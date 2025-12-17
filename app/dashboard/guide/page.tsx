@@ -2,7 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase'; // Utilisez l'import existant
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 interface Eleve {
   id: string;
@@ -91,16 +95,16 @@ export default function GuideDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+    <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Dashboard Guide</h1>
+            <h1 className="text-3xl font-bold text-gray-800">Dashboard Guide</h1>
             <p className="text-gray-600 mt-1">Connecté en tant que {userName}</p>
           </div>
           <button
             onClick={handleLogout}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
           >
             Déconnexion
           </button>
@@ -112,61 +116,54 @@ export default function GuideDashboard() {
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow overflow-x-auto">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[1000px]">
-                <thead className="bg-gray-100 border-b">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Classe</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Catégorie</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 min-w-[300px]">Problématique</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Conv. 9-10 mars</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Conv. 16-17 avril</th>
+            <table className="w-full">
+              <thead className="bg-gray-100 border-b">
+                <tr>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">Classe</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">Nom</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">Prénom</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">Catégorie</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">Problématique</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">Conv. 9-10 mars</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">Conv. 16-17 avril</th>
+                </tr>
+              </thead>
+              <tbody>
+                {eleves.map((eleve) => (
+                  <tr key={eleve.id} className="border-b hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm">{eleve.classe}</td>
+                    <td className="px-4 py-3 text-sm font-medium">{eleve.nom}</td>
+                    <td className="px-4 py-3 text-sm">{eleve.prenom}</td>
+                    <td className="px-4 py-3 text-sm">{eleve.categorie || '-'}</td>
+                    <td className="px-4 py-3 text-sm max-w-xs truncate" title={eleve.problematique || '-'}>
+                      {eleve.problematique || '-'}
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      <select
+                        value={eleve.convocation_mars || ''}
+                        onChange={(e) => handleUpdate(eleve.id, 'convocation_mars', e.target.value)}
+                        className="w-full border rounded px-2 py-1 text-sm"
+                      >
+                        {CONVOCATION_OPTIONS.map(opt => (
+                          <option key={opt} value={opt}>{opt || '-'}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      <select
+                        value={eleve.convocation_avril || ''}
+                        onChange={(e) => handleUpdate(eleve.id, 'convocation_avril', e.target.value)}
+                        className="w-full border rounded px-2 py-1 text-sm"
+                      >
+                        {CONVOCATION_OPTIONS.map(opt => (
+                          <option key={opt} value={opt}>{opt || '-'}</option>
+                        ))}
+                      </select>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {eleves.map((eleve) => (
-                    <tr key={eleve.id} className="border-b hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm">{eleve.classe}</td>
-                      <td className="px-4 py-3 text-sm font-medium">{eleve.nom}</td>
-                      <td className="px-4 py-3 text-sm">{eleve.prenom}</td>
-                      <td className="px-4 py-3 text-sm">{eleve.categorie || '-'}</td>
-                      <td className="px-4 py-3 text-sm align-top">
-                        <div 
-                          className="whitespace-pre-wrap break-words max-w-xs min-h-[40px] overflow-hidden"
-                          title={eleve.problematique || '-'}
-                        >
-                          {eleve.problematique || '-'}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm align-top">
-                        <select
-                          value={eleve.convocation_mars || ''}
-                          onChange={(e) => handleUpdate(eleve.id, 'convocation_mars', e.target.value)}
-                          className="w-full border rounded px-2 py-1 text-sm"
-                        >
-                          {CONVOCATION_OPTIONS.map(opt => (
-                            <option key={opt} value={opt}>{opt || '-'}</option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-4 py-3 text-sm align-top">
-                        <select
-                          value={eleve.convocation_avril || ''}
-                          onChange={(e) => handleUpdate(eleve.id, 'convocation_avril', e.target.value)}
-                          className="w-full border rounded px-2 py-1 text-sm"
-                        >
-                          {CONVOCATION_OPTIONS.map(opt => (
-                            <option key={opt} value={opt}>{opt || '-'}</option>
-                          ))}
-                        </select>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
