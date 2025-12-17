@@ -13,19 +13,26 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+// Dans handleLogin, modifiez les requêtes Supabase :
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-
+  
     try {
-      // Vérifier si c'est un coordinateur
+      // Normaliser les entrées (majuscules pour l'initiale, capitalisation pour le nom)
+      const nomNormalized = nom.toUpperCase();
+      const initialeNormalized = initiale.toUpperCase();
+  
+      // Vérifier si c'est un coordinateur (insensible à la casse)
       const { data: coordData } = await supabase
         .from('coordinateurs')
         .select('*')
-        .eq('nom', nom)
-        .eq('initiale', initiale)
+        .ilike('nom', nomNormalized)  // Utiliser ilike au lieu de eq pour insensible à la casse
+        .ilike('initiale', initialeNormalized)
         .single();
+  
       if (coordData) {
         // Première connexion - enregistrer le mot de passe
         if (!coordData.mot_de_passe) {
@@ -40,7 +47,7 @@ export default function LoginPage() {
           router.push('/dashboard/coordinateur');
           return;
         }
-      
+  
         // Connexion normale
         if (coordData.mot_de_passe === password) {
           localStorage.setItem('userType', 'coordinateur');
@@ -54,15 +61,15 @@ export default function LoginPage() {
           return;
         }
       }
-
-      // Vérifier si c'est un guide
+  
+      // Vérifier si c'est un guide (insensible à la casse)
       const { data: guideData } = await supabase
         .from('guides')
         .select('*')
-        .eq('nom', nom)
-        .eq('initiale', initiale)
+        .ilike('nom', nomNormalized)
+        .ilike('initiale', initialeNormalized)
         .single();
-
+  
       if (guideData) {
         // Première connexion - enregistrer le mot de passe
         if (!guideData.mot_de_passe) {
@@ -77,7 +84,7 @@ export default function LoginPage() {
           router.push('/dashboard/guide');
           return;
         }
-
+  
         // Connexion normale
         if (guideData.mot_de_passe === password) {
           localStorage.setItem('userType', 'guide');
@@ -91,15 +98,15 @@ export default function LoginPage() {
           return;
         }
       }
-
-      // Vérifier si c'est un élève
+  
+      // Vérifier si c'est un élève (insensible à la casse)
       const { data: eleveData } = await supabase
         .from('eleves')
         .select('*')
-        .eq('nom', nom)
-        .eq('initiale', initiale)
+        .ilike('nom', nomNormalized)
+        .ilike('initiale', initialeNormalized)
         .single();
-
+  
       if (eleveData) {
         // Première connexion - enregistrer le mot de passe
         if (!eleveData.mot_de_passe) {
@@ -110,16 +117,16 @@ export default function LoginPage() {
           
           localStorage.setItem('userType', 'eleve');
           localStorage.setItem('userId', eleveData.id);
-          localStorage.setItem('userName', `${eleveData.nom} ${eleveData.initiale}.`);
+          localStorage.setItem('userName', `${eleveData.nom} ${eleveData.prenom}`);
           router.push('/dashboard/eleve');
           return;
         }
-
+  
         // Connexion normale
         if (eleveData.mot_de_passe === password) {
           localStorage.setItem('userType', 'eleve');
           localStorage.setItem('userId', eleveData.id);
-          localStorage.setItem('userName', `${eleveData.nom} ${eleveData.initiale}.`);
+          localStorage.setItem('userName', `${eleveData.nom} ${eleveData.prenom}`);
           router.push('/dashboard/eleve');
           return;
         } else {
@@ -128,7 +135,7 @@ export default function LoginPage() {
           return;
         }
       }
-
+  
       setError('Utilisateur non trouvé');
       setLoading(false);
     } catch (err) {
@@ -137,7 +144,7 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
-
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
@@ -207,4 +214,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
 
