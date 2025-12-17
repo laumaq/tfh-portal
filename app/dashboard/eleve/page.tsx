@@ -2,7 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 interface EleveInfo {
   id: string;
@@ -10,6 +14,7 @@ interface EleveInfo {
   prenom: string;
   classe: string;
   problematique: string;
+  categorie: string;
   guide_nom: string;
   guide_initiale: string;
   convocation_mars: string;
@@ -24,21 +29,23 @@ export default function EleveDashboard() {
   const router = useRouter();
 
   useEffect(() => {
-    const userType = localStorage.getItem('userType');
-    const userId = localStorage.getItem('userId');
-    
-    if (userType !== 'eleve' || !userId) {
-      router.push('/');
-      return;
+    if (typeof window !== 'undefined') {
+      const userType = localStorage.getItem('userType');
+      const userId = localStorage.getItem('userId');
+      
+      if (userType !== 'eleve' || !userId) {
+        router.push('/');
+        return;
+      }
+      
+      loadEleve(userId);
     }
-    
-    loadEleve(userId);
   }, [router]);
 
   const loadEleve = async (eleveId: string) => {
     try {
       const { data, error } = await supabase
-        .from('vue_complete_eleves')
+        .from('vue_eleves_complete')
         .select('*')
         .eq('id', eleveId)
         .single();
@@ -70,7 +77,9 @@ export default function EleveDashboard() {
   };
 
   const handleLogout = () => {
-    localStorage.clear();
+    if (typeof window !== 'undefined') {
+      localStorage.clear();
+    }
     router.push('/');
   };
 
@@ -103,6 +112,9 @@ export default function EleveDashboard() {
             <div className="space-y-2 text-gray-600">
               <p><span className="font-medium">Classe:</span> {eleve.classe}</p>
               <p><span className="font-medium">Guide:</span> {eleve.guide_nom} {eleve.guide_initiale}.</p>
+              {eleve.categorie && (
+                <p><span className="font-medium">Catégorie:</span> {eleve.categorie}</p>
+              )}
             </div>
           </div>
 
@@ -146,7 +158,7 @@ export default function EleveDashboard() {
                 </div>
               </div>
             ) : (
-              <div className="bg-gray-50 rounded-lg p-4">
+              <div className="bg-gray-50 rounded-lg p-4 whitespace-pre-wrap">
                 {eleve.problematique || 'Aucune problématique définie'}
               </div>
             )}
@@ -157,13 +169,25 @@ export default function EleveDashboard() {
             <div className="space-y-2">
               <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                 <span className="font-medium">9-10 mars:</span>
-                <span className={eleve.convocation_mars?.startsWith('Oui') ? 'text-orange-600' : 'text-green-600'}>
+                <span className={
+                  eleve.convocation_mars?.startsWith('Oui') 
+                    ? 'text-orange-600 font-medium' 
+                    : eleve.convocation_mars?.startsWith('Non')
+                    ? 'text-green-600'
+                    : 'text-gray-500'
+                }>
                   {eleve.convocation_mars || 'Non défini'}
                 </span>
               </div>
               <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                 <span className="font-medium">16-17 avril:</span>
-                <span className={eleve.convocation_avril?.startsWith('Oui') ? 'text-orange-600' : 'text-green-600'}>
+                <span className={
+                  eleve.convocation_avril?.startsWith('Oui') 
+                    ? 'text-orange-600 font-medium' 
+                    : eleve.convocation_avril?.startsWith('Non')
+                    ? 'text-green-600'
+                    : 'text-gray-500'
+                }>
                   {eleve.convocation_avril || 'Non défini'}
                 </span>
               </div>
