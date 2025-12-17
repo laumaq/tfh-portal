@@ -26,8 +26,22 @@ export default function LoginPage() {
         .eq('nom', nom)
         .eq('initiale', initiale)
         .single();
-
       if (coordData) {
+        // Première connexion - enregistrer le mot de passe
+        if (!coordData.mot_de_passe) {
+          await supabase
+            .from('coordinateurs')
+            .update({ mot_de_passe: password })
+            .eq('id', coordData.id);
+          
+          localStorage.setItem('userType', 'coordinateur');
+          localStorage.setItem('userId', coordData.id);
+          localStorage.setItem('userName', `${coordData.nom} ${coordData.initiale}.`);
+          router.push('/dashboard/coordinateur');
+          return;
+        }
+      
+        // Connexion normale
         if (coordData.mot_de_passe === password) {
           localStorage.setItem('userType', 'coordinateur');
           localStorage.setItem('userId', coordData.id);
@@ -193,3 +207,4 @@ export default function LoginPage() {
     </div>
   );
 }
+
