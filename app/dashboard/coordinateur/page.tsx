@@ -11,14 +11,23 @@ interface Eleve {
   prenom: string;
   classe: string;
   problematique: string;
-  guide_nom: string;
-  guide_initiale: string;
+  categorie: string;
+  guide_id: string;
   convocation_mars: string;
   convocation_avril: string;
+  guide_nom?: string;
+  guide_initiale?: string;
+}
+
+interface Guide {
+  id: string;
+  nom: string;
+  initiale: string;
 }
 
 export default function CoordinateurDashboard() {
   const [eleves, setEleves] = useState<Eleve[]>([]);
+  const [guides, setGuides] = useState<Guide[]>([]);
   const [filteredEleves, setFilteredEleves] = useState<Eleve[]>([]);
   const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState('');
@@ -44,22 +53,42 @@ export default function CoordinateurDashboard() {
     }
     
     setUserName(name || '');
-    loadEleves();
+    loadData();
   }, [router]);
 
-  const loadEleves = async () => {
+  const loadData = async () => {
     try {
-      const { data, error } = await supabase
-        .from('vue_complete_eleves')
+      // Charger les guides
+      const { data: guidesData, error: guidesError } = await supabase
+        .from('guides')
+        .select('id, nom, initiale');
+
+      if (guidesError) throw guidesError;
+      setGuides(guidesData || []);
+
+      // Charger les élèves avec les nouvelles colonnes
+      const { data: elevesData, error: elevesError } = await supabase
+        .from('eleves')
         .select('*')
         .order('classe', { ascending: true })
         .order('nom', { ascending: true });
 
-      if (error) throw error;
-      setEleves(data || []);
-      setFilteredEleves(data || []);
+      if (elevesError) throw elevesError;
+
+      // Fusionner les données élèves avec les guides
+      const elevesWithGuides = (elevesData || []).map(eleve => {
+        const guide = guidesData?.find(g => g.id === eleve.guide_id);
+        return {
+          ...eleve,
+          guide_nom: guide?.nom || '-',
+          guide_initiale: guide?.initiale || '-'
+        };
+      });
+
+      setEleves(elevesWithGuides);
+      setFilteredEleves(elevesWithGuides);
     } catch (err) {
-      console.error('Erreur chargement élèves:', err);
+      console.error('Erreur chargement données:', err);
     } finally {
       setLoading(false);
     }
@@ -79,36 +108,19 @@ export default function CoordinateurDashboard() {
 
   const handleUpdate = async (eleveId: string, field: string, value: string) => {
     try {
-      if (field === 'problematique') {
-        await supabase
-          .from('eleves')
-          .update({ problematique: value })
-          .eq('id', eleveId);
-      } else if (field === 'convocation_mars' || field === 'convocation_avril') {
-        const periode = field === 'convocation_mars' ? '9-10-mars' : '16-17-avril';
-        
-        // Vérifier si la convocation existe
-        const { data: existing } = await supabase
-          .from('convocations')
-          .select('id')
-          .eq('eleve_id', eleveId)
-          .eq('periode', periode)
-          .single();
+      // Mettre à jour directement dans la table eleves
+      const updateData: any = {};
+      updateData[field] = value;
 
-        if (existing) {
-          await supabase
-            .from('convocations')
-            .update({ statut: value })
-            .eq('eleve_id', eleveId)
-            .eq('periode', periode);
-        } else {
-          await supabase
-            .from('convocations')
-            .insert({ eleve_id: eleveId, periode, statut: value });
-        }
-      }
+      const { error } = await supabase
+        .from('eleves')
+        .update(updateData)
+        .eq('id', eleveId);
 
-      loadEleves();
+      if (error) throw error;
+
+      // Recharger les données
+      loadData();
       setEditingCell(null);
     } catch (err) {
       console.error('Erreur mise à jour:', err);
