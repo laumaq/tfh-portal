@@ -135,8 +135,10 @@ export default function GuideDashboard() {
                     <td className="px-4 py-3 text-sm font-medium">{eleve.nom}</td>
                     <td className="px-4 py-3 text-sm">{eleve.prenom}</td>
                     <td className="px-4 py-3 text-sm">{eleve.categorie || '-'}</td>
-                    <td className="px-4 py-3 text-sm max-w-xs" title={eleve.problematique || '-'}>
-                      {eleve.problematique || '-'}
+                    <td className="px-4 py-3 text-sm max-w-xs whitespace-normal break-words" title={eleve.problematique || '-'}>
+                      <div className="whitespace-pre-wrap break-words">
+                        {eleve.problematique || '-'}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-sm">
                       <select
@@ -170,4 +172,5 @@ export default function GuideDashboard() {
     </div>
   );
 }
+
 
