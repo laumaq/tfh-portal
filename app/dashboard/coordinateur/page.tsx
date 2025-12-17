@@ -4,7 +4,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { ChevronUpIcon, ChevronDownIcon, FunnelIcon } from '@heroicons/react/24/outline';
 
 interface Eleve {
   id: string;
@@ -202,11 +201,14 @@ export default function CoordinateurDashboard() {
     router.push('/');
   };
 
+  // Icônes de tri simples (remplacement heroicons)
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortField !== field) return null;
-    return sortDirection === 'asc' ? 
-      <ChevronUpIcon className="w-4 h-4 ml-1" /> : 
-      <ChevronDownIcon className="w-4 h-4 ml-1" />;
+    return (
+      <span className="ml-1">
+        {sortDirection === 'asc' ? '↑' : '↓'}
+      </span>
+    );
   };
 
   if (loading) {
@@ -242,7 +244,7 @@ export default function CoordinateurDashboard() {
         {/* Filtres */}
         <div className="bg-white rounded-lg shadow p-4 md:p-6 mb-6">
           <div className="flex items-center gap-2 mb-4">
-            <FunnelIcon className="w-5 h-5 text-gray-500" />
+            <span className="text-gray-500">🔍</span>
             <h2 className="text-lg font-semibold text-gray-700">Filtres</h2>
           </div>
           
@@ -406,7 +408,7 @@ export default function CoordinateurDashboard() {
                         <textarea
                           defaultValue={eleve.problematique}
                           onBlur={(e) => handleUpdate(eleve.id, 'problematique', e.target.value)}
-                          className="w-full border rounded px-2 py-1"
+                          className="w-full border rounded px-2 py-1 whitespace-pre-wrap break-words"
                           rows={4}
                           autoFocus
                         />
