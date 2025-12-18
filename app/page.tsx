@@ -35,64 +35,52 @@ export default function LoginPage() {
         const storedPassword = coordData.mot_de_passe;
         
         console.log("DEBUG - Coordinateur trouvé:", {
-          id: coordData.id,
           nom: coordData.nom,
           storedPassword,
-          type: typeof storedPassword,
           isNull: storedPassword === null,
-          isEmpty: storedPassword === '',
-          hasLength: storedPassword?.length
+          isEmpty: storedPassword === ''
         });
       
-        // CAS 1: NULL = première connexion
+        // CAS 1: PREMIÈRE CONNEXION (NULL)
         if (storedPassword === null) {
-          console.log("CAS 1: Première connexion pour", coordData.nom);
+          console.log("Première connexion - enregistrement du mot de passe");
           
-          // 1. Tenter l'UPDATE
+          // Enregistrer le mot de passe
           const { error: updateError } = await supabase
             .from('coordinateurs')
             .update({ mot_de_passe: password })
             .eq('id', coordData.id);
           
-          // 2. DEBUG: Vérifier l'UPDATE
           if (updateError) {
-            console.error("ÉCHEC UPDATE:", updateError);
-            setError('Erreur technique lors de l\'enregistrement. Veuillez réessayer.');
+            console.error("Erreur enregistrement:", updateError);
+            setError('Erreur technique. Réessayez.');
             setLoading(false);
             return;
           }
           
-          console.log("UPDATE réussi");
-          
-          // 3. Stocker en localStorage
+          // Connecter l'utilisateur
           localStorage.setItem('userType', 'coordinateur');
           localStorage.setItem('userId', coordData.id);
           localStorage.setItem('userName', `${coordData.nom} ${coordData.initiale}.`);
-          
-          console.log("Redirection vers le dashboard coordinateur");
           router.push('/dashboard/coordinateur');
           return;
         }
         
-        // CAS 2: Chaîne vide = erreur (sécurité)
-        if (storedPassword === '') {
-          console.log("CAS 2: Mot de passe vide - erreur sécurité");
-          setError('Erreur de sécurité : mot de passe invalide. Contactez l\'administrateur.');
-          setLoading(false);
-          return;
-        }
+        // CAS 2 & 3: MOT DE PASSE EXISTANT (chaîne vide ou valide)
+        // Si storedPassword est une chaîne vide "", elle ne correspondra jamais au password saisi
+        // donc ça tombera dans "Mot de passe incorrect" (ce qui est correct)
         
-        // CAS 3: Mot de passe existant - vérification normale
-        console.log("CAS 3: Vérification mot de passe existant");
         if (storedPassword === password) {
-          console.log("Mot de passe correct");
+          // CAS 3: BON MOT DE PASSE
+          console.log("Connexion réussie");
           localStorage.setItem('userType', 'coordinateur');
           localStorage.setItem('userId', coordData.id);
           localStorage.setItem('userName', `${coordData.nom} ${coordData.initiale}.`);
           router.push('/dashboard/coordinateur');
           return;
         } else {
-          console.log("Mot de passe incorrect");
+          // CAS 2: MAUVAIS MOT DE PASSE (ou chaîne vide "")
+          console.log("Mot de passe incorrect ou vide");
           setError('Mot de passe incorrect');
           setLoading(false);
           return;
@@ -278,6 +266,7 @@ export default function LoginPage() {
     </div>
   );
 }
+
 
 
 
