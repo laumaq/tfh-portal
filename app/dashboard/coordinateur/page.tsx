@@ -382,6 +382,7 @@ export default function CoordinateurDashboard() {
                   <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Nom</th>
                   <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Prénom</th>
                   <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Guide</th>
+                  <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Catégorie</th>
                   <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Problématique</th>
                   <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Convoc. 9-10 mars</th>
                   <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Prés. 9 mars</th>
@@ -407,6 +408,26 @@ export default function CoordinateurDashboard() {
                       <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">
                         {eleve.guide_nom} {eleve.guide_initiale}.
                       </td>
+                      <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">
+                      {editingCell?.id === eleve.id && editingCell?.field === 'categorie' ? (
+                        <input
+                          type="text"
+                          defaultValue={eleve.categorie || ''}
+                          onBlur={(e) => handleUpdate(eleve.id, 'categorie', e.target.value)}
+                          className="w-full border rounded px-2 py-1 text-xs md:text-sm"
+                          autoFocus
+                        />
+                      ) : (
+                        <div
+                          onClick={() => setEditingCell({id: eleve.id, field: 'categorie'})}
+                          className="cursor-pointer hover:bg-gray-100 p-1 rounded"
+                        >
+                          {eleve.categorie || '-'}
+                        </div>
+                      )}
+                    </td>
+                    
+                    <td className="px-3 py-3 text-xs md:text-sm">
                       <td className="px-3 py-3 text-xs md:text-sm">
                         {editingCell?.id === eleve.id && editingCell?.field === 'problematique' ? (
                           <textarea
@@ -531,3 +552,4 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
