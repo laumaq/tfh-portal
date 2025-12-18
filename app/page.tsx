@@ -42,7 +42,7 @@ export default function LoginPage() {
         });
       
         // CAS 1: PREMIÈRE CONNEXION (NULL)
-        if (storedPassword === null) {
+        if (storedPassword === '') {
           console.log("Première connexion - enregistrement du mot de passe");
           
           // Enregistrer le mot de passe
@@ -66,7 +66,7 @@ export default function LoginPage() {
           return;
         }
         
-        // CAS 2 & 3: MOT DE PASSE EXISTANT (chaîne vide ou valide)
+        // CAS 2 : MOT DE PASSE EXISTANT (chaîne vide ou valide)
         // Si storedPassword est une chaîne vide "", elle ne correspondra jamais au password saisi
         // donc ça tombera dans "Mot de passe incorrect" (ce qui est correct)
         
@@ -79,7 +79,7 @@ export default function LoginPage() {
           router.push('/dashboard/coordinateur');
           return;
         } else {
-          // CAS 2: MAUVAIS MOT DE PASSE (ou chaîne vide "")
+          // CAS 3: MAUVAIS MOT DE PASSE
           console.log("Mot de passe incorrect ou vide");
           setError('Mot de passe incorrect');
           setLoading(false);
@@ -266,6 +266,7 @@ export default function LoginPage() {
     </div>
   );
 }
+
 
 
 
