@@ -4,7 +4,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { Check, X } from 'lucide-react';
 
 interface Eleve {
   id: string;
@@ -16,10 +15,10 @@ interface Eleve {
   guide_id: string;
   convocation_mars: string;
   convocation_avril: string;
-  presence_9_mars: boolean;
-  presence_10_mars: boolean;
-  presence_16_avril: boolean;
-  presence_17_avril: boolean;
+  presence_9_mars: boolean | null;
+  presence_10_mars: boolean | null;
+  presence_16_avril: boolean | null;
+  presence_17_avril: boolean | null;
   guide_nom?: string;
   guide_initiale?: string;
 }
@@ -157,7 +156,42 @@ export default function CoordinateurDashboard() {
     }
   }, [showConvoques, eleves]);
 
-  const handleUpdate = async (eleveId: string, field: string, value: string | boolean) => {
+  // Fonction pour cycler entre null → true → false → null
+  const cyclePresenceState = (currentState: boolean | null): boolean | null => {
+    if (currentState === null) return true;
+    if (currentState === true) return false;
+    return null; // currentState === false
+  };
+
+  const handlePresenceUpdate = async (eleveId: string, field: string, currentValue: boolean | null) => {
+    try {
+      const newValue = cyclePresenceState(currentValue);
+      
+      const updateData: any = {};
+      updateData[field] = newValue;
+
+      const { error } = await supabase
+        .from('eleves')
+        .update(updateData)
+        .eq('id', eleveId);
+
+      if (error) throw error;
+
+      // Mettre à jour l'état local immédiatement
+      setEleves(prev => prev.map(eleve => 
+        eleve.id === eleveId ? { ...eleve, [field]: newValue } : eleve
+      ));
+      
+      setFilteredEleves(prev => prev.map(eleve => 
+        eleve.id === eleveId ? { ...eleve, [field]: newValue } : eleve
+      ));
+    } catch (err) {
+      console.error('Erreur mise à jour présence:', err);
+      loadData();
+    }
+  };
+
+  const handleUpdate = async (eleveId: string, field: string, value: string) => {
     try {
       const updateData: any = {};
       updateData[field] = value;
@@ -181,7 +215,6 @@ export default function CoordinateurDashboard() {
       setEditingCell(null);
     } catch (err) {
       console.error('Erreur mise à jour:', err);
-      // Recharger les données en cas d'erreur
       loadData();
     }
   };
@@ -199,6 +232,36 @@ export default function CoordinateurDashboard() {
   const getConvocationLabel = (value: string) => {
     const option = CONVOCATION_OPTIONS.find(opt => opt.value === value);
     return option ? option.label : '-';
+  };
+
+  // Fonction pour obtenir les styles et icônes selon l'état de présence
+  const getPresenceStyles = (value: boolean | null) => {
+    switch (value) {
+      case null:
+        return {
+          bgColor: 'bg-gray-100',
+          hoverColor: 'hover:bg-gray-200',
+          textColor: 'text-gray-400',
+          icon: '?',
+          title: 'Non défini'
+        };
+      case true:
+        return {
+          bgColor: 'bg-green-100',
+          hoverColor: 'hover:bg-green-200',
+          textColor: 'text-green-600',
+          icon: '✓',
+          title: 'Présent'
+        };
+      case false:
+        return {
+          bgColor: 'bg-red-100',
+          hoverColor: 'hover:bg-red-200',
+          textColor: 'text-red-600',
+          icon: '✗',
+          title: 'Absent'
+        };
+    }
   };
 
   if (loading) {
@@ -268,25 +331,50 @@ export default function CoordinateurDashboard() {
           
           {/* Légende des couleurs */}
           <div className="mt-4 pt-4 border-t border-gray-200">
-            <p className="text-sm font-medium text-gray-700 mb-2">Légende des convocations:</p>
-            <div className="flex flex-wrap gap-2">
-              {CONVOCATION_OPTIONS.filter(opt => opt.value).map((opt) => (
-                <div key={opt.value} className={`${opt.color} px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1`}>
-                  <div className="w-2 h-2 rounded-full" style={{
-                    backgroundColor: opt.color.includes('green') ? '#10B981' :
-                                   opt.color.includes('yellow') ? '#F59E0B' :
-                                   opt.color.includes('orange') ? '#F97316' :
-                                   opt.color.includes('red') ? '#EF4444' : '#6B7280'
-                  }}></div>
-                  {opt.label.split(',')[0]}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">Légende des convocations:</p>
+                <div className="flex flex-wrap gap-2">
+                  {CONVOCATION_OPTIONS.filter(opt => opt.value).map((opt) => (
+                    <div key={opt.value} className={`${opt.color} px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1`}>
+                      <div className="w-2 h-2 rounded-full" style={{
+                        backgroundColor: opt.color.includes('green') ? '#10B981' :
+                                       opt.color.includes('yellow') ? '#F59E0B' :
+                                       opt.color.includes('orange') ? '#F97316' :
+                                       opt.color.includes('red') ? '#EF4444' : '#6B7280'
+                      }}></div>
+                      {opt.label.split(',')[0]}
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
+              
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">Légende de présence:</p>
+                <div className="flex flex-wrap gap-2">
+                  <div className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+                    <span className="w-6 h-6 flex items-center justify-center rounded-full bg-gray-200">?</span>
+                    Non défini
+                  </div>
+                  <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+                    <span className="w-6 h-6 flex items-center justify-center rounded-full bg-green-200">✓</span>
+                    Présent
+                  </div>
+                  <div className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+                    <span className="w-6 h-6 flex items-center justify-center rounded-full bg-red-200">✗</span>
+                    Absent
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Cliquez pour faire tourner: ? → ✓ → ✗ → ?
+                </p>
+              </div>
             </div>
           </div>
         </div>
 
         <div className="bg-white rounded-lg shadow overflow-x-auto">
-          <div className="min-w-[1200px] md:min-w-full"> {/* Forcer un défilement horizontal sur mobile */}
+          <div className="min-w-[1200px] md:min-w-full">
             <table className="w-full">
               <thead className="bg-gray-100 border-b">
                 <tr>
@@ -296,144 +384,136 @@ export default function CoordinateurDashboard() {
                   <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Guide</th>
                   <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Problématique</th>
                   <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Convoc. 9-10 mars</th>
-                  <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Présence 9 mars</th>
-                  <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Présence 10 mars</th>
+                  <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Prés. 9 mars</th>
+                  <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Prés. 10 mars</th>
                   <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Convoc. 16-17 avril</th>
-                  <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Présence 16 avril</th>
-                  <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Présence 17 avril</th>
+                  <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Prés. 16 avril</th>
+                  <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Prés. 17 avril</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredEleves.map((eleve) => (
-                  <tr key={eleve.id} className="border-b hover:bg-gray-50">
-                    <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">{eleve.classe}</td>
-                    <td className="px-3 py-3 text-xs md:text-sm font-medium whitespace-nowrap">{eleve.nom}</td>
-                    <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">{eleve.prenom}</td>
-                    <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">
-                      {eleve.guide_nom} {eleve.guide_initiale}.
-                    </td>
-                    <td className="px-3 py-3 text-xs md:text-sm">
-                      {editingCell?.id === eleve.id && editingCell?.field === 'problematique' ? (
-                        <textarea
-                          defaultValue={eleve.problematique}
-                          onBlur={(e) => handleUpdate(eleve.id, 'problematique', e.target.value)}
-                          className="w-full border rounded px-2 py-1 text-xs md:text-sm"
-                          rows={3}
-                          autoFocus
-                        />
-                      ) : (
-                        <div
-                          onClick={() => setEditingCell({id: eleve.id, field: 'problematique'})}
-                          className="cursor-pointer hover:bg-gray-100 p-1 rounded min-h-[60px] flex items-start"
+                {filteredEleves.map((eleve) => {
+                  // Récupérer les styles pour chaque colonne de présence
+                  const presence9Mars = getPresenceStyles(eleve.presence_9_mars);
+                  const presence10Mars = getPresenceStyles(eleve.presence_10_mars);
+                  const presence16Avril = getPresenceStyles(eleve.presence_16_avril);
+                  const presence17Avril = getPresenceStyles(eleve.presence_17_avril);
+                  
+                  return (
+                    <tr key={eleve.id} className="border-b hover:bg-gray-50">
+                      <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">{eleve.classe}</td>
+                      <td className="px-3 py-3 text-xs md:text-sm font-medium whitespace-nowrap">{eleve.nom}</td>
+                      <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">{eleve.prenom}</td>
+                      <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">
+                        {eleve.guide_nom} {eleve.guide_initiale}.
+                      </td>
+                      <td className="px-3 py-3 text-xs md:text-sm">
+                        {editingCell?.id === eleve.id && editingCell?.field === 'problematique' ? (
+                          <textarea
+                            defaultValue={eleve.problematique}
+                            onBlur={(e) => handleUpdate(eleve.id, 'problematique', e.target.value)}
+                            className="w-full border rounded px-2 py-1 text-xs md:text-sm"
+                            rows={3}
+                            autoFocus
+                          />
+                        ) : (
+                          <div
+                            onClick={() => setEditingCell({id: eleve.id, field: 'problematique'})}
+                            className="cursor-pointer hover:bg-gray-100 p-1 rounded min-h-[60px] flex items-start"
+                          >
+                            {eleve.problematique || '-'}
+                          </div>
+                        )}
+                      </td>
+                      
+                      {/* Colonnes mars */}
+                      <td className="px-3 py-3">
+                        <select
+                          value={eleve.convocation_mars || ''}
+                          onChange={(e) => handleUpdate(eleve.id, 'convocation_mars', e.target.value)}
+                          className={`w-full border rounded px-2 py-1 text-xs md:text-sm ${getConvocationColor(eleve.convocation_mars || '')}`}
+                          title={getConvocationLabel(eleve.convocation_mars || '')}
                         >
-                          {eleve.problematique || '-'}
+                          {CONVOCATION_OPTIONS.map(opt => (
+                            <option 
+                              key={opt.value} 
+                              value={opt.value}
+                              className={opt.color}
+                            >
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                        <div className={`mt-1 text-xs px-2 py-1 rounded ${getConvocationColor(eleve.convocation_mars || '')} truncate`}>
+                          {getConvocationLabel(eleve.convocation_mars || '').split(',')[0]}
                         </div>
-                      )}
-                    </td>
-                    
-                    {/* Colonnes mars */}
-                    <td className="px-3 py-3">
-                      <select
-                        value={eleve.convocation_mars || ''}
-                        onChange={(e) => handleUpdate(eleve.id, 'convocation_mars', e.target.value)}
-                        className={`w-full border rounded px-2 py-1 text-xs md:text-sm ${getConvocationColor(eleve.convocation_mars || '')}`}
-                        title={getConvocationLabel(eleve.convocation_mars || '')}
-                      >
-                        {CONVOCATION_OPTIONS.map(opt => (
-                          <option 
-                            key={opt.value} 
-                            value={opt.value}
-                            className={opt.color}
-                          >
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                      <div className={`mt-1 text-xs px-2 py-1 rounded ${getConvocationColor(eleve.convocation_mars || '')} truncate`}>
-                        {getConvocationLabel(eleve.convocation_mars || '').split(',')[0]}
-                      </div>
-                    </td>
-                    
-                    <td className="px-3 py-3">
-                      <button
-                        onClick={() => handleUpdate(eleve.id, 'presence_9_mars', !eleve.presence_9_mars)}
-                        className={`w-8 h-8 md:w-10 md:h-10 rounded-lg flex items-center justify-center transition-colors ${
-                          eleve.presence_9_mars 
-                            ? 'bg-green-100 text-green-600 hover:bg-green-200' 
-                            : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                        }`}
-                        title={eleve.presence_9_mars ? "Présent" : "Absent"}
-                      >
-                        {eleve.presence_9_mars ? <Check size={18} /> : <X size={18} />}
-                      </button>
-                    </td>
-                    
-                    <td className="px-3 py-3">
-                      <button
-                        onClick={() => handleUpdate(eleve.id, 'presence_10_mars', !eleve.presence_10_mars)}
-                        className={`w-8 h-8 md:w-10 md:h-10 rounded-lg flex items-center justify-center transition-colors ${
-                          eleve.presence_10_mars 
-                            ? 'bg-green-100 text-green-600 hover:bg-green-200' 
-                            : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                        }`}
-                        title={eleve.presence_10_mars ? "Présent" : "Absent"}
-                      >
-                        {eleve.presence_10_mars ? <Check size={18} /> : <X size={18} />}
-                      </button>
-                    </td>
-                    
-                    {/* Colonnes avril */}
-                    <td className="px-3 py-3">
-                      <select
-                        value={eleve.convocation_avril || ''}
-                        onChange={(e) => handleUpdate(eleve.id, 'convocation_avril', e.target.value)}
-                        className={`w-full border rounded px-2 py-1 text-xs md:text-sm ${getConvocationColor(eleve.convocation_avril || '')}`}
-                        title={getConvocationLabel(eleve.convocation_avril || '')}
-                      >
-                        {CONVOCATION_OPTIONS.map(opt => (
-                          <option 
-                            key={opt.value} 
-                            value={opt.value}
-                            className={opt.color}
-                          >
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                      <div className={`mt-1 text-xs px-2 py-1 rounded ${getConvocationColor(eleve.convocation_avril || '')} truncate`}>
-                        {getConvocationLabel(eleve.convocation_avril || '').split(',')[0]}
-                      </div>
-                    </td>
-                    
-                    <td className="px-3 py-3">
-                      <button
-                        onClick={() => handleUpdate(eleve.id, 'presence_16_avril', !eleve.presence_16_avril)}
-                        className={`w-8 h-8 md:w-10 md:h-10 rounded-lg flex items-center justify-center transition-colors ${
-                          eleve.presence_16_avril 
-                            ? 'bg-green-100 text-green-600 hover:bg-green-200' 
-                            : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                        }`}
-                        title={eleve.presence_16_avril ? "Présent" : "Absent"}
-                      >
-                        {eleve.presence_16_avril ? <Check size={18} /> : <X size={18} />}
-                      </button>
-                    </td>
-                    
-                    <td className="px-3 py-3">
-                      <button
-                        onClick={() => handleUpdate(eleve.id, 'presence_17_avril', !eleve.presence_17_avril)}
-                        className={`w-8 h-8 md:w-10 md:h-10 rounded-lg flex items-center justify-center transition-colors ${
-                          eleve.presence_17_avril 
-                            ? 'bg-green-100 text-green-600 hover:bg-green-200' 
-                            : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                        }`}
-                        title={eleve.presence_17_avril ? "Présent" : "Absent"}
-                      >
-                        {eleve.presence_17_avril ? <Check size={18} /> : <X size={18} />}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      
+                      <td className="px-3 py-3 text-center">
+                        <button
+                          onClick={() => handlePresenceUpdate(eleve.id, 'presence_9_mars', eleve.presence_9_mars)}
+                          className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presence9Mars.bgColor} ${presence9Mars.hoverColor} ${presence9Mars.textColor} font-bold text-lg`}
+                          title={`${presence9Mars.title} (cliquer pour changer)`}
+                        >
+                          {presence9Mars.icon}
+                        </button>
+                      </td>
+                      
+                      <td className="px-3 py-3 text-center">
+                        <button
+                          onClick={() => handlePresenceUpdate(eleve.id, 'presence_10_mars', eleve.presence_10_mars)}
+                          className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presence10Mars.bgColor} ${presence10Mars.hoverColor} ${presence10Mars.textColor} font-bold text-lg`}
+                          title={`${presence10Mars.title} (cliquer pour changer)`}
+                        >
+                          {presence10Mars.icon}
+                        </button>
+                      </td>
+                      
+                      {/* Colonnes avril */}
+                      <td className="px-3 py-3">
+                        <select
+                          value={eleve.convocation_avril || ''}
+                          onChange={(e) => handleUpdate(eleve.id, 'convocation_avril', e.target.value)}
+                          className={`w-full border rounded px-2 py-1 text-xs md:text-sm ${getConvocationColor(eleve.convocation_avril || '')}`}
+                          title={getConvocationLabel(eleve.convocation_avril || '')}
+                        >
+                          {CONVOCATION_OPTIONS.map(opt => (
+                            <option 
+                              key={opt.value} 
+                              value={opt.value}
+                              className={opt.color}
+                            >
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                        <div className={`mt-1 text-xs px-2 py-1 rounded ${getConvocationColor(eleve.convocation_avril || '')} truncate`}>
+                          {getConvocationLabel(eleve.convocation_avril || '').split(',')[0]}
+                        </div>
+                      </td>
+                      
+                      <td className="px-3 py-3 text-center">
+                        <button
+                          onClick={() => handlePresenceUpdate(eleve.id, 'presence_16_avril', eleve.presence_16_avril)}
+                          className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presence16Avril.bgColor} ${presence16Avril.hoverColor} ${presence16Avril.textColor} font-bold text-lg`}
+                          title={`${presence16Avril.title} (cliquer pour changer)`}
+                        >
+                          {presence16Avril.icon}
+                        </button>
+                      </td>
+                      
+                      <td className="px-3 py-3 text-center">
+                        <button
+                          onClick={() => handlePresenceUpdate(eleve.id, 'presence_17_avril', eleve.presence_17_avril)}
+                          className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presence17Avril.bgColor} ${presence17Avril.hoverColor} ${presence17Avril.textColor} font-bold text-lg`}
+                          title={`${presence17Avril.title} (cliquer pour changer)`}
+                        >
+                          {presence17Avril.icon}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
