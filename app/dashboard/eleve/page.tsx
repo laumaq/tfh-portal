@@ -1,12 +1,9 @@
+// app/dashboard/eleve/page.tsx - LIGNES À GARDER
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase'; // <-- CORRECTION : Import unique
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { supabase } from '@/lib/supabase'; // <-- UNIQUEMENT CET IMPORT
 
 interface EleveInfo {
   id: string;
@@ -198,4 +195,5 @@ export default function EleveDashboard() {
     </div>
   );
 }
+
 
