@@ -374,7 +374,7 @@ export default function CoordinateurDashboard() {
         </div>
 
         <div className="bg-white rounded-lg shadow overflow-x-auto">
-          <div className="min-w-[1200px] md:min-w-full">
+          <div className="min-w-[1300px] md:min-w-full">
             <table className="w-full">
               <thead className="bg-gray-100 border-b">
                 <tr>
@@ -552,4 +552,5 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
