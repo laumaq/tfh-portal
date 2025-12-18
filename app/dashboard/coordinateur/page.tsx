@@ -428,7 +428,6 @@ export default function CoordinateurDashboard() {
                     </td>
                     
                     <td className="px-3 py-3 text-xs md:text-sm">
-                      <td className="px-3 py-3 text-xs md:text-sm">
                         {editingCell?.id === eleve.id && editingCell?.field === 'problematique' ? (
                           <textarea
                             defaultValue={eleve.problematique}
@@ -552,5 +551,6 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
