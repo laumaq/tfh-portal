@@ -33,6 +33,8 @@ export default function LoginPage() {
 
         // Dans handleLogin - Partie coordinateurs CORRIGÉE
         if (!coordError && coordData) {
+          const storedPassword = coordData.mot_de_passe;
+          
           // Vérifier le type de valeur dans mot_de_passe
           const hasNullPassword = coordData.mot_de_passe === null;
           const hasEmptyPassword = coordData.mot_de_passe === '';
@@ -268,6 +270,7 @@ export default function LoginPage() {
     </div>
   );
 }
+
 
 
 
