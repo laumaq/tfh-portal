@@ -29,67 +29,75 @@ export default function LoginPage() {
         .select('*')
         .ilike('nom', nomNormalized)
         .ilike('initiale', initialeNormalized)
-        .maybeSingle(); // CHANGEMENT : .single() → .maybeSingle()
-
-        // Dans handleLogin - Partie coordinateurs CORRIGÉE
-        if (!coordError && coordData) {
-          const storedPassword = coordData.mot_de_passe;
+        .maybeSingle();
+      
+      if (!coordError && coordData) {
+        const storedPassword = coordData.mot_de_passe;
+        
+        console.log("DEBUG - Coordinateur trouvé:", {
+          id: coordData.id,
+          nom: coordData.nom,
+          storedPassword,
+          type: typeof storedPassword,
+          isNull: storedPassword === null,
+          isEmpty: storedPassword === '',
+          hasLength: storedPassword?.length
+        });
+      
+        // CAS 1: NULL = première connexion
+        if (storedPassword === null) {
+          console.log("CAS 1: Première connexion pour", coordData.nom);
           
-          // Vérifier le type de valeur dans mot_de_passe
-          const hasNullPassword = coordData.mot_de_passe === null;
-          const hasEmptyPassword = coordData.mot_de_passe === '';
-          const hasValidPassword = coordData.mot_de_passe && coordData.mot_de_passe.length > 0;
-        
-          // CAS 1: NULL = première connexion - VERSION AVEC CONTOURNEMENT
-          if (storedPassword === null) {
-            console.log("Première connexion pour", coordData.nom);
-            
-            // 1. Tenter l'UPDATE
-            const { error: updateError } = await supabase
-              .from('coordinateurs')
-              .update({ mot_de_passe: password })
-              .eq('id', coordData.id);
-            
-            // 2. Même si l'UPDATE échoue, on continue avec le mot de passe en session
-            if (updateError) {
-              console.warn("Attention: L'UPDATE a échoué mais on continue:", updateError.message);
-              // On pourrait logger cette erreur pour l'admin
-            }
-            
-            // 3. Stocker en localStorage pour cette session
-            localStorage.setItem('userType', 'coordinateur');
-            localStorage.setItem('userId', coordData.id);
-            localStorage.setItem('userName', `${coordData.nom} ${coordData.initiale}.`);
-            // On stocke aussi le mot de passe en clair (temporairement, pour cette session)
-            localStorage.setItem('tempPassword', password);
-            
-            console.log("Redirection vers le dashboard coordinateur");
-            router.push('/dashboard/coordinateur');
-            return;
-          }
-        
-          // CAS 2: Mot de passe vide (anormal, on refuse)
-          if (hasEmptyPassword) {
-            setError('Erreur de sécurité : mot de passe non valide. Contactez l\'administrateur.');
+          // 1. Tenter l'UPDATE
+          const { error: updateError } = await supabase
+            .from('coordinateurs')
+            .update({ mot_de_passe: password })
+            .eq('id', coordData.id);
+          
+          // 2. DEBUG: Vérifier l'UPDATE
+          if (updateError) {
+            console.error("ÉCHEC UPDATE:", updateError);
+            setError('Erreur technique lors de l\'enregistrement. Veuillez réessayer.');
             setLoading(false);
             return;
           }
-        
-          // CAS 3: Mot de passe existant, vérification normale
-          if (hasValidPassword) {
-            if (coordData.mot_de_passe === password) {
-              localStorage.setItem('userType', 'coordinateur');
-              localStorage.setItem('userId', coordData.id);
-              localStorage.setItem('userName', `${coordData.nom} ${coordData.initiale}.`);
-              router.push('/dashboard/coordinateur');
-              return;
-            } else {
-              setError('Mot de passe incorrect');
-              setLoading(false);
-              return;
-            }
-          }
+          
+          console.log("UPDATE réussi");
+          
+          // 3. Stocker en localStorage
+          localStorage.setItem('userType', 'coordinateur');
+          localStorage.setItem('userId', coordData.id);
+          localStorage.setItem('userName', `${coordData.nom} ${coordData.initiale}.`);
+          
+          console.log("Redirection vers le dashboard coordinateur");
+          router.push('/dashboard/coordinateur');
+          return;
         }
+        
+        // CAS 2: Chaîne vide = erreur (sécurité)
+        if (storedPassword === '') {
+          console.log("CAS 2: Mot de passe vide - erreur sécurité");
+          setError('Erreur de sécurité : mot de passe invalide. Contactez l\'administrateur.');
+          setLoading(false);
+          return;
+        }
+        
+        // CAS 3: Mot de passe existant - vérification normale
+        console.log("CAS 3: Vérification mot de passe existant");
+        if (storedPassword === password) {
+          console.log("Mot de passe correct");
+          localStorage.setItem('userType', 'coordinateur');
+          localStorage.setItem('userId', coordData.id);
+          localStorage.setItem('userName', `${coordData.nom} ${coordData.initiale}.`);
+          router.push('/dashboard/coordinateur');
+          return;
+        } else {
+          console.log("Mot de passe incorrect");
+          setError('Mot de passe incorrect');
+          setLoading(false);
+          return;
+        }
+      }
 
       // 2. VÉRIFIER LES GUIDES
       const { data: guideData, error: guideError } = await supabase
@@ -270,6 +278,7 @@ export default function LoginPage() {
     </div>
   );
 }
+
 
 
 
