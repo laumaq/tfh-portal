@@ -1,4 +1,4 @@
-// app/page.tsx - Page de connexion
+// app/page.tsx - Page de connexion CORRIGÉE
 'use client';
 
 import { useState } from 'react';
@@ -13,27 +13,25 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-// Dans handleLogin, modifiez les requêtes Supabase :
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-  
+
     try {
       // Normaliser les entrées (majuscules pour l'initiale, capitalisation pour le nom)
       const nomNormalized = nom.toUpperCase();
       const initialeNormalized = initiale.toUpperCase();
-  
-      // Vérifier si c'est un coordinateur (insensible à la casse)
-      const { data: coordData } = await supabase
+
+      // 1. VÉRIFIER LES COORDINATEURS
+      const { data: coordData, error: coordError } = await supabase
         .from('coordinateurs')
         .select('*')
-        .ilike('nom', nomNormalized)  // Utiliser ilike au lieu de eq pour insensible à la casse
+        .ilike('nom', nomNormalized)
         .ilike('initiale', initialeNormalized)
-        .single();
-  
-      if (coordData) {
+        .maybeSingle(); // CHANGEMENT : .single() → .maybeSingle()
+
+      if (!coordError && coordData) {
         // Première connexion - enregistrer le mot de passe
         if (!coordData.mot_de_passe) {
           await supabase
@@ -47,7 +45,7 @@ export default function LoginPage() {
           router.push('/dashboard/coordinateur');
           return;
         }
-  
+
         // Connexion normale
         if (coordData.mot_de_passe === password) {
           localStorage.setItem('userType', 'coordinateur');
@@ -61,16 +59,16 @@ export default function LoginPage() {
           return;
         }
       }
-  
-      // Vérifier si c'est un guide (insensible à la casse)
-      const { data: guideData } = await supabase
+
+      // 2. VÉRIFIER LES GUIDES
+      const { data: guideData, error: guideError } = await supabase
         .from('guides')
         .select('*')
         .ilike('nom', nomNormalized)
         .ilike('initiale', initialeNormalized)
-        .single();
-  
-      if (guideData) {
+        .maybeSingle(); // CHANGEMENT : .single() → .maybeSingle()
+
+      if (!guideError && guideData) {
         // Première connexion - enregistrer le mot de passe
         if (!guideData.mot_de_passe) {
           await supabase
@@ -84,7 +82,7 @@ export default function LoginPage() {
           router.push('/dashboard/guide');
           return;
         }
-  
+
         // Connexion normale
         if (guideData.mot_de_passe === password) {
           localStorage.setItem('userType', 'guide');
@@ -98,16 +96,16 @@ export default function LoginPage() {
           return;
         }
       }
-  
-      // Vérifier si c'est un élève (insensible à la casse)
-      const { data: eleveData } = await supabase
+
+      // 3. VÉRIFIER LES ÉLÈVES
+      const { data: eleveData, error: eleveError } = await supabase
         .from('eleves')
         .select('*')
         .ilike('nom', nomNormalized)
         .ilike('initiale', initialeNormalized)
-        .single();
-  
-      if (eleveData) {
+        .maybeSingle(); // CHANGEMENT : .single() → .maybeSingle()
+
+      if (!eleveError && eleveData) {
         // Première connexion - enregistrer le mot de passe
         if (!eleveData.mot_de_passe) {
           await supabase
@@ -121,7 +119,7 @@ export default function LoginPage() {
           router.push('/dashboard/eleve');
           return;
         }
-  
+
         // Connexion normale
         if (eleveData.mot_de_passe === password) {
           localStorage.setItem('userType', 'eleve');
@@ -135,16 +133,18 @@ export default function LoginPage() {
           return;
         }
       }
-  
-      setError('Utilisateur non trouvé');
+
+      // Si aucune correspondance trouvée dans aucune table
+      setError('Utilisateur non trouvé. Vérifiez votre nom et votre initiale.');
       setLoading(false);
+      
     } catch (err) {
-      setError('Erreur de connexion');
-      console.error(err);
+      console.error('Erreur inattendue lors de la connexion:', err);
+      setError('Une erreur est survenue. Veuillez réessayer.');
       setLoading(false);
     }
   };
-  
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
@@ -163,6 +163,7 @@ export default function LoginPage() {
               onChange={(e) => setNom(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
+              autoComplete="family-name"
             />
           </div>
 
@@ -177,6 +178,7 @@ export default function LoginPage() {
               maxLength={1}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
+              autoComplete="given-name-initial"
             />
           </div>
 
@@ -190,6 +192,7 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
+              autoComplete="current-password"
             />
             <p className="text-xs text-gray-500 mt-1">
               À la première connexion, ce mot de passe sera enregistré
@@ -197,7 +200,7 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
+            <div className={`p-3 rounded-lg text-sm ${error.includes('incorrect') || error.includes('non trouvé') ? 'bg-red-50 text-red-600' : 'bg-yellow-50 text-yellow-700'}`}>
               {error}
             </div>
           )}
@@ -205,14 +208,34 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50"
+            className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Connexion...' : 'Se connecter'}
+            {loading ? 'Connexion en cours...' : 'Se connecter'}
           </button>
         </form>
+
+        {/* Section debug - À retirer en production */}
+        <div className="mt-8 pt-6 border-t border-gray-200">
+          <details className="text-sm">
+            <summary className="cursor-pointer text-gray-500 font-medium">Informations de débogage</summary>
+            <div className="mt-2 p-3 bg-gray-50 rounded text-xs text-gray-600 space-y-1">
+              <p>Valeurs testées:</p>
+              <p>Nom: {nom || '(vide)'} → Normalisé: {nom.toUpperCase() || '(vide)'}</p>
+              <p>Initiale: {initiale || '(vide)'} → Normalisé: {initiale.toUpperCase() || '(vide)'}</p>
+              <button 
+                onClick={() => { 
+                  setNom('TEST'); 
+                  setInitiale('T'); 
+                  setPassword('test123'); 
+                }}
+                className="mt-2 text-blue-600 hover:text-blue-800 underline text-xs"
+              >
+                Remplir avec des données de test
+              </button>
+            </div>
+          </details>
+        </div>
       </div>
     </div>
   );
 }
-
-
