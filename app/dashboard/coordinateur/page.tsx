@@ -391,10 +391,8 @@ export default function CoordinateurDashboard() {
           const { error: guideError } = await supabase
             .from('guides')
             .insert([{
-              id: authData.user?.id,
               nom: newUser.nom,
-              initiale: newUser.initiale,
-              email: newUser.email
+              initiale: newUser.initiale
             }]);
 
           if (guideError) throw guideError;
@@ -444,10 +442,8 @@ export default function CoordinateurDashboard() {
           const { error: coordError } = await supabase
             .from('coordinateurs')
             .insert([{
-              id: coordAuthData.user?.id,
               nom: newUser.nom,
-              prenom: newUser.prenom,
-              email: newUser.email
+              prenom: newUser.prenom
             }]);
 
           if (coordError) throw coordError;
@@ -1552,7 +1548,6 @@ export default function CoordinateurDashboard() {
                         <>
                           <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
                           <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Initiale</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
                           <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
                         </>
                       )}
@@ -1568,7 +1563,6 @@ export default function CoordinateurDashboard() {
                         <>
                           <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
                           <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
                           <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
                         </>
                       )}
@@ -1598,7 +1592,6 @@ export default function CoordinateurDashboard() {
                           <>
                             <td className="px-4 py-3 text-sm">{user.nom}</td>
                             <td className="px-4 py-3 text-sm">{user.initiale}</td>
-                            <td className="px-4 py-3 text-sm">{user.email}</td>
                             <td className="px-4 py-3">
                               <button
                                 onClick={() => handleDeleteUser(user.id, user.nom)}
@@ -1630,7 +1623,6 @@ export default function CoordinateurDashboard() {
                           <>
                             <td className="px-4 py-3 text-sm">{user.nom}</td>
                             <td className="px-4 py-3 text-sm">{user.prenom}</td>
-                            <td className="px-4 py-3 text-sm">{user.email}</td>
                             <td className="px-4 py-3">
                               <button
                                 onClick={() => handleDeleteUser(user.id, user.nom, user.prenom)}
@@ -1782,5 +1774,6 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
