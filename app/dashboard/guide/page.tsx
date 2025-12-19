@@ -54,7 +54,8 @@ type TabType = 'guide' | 'lecteur-interne' | 'defenses';
 export default function GuideDashboard() {
   const [eleves, setEleves] = useState<Eleve[]>([]);
   const [elevesDisponibles, setElevesDisponibles] = useState<Eleve[]>([]);
-  const [defenses, setDefenses] = useState<Eleve[]>([]);
+  const [defensesProgrammees, setDefensesProgrammees] = useState<Eleve[]>([]);
+  const [defensesNonProgrammees, setDefensesNonProgrammees] = useState<Eleve[]>([]);
   const [guides, setGuides] = useState<Guide[]>([]);
   const [lecteursExternes, setLecteursExternes] = useState<LecteurExterne[]>([]);
   const [mediateurs, setMediateurs] = useState<Mediateur[]>([]);
@@ -209,8 +210,7 @@ export default function GuideDashboard() {
     try {
       setLoadingDefenses(true);
       
-      // Charger les défenses où l'utilisateur est soit guide, soit lecteur interne
-      // Maintenant on charge TOUS les élèves, même sans date de défense programmée
+      // Charger tous les élèves où l'utilisateur est soit guide, soit lecteur interne
       const { data: defensesData, error: defensesError } = await supabase
         .from('eleves')
         .select(`
@@ -221,8 +221,8 @@ export default function GuideDashboard() {
           mediateur:mediateurs!mediateur_id (nom, prenom)
         `)
         .or(`guide_id.eq.${guideId},lecteur_interne_id.eq.${guideId}`)
-        .order('date_defense', { ascending: true, nullsFirst: true })
-        .order('heure_defense', { ascending: true, nullsFirst: true })
+        .order('date_defense', { ascending: true, nullsFirst: false })
+        .order('heure_defense', { ascending: true, nullsFirst: false })
         .order('classe', { ascending: true })
         .order('nom', { ascending: true });
 
@@ -240,7 +240,18 @@ export default function GuideDashboard() {
         mediateur_prenom: eleve.mediateur?.prenom || '-'
       }));
 
-      setDefenses(defensesFormatted);
+      // Séparer les défenses programmées et non programmées
+      const programmees = defensesFormatted.filter(eleve => 
+        eleve.date_defense && eleve.heure_defense
+      );
+      
+      const nonProgrammees = defensesFormatted.filter(eleve => 
+        !eleve.date_defense || !eleve.heure_defense
+      );
+
+      setDefensesProgrammees(programmees);
+      setDefensesNonProgrammees(nonProgrammees);
+
     } catch (err) {
       console.error('Erreur chargement des défenses:', err);
     } finally {
@@ -646,7 +657,7 @@ export default function GuideDashboard() {
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-xl font-semibold text-gray-800">Défenses programmées</h2>
               <p className="text-gray-600 mt-1">
-                Liste de tous vos élèves (en tant que guide ou lecteur interne), avec ou sans défense programmée.
+                Liste de tous vos élèves (en tant que guide ou lecteur interne).
               </p>
             </div>
 
@@ -654,7 +665,7 @@ export default function GuideDashboard() {
               <div className="text-center py-12">
                 <div className="text-xl">Chargement des données...</div>
               </div>
-            ) : defenses.length === 0 ? (
+            ) : defensesProgrammees.length === 0 && defensesNonProgrammees.length === 0 ? (
               <div className="bg-white rounded-lg shadow p-8 text-center">
                 <div className="text-gray-400 text-4xl mb-4">📅</div>
                 <h3 className="text-lg font-medium text-gray-700 mb-2">Aucun élève trouvé</h3>
@@ -663,109 +674,214 @@ export default function GuideDashboard() {
                 </p>
               </div>
             ) : (
-              <div className="bg-white rounded-lg shadow overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-100 border-b">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Date</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Heure</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Classe</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Élève</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Catégorie</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Problématique</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Guide</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur interne</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur externe</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Médiateur</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Localisation</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Statut défense</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {defenses.map((eleve) => {
-                      const hasDefense = eleve.date_defense || eleve.heure_defense || eleve.localisation_defense;
-                      const isGuide = eleve.guide_id === userGuideId;
-                      const isLecteurInterne = eleve.lecteur_interne_id === userGuideId;
-                      
-                      return (
-                        <tr key={eleve.id} className="border-b hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
-                            {formatDate(eleve.date_defense)}
-                          </td>
-                          <td className="px-4 py-3 text-sm whitespace-nowrap">
-                            {eleve.heure_defense || '-'}
-                          </td>
-                          <td className="px-4 py-3 text-sm">{eleve.classe}</td>
-                          <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
-                            {eleve.nom} {eleve.prenom}
-                          </td>
-                          <td className="px-4 py-3 text-sm">
-                            {eleve.categorie ? (
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 whitespace-nowrap">
-                                {eleve.categorie}
-                              </span>
-                            ) : '-'}
-                          </td>
-                          <td className="px-4 py-3 text-sm">
-                            <div className="max-w-xs whitespace-pre-wrap break-words min-h-[40px]">
-                              {eleve.problematique || '-'}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-sm whitespace-nowrap">
-                            {eleve.guide_nom} {eleve.guide_initiale}.
-                            {isGuide && (
-                              <span className="ml-1 text-xs text-blue-600">(vous)</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-sm whitespace-nowrap">
-                            {eleve.lecteur_interne_nom ? (
-                              <span>
-                                {eleve.lecteur_interne_nom} {eleve.lecteur_interne_initiale}.
-                                {isLecteurInterne && (
-                                  <span className="ml-1 text-xs text-blue-600">(vous)</span>
-                                )}
-                              </span>
-                            ) : (
-                              '-'
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-sm whitespace-nowrap">
-                            {eleve.lecteur_externe_nom ? (
-                              <span>
-                                {eleve.lecteur_externe_prenom} {eleve.lecteur_externe_nom}
-                              </span>
-                            ) : (
-                              '-'
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-sm whitespace-nowrap">
-                            {eleve.mediateur_nom ? (
-                              <span>
-                                {eleve.mediateur_prenom} {eleve.mediateur_nom}
-                              </span>
-                            ) : (
-                              '-'
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-sm">
-                            {eleve.localisation_defense || '-'}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            {hasDefense ? (
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                Programmé
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                Non programmé
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+              <div className="space-y-8">
+                {/* Section des défenses programmées */}
+                {defensesProgrammees.length > 0 && (
+                  <div>
+                    <div className="mb-4">
+                      <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                        <span className="w-3 h-3 bg-green-500 rounded-full"></span>
+                        Défenses programmées ({defensesProgrammees.length})
+                      </h3>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Défenses avec date, heure et localisation définies.
+                      </p>
+                    </div>
+                    
+                    <div className="bg-white rounded-lg shadow overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-100 border-b">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Date</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Heure</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Localisation</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Classe</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-32">Élève</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Catégorie</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-96">Problématique</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Guide</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur interne</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur externe</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Médiateur</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {defensesProgrammees.map((eleve) => {
+                            const isGuide = eleve.guide_id === userGuideId;
+                            const isLecteurInterne = eleve.lecteur_interne_id === userGuideId;
+                            
+                            return (
+                              <tr key={eleve.id} className="border-b hover:bg-gray-50">
+                                <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
+                                  {formatDate(eleve.date_defense)}
+                                </td>
+                                <td className="px-4 py-3 text-sm whitespace-nowrap">
+                                  {eleve.heure_defense || '-'}
+                                </td>
+                                <td className="px-4 py-3 text-sm">
+                                  {eleve.localisation_defense || '-'}
+                                </td>
+                                <td className="px-4 py-3 text-sm">{eleve.classe}</td>
+                                <td className="px-4 py-3 text-sm">
+                                  <div className="flex flex-col min-w-0">
+                                    <span className="font-medium truncate">{eleve.nom}</span>
+                                    <span className="truncate">{eleve.prenom}</span>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 text-sm">
+                                  {eleve.categorie ? (
+                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 whitespace-nowrap">
+                                      {eleve.categorie}
+                                    </span>
+                                  ) : '-'}
+                                </td>
+                                <td className="px-4 py-3 text-sm">
+                                  <div className="whitespace-pre-wrap break-words min-h-[40px] max-w-96">
+                                    {eleve.problematique || '-'}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 text-sm whitespace-nowrap">
+                                  {eleve.guide_nom} {eleve.guide_initiale}.
+                                  {isGuide && (
+                                    <span className="ml-1 text-xs text-blue-600">(vous)</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 text-sm whitespace-nowrap">
+                                  {eleve.lecteur_interne_nom ? (
+                                    <span>
+                                      {eleve.lecteur_interne_nom} {eleve.lecteur_interne_initiale}.
+                                      {isLecteurInterne && (
+                                        <span className="ml-1 text-xs text-blue-600">(vous)</span>
+                                      )}
+                                    </span>
+                                  ) : (
+                                    '-'
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 text-sm whitespace-nowrap">
+                                  {eleve.lecteur_externe_nom ? (
+                                    <span>
+                                      {eleve.lecteur_externe_prenom} {eleve.lecteur_externe_nom}
+                                    </span>
+                                  ) : (
+                                    '-'
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 text-sm whitespace-nowrap">
+                                  {eleve.mediateur_nom ? (
+                                    <span>
+                                      {eleve.mediateur_prenom} {eleve.mediateur_nom}
+                                    </span>
+                                  ) : (
+                                    '-'
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Section des défenses non programmées */}
+                {defensesNonProgrammees.length > 0 && (
+                  <div>
+                    <div className="mb-4">
+                      <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                        <span className="w-3 h-3 bg-gray-400 rounded-full"></span>
+                        Défenses non programmées ({defensesNonProgrammees.length})
+                      </h3>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Défenses en attente de programmation.
+                      </p>
+                    </div>
+                    
+                    <div className="bg-white rounded-lg shadow overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-100 border-b">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Classe</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-32">Élève</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Catégorie</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-96">Problématique</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Guide</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur interne</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur externe</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Médiateur</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {defensesNonProgrammees.map((eleve) => {
+                            const isGuide = eleve.guide_id === userGuideId;
+                            const isLecteurInterne = eleve.lecteur_interne_id === userGuideId;
+                            
+                            return (
+                              <tr key={eleve.id} className="border-b hover:bg-gray-50">
+                                <td className="px-4 py-3 text-sm">{eleve.classe}</td>
+                                <td className="px-4 py-3 text-sm">
+                                  <div className="flex flex-col min-w-0">
+                                    <span className="font-medium truncate">{eleve.nom}</span>
+                                    <span className="truncate">{eleve.prenom}</span>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 text-sm">
+                                  {eleve.categorie ? (
+                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 whitespace-nowrap">
+                                      {eleve.categorie}
+                                    </span>
+                                  ) : '-'}
+                                </td>
+                                <td className="px-4 py-3 text-sm">
+                                  <div className="whitespace-pre-wrap break-words min-h-[40px] max-w-96">
+                                    {eleve.problematique || '-'}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 text-sm whitespace-nowrap">
+                                  {eleve.guide_nom} {eleve.guide_initiale}.
+                                  {isGuide && (
+                                    <span className="ml-1 text-xs text-blue-600">(vous)</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 text-sm whitespace-nowrap">
+                                  {eleve.lecteur_interne_nom ? (
+                                    <span>
+                                      {eleve.lecteur_interne_nom} {eleve.lecteur_interne_initiale}.
+                                      {isLecteurInterne && (
+                                        <span className="ml-1 text-xs text-blue-600">(vous)</span>
+                                      )}
+                                    </span>
+                                  ) : (
+                                    '-'
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 text-sm whitespace-nowrap">
+                                  {eleve.lecteur_externe_nom ? (
+                                    <span>
+                                      {eleve.lecteur_externe_prenom} {eleve.lecteur_externe_nom}
+                                    </span>
+                                  ) : (
+                                    '-'
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 text-sm whitespace-nowrap">
+                                  {eleve.mediateur_nom ? (
+                                    <span>
+                                      {eleve.mediateur_prenom} {eleve.mediateur_nom}
+                                    </span>
+                                  ) : (
+                                    '-'
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -778,7 +894,7 @@ export default function GuideDashboard() {
             <span>
               {activeTab === 'guide' && 'Vous pouvez modifier la problématique en cliquant dessus, et les convocations via les menus déroulants.'}
               {activeTab === 'lecteur-interne' && 'Sélectionnez les élèves pour lesquels vous serez lecteur interne. Un élève ne peut avoir qu\'un seul lecteur interne.'}
-              {activeTab === 'defenses' && 'Affichage de tous vos élèves (guide ou lecteur interne), avec ou sans défense programmée.'}
+              {activeTab === 'defenses' && 'Affichage séparé des défenses programmées et non programmées.'}
             </span>
           </p>
         </div>
