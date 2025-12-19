@@ -24,6 +24,8 @@ interface Eleve {
   lecteur_interne_initiale?: string;
   lecteur_externe_nom?: string;
   lecteur_externe_prenom?: string;
+  mediateur_nom?: string;
+  mediateur_prenom?: string;
 }
 
 interface Guide {
