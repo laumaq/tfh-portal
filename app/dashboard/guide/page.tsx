@@ -65,6 +65,8 @@ export default function GuideDashboard() {
   const [editingCell, setEditingCell] = useState<{id: string, field: string} | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('guide');
   const [selectedEleves, setSelectedEleves] = useState<string[]>([]);
+  const [selectedCategorie, setSelectedCategorie] = useState<string>('toutes');
+  const [categories, setCategories] = useState<string[]>([]);
   const router = useRouter();
 
   // Options de convocation identiques à celles du coordinateur
@@ -181,6 +183,12 @@ export default function GuideDashboard() {
 
       setElevesDisponibles(elevesDispoFormatted);
 
+      // Extraire les catégories uniques pour le filtre
+      const uniqueCategories = Array.from(
+        new Set(elevesDispoFormatted.map(e => e.categorie).filter(Boolean))
+      ).sort();
+      setCategories(uniqueCategories);
+
       // Pré-sélectionner les élèves où l'utilisateur est déjà lecteur interne
       const preSelected = elevesDispoFormatted
         .filter(e => e.lecteur_interne_id === guideId)
@@ -199,6 +207,7 @@ export default function GuideDashboard() {
       setLoadingDefenses(true);
       
       // Charger les défenses où l'utilisateur est soit guide, soit lecteur interne
+      // Maintenant on charge TOUS les élèves, même sans date de défense programmée
       const { data: defensesData, error: defensesError } = await supabase
         .from('eleves')
         .select(`
@@ -209,9 +218,10 @@ export default function GuideDashboard() {
           mediateur:mediateurs!mediateur_id (nom, prenom)
         `)
         .or(`guide_id.eq.${guideId},lecteur_interne_id.eq.${guideId}`)
-        .not('date_defense', 'is', null)
-        .order('date_defense', { ascending: true })
-        .order('heure_defense', { ascending: true });
+        .order('date_defense', { ascending: true, nullsFirst: true })
+        .order('heure_defense', { ascending: true, nullsFirst: true })
+        .order('classe', { ascending: true })
+        .order('nom', { ascending: true });
 
       if (defensesError) throw defensesError;
 
@@ -241,6 +251,13 @@ export default function GuideDashboard() {
     }
   }, [activeTab, userGuideId]);
 
+  // Filtrer les élèves disponibles par catégorie
+  const filteredElevesDisponibles = elevesDisponibles.filter(eleve => {
+    if (selectedCategorie === 'toutes') return true;
+    if (selectedCategorie === 'sans-categorie') return !eleve.categorie;
+    return eleve.categorie === selectedCategorie;
+  });
+
   const handleToggleSelection = (eleveId: string) => {
     setSelectedEleves(prev => {
       if (prev.includes(eleveId)) {
@@ -249,6 +266,14 @@ export default function GuideDashboard() {
         return [...prev, eleveId];
       }
     });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedEleves.length === filteredElevesDisponibles.length) {
+      setSelectedEleves([]);
+    } else {
+      setSelectedEleves(filteredElevesDisponibles.map(e => e.id));
+    }
   };
 
   const handleSaveLecteurInterne = async () => {
@@ -500,26 +525,48 @@ export default function GuideDashboard() {
           </>
         ) : activeTab === 'lecteur-interne' ? (
           <div className="space-y-6">
-            {/* En-tête avec bouton de sauvegarde */}
+            {/* En-tête avec filtres et bouton de sauvegarde */}
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
+                <div className="flex-1">
                   <h2 className="text-xl font-semibold text-gray-800">Sélection des élèves comme lecteur interne</h2>
                   <p className="text-gray-600 mt-1">
                     Sélectionnez les élèves pour lesquels vous serez lecteur interne.
                     Les élèves sélectionnés n'apparaîtront plus dans la liste des autres guides.
                   </p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-gray-600">
-                    {selectedEleves.length} élève(s) sélectionné(s)
-                  </span>
-                  <button
-                    onClick={handleSaveLecteurInterne}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
-                  >
-                    Enregistrer la sélection
-                  </button>
+                <div className="flex flex-col md:items-end gap-3">
+                  {/* Filtre par catégorie */}
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                      Filtrer par catégorie:
+                    </label>
+                    <select
+                      value={selectedCategorie}
+                      onChange={(e) => setSelectedCategorie(e.target.value)}
+                      className="border rounded px-3 py-1 text-sm"
+                    >
+                      <option value="toutes">Toutes les catégories</option>
+                      <option value="sans-categorie">Sans catégorie</option>
+                      {categories.map(categorie => (
+                        <option key={categorie} value={categorie}>
+                          {categorie}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-gray-600 whitespace-nowrap">
+                      {selectedEleves.length} élève(s) sélectionné(s)
+                    </span>
+                    <button
+                      onClick={handleSaveLecteurInterne}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                    >
+                      Enregistrer la sélection
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -532,14 +579,8 @@ export default function GuideDashboard() {
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-12">
                       <input
                         type="checkbox"
-                        checked={selectedEleves.length === elevesDisponibles.length && elevesDisponibles.length > 0}
-                        onChange={() => {
-                          if (selectedEleves.length === elevesDisponibles.length) {
-                            setSelectedEleves([]);
-                          } else {
-                            setSelectedEleves(elevesDisponibles.map(e => e.id));
-                          }
-                        }}
+                        checked={selectedEleves.length === filteredElevesDisponibles.length && filteredElevesDisponibles.length > 0}
+                        onChange={handleSelectAll}
                         className="w-4 h-4 text-blue-600 rounded"
                       />
                     </th>
@@ -553,43 +594,61 @@ export default function GuideDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {elevesDisponibles.map((eleve) => (
-                    <tr key={eleve.id} className="border-b hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <input
-                          type="checkbox"
-                          checked={selectedEleves.includes(eleve.id)}
-                          onChange={() => handleToggleSelection(eleve.id)}
-                          className="w-4 h-4 text-blue-600 rounded"
-                        />
-                      </td>
-                      <td className="px-4 py-3 text-sm">{eleve.classe}</td>
-                      <td className="px-4 py-3 text-sm font-medium">{eleve.nom}</td>
-                      <td className="px-4 py-3 text-sm">{eleve.prenom}</td>
-                      <td className="px-4 py-3 text-sm">{eleve.categorie || '-'}</td>
-                      <td className="px-4 py-3 text-sm">
-                        <div className="line-clamp-2 max-w-xs">
-                          {eleve.problematique || '-'}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        {eleve.guide_nom} {eleve.guide_initiale}.
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        {eleve.lecteur_interne_id === userGuideId ? (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            Vous
-                          </span>
-                        ) : eleve.lecteur_interne_id ? (
-                          <span className="text-gray-600">
-                            {guides.find(g => g.id === eleve.lecteur_interne_id)?.nom || 'Autre guide'}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
+                  {filteredElevesDisponibles.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
+                        {selectedCategorie === 'toutes' 
+                          ? "Aucun élève disponible pour le moment."
+                          : `Aucun élève trouvé dans la catégorie "${selectedCategorie === 'sans-categorie' ? 'Sans catégorie' : selectedCategorie}".`}
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    filteredElevesDisponibles.map((eleve) => (
+                      <tr key={eleve.id} className="border-b hover:bg-gray-50">
+                        <td className="px-4 py-3">
+                          <input
+                            type="checkbox"
+                            checked={selectedEleves.includes(eleve.id)}
+                            onChange={() => handleToggleSelection(eleve.id)}
+                            className="w-4 h-4 text-blue-600 rounded"
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-sm">{eleve.classe}</td>
+                        <td className="px-4 py-3 text-sm font-medium">{eleve.nom}</td>
+                        <td className="px-4 py-3 text-sm">{eleve.prenom}</td>
+                        <td className="px-4 py-3 text-sm">
+                          {eleve.categorie ? (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              {eleve.categorie}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          <div className="line-clamp-2 max-w-xs">
+                            {eleve.problematique || '-'}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          {eleve.guide_nom} {eleve.guide_initiale}.
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          {eleve.lecteur_interne_id === userGuideId ? (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              Vous
+                            </span>
+                          ) : eleve.lecteur_interne_id ? (
+                            <span className="text-gray-600">
+                              {guides.find(g => g.id === eleve.lecteur_interne_id)?.nom || 'Autre guide'}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -600,20 +659,20 @@ export default function GuideDashboard() {
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-xl font-semibold text-gray-800">Défenses programmées</h2>
               <p className="text-gray-600 mt-1">
-                Liste des défenses où vous êtes impliqué en tant que guide ou lecteur interne.
+                Liste de tous vos élèves (en tant que guide ou lecteur interne), avec ou sans défense programmée.
               </p>
             </div>
 
             {loadingDefenses ? (
               <div className="text-center py-12">
-                <div className="text-xl">Chargement des défenses...</div>
+                <div className="text-xl">Chargement des données...</div>
               </div>
             ) : defenses.length === 0 ? (
               <div className="bg-white rounded-lg shadow p-8 text-center">
                 <div className="text-gray-400 text-4xl mb-4">📅</div>
-                <h3 className="text-lg font-medium text-gray-700 mb-2">Aucune défense programmée</h3>
+                <h3 className="text-lg font-medium text-gray-700 mb-2">Aucun élève trouvé</h3>
                 <p className="text-gray-500">
-                  Aucune défense n'est actuellement programmée pour vos élèves.
+                  Vous n'avez pas d'élèves assignés (en tant que guide ou lecteur interne).
                 </p>
               </div>
             ) : (
@@ -632,65 +691,92 @@ export default function GuideDashboard() {
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur externe</th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Médiateur</th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Localisation</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Statut défense</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {defenses.map((eleve) => (
-                      <tr key={eleve.id} className="border-b hover:bg-gray-50">
-                        <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
-                          {formatDate(eleve.date_defense)}
-                        </td>
-                        <td className="px-4 py-3 text-sm whitespace-nowrap">
-                          {eleve.heure_defense || '-'}
-                        </td>
-                        <td className="px-4 py-3 text-sm">{eleve.classe}</td>
-                        <td className="px-4 py-3 text-sm font-medium">
-                          {eleve.nom} {eleve.prenom}
-                        </td>
-                        <td className="px-4 py-3 text-sm">{eleve.categorie || '-'}</td>
-                        <td className="px-4 py-3 text-sm">
-                          <div className="line-clamp-2 max-w-xs">
-                            {eleve.problematique || '-'}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          {eleve.guide_nom} {eleve.guide_initiale}.
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          {eleve.lecteur_interne_nom ? (
-                            <span>
-                              {eleve.lecteur_interne_nom} {eleve.lecteur_interne_initiale}.
-                              {eleve.lecteur_interne_id === userGuideId && (
-                                <span className="ml-1 text-xs text-blue-600">(vous)</span>
-                              )}
-                            </span>
-                          ) : (
-                            '-'
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          {eleve.lecteur_externe_nom ? (
-                            <span>
-                              {eleve.lecteur_externe_prenom} {eleve.lecteur_externe_nom}
-                            </span>
-                          ) : (
-                            '-'
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          {eleve.mediateur_nom ? (
-                            <span>
-                              {eleve.mediateur_prenom} {eleve.mediateur_nom}
-                            </span>
-                          ) : (
-                            '-'
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          {eleve.localisation_defense || '-'}
-                        </td>
-                      </tr>
-                    ))}
+                    {defenses.map((eleve) => {
+                      const hasDefense = eleve.date_defense || eleve.heure_defense || eleve.localisation_defense;
+                      const isGuide = eleve.guide_id === userGuideId;
+                      const isLecteurInterne = eleve.lecteur_interne_id === userGuideId;
+                      
+                      return (
+                        <tr key={eleve.id} className="border-b hover:bg-gray-50">
+                          <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
+                            {formatDate(eleve.date_defense)}
+                          </td>
+                          <td className="px-4 py-3 text-sm whitespace-nowrap">
+                            {eleve.heure_defense || '-'}
+                          </td>
+                          <td className="px-4 py-3 text-sm">{eleve.classe}</td>
+                          <td className="px-4 py-3 text-sm font-medium">
+                            {eleve.nom} {eleve.prenom}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {eleve.categorie ? (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                {eleve.categorie}
+                              </span>
+                            ) : '-'}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            <div className="line-clamp-2 max-w-xs">
+                              {eleve.problematique || '-'}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {eleve.guide_nom} {eleve.guide_initiale}.
+                            {isGuide && (
+                              <span className="ml-1 text-xs text-blue-600">(vous)</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {eleve.lecteur_interne_nom ? (
+                              <span>
+                                {eleve.lecteur_interne_nom} {eleve.lecteur_interne_initiale}.
+                                {isLecteurInterne && (
+                                  <span className="ml-1 text-xs text-blue-600">(vous)</span>
+                                )}
+                              </span>
+                            ) : (
+                              '-'
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {eleve.lecteur_externe_nom ? (
+                              <span>
+                                {eleve.lecteur_externe_prenom} {eleve.lecteur_externe_nom}
+                              </span>
+                            ) : (
+                              '-'
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {eleve.mediateur_nom ? (
+                              <span>
+                                {eleve.mediateur_prenom} {eleve.mediateur_nom}
+                              </span>
+                            ) : (
+                              '-'
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {eleve.localisation_defense || '-'}
+                          </td>
+                          <td className="px-4 py-3">
+                            {hasDefense ? (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                Programmé
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                Non programmé
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -705,7 +791,7 @@ export default function GuideDashboard() {
             <span>
               {activeTab === 'guide' && 'Vous pouvez modifier la problématique en cliquant dessus, et les convocations via les menus déroulants.'}
               {activeTab === 'lecteur-interne' && 'Sélectionnez les élèves pour lesquels vous serez lecteur interne. Un élève ne peut avoir qu\'un seul lecteur interne.'}
-              {activeTab === 'defenses' && 'Affichage des défenses programmées pour vos élèves (guide ou lecteur interne).'}
+              {activeTab === 'defenses' && 'Affichage de tous vos élèves (guide ou lecteur interne), avec ou sans défense programmée.'}
             </span>
           </p>
         </div>
