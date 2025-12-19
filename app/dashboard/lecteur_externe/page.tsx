@@ -97,9 +97,10 @@ export default function LecteurExterneDashboard() {
           *,
           guide:guides!guide_id (nom, initiale),
           lecteur_interne:guides!lecteur_interne_id (nom, initiale),
-          lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom)
+          lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
+          mediateur:mediateurs!mediateur_id (nom, prenom)  // <-- Ajouter cette jointure
         `)
-        .eq('lecteur_externe_id', lecteurExterneId)  // <-- CHANGER ICI
+        .eq('mediateurs_id', mediateurId) 
         .order('date_defense', { ascending: true, nullsFirst: true })
         .order('heure_defense', { ascending: true, nullsFirst: true })
         .order('classe', { ascending: true })
@@ -114,8 +115,8 @@ export default function LecteurExterneDashboard() {
         guide_initiale: eleve.guide?.initiale || '-',
         lecteur_interne_nom: eleve.lecteur_interne?.nom || '-',
         lecteur_interne_initiale: eleve.lecteur_interne?.initiale || '-',
-        lecteur_externe_nom: eleve.lecteur_externe?.nom || '-',
-        lecteur_externe_prenom: eleve.lecteur_externe?.prenom || '-'
+        mediateur_nom: eleve.mediateur?.nom || '-',
+        mediateur_prenom: eleve.mediateur?.prenom || '-'
       }));
   
       setEleves(elevesFormatted);
@@ -207,7 +208,7 @@ export default function LecteurExterneDashboard() {
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Catégorie</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Guide</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur interne</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur externe</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Médiateur</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Problématique</th>
                   </tr>
                 </thead>
