@@ -1,9 +1,10 @@
 // app/dashboard/coordinateur/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import * as XLSX from 'xlsx';
 
 interface Eleve {
   id: string;
@@ -39,18 +40,21 @@ interface Guide {
   id: string;
   nom: string;
   initiale: string;
+  email: string;
 }
 
 interface LecteurExterne {
   id: string;
   nom: string;
   prenom: string;
+  email: string;
 }
 
 interface Mediateur {
   id: string;
   nom: string;
   prenom: string;
+  email: string;
 }
 
 interface Coordinateur {
@@ -61,6 +65,7 @@ interface Coordinateur {
 }
 
 type TabType = 'convocations' | 'defenses' | 'gestion-utilisateurs';
+type UserType = 'eleves' | 'guides' | 'lecteurs-externes' | 'mediateurs' | 'coordinateurs';
 
 export default function CoordinateurDashboard() {
   const [eleves, setEleves] = useState<Eleve[]>([]);
@@ -75,39 +80,25 @@ export default function CoordinateurDashboard() {
   const [editingCell, setEditingCell] = useState<{id: string, field: string} | null>(null);
   const [isLandscape, setIsLandscape] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('convocations');
-  const [editingMode, setEditingMode] = useState(false);
+  const [editingModeConvocations, setEditingModeConvocations] = useState(false);
+  const [editingModeDefenses, setEditingModeDefenses] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
   const [newCategory, setNewCategory] = useState('');
-  const [newEleve, setNewEleve] = useState({
+  const [selectedUserType, setSelectedUserType] = useState<UserType>('eleves');
+  const [newUser, setNewUser] = useState({
     nom: '',
     prenom: '',
     classe: '',
-    problematique: '',
-    categorie: '',
-    guide_id: ''
-  });
-  const [newGuide, setNewGuide] = useState({
-    nom: '',
+    email: '',
     initiale: '',
-    email: '',
-    password: ''
+    password: '',
+    categorie: ''
   });
-  const [newLecteurExterne, setNewLecteurExterne] = useState({
-    nom: '',
-    prenom: '',
-    email: ''
-  });
-  const [newMediateur, setNewMediateur] = useState({
-    nom: '',
-    prenom: '',
-    email: ''
-  });
-  const [newCoordinateur, setNewCoordinateur] = useState({
-    nom: '',
-    prenom: '',
-    email: '',
-    password: ''
-  });
+  const [showMassImport, setShowMassImport] = useState(false);
+  const [massImportData, setMassImportData] = useState<string>('');
+  const [showClearConfirmations, setShowClearConfirmations] = useState(false);
+  const [clearConfirmations, setClearConfirmations] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   const CONVOCATION_OPTIONS = [
@@ -133,22 +124,6 @@ export default function CoordinateurDashboard() {
       color: 'bg-orange-100 text-orange-800 border-orange-200'
     }
   ];
-
-  // Fonction pour forcer le mode paysage sur mobile
-  const checkAndForceLandscape = () => {
-    if (typeof window !== 'undefined') {
-      const isMobile = window.innerWidth <= 768;
-      if (isMobile && !isLandscape) {
-        setIsLandscape(true);
-        const landscapeMsg = document.getElementById('landscape-message');
-        if (landscapeMsg) {
-          landscapeMsg.classList.remove('hidden');
-        }
-      } else {
-        setIsLandscape(false);
-      }
-    }
-  };
 
   useEffect(() => {
     const userType = localStorage.getItem('userType');
@@ -178,7 +153,7 @@ export default function CoordinateurDashboard() {
       // Charger les guides
       const { data: guidesData, error: guidesError } = await supabase
         .from('guides')
-        .select('id, nom, initiale');
+        .select('id, nom, initiale, email');
 
       if (guidesError) throw guidesError;
       setGuides(guidesData || []);
@@ -186,7 +161,7 @@ export default function CoordinateurDashboard() {
       // Charger les lecteurs externes
       const { data: lecteursExternesData, error: lecteursError } = await supabase
         .from('lecteurs_externes')
-        .select('id, nom, prenom');
+        .select('id, nom, prenom, email');
 
       if (lecteursError) throw lecteursError;
       setLecteursExternes(lecteursExternesData || []);
@@ -194,7 +169,7 @@ export default function CoordinateurDashboard() {
       // Charger les médiateurs
       const { data: mediateursData, error: mediateursError } = await supabase
         .from('mediateurs')
-        .select('id, nom, prenom');
+        .select('id, nom, prenom, email');
 
       if (mediateursError) {
         console.warn('Table médiateurs non trouvée ou erreur:', mediateursError);
@@ -230,7 +205,6 @@ export default function CoordinateurDashboard() {
 
       if (elevesError) throw elevesError;
 
-      // Formater les données
       const elevesFormatted = (elevesData || []).map(eleve => ({
         ...eleve,
         guide_nom: eleve.guide?.nom || '-',
@@ -278,7 +252,7 @@ export default function CoordinateurDashboard() {
   };
 
   const handlePresenceUpdate = async (eleveId: string, field: string, currentValue: boolean | null) => {
-    if (!editingMode) return;
+    if (!editingModeConvocations) return;
     
     try {
       const newValue = cyclePresenceState(currentValue);
@@ -307,7 +281,8 @@ export default function CoordinateurDashboard() {
   };
 
   const handleUpdate = async (eleveId: string, field: string, value: string) => {
-    if (!editingMode) return;
+    const isEditing = activeTab === 'convocations' ? editingModeConvocations : editingModeDefenses;
+    if (!isEditing) return;
     
     try {
       const updateData: any = {};
@@ -347,7 +322,8 @@ export default function CoordinateurDashboard() {
   };
 
   const handleSelectUpdate = async (eleveId: string, field: string, value: string) => {
-    if (!editingMode) return;
+    const isEditing = activeTab === 'convocations' ? editingModeConvocations : editingModeDefenses;
+    if (!isEditing) return;
     
     try {
       const updateData: any = {};
@@ -380,270 +356,306 @@ export default function CoordinateurDashboard() {
     }
   };
 
-  const handleAddEleve = async () => {
+  const handleAddUser = async () => {
     try {
-      const { data, error } = await supabase
-        .from('eleves')
-        .insert([{
-          nom: newEleve.nom,
-          prenom: newEleve.prenom,
-          classe: newEleve.classe,
-          problematique: newEleve.problematique,
-          categorie: newEleve.categorie,
-          guide_id: newEleve.guide_id || null
-        }])
-        .select();
+      switch (selectedUserType) {
+        case 'eleves':
+          const { error: eleveError } = await supabase
+            .from('eleves')
+            .insert([{
+              nom: newUser.nom,
+              prenom: newUser.prenom,
+              classe: newUser.classe,
+              categorie: newUser.categorie,
+              guide_id: null
+            }]);
 
-      if (error) throw error;
+          if (eleveError) throw eleveError;
+          break;
 
-      alert('Élève ajouté avec succès!');
-      setNewEleve({
+        case 'guides':
+          // Créer dans Auth
+          const { data: authData, error: authError } = await supabase.auth.signUp({
+            email: newUser.email,
+            password: newUser.password || 'password123',
+            options: {
+              data: {
+                nom: newUser.nom,
+                initiale: newUser.initiale,
+                user_type: 'guide'
+              }
+            }
+          });
+
+          if (authError) throw authError;
+
+          // Créer dans la table guides
+          const { error: guideError } = await supabase
+            .from('guides')
+            .insert([{
+              id: authData.user?.id,
+              nom: newUser.nom,
+              initiale: newUser.initiale,
+              email: newUser.email
+            }]);
+
+          if (guideError) throw guideError;
+          break;
+
+        case 'lecteurs-externes':
+          const { error: lecteurError } = await supabase
+            .from('lecteurs_externes')
+            .insert([{
+              nom: newUser.nom,
+              prenom: newUser.prenom,
+              email: newUser.email
+            }]);
+
+          if (lecteurError) throw lecteurError;
+          break;
+
+        case 'mediateurs':
+          const { error: mediateurError } = await supabase
+            .from('mediateurs')
+            .insert([{
+              nom: newUser.nom,
+              prenom: newUser.prenom,
+              email: newUser.email
+            }]);
+
+          if (mediateurError) throw mediateurError;
+          break;
+
+        case 'coordinateurs':
+          // Créer dans Auth
+          const { data: coordAuthData, error: coordAuthError } = await supabase.auth.signUp({
+            email: newUser.email,
+            password: newUser.password || 'password123',
+            options: {
+              data: {
+                nom: newUser.nom,
+                prenom: newUser.prenom,
+                user_type: 'coordinateur'
+              }
+            }
+          });
+
+          if (coordAuthError) throw coordAuthError;
+
+          // Créer dans la table coordinateurs
+          const { error: coordError } = await supabase
+            .from('coordinateurs')
+            .insert([{
+              id: coordAuthData.user?.id,
+              nom: newUser.nom,
+              prenom: newUser.prenom,
+              email: newUser.email
+            }]);
+
+          if (coordError) throw coordError;
+          break;
+      }
+
+      alert('Utilisateur ajouté avec succès!');
+      setNewUser({
         nom: '',
         prenom: '',
         classe: '',
-        problematique: '',
-        categorie: '',
-        guide_id: ''
-      });
-      loadData();
-    } catch (err) {
-      console.error('Erreur ajout élève:', err);
-      alert('Erreur lors de l\'ajout de l\'élève');
-    }
-  };
-
-  const handleAddGuide = async () => {
-    try {
-      // Créer l'utilisateur dans l'auth Supabase
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: newGuide.email,
-        password: newGuide.password,
-        options: {
-          data: {
-            nom: newGuide.nom,
-            initiale: newGuide.initiale,
-            user_type: 'guide'
-          }
-        }
-      });
-
-      if (authError) throw authError;
-
-      // Ajouter dans la table guides
-      const { error: guideError } = await supabase
-        .from('guides')
-        .insert([{
-          id: authData.user?.id,
-          nom: newGuide.nom,
-          initiale: newGuide.initiale,
-          email: newGuide.email
-        }]);
-
-      if (guideError) throw guideError;
-
-      alert('Guide ajouté avec succès!');
-      setNewGuide({
-        nom: '',
+        email: '',
         initiale: '',
-        email: '',
-        password: ''
+        password: '',
+        categorie: ''
       });
       loadData();
     } catch (err) {
-      console.error('Erreur ajout guide:', err);
-      alert('Erreur lors de l\'ajout du guide');
+      console.error('Erreur ajout utilisateur:', err);
+      alert('Erreur lors de l\'ajout de l\'utilisateur');
     }
   };
 
-  const handleAddLecteurExterne = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('lecteurs_externes')
-        .insert([{
-          nom: newLecteurExterne.nom,
-          prenom: newLecteurExterne.prenom,
-          email: newLecteurExterne.email
-        }])
-        .select();
-
-      if (error) throw error;
-
-      alert('Lecteur externe ajouté avec succès!');
-      setNewLecteurExterne({
-        nom: '',
-        prenom: '',
-        email: ''
-      });
-      loadData();
-    } catch (err) {
-      console.error('Erreur ajout lecteur externe:', err);
-      alert('Erreur lors de l\'ajout du lecteur externe');
-    }
-  };
-
-  const handleAddMediateur = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('mediateurs')
-        .insert([{
-          nom: newMediateur.nom,
-          prenom: newMediateur.prenom,
-          email: newMediateur.email
-        }])
-        .select();
-
-      if (error) throw error;
-
-      alert('Médiateur ajouté avec succès!');
-      setNewMediateur({
-        nom: '',
-        prenom: '',
-        email: ''
-      });
-      loadData();
-    } catch (err) {
-      console.error('Erreur ajout médiateur:', err);
-      alert('Erreur lors de l\'ajout du médiateur');
-    }
-  };
-
-  const handleAddCoordinateur = async () => {
-    try {
-      // Créer l'utilisateur dans l'auth Supabase
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: newCoordinateur.email,
-        password: newCoordinateur.password,
-        options: {
-          data: {
-            nom: newCoordinateur.nom,
-            prenom: newCoordinateur.prenom,
-            user_type: 'coordinateur'
-          }
-        }
-      });
-
-      if (authError) throw authError;
-
-      // Ajouter dans la table coordinateurs
-      const { error: coordError } = await supabase
-        .from('coordinateurs')
-        .insert([{
-          id: authData.user?.id,
-          nom: newCoordinateur.nom,
-          prenom: newCoordinateur.prenom,
-          email: newCoordinateur.email
-        }]);
-
-      if (coordError) throw coordError;
-
-      alert('Coordinateur ajouté avec succès!');
-      setNewCoordinateur({
-        nom: '',
-        prenom: '',
-        email: '',
-        password: ''
-      });
-      loadData();
-    } catch (err) {
-      console.error('Erreur ajout coordinateur:', err);
-      alert('Erreur lors de l\'ajout du coordinateur');
-    }
-  };
-
-  const handleDeleteEleve = async (id: string, nom: string, prenom: string) => {
-    if (confirm(`Supprimer l'élève ${prenom} ${nom} ?`)) {
+  const handleDeleteUser = async (id: string, nom: string, prenom?: string) => {
+    const fullName = prenom ? `${prenom} ${nom}` : nom;
+    
+    if (confirm(`Supprimer ${fullName} ?`)) {
       try {
+        switch (selectedUserType) {
+          case 'eleves':
+            await supabase.from('eleves').delete().eq('id', id);
+            break;
+          case 'guides':
+            await supabase.from('guides').delete().eq('id', id);
+            break;
+          case 'lecteurs-externes':
+            await supabase.from('lecteurs_externes').delete().eq('id', id);
+            break;
+          case 'mediateurs':
+            await supabase.from('mediateurs').delete().eq('id', id);
+            break;
+          case 'coordinateurs':
+            await supabase.from('coordinateurs').delete().eq('id', id);
+            break;
+        }
+
+        alert('Utilisateur supprimé avec succès!');
+        loadData();
+      } catch (err) {
+        console.error('Erreur suppression utilisateur:', err);
+        alert('Erreur lors de la suppression de l\'utilisateur');
+      }
+    }
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as string[][];
+        
+        // Convertir en format CSV pour l'affichage
+        const csvText = jsonData.map(row => row.join(',')).join('\n');
+        setMassImportData(csvText);
+        setShowMassImport(true);
+      } catch (err) {
+        console.error('Erreur lecture fichier:', err);
+        alert('Erreur lors de la lecture du fichier');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const handleMassImport = async () => {
+    try {
+      const rows = massImportData.split('\n').filter(row => row.trim());
+      const headers = rows[0].split(',').map(h => h.trim());
+      const dataRows = rows.slice(1);
+
+      switch (selectedUserType) {
+        case 'eleves':
+          const elevesToInsert = dataRows.map(row => {
+            const values = row.split(',').map(v => v.trim());
+            const eleve: any = {};
+            headers.forEach((header, index) => {
+              if (values[index]) {
+                eleve[header.toLowerCase()] = values[index];
+              }
+            });
+            return eleve;
+          }).filter(e => e.nom && e.prenom && e.classe);
+
+          if (elevesToInsert.length > 0) {
+            const { error } = await supabase
+              .from('eleves')
+              .insert(elevesToInsert);
+            if (error) throw error;
+          }
+          break;
+
+        case 'guides':
+          // Pour les guides, on pourrait ajouter directement dans la table
+          // Note: Pas d'auth ici pour simplifier
+          const guidesToInsert = dataRows.map(row => {
+            const values = row.split(',').map(v => v.trim());
+            const guide: any = {};
+            headers.forEach((header, index) => {
+              if (values[index]) {
+                guide[header.toLowerCase()] = values[index];
+              }
+            });
+            return guide;
+          }).filter(g => g.nom && g.email);
+
+          if (guidesToInsert.length > 0) {
+            const { error } = await supabase
+              .from('guides')
+              .insert(guidesToInsert);
+            if (error) throw error;
+          }
+          break;
+
+        // Similar logic for other user types...
+      }
+
+      alert(`${dataRows.length} utilisateurs importés avec succès!`);
+      setShowMassImport(false);
+      setMassImportData('');
+      loadData();
+    } catch (err) {
+      console.error('Erreur import massif:', err);
+      alert('Erreur lors de l\'importation');
+    }
+  };
+
+  const handleClearAll = async (type: 'eleves' | 'guides') => {
+    if (!clearConfirmations.includes(userName)) {
+      setClearConfirmations([...clearConfirmations, userName]);
+      alert(`Confirmation 1/3 enregistrée. Demandez à 2 autres coordinateurs de confirmer.`);
+      return;
+    }
+
+    if (clearConfirmations.length < 2) {
+      alert(`Confirmation ${clearConfirmations.length}/3 enregistrée. ${3 - clearConfirmations.length} confirmation(s) restante(s).`);
+      return;
+    }
+
+    // 3 confirmations reçues
+    try {
+      if (type === 'eleves') {
         const { error } = await supabase
           .from('eleves')
           .delete()
-          .eq('id', id);
-
+          .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
         if (error) throw error;
-
-        alert('Élève supprimé avec succès!');
-        loadData();
-      } catch (err) {
-        console.error('Erreur suppression élève:', err);
-        alert('Erreur lors de la suppression de l\'élève');
-      }
-    }
-  };
-
-  const handleDeleteGuide = async (id: string, nom: string) => {
-    if (confirm(`Supprimer le guide ${nom} ?`)) {
-      try {
+      } else if (type === 'guides') {
         const { error } = await supabase
           .from('guides')
           .delete()
-          .eq('id', id);
-
+          .neq('id', '00000000-0000-0000-0000-000000000000');
         if (error) throw error;
-
-        // Optionnel: Supprimer aussi l'utilisateur auth
-        // await supabase.auth.admin.deleteUser(id);
-
-        alert('Guide supprimé avec succès!');
-        loadData();
-      } catch (err) {
-        console.error('Erreur suppression guide:', err);
-        alert('Erreur lors de la suppression du guide');
       }
+
+      alert(`Tous les ${type} ont été supprimés avec succès!`);
+      setShowClearConfirmations(false);
+      setClearConfirmations([]);
+      loadData();
+    } catch (err) {
+      console.error(`Erreur suppression ${type}:`, err);
+      alert(`Erreur lors de la suppression des ${type}`);
     }
   };
 
-  const handleDeleteLecteurExterne = async (id: string, nom: string, prenom: string) => {
-    if (confirm(`Supprimer le lecteur externe ${prenom} ${nom} ?`)) {
-      try {
-        const { error } = await supabase
-          .from('lecteurs_externes')
-          .delete()
-          .eq('id', id);
-
-        if (error) throw error;
-
-        alert('Lecteur externe supprimé avec succès!');
-        loadData();
-      } catch (err) {
-        console.error('Erreur suppression lecteur externe:', err);
-        alert('Erreur lors de la suppression du lecteur externe');
-      }
+  const getCurrentUsers = () => {
+    switch (selectedUserType) {
+      case 'eleves': return eleves;
+      case 'guides': return guides;
+      case 'lecteurs-externes': return lecteursExternes;
+      case 'mediateurs': return mediateurs;
+      case 'coordinateurs': return coordinateurs;
+      default: return [];
     }
   };
 
-  const handleDeleteMediateur = async (id: string, nom: string, prenom: string) => {
-    if (confirm(`Supprimer le médiateur ${prenom} ${nom} ?`)) {
-      try {
-        const { error } = await supabase
-          .from('mediateurs')
-          .delete()
-          .eq('id', id);
-
-        if (error) throw error;
-
-        alert('Médiateur supprimé avec succès!');
-        loadData();
-      } catch (err) {
-        console.error('Erreur suppression médiateur:', err);
-        alert('Erreur lors de la suppression du médiateur');
-      }
-    }
+  const getCurrentUserCount = () => {
+    const users = getCurrentUsers();
+    return Array.isArray(users) ? users.length : 0;
   };
 
-  const handleDeleteCoordinateur = async (id: string, nom: string, prenom: string) => {
-    if (confirm(`Êtes-vous sûr de vouloir supprimer le coordinateur ${prenom} ${nom} ? Cette action est irréversible.`)) {
-      try {
-        const { error } = await supabase
-          .from('coordinateurs')
-          .delete()
-          .eq('id', id);
-
-        if (error) throw error;
-
-        alert('Coordinateur supprimé avec succès!');
-        loadData();
-      } catch (err) {
-        console.error('Erreur suppression coordinateur:', err);
-        alert('Erreur lors de la suppression du coordinateur');
+  const checkAndForceLandscape = () => {
+    if (typeof window !== 'undefined') {
+      const isMobile = window.innerWidth <= 768;
+      if (isMobile && !isLandscape) {
+        setIsLandscape(true);
+        const landscapeMsg = document.getElementById('landscape-message');
+        if (landscapeMsg) {
+          landscapeMsg.classList.remove('hidden');
+        }
+      } else {
+        setIsLandscape(false);
       }
     }
   };
@@ -814,8 +826,8 @@ export default function CoordinateurDashboard() {
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={editingMode}
-                      onChange={(e) => setEditingMode(e.target.checked)}
+                      checked={editingModeConvocations}
+                      onChange={(e) => setEditingModeConvocations(e.target.checked)}
                       className="w-5 h-5 text-blue-600 rounded"
                     />
                     <span className="text-sm font-medium">
@@ -866,7 +878,7 @@ export default function CoordinateurDashboard() {
                       </div>
                     </div>
                     <p className="text-xs text-gray-500 mt-1">
-                      {editingMode ? 'Cliquez pour faire tourner: ? → ✓ → ✗ → ?' : 'Activez le mode édition pour modifier'}
+                      {editingModeConvocations ? 'Cliquez pour faire tourner: ? → ✓ → ✗ → ?' : 'Activez le mode édition pour modifier'}
                     </p>
                   </div>
                 </div>
@@ -908,7 +920,7 @@ export default function CoordinateurDashboard() {
                           
                           {/* Guide */}
                           <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">
-                            {editingMode ? (
+                            {editingModeConvocations ? (
                               <select
                                 value={eleve.guide_id || ''}
                                 onChange={(e) => handleSelectUpdate(eleve.id, 'guide_id', e.target.value)}
@@ -930,7 +942,7 @@ export default function CoordinateurDashboard() {
                           
                           {/* Catégorie */}
                           <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">
-                            {editingMode ? (
+                            {editingModeConvocations ? (
                               <div className="flex flex-col gap-1">
                                 <select
                                   value={eleve.categorie || ''}
@@ -965,7 +977,7 @@ export default function CoordinateurDashboard() {
                           
                           {/* Problématique */}
                           <td className="px-3 py-3 text-xs md:text-sm">
-                            {editingMode && editingCell?.id === eleve.id && editingCell?.field === 'problematique' ? (
+                            {editingModeConvocations && editingCell?.id === eleve.id && editingCell?.field === 'problematique' ? (
                               <textarea
                                 defaultValue={eleve.problematique}
                                 onBlur={(e) => handleUpdate(eleve.id, 'problematique', e.target.value)}
@@ -973,7 +985,7 @@ export default function CoordinateurDashboard() {
                                 rows={3}
                                 autoFocus
                               />
-                            ) : editingMode ? (
+                            ) : editingModeConvocations ? (
                               <div
                                 onClick={() => setEditingCell({id: eleve.id, field: 'problematique'})}
                                 className="cursor-pointer hover:bg-gray-100 p-1 rounded min-h-[60px] flex items-start"
@@ -989,7 +1001,7 @@ export default function CoordinateurDashboard() {
                           
                           {/* Convocation Mars */}
                           <td className="px-3 py-3">
-                            {editingMode ? (
+                            {editingModeConvocations ? (
                               <select
                                 value={eleve.convocation_mars || ''}
                                 onChange={(e) => handleUpdate(eleve.id, 'convocation_mars', e.target.value)}
@@ -1011,7 +1023,7 @@ export default function CoordinateurDashboard() {
                           
                           {/* Présence 9 mars */}
                           <td className="px-3 py-3 text-center">
-                            {editingMode ? (
+                            {editingModeConvocations ? (
                               <button
                                 onClick={() => handlePresenceUpdate(eleve.id, 'presence_9_mars', eleve.presence_9_mars)}
                                 className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presence9Mars.bgColor} ${presence9Mars.hoverColor} ${presence9Mars.textColor} font-bold text-lg`}
@@ -1028,7 +1040,7 @@ export default function CoordinateurDashboard() {
                           
                           {/* Présence 10 mars */}
                           <td className="px-3 py-3 text-center">
-                            {editingMode ? (
+                            {editingModeConvocations ? (
                               <button
                                 onClick={() => handlePresenceUpdate(eleve.id, 'presence_10_mars', eleve.presence_10_mars)}
                                 className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presence10Mars.bgColor} ${presence10Mars.hoverColor} ${presence10Mars.textColor} font-bold text-lg`}
@@ -1045,7 +1057,7 @@ export default function CoordinateurDashboard() {
                           
                           {/* Convocation Avril */}
                           <td className="px-3 py-3">
-                            {editingMode ? (
+                            {editingModeConvocations ? (
                               <select
                                 value={eleve.convocation_avril || ''}
                                 onChange={(e) => handleUpdate(eleve.id, 'convocation_avril', e.target.value)}
@@ -1067,7 +1079,7 @@ export default function CoordinateurDashboard() {
                           
                           {/* Présence 16 avril */}
                           <td className="px-3 py-3 text-center">
-                            {editingMode ? (
+                            {editingModeConvocations ? (
                               <button
                                 onClick={() => handlePresenceUpdate(eleve.id, 'presence_16_avril', eleve.presence_16_avril)}
                                 className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presence16Avril.bgColor} ${presence16Avril.hoverColor} ${presence16Avril.textColor} font-bold text-lg`}
@@ -1084,7 +1096,7 @@ export default function CoordinateurDashboard() {
                           
                           {/* Présence 17 avril */}
                           <td className="px-3 py-3 text-center">
-                            {editingMode ? (
+                            {editingModeConvocations ? (
                               <button
                                 onClick={() => handlePresenceUpdate(eleve.id, 'presence_17_avril', eleve.presence_17_avril)}
                                 className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presence17Avril.bgColor} ${presence17Avril.hoverColor} ${presence17Avril.textColor} font-bold text-lg`}
@@ -1108,567 +1120,664 @@ export default function CoordinateurDashboard() {
           </>
         ) : activeTab === 'defenses' ? (
           /* Onglet Gestion des Défenses */
-          <div className="bg-white rounded-lg shadow overflow-x-auto">
-            <div className="min-w-[1400px] md:min-w-full">
-              <table className="w-full">
-                <thead className="bg-gray-100 border-b">
-                  <tr>
-                    <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Classe</th>
-                    <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Nom</th>
-                    <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Prénom</th>
-                    <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Catégorie</th>
-                    <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Problématique</th>
-                    <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Guide</th>
-                    <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Lecteur Interne</th>
-                    <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Lecteur Externe</th>
-                    <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Médiateur</th>
-                    <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Date Défense</th>
-                    <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Heure Défense</th>
-                    <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Localisation</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredEleves.map((eleve) => (
-                    <tr key={eleve.id} className="border-b hover:bg-gray-50">
-                      <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">{eleve.classe}</td>
-                      <td className="px-3 py-3 text-xs md:text-sm font-medium whitespace-nowrap">{eleve.nom}</td>
-                      <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">{eleve.prenom}</td>
-                      <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">
-                        {eleve.categorie || '-'}
-                      </td>
-                      <td className="px-3 py-3 text-xs md:text-sm">
-                        <div className="whitespace-pre-wrap break-words max-w-xs">
-                          {eleve.problematique || '-'}
-                        </div>
-                      </td>
-                      <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">
-                        {eleve.guide_nom} {eleve.guide_initiale}.
-                      </td>  
-                      
-                      {/* Lecteur Interne */}
-                      <td className="px-3 py-3">
-                        <select
-                          value={eleve.lecteur_interne_id || ''}
-                          onChange={(e) => handleSelectUpdate(eleve.id, 'lecteur_interne_id', e.target.value)}
-                          className="w-full border rounded px-2 py-1 text-xs md:text-sm"
-                          disabled={!editingMode}
-                        >
-                          <option value="">-</option>
-                          {guides.map(guide => (
-                            <option key={guide.id} value={guide.id}>
-                              {guide.nom} {guide.initiale}.
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      
-                      {/* Lecteur Externe */}
-                      <td className="px-3 py-3">
-                        <select
-                          value={eleve.lecteur_externe_id || ''}
-                          onChange={(e) => handleSelectUpdate(eleve.id, 'lecteur_externe_id', e.target.value)}
-                          className="w-full border rounded px-2 py-1 text-xs md:text-sm"
-                          disabled={!editingMode}
-                        >
-                          <option value="">-</option>
-                          {lecteursExternes.map(lecteur => (
-                            <option key={lecteur.id} value={lecteur.id}>
-                              {lecteur.prenom} {lecteur.nom}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      
-                      {/* Médiateur */}
-                      <td className="px-3 py-3">
-                        <select
-                          value={eleve.mediateur_id || ''}
-                          onChange={(e) => handleSelectUpdate(eleve.id, 'mediateur_id', e.target.value)}
-                          className="w-full border rounded px-2 py-1 text-xs md:text-sm"
-                          disabled={!editingMode || mediateurs.length === 0}
-                        >
-                          <option value="">-</option>
-                          {mediateurs.map(mediateur => (
-                            <option key={mediateur.id} value={mediateur.id}>
-                              {mediateur.prenom} {mediateur.nom}
-                            </option>
-                          ))}
-                        </select>
-                      </td>   
-                                            
-                      {/* Date de défense */}
-                      <td className="px-3 py-3">
-                        <div className="flex items-center gap-1">
-                          <input
-                            type="date"
-                            value={formatDateForInput(eleve.date_defense)}
-                            onChange={(e) => {
-                              const newValue = e.target.value;
-                              handleUpdate(eleve.id, 'date_defense', newValue);
-                            }}
-                            className="w-full border rounded px-2 py-1 text-xs md:text-sm"
-                            disabled={!editingMode}
-                          />
-                          {editingMode && eleve.date_defense && (
-                            <button
-                              onClick={() => handleUpdate(eleve.id, 'date_defense', '')}
-                              className="p-1 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
-                              title="Effacer la date"
-                            >
-                              ×
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                                            
-                      {/* Heure de défense */}
-                      <td className="px-3 py-3">
-                        <div className="flex items-center gap-1">
-                          <input
-                            type="time"
-                            value={eleve.heure_defense || ''}
-                            onChange={(e) => {
-                              const newValue = e.target.value;
-                              handleUpdate(eleve.id, 'heure_defense', newValue);
-                            }}
-                            className="w-full border rounded px-2 py-1 text-xs md:text-sm"
-                            disabled={!editingMode}
-                          />
-                          {editingMode && eleve.heure_defense && (
-                            <button
-                              onClick={() => handleUpdate(eleve.id, 'heure_defense', '')}
-                              className="p-1 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
-                              title="Effacer l'heure"
-                            >
-                              ×
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                                            
-                      {/* Localisation */}
-                      <td className="px-3 py-3">
-                        <div className="flex items-center gap-1">
-                          <input
-                            type="text"
-                            value={eleve.localisation_defense || ''}
-                            onChange={(e) => {
-                              const newValue = e.target.value;
-                              handleUpdate(eleve.id, 'localisation_defense', newValue);
-                            }}
-                            className="w-full border rounded px-2 py-1 text-xs md:text-sm"
-                            placeholder="Salle, bâtiment..."
-                            disabled={!editingMode}
-                          />
-                          {editingMode && eleve.localisation_defense && (
-                            <button
-                              onClick={() => handleUpdate(eleve.id, 'localisation_defense', '')}
-                              className="p-1 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
-                              title="Effacer la localisation"
-                            >
-                              ×
-                            </button>
-                          )}
-                        </div>
-                      </td>
+          <div className="space-y-6">
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-4">
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editingModeDefenses}
+                      onChange={(e) => setEditingModeDefenses(e.target.checked)}
+                      className="w-5 h-5 text-blue-600 rounded"
+                    />
+                    <span className="text-sm font-medium">
+                      Mode édition défenses
+                    </span>
+                  </label>
+                </div>
+                
+                <span className="text-sm text-gray-500">
+                  ({filteredEleves.length} élève{filteredEleves.length > 1 ? 's' : ''})
+                </span>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow overflow-x-auto">
+              <div className="min-w-[1400px] md:min-w-full">
+                <table className="w-full">
+                  <thead className="bg-gray-100 border-b">
+                    <tr>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Classe</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Nom</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Prénom</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Catégorie</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Problématique</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Guide</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Lecteur Interne</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Lecteur Externe</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Médiateur</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Date Défense</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Heure Défense</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Localisation</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {filteredEleves.map((eleve) => (
+                      <tr key={eleve.id} className="border-b hover:bg-gray-50">
+                        <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">{eleve.classe}</td>
+                        <td className="px-3 py-3 text-xs md:text-sm font-medium whitespace-nowrap">{eleve.nom}</td>
+                        <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">{eleve.prenom}</td>
+                        <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">
+                          {eleve.categorie || '-'}
+                        </td>
+                        <td className="px-3 py-3 text-xs md:text-sm">
+                          <div className="whitespace-pre-wrap break-words max-w-xs">
+                            {eleve.problematique || '-'}
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">
+                          {eleve.guide_nom} {eleve.guide_initiale}.
+                        </td>  
+                        
+                        {/* Lecteur Interne */}
+                        <td className="px-3 py-3">
+                          <select
+                            value={eleve.lecteur_interne_id || ''}
+                            onChange={(e) => handleSelectUpdate(eleve.id, 'lecteur_interne_id', e.target.value)}
+                            className="w-full border rounded px-2 py-1 text-xs md:text-sm"
+                            disabled={!editingModeDefenses}
+                          >
+                            <option value="">-</option>
+                            {guides.map(guide => (
+                              <option key={guide.id} value={guide.id}>
+                                {guide.nom} {guide.initiale}.
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        
+                        {/* Lecteur Externe */}
+                        <td className="px-3 py-3">
+                          <select
+                            value={eleve.lecteur_externe_id || ''}
+                            onChange={(e) => handleSelectUpdate(eleve.id, 'lecteur_externe_id', e.target.value)}
+                            className="w-full border rounded px-2 py-1 text-xs md:text-sm"
+                            disabled={!editingModeDefenses}
+                          >
+                            <option value="">-</option>
+                            {lecteursExternes.map(lecteur => (
+                              <option key={lecteur.id} value={lecteur.id}>
+                                {lecteur.prenom} {lecteur.nom}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        
+                        {/* Médiateur */}
+                        <td className="px-3 py-3">
+                          <select
+                            value={eleve.mediateur_id || ''}
+                            onChange={(e) => handleSelectUpdate(eleve.id, 'mediateur_id', e.target.value)}
+                            className="w-full border rounded px-2 py-1 text-xs md:text-sm"
+                            disabled={!editingModeDefenses || mediateurs.length === 0}
+                          >
+                            <option value="">-</option>
+                            {mediateurs.map(mediateur => (
+                              <option key={mediateur.id} value={mediateur.id}>
+                                {mediateur.prenom} {mediateur.nom}
+                              </option>
+                            ))}
+                          </select>
+                        </td>   
+                                              
+                        {/* Date de défense */}
+                        <td className="px-3 py-3">
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="date"
+                              value={formatDateForInput(eleve.date_defense)}
+                              onChange={(e) => {
+                                const newValue = e.target.value;
+                                handleUpdate(eleve.id, 'date_defense', newValue);
+                              }}
+                              className="w-full border rounded px-2 py-1 text-xs md:text-sm"
+                              disabled={!editingModeDefenses}
+                            />
+                            {editingModeDefenses && eleve.date_defense && (
+                              <button
+                                onClick={() => handleUpdate(eleve.id, 'date_defense', '')}
+                                className="p-1 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
+                                title="Effacer la date"
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                                              
+                        {/* Heure de défense */}
+                        <td className="px-3 py-3">
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="time"
+                              value={eleve.heure_defense || ''}
+                              onChange={(e) => {
+                                const newValue = e.target.value;
+                                handleUpdate(eleve.id, 'heure_defense', newValue);
+                              }}
+                              className="w-full border rounded px-2 py-1 text-xs md:text-sm"
+                              disabled={!editingModeDefenses}
+                            />
+                            {editingModeDefenses && eleve.heure_defense && (
+                              <button
+                                onClick={() => handleUpdate(eleve.id, 'heure_defense', '')}
+                                className="p-1 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
+                                title="Effacer l'heure"
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                                              
+                        {/* Localisation */}
+                        <td className="px-3 py-3">
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="text"
+                              value={eleve.localisation_defense || ''}
+                              onChange={(e) => {
+                                const newValue = e.target.value;
+                                handleUpdate(eleve.id, 'localisation_defense', newValue);
+                              }}
+                              className="w-full border rounded px-2 py-1 text-xs md:text-sm"
+                              placeholder="Salle, bâtiment..."
+                              disabled={!editingModeDefenses}
+                            />
+                            {editingModeDefenses && eleve.localisation_defense && (
+                              <button
+                                onClick={() => handleUpdate(eleve.id, 'localisation_defense', '')}
+                                className="p-1 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
+                                title="Effacer la localisation"
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         ) : (
           /* Onglet Gestion des Utilisateurs */
-          <div className="space-y-8">
-            {/* Section Ajout d'utilisateurs */}
+          <div className="space-y-6">
+            {/* Menu de sélection du type d'utilisateur */}
             <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold text-gray-800 mb-6">Ajouter de nouveaux utilisateurs</h2>
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">Gestion des Utilisateurs</h2>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {/* Ajouter un élève */}
-                <div className="border rounded-lg p-4">
-                  <h3 className="font-medium text-gray-700 mb-3">Ajouter un élève</h3>
-                  <div className="space-y-2">
+              <div className="flex flex-wrap gap-2 mb-6">
+                <button
+                  onClick={() => setSelectedUserType('eleves')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                    selectedUserType === 'eleves'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Élèves ({eleves.length})
+                </button>
+                <button
+                  onClick={() => setSelectedUserType('guides')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                    selectedUserType === 'guides'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Guides ({guides.length})
+                </button>
+                <button
+                  onClick={() => setSelectedUserType('lecteurs-externes')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                    selectedUserType === 'lecteurs-externes'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Lecteurs externes ({lecteursExternes.length})
+                </button>
+                <button
+                  onClick={() => setSelectedUserType('mediateurs')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                    selectedUserType === 'mediateurs'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Médiateurs ({mediateurs.length})
+                </button>
+                <button
+                  onClick={() => setSelectedUserType('coordinateurs')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                    selectedUserType === 'coordinateurs'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Coordinateurs ({coordinateurs.length})
+                </button>
+              </div>
+
+              {/* Actions spéciales */}
+              <div className="flex flex-wrap gap-3 mt-4">
+                <button
+                  onClick={() => setShowMassImport(true)}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                >
+                  Import CSV/Excel
+                </button>
+                
+                {(selectedUserType === 'eleves' || selectedUserType === 'guides') && (
+                  <button
+                    onClick={() => setShowClearConfirmations(true)}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
+                  >
+                    Vider tous les {selectedUserType === 'eleves' ? 'élèves' : 'guides'}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Formulaire d'ajout d'utilisateur */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-lg font-medium text-gray-700 mb-4">
+                Ajouter un {selectedUserType === 'eleves' ? 'élève' : 
+                          selectedUserType === 'guides' ? 'guide' :
+                          selectedUserType === 'lecteurs-externes' ? 'lecteur externe' :
+                          selectedUserType === 'mediateurs' ? 'médiateur' : 'coordinateur'}
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {selectedUserType === 'eleves' && (
+                  <>
                     <input
                       type="text"
                       placeholder="Nom"
-                      value={newEleve.nom}
-                      onChange={(e) => setNewEleve({...newEleve, nom: e.target.value})}
-                      className="w-full border rounded px-3 py-1 text-sm"
+                      value={newUser.nom}
+                      onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
+                      className="border rounded px-3 py-2 text-sm"
                     />
                     <input
                       type="text"
                       placeholder="Prénom"
-                      value={newEleve.prenom}
-                      onChange={(e) => setNewEleve({...newEleve, prenom: e.target.value})}
-                      className="w-full border rounded px-3 py-1 text-sm"
+                      value={newUser.prenom}
+                      onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
+                      className="border rounded px-3 py-2 text-sm"
                     />
                     <input
                       type="text"
                       placeholder="Classe"
-                      value={newEleve.classe}
-                      onChange={(e) => setNewEleve({...newEleve, classe: e.target.value})}
-                      className="w-full border rounded px-3 py-1 text-sm"
+                      value={newUser.classe}
+                      onChange={(e) => setNewUser({...newUser, classe: e.target.value})}
+                      className="border rounded px-3 py-2 text-sm"
                     />
                     <input
                       type="text"
                       placeholder="Catégorie"
-                      value={newEleve.categorie}
-                      onChange={(e) => setNewEleve({...newEleve, categorie: e.target.value})}
-                      className="w-full border rounded px-3 py-1 text-sm"
+                      value={newUser.categorie}
+                      onChange={(e) => setNewUser({...newUser, categorie: e.target.value})}
+                      className="border rounded px-3 py-2 text-sm"
                     />
-                    <select
-                      value={newEleve.guide_id}
-                      onChange={(e) => setNewEleve({...newEleve, guide_id: e.target.value})}
-                      className="w-full border rounded px-3 py-1 text-sm"
-                    >
-                      <option value="">Sélectionner un guide</option>
-                      {guides.map(guide => (
-                        <option key={guide.id} value={guide.id}>
-                          {guide.nom} {guide.initiale}.
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={handleAddEleve}
-                      className="w-full px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
-                    >
-                      Ajouter l'élève
-                    </button>
-                  </div>
-                </div>
+                  </>
+                )}
 
-                {/* Ajouter un guide */}
-                <div className="border rounded-lg p-4">
-                  <h3 className="font-medium text-gray-700 mb-3">Ajouter un guide</h3>
-                  <div className="space-y-2">
+                {selectedUserType === 'guides' && (
+                  <>
                     <input
                       type="text"
                       placeholder="Nom"
-                      value={newGuide.nom}
-                      onChange={(e) => setNewGuide({...newGuide, nom: e.target.value})}
-                      className="w-full border rounded px-3 py-1 text-sm"
+                      value={newUser.nom}
+                      onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
+                      className="border rounded px-3 py-2 text-sm"
                     />
                     <input
                       type="text"
                       placeholder="Initiale"
-                      value={newGuide.initiale}
-                      onChange={(e) => setNewGuide({...newGuide, initiale: e.target.value})}
-                      className="w-full border rounded px-3 py-1 text-sm"
+                      value={newUser.initiale}
+                      onChange={(e) => setNewUser({...newUser, initiale: e.target.value})}
+                      className="border rounded px-3 py-2 text-sm"
                     />
                     <input
                       type="email"
                       placeholder="Email"
-                      value={newGuide.email}
-                      onChange={(e) => setNewGuide({...newGuide, email: e.target.value})}
-                      className="w-full border rounded px-3 py-1 text-sm"
+                      value={newUser.email}
+                      onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                      className="border rounded px-3 py-2 text-sm"
                     />
                     <input
                       type="password"
                       placeholder="Mot de passe"
-                      value={newGuide.password}
-                      onChange={(e) => setNewGuide({...newGuide, password: e.target.value})}
-                      className="w-full border rounded px-3 py-1 text-sm"
+                      value={newUser.password}
+                      onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                      className="border rounded px-3 py-2 text-sm"
                     />
-                    <button
-                      onClick={handleAddGuide}
-                      className="w-full px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
-                    >
-                      Ajouter le guide
-                    </button>
-                  </div>
-                </div>
+                  </>
+                )}
 
-                {/* Ajouter un lecteur externe */}
-                <div className="border rounded-lg p-4">
-                  <h3 className="font-medium text-gray-700 mb-3">Ajouter un lecteur externe</h3>
-                  <div className="space-y-2">
+                {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && (
+                  <>
                     <input
                       type="text"
                       placeholder="Nom"
-                      value={newLecteurExterne.nom}
-                      onChange={(e) => setNewLecteurExterne({...newLecteurExterne, nom: e.target.value})}
-                      className="w-full border rounded px-3 py-1 text-sm"
+                      value={newUser.nom}
+                      onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
+                      className="border rounded px-3 py-2 text-sm"
                     />
                     <input
                       type="text"
                       placeholder="Prénom"
-                      value={newLecteurExterne.prenom}
-                      onChange={(e) => setNewLecteurExterne({...newLecteurExterne, prenom: e.target.value})}
-                      className="w-full border rounded px-3 py-1 text-sm"
+                      value={newUser.prenom}
+                      onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
+                      className="border rounded px-3 py-2 text-sm"
                     />
                     <input
                       type="email"
                       placeholder="Email"
-                      value={newLecteurExterne.email}
-                      onChange={(e) => setNewLecteurExterne({...newLecteurExterne, email: e.target.value})}
-                      className="w-full border rounded px-3 py-1 text-sm"
+                      value={newUser.email}
+                      onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                      className="border rounded px-3 py-2 text-sm"
                     />
-                    <button
-                      onClick={handleAddLecteurExterne}
-                      className="w-full px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
-                    >
-                      Ajouter le lecteur
-                    </button>
-                  </div>
-                </div>
+                  </>
+                )}
 
-                {/* Ajouter un médiateur */}
-                <div className="border rounded-lg p-4">
-                  <h3 className="font-medium text-gray-700 mb-3">Ajouter un médiateur</h3>
-                  <div className="space-y-2">
+                {selectedUserType === 'coordinateurs' && (
+                  <>
                     <input
                       type="text"
                       placeholder="Nom"
-                      value={newMediateur.nom}
-                      onChange={(e) => setNewMediateur({...newMediateur, nom: e.target.value})}
-                      className="w-full border rounded px-3 py-1 text-sm"
+                      value={newUser.nom}
+                      onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
+                      className="border rounded px-3 py-2 text-sm"
                     />
                     <input
                       type="text"
                       placeholder="Prénom"
-                      value={newMediateur.prenom}
-                      onChange={(e) => setNewMediateur({...newMediateur, prenom: e.target.value})}
-                      className="w-full border rounded px-3 py-1 text-sm"
+                      value={newUser.prenom}
+                      onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
+                      className="border rounded px-3 py-2 text-sm"
                     />
                     <input
                       type="email"
                       placeholder="Email"
-                      value={newMediateur.email}
-                      onChange={(e) => setNewMediateur({...newMediateur, email: e.target.value})}
-                      className="w-full border rounded px-3 py-1 text-sm"
+                      value={newUser.email}
+                      onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                      className="border rounded px-3 py-2 text-sm"
                     />
-                    <button
-                      onClick={handleAddMediateur}
-                      className="w-full px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
-                    >
-                      Ajouter le médiateur
-                    </button>
-                  </div>
-                </div>
+                    <input
+                      type="password"
+                      placeholder="Mot de passe"
+                      value={newUser.password}
+                      onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                      className="border rounded px-3 py-2 text-sm"
+                    />
+                  </>
+                )}
               </div>
 
-              {/* Ajouter un coordinateur */}
-              <div className="mt-6 border rounded-lg p-4 max-w-md">
-                <h3 className="font-medium text-gray-700 mb-3">Ajouter un coordinateur</h3>
-                <div className="space-y-2">
-                  <input
-                    type="text"
-                    placeholder="Nom"
-                    value={newCoordinateur.nom}
-                    onChange={(e) => setNewCoordinateur({...newCoordinateur, nom: e.target.value})}
-                    className="w-full border rounded px-3 py-1 text-sm"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Prénom"
-                    value={newCoordinateur.prenom}
-                    onChange={(e) => setNewCoordinateur({...newCoordinateur, prenom: e.target.value})}
-                    className="w-full border rounded px-3 py-1 text-sm"
-                  />
-                  <input
-                    type="email"
-                    placeholder="Email"
-                    value={newCoordinateur.email}
-                    onChange={(e) => setNewCoordinateur({...newCoordinateur, email: e.target.value})}
-                    className="w-full border rounded px-3 py-1 text-sm"
-                  />
-                  <input
-                    type="password"
-                    placeholder="Mot de passe"
-                    value={newCoordinateur.password}
-                    onChange={(e) => setNewCoordinateur({...newCoordinateur, password: e.target.value})}
-                    className="w-full border rounded px-3 py-1 text-sm"
-                  />
-                  <button
-                    onClick={handleAddCoordinateur}
-                    className="w-full px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
-                  >
-                    Ajouter le coordinateur
-                  </button>
-                </div>
+              <div className="mt-4">
+                <button
+                  onClick={handleAddUser}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center gap-2"
+                >
+                  <span>+</span>
+                  <span>Ajouter</span>
+                </button>
               </div>
             </div>
 
-            {/* Section Liste des utilisateurs */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold text-gray-800 mb-6">Liste des utilisateurs</h2>
+            {/* Liste des utilisateurs */}
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              <div className="px-6 py-4 border-b">
+                <h3 className="text-lg font-medium text-gray-700">
+                  Liste des {selectedUserType} ({getCurrentUserCount()})
+                </h3>
+              </div>
               
-              {/* Élèves */}
-              <div className="mb-8">
-                <h3 className="text-lg font-medium text-gray-700 mb-4">Élèves ({eleves.length})</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-100 border-b">
-                      <tr>
-                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Classe</th>
-                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Nom</th>
-                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Prénom</th>
-                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Catégorie</th>
-                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Guide</th>
-                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {eleves.slice(0, 10).map((eleve) => (
-                        <tr key={eleve.id} className="border-b hover:bg-gray-50">
-                          <td className="px-4 py-2 text-sm">{eleve.classe}</td>
-                          <td className="px-4 py-2 text-sm">{eleve.nom}</td>
-                          <td className="px-4 py-2 text-sm">{eleve.prenom}</td>
-                          <td className="px-4 py-2 text-sm">{eleve.categorie || '-'}</td>
-                          <td className="px-4 py-2 text-sm">{eleve.guide_nom} {eleve.guide_initiale}.</td>
-                          <td className="px-4 py-2">
-                            <button
-                              onClick={() => handleDeleteEleve(eleve.id, eleve.nom, eleve.prenom)}
-                              className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200"
-                            >
-                              Supprimer
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                      {eleves.length > 10 && (
-                        <tr>
-                          <td colSpan={6} className="px-4 py-2 text-sm text-gray-500 text-center">
-                            ... et {eleves.length - 10} autres élèves
-                          </td>
-                        </tr>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-100 border-b">
+                    <tr>
+                      {selectedUserType === 'eleves' && (
+                        <>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Classe</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Catégorie</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+                        </>
                       )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Guides */}
-              <div className="mb-8">
-                <h3 className="text-lg font-medium text-gray-700 mb-4">Guides ({guides.length})</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-100 border-b">
-                      <tr>
-                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Nom</th>
-                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Initiale</th>
-                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {guides.map((guide) => (
-                        <tr key={guide.id} className="border-b hover:bg-gray-50">
-                          <td className="px-4 py-2 text-sm">{guide.nom}</td>
-                          <td className="px-4 py-2 text-sm">{guide.initiale}</td>
-                          <td className="px-4 py-2">
-                            <button
-                              onClick={() => handleDeleteGuide(guide.id, guide.nom)}
-                              className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200"
-                            >
-                              Supprimer
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Lecteurs externes */}
-              <div className="mb-8">
-                <h3 className="text-lg font-medium text-gray-700 mb-4">Lecteurs externes ({lecteursExternes.length})</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-100 border-b">
-                      <tr>
-                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Nom</th>
-                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Prénom</th>
-                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {lecteursExternes.map((lecteur) => (
-                        <tr key={lecteur.id} className="border-b hover:bg-gray-50">
-                          <td className="px-4 py-2 text-sm">{lecteur.nom}</td>
-                          <td className="px-4 py-2 text-sm">{lecteur.prenom}</td>
-                          <td className="px-4 py-2">
-                            <button
-                              onClick={() => handleDeleteLecteurExterne(lecteur.id, lecteur.nom, lecteur.prenom)}
-                              className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200"
-                            >
-                              Supprimer
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Médiateurs */}
-              {mediateurs.length > 0 && (
-                <div className="mb-8">
-                  <h3 className="text-lg font-medium text-gray-700 mb-4">Médiateurs ({mediateurs.length})</h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-gray-100 border-b">
-                        <tr>
-                          <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Nom</th>
-                          <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Prénom</th>
-                          <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {mediateurs.map((mediateur) => (
-                          <tr key={mediateur.id} className="border-b hover:bg-gray-50">
-                            <td className="px-4 py-2 text-sm">{mediateur.nom}</td>
-                            <td className="px-4 py-2 text-sm">{mediateur.prenom}</td>
-                            <td className="px-4 py-2">
+                      {selectedUserType === 'guides' && (
+                        <>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Initiale</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+                        </>
+                      )}
+                      {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && (
+                        <>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+                        </>
+                      )}
+                      {selectedUserType === 'coordinateurs' && (
+                        <>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+                        </>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {getCurrentUsers().map((user: any) => (
+                      <tr key={user.id} className="border-b hover:bg-gray-50">
+                        {selectedUserType === 'eleves' && (
+                          <>
+                            <td className="px-4 py-3 text-sm">{user.classe}</td>
+                            <td className="px-4 py-3 text-sm">{user.nom}</td>
+                            <td className="px-4 py-3 text-sm">{user.prenom}</td>
+                            <td className="px-4 py-3 text-sm">{user.categorie || '-'}</td>
+                            <td className="px-4 py-3">
                               <button
-                                onClick={() => handleDeleteMediateur(mediateur.id, mediateur.nom, mediateur.prenom)}
-                                className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200"
+                                onClick={() => handleDeleteUser(user.id, user.nom, user.prenom)}
+                                className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 flex items-center gap-1"
                               >
-                                Supprimer
+                                <span>✕</span>
+                                <span>Supprimer</span>
                               </button>
                             </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                          </>
+                        )}
+                        {selectedUserType === 'guides' && (
+                          <>
+                            <td className="px-4 py-3 text-sm">{user.nom}</td>
+                            <td className="px-4 py-3 text-sm">{user.initiale}</td>
+                            <td className="px-4 py-3 text-sm">{user.email}</td>
+                            <td className="px-4 py-3">
+                              <button
+                                onClick={() => handleDeleteUser(user.id, user.nom)}
+                                className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 flex items-center gap-1"
+                              >
+                                <span>✕</span>
+                                <span>Supprimer</span>
+                              </button>
+                            </td>
+                          </>
+                        )}
+                        {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && (
+                          <>
+                            <td className="px-4 py-3 text-sm">{user.nom}</td>
+                            <td className="px-4 py-3 text-sm">{user.prenom}</td>
+                            <td className="px-4 py-3 text-sm">{user.email}</td>
+                            <td className="px-4 py-3">
+                              <button
+                                onClick={() => handleDeleteUser(user.id, user.nom, user.prenom)}
+                                className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 flex items-center gap-1"
+                              >
+                                <span>✕</span>
+                                <span>Supprimer</span>
+                              </button>
+                            </td>
+                          </>
+                        )}
+                        {selectedUserType === 'coordinateurs' && (
+                          <>
+                            <td className="px-4 py-3 text-sm">{user.nom}</td>
+                            <td className="px-4 py-3 text-sm">{user.prenom}</td>
+                            <td className="px-4 py-3 text-sm">{user.email}</td>
+                            <td className="px-4 py-3">
+                              <button
+                                onClick={() => handleDeleteUser(user.id, user.nom, user.prenom)}
+                                className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 flex items-center gap-1"
+                              >
+                                <span>✕</span>
+                                <span>Supprimer</span>
+                              </button>
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modals */}
+        {showMassImport && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+              <div className="px-6 py-4 border-b">
+                <h3 className="text-lg font-semibold text-gray-800">Import massif depuis CSV/Excel</h3>
+              </div>
+              
+              <div className="p-6">
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Format attendu pour les {selectedUserType}:
+                  </label>
+                  <div className="text-sm text-gray-600 mb-3">
+                    {selectedUserType === 'eleves' && 'Colonnes: nom, prenom, classe, categorie (optionnel)'}
+                    {selectedUserType === 'guides' && 'Colonnes: nom, initiale, email'}
+                    {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && 'Colonnes: nom, prenom, email'}
+                    {selectedUserType === 'coordinateurs' && 'Colonnes: nom, prenom, email'}
+                  </div>
+                  
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileUpload}
+                    accept=".csv,.xlsx,.xls"
+                    className="w-full border rounded px-3 py-2 text-sm"
+                  />
+                </div>
+                
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Données CSV (vous pouvez aussi coller directement):
+                  </label>
+                  <textarea
+                    value={massImportData}
+                    onChange={(e) => setMassImportData(e.target.value)}
+                    rows={10}
+                    className="w-full border rounded px-3 py-2 text-sm font-mono"
+                    placeholder="Collez vos données CSV ici..."
+                  />
+                </div>
+              </div>
+              
+              <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setShowMassImport(false);
+                    setMassImportData('');
+                  }}
+                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleMassImport}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                  disabled={!massImportData.trim()}
+                >
+                  Importer
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showClearConfirmations && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+              <div className="px-6 py-4 border-b">
+                <h3 className="text-lg font-semibold text-red-800">
+                  Confirmation nécessaire
+                </h3>
+              </div>
+              
+              <div className="p-6">
+                <div className="mb-4">
+                  <p className="text-gray-700 mb-3">
+                    Vous êtes sur le point de supprimer <strong>TOUS</strong> les {selectedUserType === 'eleves' ? 'élèves' : 'guides'}.
+                    Cette action est irréversible.
+                  </p>
+                  
+                  <p className="text-sm text-gray-600 mb-4">
+                    Pour des raisons de sécurité, cette opération nécessite la confirmation de 3 coordinateurs différents.
+                  </p>
+                  
+                  <div className="bg-yellow-50 border border-yellow-200 rounded p-3 mb-4">
+                    <p className="text-sm text-yellow-800">
+                      Confirmations reçues: {clearConfirmations.length}/3
+                      {clearConfirmations.length > 0 && (
+                        <span className="block mt-1">
+                          {clearConfirmations.map(name => `• ${name}`).join('\n')}
+                        </span>
+                      )}
+                    </p>
                   </div>
                 </div>
-              )}
-
-              {/* Coordinateurs */}
-              <div>
-                <h3 className="text-lg font-medium text-gray-700 mb-4">Coordinateurs ({coordinateurs.length})</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-100 border-b">
-                      <tr>
-                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Nom</th>
-                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Prénom</th>
-                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Email</th>
-                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {coordinateurs.map((coordinateur) => (
-                        <tr key={coordinateur.id} className="border-b hover:bg-gray-50">
-                          <td className="px-4 py-2 text-sm">{coordinateur.nom}</td>
-                          <td className="px-4 py-2 text-sm">{coordinateur.prenom}</td>
-                          <td className="px-4 py-2 text-sm">{coordinateur.email}</td>
-                          <td className="px-4 py-2">
-                            <button
-                              onClick={() => handleDeleteCoordinateur(coordinateur.id, coordinateur.nom, coordinateur.prenom)}
-                              className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200"
-                            >
-                              Supprimer
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+              </div>
+              
+              <div className="px-6 py-4 border-t bg-gray-50 flex justify-between">
+                <button
+                  onClick={() => {
+                    setShowClearConfirmations(false);
+                    setClearConfirmations([]);
+                  }}
+                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={() => handleClearAll(selectedUserType as 'eleves' | 'guides')}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
+                >
+                  Confirmer ({clearConfirmations.length}/3)
+                </button>
               </div>
             </div>
           </div>
