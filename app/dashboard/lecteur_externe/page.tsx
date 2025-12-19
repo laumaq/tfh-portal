@@ -1,4 +1,4 @@
-// app/dashboard/mediateur/page.tsx
+// app/dashboard/lecteur_externe/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -40,7 +40,7 @@ interface LecteurExterne {
   prenom: string;
 }
 
-export default function MediateurDashboard() {
+export default function LecteurExterneDashboard() {
   const [eleves, setEleves] = useState<Eleve[]>([]);
   const [guides, setGuides] = useState<Guide[]>([]);
   const [lecteursExternes, setLecteursExternes] = useState<LecteurExterne[]>([]);
@@ -90,7 +90,7 @@ export default function MediateurDashboard() {
     }
   };
 
-  const loadEleves = async (mediateurId: string) => {
+  const loadEleves = async (lecteurExterneId: string) => {
     try {
       // Charger les élèves assignés à ce médiateur
       const { data: elevesData, error: elevesError } = await supabase
