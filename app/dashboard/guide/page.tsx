@@ -546,6 +546,7 @@ export default function GuideDashboard() {
                   <p className="text-gray-600 mt-1">
                     Sélectionnez les élèves pour lesquels vous serez lecteur interne.
                     Les élèves sélectionnés n'apparaîtront plus dans la liste des autres guides.
+                    N'oubliez pas d'enregistrer si vous cochez des élèves dans la liste.
                   </p>
                 </div>
                 <div className="flex flex-col md:items-end gap-3">
@@ -902,3 +903,4 @@ export default function GuideDashboard() {
     </div>
   );
 }
+
