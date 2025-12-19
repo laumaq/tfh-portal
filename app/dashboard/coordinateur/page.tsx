@@ -630,19 +630,36 @@ export default function CoordinateurDashboard() {
   };
 
   const getCurrentUsers = () => {
+    console.log('Type sélectionné:', selectedUserType);
+    console.log('Élèves:', eleves.length);
+    console.log('Guides:', guides.length);
+    
     switch (selectedUserType) {
-      case 'eleves': return eleves;
-      case 'guides': return guides;
-      case 'lecteurs-externes': return lecteursExternes;
-      case 'mediateurs': return mediateurs;
-      case 'coordinateurs': return coordinateurs;
-      default: return [];
+      case 'eleves':
+        console.log('Retourne élèves:', eleves);
+        return eleves;
+      case 'guides':
+        console.log('Retourne guides:', guides);
+        return guides;
+      case 'lecteurs-externes':
+        console.log('Retourne lecteurs externes:', lecteursExternes);
+        return lecteursExternes;
+      case 'mediateurs':
+        console.log('Retourne médiateurs:', mediateurs);
+        return mediateurs;
+      case 'coordinateurs':
+        console.log('Retourne coordinateurs:', coordinateurs);
+        return coordinateurs;
+      default:
+        console.log('Type inconnu, retourne tableau vide');
+        return [];
     }
   };
 
   const getCurrentUserCount = () => {
     const users = getCurrentUsers();
-    return Array.isArray(users) ? users.length : 0;
+    console.log('Nombre d\'utilisateurs à afficher:', users.length);
+    return users.length;
   };
 
   const checkAndForceLandscape = () => {
@@ -1795,3 +1812,4 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
