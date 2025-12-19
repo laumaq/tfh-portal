@@ -690,11 +690,6 @@ export default function CoordinateurDashboard() {
                           onChange={(e) => handleSelectUpdate(eleve.id, 'lecteur_interne_id', e.target.value)}
                           className="w-full border rounded px-2 py-1 text-xs md:text-sm"
                         >
-                          <option value="">-</option>
-                          {guides.map(guide => (
-                            <option key={guide.id} value={guide.id}>
-                              {guide.nom} {guide.initiale}.
-                            </option>
                           ))}
                         </select>
                         <div className="text-xs text-gray-500 mt-1 truncate">
@@ -709,11 +704,6 @@ export default function CoordinateurDashboard() {
                           onChange={(e) => handleSelectUpdate(eleve.id, 'lecteur_externe_id', e.target.value)}
                           className="w-full border rounded px-2 py-1 text-xs md:text-sm"
                         >
-                          <option value="">-</option>
-                          {lecteursExternes.map(lecteur => (
-                            <option key={lecteur.id} value={lecteur.id}>
-                              {lecteur.prenom} {lecteur.nom}
-                            </option>
                           ))}
                         </select>
                         <div className="text-xs text-gray-500 mt-1 truncate">
@@ -729,11 +719,6 @@ export default function CoordinateurDashboard() {
                           className="w-full border rounded px-2 py-1 text-xs md:text-sm"
                           disabled={mediateurs.length === 0}
                         >
-                          <option value="">-</option>
-                          {mediateurs.map(mediateur => (
-                            <option key={mediateur.id} value={mediateur.id}>
-                              {mediateur.prenom} {mediateur.nom}
-                            </option>
                           ))}
                         </select>
                         <div className="text-xs text-gray-500 mt-1 truncate">
@@ -807,4 +792,5 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
