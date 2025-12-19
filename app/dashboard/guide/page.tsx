@@ -15,16 +15,56 @@ interface Eleve {
   guide_id: string;
   convocation_mars: string;
   convocation_avril: string;
+  date_defense: string | null;
+  heure_defense: string | null;
+  localisation_defense: string | null;
+  lecteur_interne_id: string | null;
+  lecteur_externe_id: string | null;
+  mediateur_id: string | null;
   guide_nom?: string;
   guide_initiale?: string;
+  lecteur_interne_nom?: string;
+  lecteur_interne_initiale?: string;
+  lecteur_externe_nom?: string;
+  lecteur_externe_prenom?: string;
+  mediateur_nom?: string;
+  mediateur_prenom?: string;
 }
+
+interface Guide {
+  id: string;
+  nom: string;
+  initiale: string;
+}
+
+interface LecteurExterne {
+  id: string;
+  nom: string;
+  prenom: string;
+}
+
+interface Mediateur {
+  id: string;
+  nom: string;
+  prenom: string;
+}
+
+type TabType = 'guide' | 'lecteur-interne' | 'defenses';
 
 export default function GuideDashboard() {
   const [eleves, setEleves] = useState<Eleve[]>([]);
+  const [elevesDisponibles, setElevesDisponibles] = useState<Eleve[]>([]);
+  const [defenses, setDefenses] = useState<Eleve[]>([]);
+  const [guides, setGuides] = useState<Guide[]>([]);
+  const [lecteursExternes, setLecteursExternes] = useState<LecteurExterne[]>([]);
+  const [mediateurs, setMediateurs] = useState<Mediateur[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingDefenses, setLoadingDefenses] = useState(false);
   const [userName, setUserName] = useState('');
   const [userGuideId, setUserGuideId] = useState<string>('');
   const [editingCell, setEditingCell] = useState<{id: string, field: string} | null>(null);
+  const [activeTab, setActiveTab] = useState<TabType>('guide');
+  const [selectedEleves, setSelectedEleves] = useState<string[]>([]);
   const router = useRouter();
 
   // Options de convocation identiques à celles du coordinateur
@@ -64,24 +104,180 @@ export default function GuideDashboard() {
 
     setUserName(name || '');
     setUserGuideId(userId);
-    loadEleves(userId);
+    loadData(userId);
   }, [router]);
 
-  const loadEleves = async (guideId: string) => {
+  const loadData = async (guideId: string) => {
     try {
+      setLoading(true);
+      
+      // Charger les guides (pour le dropdown des lecteurs internes)
+      const { data: guidesData } = await supabase
+        .from('guides')
+        .select('id, nom, initiale');
+      setGuides(guidesData || []);
+
+      // Charger les lecteurs externes et médiateurs pour l'affichage des défenses
+      const { data: lecteursExternesData } = await supabase
+        .from('lecteurs_externes')
+        .select('id, nom, prenom');
+      setLecteursExternes(lecteursExternesData || []);
+
+      const { data: mediateursData } = await supabase
+        .from('mediateurs')
+        .select('id, nom, prenom');
+      setMediateurs(mediateursData || []);
+
+      // Charger les élèves assignés à ce guide
       const { data: elevesData, error: elevesError } = await supabase
         .from('eleves')
-        .select('*')
+        .select(`
+          *,
+          guide:guides!guide_id (nom, initiale),
+          lecteur_interne:guides!lecteur_interne_id (nom, initiale),
+          lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
+          mediateur:mediateurs!mediateur_id (nom, prenom)
+        `)
         .eq('guide_id', guideId)
         .order('classe', { ascending: true })
         .order('nom', { ascending: true });
 
       if (elevesError) throw elevesError;
-      setEleves(elevesData || []);
+
+      // Formater les données des élèves
+      const elevesFormatted = (elevesData || []).map(eleve => ({
+        ...eleve,
+        guide_nom: eleve.guide?.nom || '-',
+        guide_initiale: eleve.guide?.initiale || '-',
+        lecteur_interne_nom: eleve.lecteur_interne?.nom || '-',
+        lecteur_interne_initiale: eleve.lecteur_interne?.initiale || '-',
+        lecteur_externe_nom: eleve.lecteur_externe?.nom || '-',
+        lecteur_externe_prenom: eleve.lecteur_externe?.prenom || '-',
+        mediateur_nom: eleve.mediateur?.nom || '-',
+        mediateur_prenom: eleve.mediateur?.prenom || '-'
+      }));
+
+      setEleves(elevesFormatted);
+
+      // Pour l'onglet Lecteur interne: charger les élèves qui n'ont pas encore de lecteur interne
+      // OU dont le lecteur interne est l'utilisateur actuel
+      const { data: elevesDispoData, error: elevesDispoError } = await supabase
+        .from('eleves')
+        .select(`
+          *,
+          guide:guides!guide_id (nom, initiale)
+        `)
+        .or(`lecteur_interne_id.is.null,lecteur_interne_id.eq.${guideId}`)
+        .order('classe', { ascending: true })
+        .order('nom', { ascending: true });
+
+      if (elevesDispoError) throw elevesDispoError;
+
+      const elevesDispoFormatted = (elevesDispoData || []).map(eleve => ({
+        ...eleve,
+        guide_nom: eleve.guide?.nom || '-',
+        guide_initiale: eleve.guide?.initiale || '-'
+      }));
+
+      setElevesDisponibles(elevesDispoFormatted);
+
+      // Pré-sélectionner les élèves où l'utilisateur est déjà lecteur interne
+      const preSelected = elevesDispoFormatted
+        .filter(e => e.lecteur_interne_id === guideId)
+        .map(e => e.id);
+      setSelectedEleves(preSelected);
+
     } catch (err) {
-      console.error('Erreur chargement des élèves:', err);
+      console.error('Erreur chargement des données:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadDefenses = async (guideId: string) => {
+    try {
+      setLoadingDefenses(true);
+      
+      // Charger les défenses où l'utilisateur est soit guide, soit lecteur interne
+      const { data: defensesData, error: defensesError } = await supabase
+        .from('eleves')
+        .select(`
+          *,
+          guide:guides!guide_id (nom, initiale),
+          lecteur_interne:guides!lecteur_interne_id (nom, initiale),
+          lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
+          mediateur:mediateurs!mediateur_id (nom, prenom)
+        `)
+        .or(`guide_id.eq.${guideId},lecteur_interne_id.eq.${guideId}`)
+        .not('date_defense', 'is', null)
+        .order('date_defense', { ascending: true })
+        .order('heure_defense', { ascending: true });
+
+      if (defensesError) throw defensesError;
+
+      const defensesFormatted = (defensesData || []).map(eleve => ({
+        ...eleve,
+        guide_nom: eleve.guide?.nom || '-',
+        guide_initiale: eleve.guide?.initiale || '-',
+        lecteur_interne_nom: eleve.lecteur_interne?.nom || '-',
+        lecteur_interne_initiale: eleve.lecteur_interne?.initiale || '-',
+        lecteur_externe_nom: eleve.lecteur_externe?.nom || '-',
+        lecteur_externe_prenom: eleve.lecteur_externe?.prenom || '-',
+        mediateur_nom: eleve.mediateur?.nom || '-',
+        mediateur_prenom: eleve.mediateur?.prenom || '-'
+      }));
+
+      setDefenses(defensesFormatted);
+    } catch (err) {
+      console.error('Erreur chargement des défenses:', err);
+    } finally {
+      setLoadingDefenses(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'defenses' && userGuideId) {
+      loadDefenses(userGuideId);
+    }
+  }, [activeTab, userGuideId]);
+
+  const handleToggleSelection = (eleveId: string) => {
+    setSelectedEleves(prev => {
+      if (prev.includes(eleveId)) {
+        return prev.filter(id => id !== eleveId);
+      } else {
+        return [...prev, eleveId];
+      }
+    });
+  };
+
+  const handleSaveLecteurInterne = async () => {
+    try {
+      // D'abord, retirer ce guide comme lecteur interne de tous les élèves
+      const { error: clearError } = await supabase
+        .from('eleves')
+        .update({ lecteur_interne_id: null })
+        .eq('lecteur_interne_id', userGuideId);
+
+      if (clearError) throw clearError;
+
+      // Ensuite, ajouter ce guide comme lecteur interne aux élèves sélectionnés
+      if (selectedEleves.length > 0) {
+        const { error: updateError } = await supabase
+          .from('eleves')
+          .update({ lecteur_interne_id: userGuideId })
+          .in('id', selectedEleves);
+
+        if (updateError) throw updateError;
+      }
+
+      // Recharger les données
+      await loadData(userGuideId);
+      
+      alert('Modifications enregistrées avec succès !');
+    } catch (err) {
+      console.error('Erreur lors de la sauvegarde:', err);
+      alert('Erreur lors de la sauvegarde');
     }
   };
 
@@ -98,7 +294,7 @@ export default function GuideDashboard() {
 
       if (error) throw error;
 
-      // Mettre à jour l'état local immédiatement
+      // Mettre à jour l'état local
       setEleves(prev => prev.map(eleve => 
         eleve.id === eleveId ? { ...eleve, [field]: value } : eleve
       ));
@@ -106,8 +302,7 @@ export default function GuideDashboard() {
       setEditingCell(null);
     } catch (err) {
       console.error('Erreur mise à jour convocation:', err);
-      // Recharger les données en cas d'erreur
-      loadEleves(userGuideId);
+      loadData(userGuideId);
     }
   };
 
@@ -117,7 +312,7 @@ export default function GuideDashboard() {
     return option ? option.color : 'bg-gray-100';
   };
 
-  // Fonction pour obtenir le label court (pour affichage compact)
+  // Fonction pour obtenir le label court
   const getShortLabel = (value: string) => {
     if (!value) return '-';
     if (value.includes('atteint bien')) return 'Objectifs atteints';
@@ -132,7 +327,16 @@ export default function GuideDashboard() {
     router.push('/');
   };
 
-  if (loading) {
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return '-';
+    try {
+      return new Date(dateString).toLocaleDateString('fr-FR');
+    } catch {
+      return dateString;
+    }
+  };
+
+  if (loading && activeTab === 'guide') {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-xl">Chargement de vos élèves...</div>
@@ -143,137 +347,365 @@ export default function GuideDashboard() {
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">Dashboard Guide</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Dashboard Guide</h1>
             <p className="text-gray-600 mt-1">Connecté en tant que {userName}</p>
-            <p className="text-sm text-gray-500">Vous avez {eleves.length} élève(s) assigné(s).</p>
           </div>
           <button
             onClick={handleLogout}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm md:text-base"
           >
             Déconnexion
           </button>
         </div>
 
-        {/* Légende des couleurs */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <p className="text-sm font-medium text-gray-700 mb-2">Légende des convocations:</p>
-          <div className="flex flex-wrap gap-2">
-            {CONVOCATION_OPTIONS.filter(opt => opt.value).map((opt) => (
-              <div key={opt.value} className={`${opt.color} px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1`}>
-                <div className="w-2 h-2 rounded-full" style={{
-                  backgroundColor: opt.color.includes('green') ? '#10B981' :
-                                 opt.color.includes('yellow') ? '#F59E0B' :
-                                 opt.color.includes('orange') ? '#F97316' :
-                                 opt.color.includes('red') ? '#EF4444' : '#6B7280'
-                }}></div>
-                {getShortLabel(opt.label)}
-              </div>
-            ))}
-          </div>
+        {/* Onglets */}
+        <div className="flex border-b border-gray-200 mb-6">
+          <button
+            onClick={() => setActiveTab('guide')}
+            className={`px-4 py-2 font-medium text-sm md:text-base ${
+              activeTab === 'guide'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Guide ({eleves.length} élève(s))
+          </button>
+          <button
+            onClick={() => setActiveTab('lecteur-interne')}
+            className={`px-4 py-2 font-medium text-sm md:text-base ${
+              activeTab === 'lecteur-interne'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Lecteur interne
+          </button>
+          <button
+            onClick={() => setActiveTab('defenses')}
+            className={`px-4 py-2 font-medium text-sm md:text-base ${
+              activeTab === 'defenses'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Défenses programmées
+          </button>
         </div>
 
-        <div className="bg-white rounded-lg shadow overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-100 border-b">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Classe</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Problématique</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Convoc. 9-10 mars</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Convoc. 16-17 avril</th>
-              </tr>
-            </thead>
-            <tbody>
-              {eleves.map((eleve) => (
-                <tr key={eleve.id} className="border-b hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm">{eleve.classe}</td>
-                  <td className="px-4 py-3 text-sm font-medium">{eleve.nom}</td>
-                  <td className="px-4 py-3 text-sm">{eleve.prenom}</td>
-                  <td className="px-4 py-3 text-sm">
-                    {editingCell?.id === eleve.id && editingCell?.field === 'problematique' ? (
-                      <textarea
-                        defaultValue={eleve.problematique}
-                        onBlur={(e) => handleUpdateConvocation(eleve.id, 'problematique', e.target.value)}
-                        className="w-full border rounded px-2 py-1 text-sm"
-                        rows={3}
-                        autoFocus
+        {/* Contenu selon l'onglet */}
+        {activeTab === 'guide' ? (
+          <>
+            {/* Légende des couleurs */}
+            <div className="bg-white rounded-lg shadow p-6 mb-6">
+              <p className="text-sm font-medium text-gray-700 mb-2">Légende des convocations:</p>
+              <div className="flex flex-wrap gap-2">
+                {CONVOCATION_OPTIONS.filter(opt => opt.value).map((opt) => (
+                  <div key={opt.value} className={`${opt.color} px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1`}>
+                    <div className="w-2 h-2 rounded-full" style={{
+                      backgroundColor: opt.color.includes('green') ? '#10B981' :
+                                     opt.color.includes('yellow') ? '#F59E0B' :
+                                     opt.color.includes('orange') ? '#F97316' :
+                                     opt.color.includes('red') ? '#EF4444' : '#6B7280'
+                    }}></div>
+                    {getShortLabel(opt.label)}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Tableau des élèves assignés */}
+            <div className="bg-white rounded-lg shadow overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-100 border-b">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Classe</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Problématique</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Convoc. 9-10 mars</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Convoc. 16-17 avril</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {eleves.map((eleve) => (
+                    <tr key={eleve.id} className="border-b hover:bg-gray-50">
+                      <td className="px-4 py-3 text-sm">{eleve.classe}</td>
+                      <td className="px-4 py-3 text-sm font-medium">{eleve.nom}</td>
+                      <td className="px-4 py-3 text-sm">{eleve.prenom}</td>
+                      <td className="px-4 py-3 text-sm">
+                        {editingCell?.id === eleve.id && editingCell?.field === 'problematique' ? (
+                          <textarea
+                            defaultValue={eleve.problematique}
+                            onBlur={(e) => handleUpdateConvocation(eleve.id, 'problematique', e.target.value)}
+                            className="w-full border rounded px-2 py-1 text-sm"
+                            rows={3}
+                            autoFocus
+                          />
+                        ) : (
+                          <div
+                            onClick={() => setEditingCell({id: eleve.id, field: 'problematique'})}
+                            className="cursor-pointer hover:bg-gray-100 p-1 rounded min-h-[60px] flex items-start"
+                          >
+                            {eleve.problematique || '-'}
+                          </div>
+                        )}
+                      </td>
+                      
+                      <td className="px-4 py-3">
+                        <div className="space-y-1">
+                          <select
+                            value={eleve.convocation_mars || ''}
+                            onChange={(e) => handleUpdateConvocation(eleve.id, 'convocation_mars', e.target.value)}
+                            className={`w-full border rounded px-2 py-1 text-sm ${getConvocationColor(eleve.convocation_mars || '')}`}
+                            title={eleve.convocation_mars || 'Non défini'}
+                          >
+                            {CONVOCATION_OPTIONS.map(opt => (
+                              <option key={opt.value} value={opt.value} className={opt.color}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                          <div className={`text-xs px-2 py-1 rounded truncate ${getConvocationColor(eleve.convocation_mars || '')}`}>
+                            {getShortLabel(eleve.convocation_mars || '')}
+                          </div>
+                        </div>
+                      </td>
+                      
+                      <td className="px-4 py-3">
+                        <div className="space-y-1">
+                          <select
+                            value={eleve.convocation_avril || ''}
+                            onChange={(e) => handleUpdateConvocation(eleve.id, 'convocation_avril', e.target.value)}
+                            className={`w-full border rounded px-2 py-1 text-sm ${getConvocationColor(eleve.convocation_avril || '')}`}
+                            title={eleve.convocation_avril || 'Non défini'}
+                          >
+                            {CONVOCATION_OPTIONS.map(opt => (
+                              <option key={opt.value} value={opt.value} className={opt.color}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                          <div className={`text-xs px-2 py-1 rounded truncate ${getConvocationColor(eleve.convocation_avril || '')}`}>
+                            {getShortLabel(eleve.convocation_avril || '')}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        ) : activeTab === 'lecteur-interne' ? (
+          <div className="space-y-6">
+            {/* En-tête avec bouton de sauvegarde */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-800">Sélection des élèves comme lecteur interne</h2>
+                  <p className="text-gray-600 mt-1">
+                    Sélectionnez les élèves pour lesquels vous serez lecteur interne.
+                    Les élèves sélectionnés n'apparaîtront plus dans la liste des autres guides.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-gray-600">
+                    {selectedEleves.length} élève(s) sélectionné(s)
+                  </span>
+                  <button
+                    onClick={handleSaveLecteurInterne}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                  >
+                    Enregistrer la sélection
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Tableau des élèves disponibles */}
+            <div className="bg-white rounded-lg shadow overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-100 border-b">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-12">
+                      <input
+                        type="checkbox"
+                        checked={selectedEleves.length === elevesDisponibles.length && elevesDisponibles.length > 0}
+                        onChange={() => {
+                          if (selectedEleves.length === elevesDisponibles.length) {
+                            setSelectedEleves([]);
+                          } else {
+                            setSelectedEleves(elevesDisponibles.map(e => e.id));
+                          }
+                        }}
+                        className="w-4 h-4 text-blue-600 rounded"
                       />
-                    ) : (
-                      <div
-                        onClick={() => setEditingCell({id: eleve.id, field: 'problematique'})}
-                        className="cursor-pointer hover:bg-gray-100 p-1 rounded min-h-[60px] flex items-start"
-                      >
-                        {eleve.problematique || '-'}
-                      </div>
-                    )}
-                  </td>
-                  
-                  {/* Colonne Convocation Mars */}
-                  <td className="px-4 py-3">
-                    <div className="space-y-1">
-                      <select
-                        value={eleve.convocation_mars || ''}
-                        onChange={(e) => handleUpdateConvocation(eleve.id, 'convocation_mars', e.target.value)}
-                        className={`w-full border rounded px-2 py-1 text-sm ${getConvocationColor(eleve.convocation_mars || '')}`}
-                        title={eleve.convocation_mars || 'Non défini'}
-                      >
-                        {CONVOCATION_OPTIONS.map(opt => (
-                          <option 
-                            key={opt.value} 
-                            value={opt.value}
-                            className={opt.color}
-                          >
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                      <div className={`text-xs px-2 py-1 rounded truncate ${getConvocationColor(eleve.convocation_mars || '')}`}>
-                        {getShortLabel(eleve.convocation_mars || '')}
-                      </div>
-                    </div>
-                  </td>
-                  
-                  {/* Colonne Convocation Avril */}
-                  <td className="px-4 py-3">
-                    <div className="space-y-1">
-                      <select
-                        value={eleve.convocation_avril || ''}
-                        onChange={(e) => handleUpdateConvocation(eleve.id, 'convocation_avril', e.target.value)}
-                        className={`w-full border rounded px-2 py-1 text-sm ${getConvocationColor(eleve.convocation_avril || '')}`}
-                        title={eleve.convocation_avril || 'Non défini'}
-                      >
-                        {CONVOCATION_OPTIONS.map(opt => (
-                          <option 
-                            key={opt.value} 
-                            value={opt.value}
-                            className={opt.color}
-                          >
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                      <div className={`text-xs px-2 py-1 rounded truncate ${getConvocationColor(eleve.convocation_avril || '')}`}>
-                        {getShortLabel(eleve.convocation_avril || '')}
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Classe</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Catégorie</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Problématique</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Guide</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur interne actuel</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {elevesDisponibles.map((eleve) => (
+                    <tr key={eleve.id} className="border-b hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedEleves.includes(eleve.id)}
+                          onChange={() => handleToggleSelection(eleve.id)}
+                          className="w-4 h-4 text-blue-600 rounded"
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-sm">{eleve.classe}</td>
+                      <td className="px-4 py-3 text-sm font-medium">{eleve.nom}</td>
+                      <td className="px-4 py-3 text-sm">{eleve.prenom}</td>
+                      <td className="px-4 py-3 text-sm">{eleve.categorie || '-'}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <div className="line-clamp-2 max-w-xs">
+                          {eleve.problematique || '-'}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {eleve.guide_nom} {eleve.guide_initiale}.
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {eleve.lecteur_interne_id === userGuideId ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Vous
+                          </span>
+                        ) : eleve.lecteur_interne_id ? (
+                          <span className="text-gray-600">
+                            {guides.find(g => g.id === eleve.lecteur_interne_id)?.nom || 'Autre guide'}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          /* Onglet Défenses programmées */
+          <div className="space-y-6">
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-xl font-semibold text-gray-800">Défenses programmées</h2>
+              <p className="text-gray-600 mt-1">
+                Liste des défenses où vous êtes impliqué en tant que guide ou lecteur interne.
+              </p>
+            </div>
+
+            {loadingDefenses ? (
+              <div className="text-center py-12">
+                <div className="text-xl">Chargement des défenses...</div>
+              </div>
+            ) : defenses.length === 0 ? (
+              <div className="bg-white rounded-lg shadow p-8 text-center">
+                <div className="text-gray-400 text-4xl mb-4">📅</div>
+                <h3 className="text-lg font-medium text-gray-700 mb-2">Aucune défense programmée</h3>
+                <p className="text-gray-500">
+                  Aucune défense n'est actuellement programmée pour vos élèves.
+                </p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg shadow overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-100 border-b">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Date</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Heure</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Classe</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Élève</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Catégorie</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Problématique</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Guide</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur interne</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur externe</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Médiateur</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Localisation</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {defenses.map((eleve) => (
+                      <tr key={eleve.id} className="border-b hover:bg-gray-50">
+                        <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
+                          {formatDate(eleve.date_defense)}
+                        </td>
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">
+                          {eleve.heure_defense || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm">{eleve.classe}</td>
+                        <td className="px-4 py-3 text-sm font-medium">
+                          {eleve.nom} {eleve.prenom}
+                        </td>
+                        <td className="px-4 py-3 text-sm">{eleve.categorie || '-'}</td>
+                        <td className="px-4 py-3 text-sm">
+                          <div className="line-clamp-2 max-w-xs">
+                            {eleve.problematique || '-'}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          {eleve.guide_nom} {eleve.guide_initiale}.
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          {eleve.lecteur_interne_nom ? (
+                            <span>
+                              {eleve.lecteur_interne_nom} {eleve.lecteur_interne_initiale}.
+                              {eleve.lecteur_interne_id === userGuideId && (
+                                <span className="ml-1 text-xs text-blue-600">(vous)</span>
+                              )}
+                            </span>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          {eleve.lecteur_externe_nom ? (
+                            <span>
+                              {eleve.lecteur_externe_prenom} {eleve.lecteur_externe_nom}
+                            </span>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          {eleve.mediateur_nom ? (
+                            <span>
+                              {eleve.mediateur_prenom} {eleve.mediateur_nom}
+                            </span>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          {eleve.localisation_defense || '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Note informative */}
         <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
           <p className="text-sm text-blue-700 flex items-start gap-2">
             <span className="text-lg">💡</span>
             <span>
-              Vous pouvez modifier la problématique en cliquant dessus, et les convocations via les menus déroulants.
-              Les modifications sont enregistrées automatiquement.
+              {activeTab === 'guide' && 'Vous pouvez modifier la problématique en cliquant dessus, et les convocations via les menus déroulants.'}
+              {activeTab === 'lecteur-interne' && 'Sélectionnez les élèves pour lesquels vous serez lecteur interne. Un élève ne peut avoir qu\'un seul lecteur interne.'}
+              {activeTab === 'defenses' && 'Affichage des défenses programmées pour vos élèves (guide ou lecteur interne).'}
             </span>
           </p>
         </div>
