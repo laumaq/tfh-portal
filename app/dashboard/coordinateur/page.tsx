@@ -737,46 +737,68 @@ export default function CoordinateurDashboard() {
                           </div>
                         )}
                       </td>   
-                      
+                                            
                       {/* Date de défense */}
                       <td className="px-3 py-3">
-                        <input
-                          type="date"
-                          value={formatDateForInput(eleve.date_defense)}
-                          onChange={(e) => handleUpdate(eleve.id, 'date_defense', e.target.value)}
-                          className="w-full border rounded px-2 py-1 text-xs md:text-sm"
-                        />
-                        {eleve.date_defense && (
-                          <div className="text-xs text-gray-500 mt-1">
-                            {new Date(eleve.date_defense).toLocaleDateString('fr-FR')}
-                          </div>
-                        )}
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="date"
+                            value={formatDateForInput(eleve.date_defense)}
+                            onChange={(e) => handleUpdate(eleve.id, 'date_defense', e.target.value)}
+                            className="w-full border rounded px-2 py-1 text-xs md:text-sm"
+                          />
+                          {eleve.date_defense && (
+                            <button
+                              onClick={() => handleUpdate(eleve.id, 'date_defense', '')}
+                              className="p-1 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
+                              title="Effacer la date"
+                            >
+                              ×
+                            </button>
+                          )}
+                        </div>
                       </td>
                       
                       {/* Heure de défense */}
                       <td className="px-3 py-3">
-                        <input
-                          type="time"
-                          value={eleve.heure_defense || ''}
-                          onChange={(e) => handleUpdate(eleve.id, 'heure_defense', e.target.value)}
-                          className="w-full border rounded px-2 py-1 text-xs md:text-sm"
-                        />
-                        <div className="text-xs text-gray-500 mt-1">
-                          {eleve.heure_defense || '-'}
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="time"
+                            value={eleve.heure_defense || ''}
+                            onChange={(e) => handleUpdate(eleve.id, 'heure_defense', e.target.value)}
+                            className="w-full border rounded px-2 py-1 text-xs md:text-sm"
+                          />
+                          {eleve.heure_defense && (
+                            <button
+                              onClick={() => handleUpdate(eleve.id, 'heure_defense', '')}
+                              className="p-1 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
+                              title="Effacer l'heure"
+                            >
+                              ×
+                            </button>
+                          )}
                         </div>
                       </td>
                       
                       {/* Localisation */}
                       <td className="px-3 py-3">
-                        <input
-                          type="text"
-                          value={eleve.localisation_defense || ''}
-                          onChange={(e) => handleUpdate(eleve.id, 'localisation_defense', e.target.value)}
-                          className="w-full border rounded px-2 py-1 text-xs md:text-sm"
-                          placeholder="Salle, bâtiment..."
-                        />
-                        <div className="text-xs text-gray-500 mt-1 truncate">
-                          {eleve.localisation_defense || '-'}
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="text"
+                            value={eleve.localisation_defense || ''}
+                            onChange={(e) => handleUpdate(eleve.id, 'localisation_defense', e.target.value)}
+                            className="w-full border rounded px-2 py-1 text-xs md:text-sm"
+                            placeholder="Salle, bâtiment..."
+                          />
+                          {eleve.localisation_defense && (
+                            <button
+                              onClick={() => handleUpdate(eleve.id, 'localisation_defense', '')}
+                              className="p-1 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
+                              title="Effacer la localisation"
+                            >
+                              ×
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -799,6 +821,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
