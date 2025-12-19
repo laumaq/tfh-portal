@@ -240,7 +240,7 @@ export default function LoginPage() {
           localStorage.setItem('userType', 'lecteur_externe');
           localStorage.setItem('userId', lecteurData.id);
           localStorage.setItem('userName', `${lecteurData.prenom} ${lecteurData.nom}`);
-          router.push('/dashboard/lecteur-externe');
+          router.push('/dashboard/lecteur_externe');
           return;
         }
 
@@ -249,7 +249,7 @@ export default function LoginPage() {
           localStorage.setItem('userType', 'lecteur_externe');
           localStorage.setItem('userId', lecteurData.id);
           localStorage.setItem('userName', `${lecteurData.prenom} ${lecteurData.nom}`);
-          router.push('/dashboard/lecteur-externe');
+          router.push('/dashboard/lecteur_externe');
           return;
         } else {
           setError('Mot de passe incorrect');
@@ -367,3 +367,4 @@ export default function LoginPage() {
     </div>
   );
 }
+
