@@ -98,9 +98,9 @@ export default function LecteurExterneDashboard() {
           guide:guides!guide_id (nom, initiale),
           lecteur_interne:guides!lecteur_interne_id (nom, initiale),
           lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
-          mediateur:mediateurs!mediateur_id (nom, prenom)  // <-- Ajouter cette jointure
+          mediateur:mediateurs!mediateur_id (nom, prenom)
         `)
-        .eq('mediateurs_id', mediateurId) 
+        .eq('lecteur_externe_id', lecteurExterneId)  // <-- CORRECTION ICI : filtrer par lecteur externe
         .order('date_defense', { ascending: true, nullsFirst: true })
         .order('heure_defense', { ascending: true, nullsFirst: true })
         .order('classe', { ascending: true })
@@ -115,6 +115,8 @@ export default function LecteurExterneDashboard() {
         guide_initiale: eleve.guide?.initiale || '-',
         lecteur_interne_nom: eleve.lecteur_interne?.nom || '-',
         lecteur_interne_initiale: eleve.lecteur_interne?.initiale || '-',
+        lecteur_externe_nom: eleve.lecteur_externe?.nom || '-',
+        lecteur_externe_prenom: eleve.lecteur_externe?.prenom || '-',
         mediateur_nom: eleve.mediateur?.nom || '-',
         mediateur_prenom: eleve.mediateur?.prenom || '-'
       }));
@@ -246,7 +248,7 @@ export default function LecteurExterneDashboard() {
                         {eleve.lecteur_interne_nom} {eleve.lecteur_interne_initiale}.
                       </td>
                       <td className="px-4 py-3 text-sm whitespace-nowrap">
-                        {eleve.lecteur_externe_prenom} {eleve.lecteur_externe_nom}
+                        {eleve.mediateur_prenom} {eleve.mediateur_nom}
                       </td>
                       <td className="px-4 py-3 text-sm max-w-xs">
                         <div className="line-clamp-2">
