@@ -170,6 +170,9 @@ export default function GuideDashboard() {
           guide:guides!guide_id (nom, initiale)
         `)
         .or(`lecteur_interne_id.is.null,lecteur_interne_id.eq.${guideId}`)
+        // Filtrer les élèves qui ont une catégorie
+        .not('categorie', 'is', null)
+        .not('categorie', 'eq', '')
         .order('classe', { ascending: true })
         .order('nom', { ascending: true });
 
@@ -254,7 +257,6 @@ export default function GuideDashboard() {
   // Filtrer les élèves disponibles par catégorie
   const filteredElevesDisponibles = elevesDisponibles.filter(eleve => {
     if (selectedCategorie === 'toutes') return true;
-    if (selectedCategorie === 'sans-categorie') return !eleve.categorie;
     return eleve.categorie === selectedCategorie;
   });
 
@@ -471,7 +473,7 @@ export default function GuideDashboard() {
                         ) : (
                           <div
                             onClick={() => setEditingCell({id: eleve.id, field: 'problematique'})}
-                            className="cursor-pointer hover:bg-gray-100 p-1 rounded min-h-[60px] flex items-start"
+                            className="cursor-pointer hover:bg-gray-100 p-1 rounded min-h-[60px] flex items-start whitespace-pre-wrap break-words"
                           >
                             {eleve.problematique || '-'}
                           </div>
@@ -547,7 +549,6 @@ export default function GuideDashboard() {
                       className="border rounded px-3 py-1 text-sm"
                     >
                       <option value="toutes">Toutes les catégories</option>
-                      <option value="sans-categorie">Sans catégorie</option>
                       {categories.map(categorie => (
                         <option key={categorie} value={categorie}>
                           {categorie}
@@ -590,16 +591,15 @@ export default function GuideDashboard() {
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Catégorie</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Problématique</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Guide</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur interne actuel</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredElevesDisponibles.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
+                      <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
                         {selectedCategorie === 'toutes' 
                           ? "Aucun élève disponible pour le moment."
-                          : `Aucun élève trouvé dans la catégorie "${selectedCategorie === 'sans-categorie' ? 'Sans catégorie' : selectedCategorie}".`}
+                          : `Aucun élève trouvé dans la catégorie "${selectedCategorie}".`}
                       </td>
                     </tr>
                   ) : (
@@ -626,25 +626,12 @@ export default function GuideDashboard() {
                           )}
                         </td>
                         <td className="px-4 py-3 text-sm">
-                          <div className="line-clamp-2 max-w-xs">
+                          <div className="max-w-xs whitespace-pre-wrap break-words min-h-[40px]">
                             {eleve.problematique || '-'}
                           </div>
                         </td>
                         <td className="px-4 py-3 text-sm">
                           {eleve.guide_nom} {eleve.guide_initiale}.
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          {eleve.lecteur_interne_id === userGuideId ? (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                              Vous
-                            </span>
-                          ) : eleve.lecteur_interne_id ? (
-                            <span className="text-gray-600">
-                              {guides.find(g => g.id === eleve.lecteur_interne_id)?.nom || 'Autre guide'}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
                         </td>
                       </tr>
                     ))
@@ -691,6 +678,7 @@ export default function GuideDashboard() {
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur externe</th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Médiateur</th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Localisation</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Statut défense</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -708,28 +696,28 @@ export default function GuideDashboard() {
                             {eleve.heure_defense || '-'}
                           </td>
                           <td className="px-4 py-3 text-sm">{eleve.classe}</td>
-                          <td className="px-4 py-3 text-sm font-medium">
+                          <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
                             {eleve.nom} {eleve.prenom}
                           </td>
                           <td className="px-4 py-3 text-sm">
                             {eleve.categorie ? (
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 whitespace-nowrap">
                                 {eleve.categorie}
                               </span>
                             ) : '-'}
                           </td>
                           <td className="px-4 py-3 text-sm">
-                            <div className="line-clamp-2 max-w-xs">
+                            <div className="max-w-xs whitespace-pre-wrap break-words min-h-[40px]">
                               {eleve.problematique || '-'}
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-sm">
+                          <td className="px-4 py-3 text-sm whitespace-nowrap">
                             {eleve.guide_nom} {eleve.guide_initiale}.
                             {isGuide && (
                               <span className="ml-1 text-xs text-blue-600">(vous)</span>
                             )}
                           </td>
-                          <td className="px-4 py-3 text-sm">
+                          <td className="px-4 py-3 text-sm whitespace-nowrap">
                             {eleve.lecteur_interne_nom ? (
                               <span>
                                 {eleve.lecteur_interne_nom} {eleve.lecteur_interne_initiale}.
@@ -741,7 +729,7 @@ export default function GuideDashboard() {
                               '-'
                             )}
                           </td>
-                          <td className="px-4 py-3 text-sm">
+                          <td className="px-4 py-3 text-sm whitespace-nowrap">
                             {eleve.lecteur_externe_nom ? (
                               <span>
                                 {eleve.lecteur_externe_prenom} {eleve.lecteur_externe_nom}
@@ -750,7 +738,7 @@ export default function GuideDashboard() {
                               '-'
                             )}
                           </td>
-                          <td className="px-4 py-3 text-sm">
+                          <td className="px-4 py-3 text-sm whitespace-nowrap">
                             {eleve.mediateur_nom ? (
                               <span>
                                 {eleve.mediateur_prenom} {eleve.mediateur_nom}
@@ -761,6 +749,17 @@ export default function GuideDashboard() {
                           </td>
                           <td className="px-4 py-3 text-sm">
                             {eleve.localisation_defense || '-'}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {hasDefense ? (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                Programmé
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                Non programmé
+                              </span>
+                            )}
                           </td>
                         </tr>
                       );
@@ -787,4 +786,3 @@ export default function GuideDashboard() {
     </div>
   );
 }
-
