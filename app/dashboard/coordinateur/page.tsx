@@ -682,7 +682,8 @@ export default function CoordinateurDashboard() {
                       </td>
                       <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">
                         {eleve.guide_nom} {eleve.guide_initiale}.
-                      </td>                      
+                      </td>  
+                      
                       {/* Lecteur Interne */}
                       <td className="px-3 py-3">
                         <select
@@ -690,11 +691,13 @@ export default function CoordinateurDashboard() {
                           onChange={(e) => handleSelectUpdate(eleve.id, 'lecteur_interne_id', e.target.value)}
                           className="w-full border rounded px-2 py-1 text-xs md:text-sm"
                         >
+                          <option value="">-</option>
+                          {guides.map(guide => (
+                            <option key={guide.id} value={guide.id}>
+                              {guide.nom} {guide.initiale}.
+                            </option>
                           ))}
                         </select>
-                        <div className="text-xs text-gray-500 mt-1 truncate">
-                          {eleve.lecteur_interne_nom ? `${eleve.lecteur_interne_nom} ${eleve.lecteur_interne_initiale}.` : '-'}
-                        </div>
                       </td>
                       
                       {/* Lecteur Externe */}
@@ -704,11 +707,13 @@ export default function CoordinateurDashboard() {
                           onChange={(e) => handleSelectUpdate(eleve.id, 'lecteur_externe_id', e.target.value)}
                           className="w-full border rounded px-2 py-1 text-xs md:text-sm"
                         >
+                          <option value="">-</option>
+                          {lecteursExternes.map(lecteur => (
+                            <option key={lecteur.id} value={lecteur.id}>
+                              {lecteur.prenom} {lecteur.nom}
+                            </option>
                           ))}
                         </select>
-                        <div className="text-xs text-gray-500 mt-1 truncate">
-                          {eleve.lecteur_externe_prenom ? `${eleve.lecteur_externe_prenom} ${eleve.lecteur_externe_nom}` : '-'}
-                        </div>
                       </td>
                       
                       {/* Médiateur */}
@@ -719,17 +724,19 @@ export default function CoordinateurDashboard() {
                           className="w-full border rounded px-2 py-1 text-xs md:text-sm"
                           disabled={mediateurs.length === 0}
                         >
+                          <option value="">-</option>
+                          {mediateurs.map(mediateur => (
+                            <option key={mediateur.id} value={mediateur.id}>
+                              {mediateur.prenom} {mediateur.nom}
+                            </option>
                           ))}
                         </select>
-                        <div className="text-xs text-gray-500 mt-1 truncate">
-                          {eleve.mediateur_prenom ? `${eleve.mediateur_prenom} ${eleve.mediateur_nom}` : '-'}
-                        </div>
                         {mediateurs.length === 0 && (
                           <div className="text-xs text-red-500 mt-1">
                             Table médiateurs non configurée
                           </div>
                         )}
-                      </td>
+                      </td>   
                       
                       {/* Date de défense */}
                       <td className="px-3 py-3">
@@ -792,5 +799,6 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
