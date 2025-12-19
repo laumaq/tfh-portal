@@ -89,9 +89,7 @@ export default function CoordinateurDashboard() {
     nom: '',
     prenom: '',
     classe: '',
-    email: '',
     initiale: '',
-    password: '',
     categorie: ''
   });
   const [showMassImport, setShowMassImport] = useState(false);
@@ -153,7 +151,7 @@ export default function CoordinateurDashboard() {
       // Charger les guides
       const { data: guidesData, error: guidesError } = await supabase
         .from('guides')
-        .select('id, nom, initiale, email');
+        .select('id, nom, initiale');
 
       if (guidesError) throw guidesError;
       setGuides(guidesData || []);
@@ -181,7 +179,7 @@ export default function CoordinateurDashboard() {
       // Charger les coordinateurs
       const { data: coordinateursData, error: coordinateursError } = await supabase
         .from('coordinateurs')
-        .select('id, nom, prenom, email');
+        .select('id, nom, prenom');
 
       if (coordinateursError) {
         console.warn('Table coordinateurs non trouvée ou erreur:', coordinateursError);
@@ -1469,20 +1467,6 @@ export default function CoordinateurDashboard() {
                       onChange={(e) => setNewUser({...newUser, initiale: e.target.value})}
                       className="border rounded px-3 py-2 text-sm"
                     />
-                    <input
-                      type="email"
-                      placeholder="Email"
-                      value={newUser.email}
-                      onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                      className="border rounded px-3 py-2 text-sm"
-                    />
-                    <input
-                      type="password"
-                      placeholder="Mot de passe"
-                      value={newUser.password}
-                      onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                      className="border rounded px-3 py-2 text-sm"
-                    />
                   </>
                 )}
 
@@ -1526,20 +1510,6 @@ export default function CoordinateurDashboard() {
                       placeholder="Prénom"
                       value={newUser.prenom}
                       onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
-                      className="border rounded px-3 py-2 text-sm"
-                    />
-                    <input
-                      type="email"
-                      placeholder="Email"
-                      value={newUser.email}
-                      onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                      className="border rounded px-3 py-2 text-sm"
-                    />
-                    <input
-                      type="password"
-                      placeholder="Mot de passe"
-                      value={newUser.password}
-                      onChange={(e) => setNewUser({...newUser, password: e.target.value})}
                       className="border rounded px-3 py-2 text-sm"
                     />
                   </>
@@ -1812,4 +1782,5 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
