@@ -19,7 +19,6 @@ interface Eleve {
   presence_10_mars: boolean | null;
   presence_16_avril: boolean | null;
   presence_17_avril: boolean | null;
-  // Nouveaux champs pour les défenses
   date_defense: string | null;
   heure_defense: string | null;
   localisation_defense: string | null;
@@ -54,13 +53,21 @@ interface Mediateur {
   prenom: string;
 }
 
-type TabType = 'convocations' | 'defenses';
+interface Coordinateur {
+  id: string;
+  nom: string;
+  prenom: string;
+  email: string;
+}
+
+type TabType = 'convocations' | 'defenses' | 'gestion-utilisateurs';
 
 export default function CoordinateurDashboard() {
   const [eleves, setEleves] = useState<Eleve[]>([]);
   const [guides, setGuides] = useState<Guide[]>([]);
   const [lecteursExternes, setLecteursExternes] = useState<LecteurExterne[]>([]);
   const [mediateurs, setMediateurs] = useState<Mediateur[]>([]);
+  const [coordinateurs, setCoordinateurs] = useState<Coordinateur[]>([]);
   const [filteredEleves, setFilteredEleves] = useState<Eleve[]>([]);
   const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState('');
@@ -68,6 +75,39 @@ export default function CoordinateurDashboard() {
   const [editingCell, setEditingCell] = useState<{id: string, field: string} | null>(null);
   const [isLandscape, setIsLandscape] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('convocations');
+  const [editingMode, setEditingMode] = useState(false);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [newCategory, setNewCategory] = useState('');
+  const [newEleve, setNewEleve] = useState({
+    nom: '',
+    prenom: '',
+    classe: '',
+    problematique: '',
+    categorie: '',
+    guide_id: ''
+  });
+  const [newGuide, setNewGuide] = useState({
+    nom: '',
+    initiale: '',
+    email: '',
+    password: ''
+  });
+  const [newLecteurExterne, setNewLecteurExterne] = useState({
+    nom: '',
+    prenom: '',
+    email: ''
+  });
+  const [newMediateur, setNewMediateur] = useState({
+    nom: '',
+    prenom: '',
+    email: ''
+  });
+  const [newCoordinateur, setNewCoordinateur] = useState({
+    nom: '',
+    prenom: '',
+    email: '',
+    password: ''
+  });
   const router = useRouter();
 
   const CONVOCATION_OPTIONS = [
@@ -151,7 +191,7 @@ export default function CoordinateurDashboard() {
       if (lecteursError) throw lecteursError;
       setLecteursExternes(lecteursExternesData || []);
 
-      // Charger les médiateurs (si vous avez une table médiateurs)
+      // Charger les médiateurs
       const { data: mediateursData, error: mediateursError } = await supabase
         .from('mediateurs')
         .select('id, nom, prenom');
@@ -161,6 +201,18 @@ export default function CoordinateurDashboard() {
         setMediateurs([]);
       } else {
         setMediateurs(mediateursData || []);
+      }
+
+      // Charger les coordinateurs
+      const { data: coordinateursData, error: coordinateursError } = await supabase
+        .from('coordinateurs')
+        .select('id, nom, prenom, email');
+
+      if (coordinateursError) {
+        console.warn('Table coordinateurs non trouvée ou erreur:', coordinateursError);
+        setCoordinateurs([]);
+      } else {
+        setCoordinateurs(coordinateursData || []);
       }
 
       // Charger les élèves avec toutes les données
@@ -193,6 +245,13 @@ export default function CoordinateurDashboard() {
 
       setEleves(elevesFormatted);
       setFilteredEleves(elevesFormatted);
+
+      // Extraire les catégories uniques
+      const uniqueCategories = Array.from(
+        new Set(elevesFormatted.map(e => e.categorie).filter(Boolean))
+      ).sort();
+      setCategories(uniqueCategories);
+
     } catch (err) {
       console.error('Erreur chargement données:', err);
     } finally {
@@ -219,6 +278,8 @@ export default function CoordinateurDashboard() {
   };
 
   const handlePresenceUpdate = async (eleveId: string, field: string, currentValue: boolean | null) => {
+    if (!editingMode) return;
+    
     try {
       const newValue = cyclePresenceState(currentValue);
       
@@ -246,10 +307,11 @@ export default function CoordinateurDashboard() {
   };
 
   const handleUpdate = async (eleveId: string, field: string, value: string) => {
+    if (!editingMode) return;
+    
     try {
       const updateData: any = {};
       
-      // Convertir les chaînes vides en null pour les champs qui peuvent être null
       if (value === '') {
         updateData[field] = null;
       } else {
@@ -263,7 +325,6 @@ export default function CoordinateurDashboard() {
   
       if (error) throw error;
   
-      // Mettre à jour l'état local
       setEleves(prev => prev.map(eleve => 
         eleve.id === eleveId ? { 
           ...eleve, 
@@ -286,6 +347,8 @@ export default function CoordinateurDashboard() {
   };
 
   const handleSelectUpdate = async (eleveId: string, field: string, value: string) => {
+    if (!editingMode) return;
+    
     try {
       const updateData: any = {};
       updateData[field] = value === '' ? null : value;
@@ -307,6 +370,281 @@ export default function CoordinateurDashboard() {
     } catch (err) {
       console.error('Erreur mise à jour select:', err);
       loadData();
+    }
+  };
+
+  const handleAddCategory = () => {
+    if (newCategory.trim() && !categories.includes(newCategory.trim())) {
+      setCategories(prev => [...prev, newCategory.trim()].sort());
+      setNewCategory('');
+    }
+  };
+
+  const handleAddEleve = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('eleves')
+        .insert([{
+          nom: newEleve.nom,
+          prenom: newEleve.prenom,
+          classe: newEleve.classe,
+          problematique: newEleve.problematique,
+          categorie: newEleve.categorie,
+          guide_id: newEleve.guide_id || null
+        }])
+        .select();
+
+      if (error) throw error;
+
+      alert('Élève ajouté avec succès!');
+      setNewEleve({
+        nom: '',
+        prenom: '',
+        classe: '',
+        problematique: '',
+        categorie: '',
+        guide_id: ''
+      });
+      loadData();
+    } catch (err) {
+      console.error('Erreur ajout élève:', err);
+      alert('Erreur lors de l\'ajout de l\'élève');
+    }
+  };
+
+  const handleAddGuide = async () => {
+    try {
+      // Créer l'utilisateur dans l'auth Supabase
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: newGuide.email,
+        password: newGuide.password,
+        options: {
+          data: {
+            nom: newGuide.nom,
+            initiale: newGuide.initiale,
+            user_type: 'guide'
+          }
+        }
+      });
+
+      if (authError) throw authError;
+
+      // Ajouter dans la table guides
+      const { error: guideError } = await supabase
+        .from('guides')
+        .insert([{
+          id: authData.user?.id,
+          nom: newGuide.nom,
+          initiale: newGuide.initiale,
+          email: newGuide.email
+        }]);
+
+      if (guideError) throw guideError;
+
+      alert('Guide ajouté avec succès!');
+      setNewGuide({
+        nom: '',
+        initiale: '',
+        email: '',
+        password: ''
+      });
+      loadData();
+    } catch (err) {
+      console.error('Erreur ajout guide:', err);
+      alert('Erreur lors de l\'ajout du guide');
+    }
+  };
+
+  const handleAddLecteurExterne = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('lecteurs_externes')
+        .insert([{
+          nom: newLecteurExterne.nom,
+          prenom: newLecteurExterne.prenom,
+          email: newLecteurExterne.email
+        }])
+        .select();
+
+      if (error) throw error;
+
+      alert('Lecteur externe ajouté avec succès!');
+      setNewLecteurExterne({
+        nom: '',
+        prenom: '',
+        email: ''
+      });
+      loadData();
+    } catch (err) {
+      console.error('Erreur ajout lecteur externe:', err);
+      alert('Erreur lors de l\'ajout du lecteur externe');
+    }
+  };
+
+  const handleAddMediateur = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('mediateurs')
+        .insert([{
+          nom: newMediateur.nom,
+          prenom: newMediateur.prenom,
+          email: newMediateur.email
+        }])
+        .select();
+
+      if (error) throw error;
+
+      alert('Médiateur ajouté avec succès!');
+      setNewMediateur({
+        nom: '',
+        prenom: '',
+        email: ''
+      });
+      loadData();
+    } catch (err) {
+      console.error('Erreur ajout médiateur:', err);
+      alert('Erreur lors de l\'ajout du médiateur');
+    }
+  };
+
+  const handleAddCoordinateur = async () => {
+    try {
+      // Créer l'utilisateur dans l'auth Supabase
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: newCoordinateur.email,
+        password: newCoordinateur.password,
+        options: {
+          data: {
+            nom: newCoordinateur.nom,
+            prenom: newCoordinateur.prenom,
+            user_type: 'coordinateur'
+          }
+        }
+      });
+
+      if (authError) throw authError;
+
+      // Ajouter dans la table coordinateurs
+      const { error: coordError } = await supabase
+        .from('coordinateurs')
+        .insert([{
+          id: authData.user?.id,
+          nom: newCoordinateur.nom,
+          prenom: newCoordinateur.prenom,
+          email: newCoordinateur.email
+        }]);
+
+      if (coordError) throw coordError;
+
+      alert('Coordinateur ajouté avec succès!');
+      setNewCoordinateur({
+        nom: '',
+        prenom: '',
+        email: '',
+        password: ''
+      });
+      loadData();
+    } catch (err) {
+      console.error('Erreur ajout coordinateur:', err);
+      alert('Erreur lors de l\'ajout du coordinateur');
+    }
+  };
+
+  const handleDeleteEleve = async (id: string, nom: string, prenom: string) => {
+    if (confirm(`Supprimer l'élève ${prenom} ${nom} ?`)) {
+      try {
+        const { error } = await supabase
+          .from('eleves')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+
+        alert('Élève supprimé avec succès!');
+        loadData();
+      } catch (err) {
+        console.error('Erreur suppression élève:', err);
+        alert('Erreur lors de la suppression de l\'élève');
+      }
+    }
+  };
+
+  const handleDeleteGuide = async (id: string, nom: string) => {
+    if (confirm(`Supprimer le guide ${nom} ?`)) {
+      try {
+        const { error } = await supabase
+          .from('guides')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+
+        // Optionnel: Supprimer aussi l'utilisateur auth
+        // await supabase.auth.admin.deleteUser(id);
+
+        alert('Guide supprimé avec succès!');
+        loadData();
+      } catch (err) {
+        console.error('Erreur suppression guide:', err);
+        alert('Erreur lors de la suppression du guide');
+      }
+    }
+  };
+
+  const handleDeleteLecteurExterne = async (id: string, nom: string, prenom: string) => {
+    if (confirm(`Supprimer le lecteur externe ${prenom} ${nom} ?`)) {
+      try {
+        const { error } = await supabase
+          .from('lecteurs_externes')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+
+        alert('Lecteur externe supprimé avec succès!');
+        loadData();
+      } catch (err) {
+        console.error('Erreur suppression lecteur externe:', err);
+        alert('Erreur lors de la suppression du lecteur externe');
+      }
+    }
+  };
+
+  const handleDeleteMediateur = async (id: string, nom: string, prenom: string) => {
+    if (confirm(`Supprimer le médiateur ${prenom} ${nom} ?`)) {
+      try {
+        const { error } = await supabase
+          .from('mediateurs')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+
+        alert('Médiateur supprimé avec succès!');
+        loadData();
+      } catch (err) {
+        console.error('Erreur suppression médiateur:', err);
+        alert('Erreur lors de la suppression du médiateur');
+      }
+    }
+  };
+
+  const handleDeleteCoordinateur = async (id: string, nom: string, prenom: string) => {
+    if (confirm(`Êtes-vous sûr de vouloir supprimer le coordinateur ${prenom} ${nom} ? Cette action est irréversible.`)) {
+      try {
+        const { error } = await supabase
+          .from('coordinateurs')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+
+        alert('Coordinateur supprimé avec succès!');
+        loadData();
+      } catch (err) {
+        console.error('Erreur suppression coordinateur:', err);
+        alert('Erreur lors de la suppression du coordinateur');
+      }
     }
   };
 
@@ -358,7 +696,6 @@ export default function CoordinateurDashboard() {
     if (!dateString) return '';
     try {
       const date = new Date(dateString);
-      // S'assurer que la date est valide
       if (isNaN(date.getTime())) return '';
       return date.toISOString().split('T')[0];
     } catch (error) {
@@ -441,24 +778,52 @@ export default function CoordinateurDashboard() {
           >
             Gestion des Défenses
           </button>
+          <button
+            onClick={() => {
+              setActiveTab('gestion-utilisateurs');
+              setShowConvoques(false);
+            }}
+            className={`px-4 py-2 font-medium text-sm md:text-base ${
+              activeTab === 'gestion-utilisateurs'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Gestion des Utilisateurs
+          </button>
         </div>
 
         {/* Contenu selon l'onglet */}
         {activeTab === 'convocations' ? (
           <>
             <div className="bg-white rounded-lg shadow p-4 md:p-6 mb-6">
-              <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={showConvoques}
-                    onChange={(e) => setShowConvoques(e.target.checked)}
-                    className="w-5 h-5 text-blue-600 rounded"
-                  />
-                  <span className="text-sm font-medium">
-                    Afficher uniquement les élèves convoqués
-                  </span>
-                </label>
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-4">
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={showConvoques}
+                      onChange={(e) => setShowConvoques(e.target.checked)}
+                      className="w-5 h-5 text-blue-600 rounded"
+                    />
+                    <span className="text-sm font-medium">
+                      Afficher uniquement les élèves convoqués
+                    </span>
+                  </label>
+                  
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editingMode}
+                      onChange={(e) => setEditingMode(e.target.checked)}
+                      className="w-5 h-5 text-blue-600 rounded"
+                    />
+                    <span className="text-sm font-medium">
+                      Mode édition
+                    </span>
+                  </label>
+                </div>
+                
                 <span className="text-sm text-gray-500">
                   ({filteredEleves.length} élève{filteredEleves.length > 1 ? 's' : ''})
                 </span>
@@ -501,7 +866,7 @@ export default function CoordinateurDashboard() {
                       </div>
                     </div>
                     <p className="text-xs text-gray-500 mt-1">
-                      Cliquez pour faire tourner: ? → ✓ → ✗ → ?
+                      {editingMode ? 'Cliquez pour faire tourner: ? → ✓ → ✗ → ?' : 'Activez le mode édition pour modifier'}
                     </p>
                   </div>
                 </div>
@@ -540,30 +905,67 @@ export default function CoordinateurDashboard() {
                           <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">{eleve.classe}</td>
                           <td className="px-3 py-3 text-xs md:text-sm font-medium whitespace-nowrap">{eleve.nom}</td>
                           <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">{eleve.prenom}</td>
+                          
+                          {/* Guide */}
                           <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">
-                            {eleve.guide_nom} {eleve.guide_initiale}.
-                          </td>
-                          <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">
-                            {editingCell?.id === eleve.id && editingCell?.field === 'categorie' ? (
-                              <input
-                                type="text"
-                                defaultValue={eleve.categorie || ''}
-                                onBlur={(e) => handleUpdate(eleve.id, 'categorie', e.target.value)}
+                            {editingMode ? (
+                              <select
+                                value={eleve.guide_id || ''}
+                                onChange={(e) => handleSelectUpdate(eleve.id, 'guide_id', e.target.value)}
                                 className="w-full border rounded px-2 py-1 text-xs md:text-sm"
-                                autoFocus
-                              />
-                            ) : (
-                              <div
-                                onClick={() => setEditingCell({id: eleve.id, field: 'categorie'})}
-                                className="cursor-pointer hover:bg-gray-100 p-1 rounded"
                               >
-                                {eleve.categorie || '-'}
-                              </div>
+                                <option value="">-</option>
+                                {guides.map(guide => (
+                                  <option key={guide.id} value={guide.id}>
+                                    {guide.nom} {guide.initiale}.
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <span>
+                                {eleve.guide_nom} {eleve.guide_initiale}.
+                              </span>
                             )}
                           </td>
                           
+                          {/* Catégorie */}
+                          <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">
+                            {editingMode ? (
+                              <div className="flex flex-col gap-1">
+                                <select
+                                  value={eleve.categorie || ''}
+                                  onChange={(e) => handleSelectUpdate(eleve.id, 'categorie', e.target.value)}
+                                  className="w-full border rounded px-2 py-1 text-xs md:text-sm"
+                                >
+                                  <option value="">-</option>
+                                  {categories.map(cat => (
+                                    <option key={cat} value={cat}>{cat}</option>
+                                  ))}
+                                </select>
+                                <div className="flex gap-1">
+                                  <input
+                                    type="text"
+                                    value={newCategory}
+                                    onChange={(e) => setNewCategory(e.target.value)}
+                                    placeholder="Nouvelle catégorie"
+                                    className="flex-1 border rounded px-2 py-1 text-xs"
+                                  />
+                                  <button
+                                    onClick={handleAddCategory}
+                                    className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <span>{eleve.categorie || '-'}</span>
+                            )}
+                          </td>
+                          
+                          {/* Problématique */}
                           <td className="px-3 py-3 text-xs md:text-sm">
-                            {editingCell?.id === eleve.id && editingCell?.field === 'problematique' ? (
+                            {editingMode && editingCell?.id === eleve.id && editingCell?.field === 'problematique' ? (
                               <textarea
                                 defaultValue={eleve.problematique}
                                 onBlur={(e) => handleUpdate(eleve.id, 'problematique', e.target.value)}
@@ -571,90 +973,130 @@ export default function CoordinateurDashboard() {
                                 rows={3}
                                 autoFocus
                               />
-                            ) : (
+                            ) : editingMode ? (
                               <div
                                 onClick={() => setEditingCell({id: eleve.id, field: 'problematique'})}
                                 className="cursor-pointer hover:bg-gray-100 p-1 rounded min-h-[60px] flex items-start"
                               >
                                 {eleve.problematique || '-'}
                               </div>
+                            ) : (
+                              <div className="min-h-[60px] flex items-start">
+                                {eleve.problematique || '-'}
+                              </div>
                             )}
                           </td>
                           
+                          {/* Convocation Mars */}
                           <td className="px-3 py-3">
-                            <select
-                              value={eleve.convocation_mars || ''}
-                              onChange={(e) => handleUpdate(eleve.id, 'convocation_mars', e.target.value)}
-                              className={`w-full border rounded px-2 py-1 text-xs md:text-sm ${getConvocationColor(eleve.convocation_mars || '')}`}
-                              title={getConvocationLabel(eleve.convocation_mars || '')}
-                            >
-                              {CONVOCATION_OPTIONS.map(opt => (
-                                <option key={opt.value} value={opt.value} className={opt.color}>
-                                  {opt.label}
-                                </option>
-                              ))}
-                            </select>
-                            <div className={`mt-1 text-xs px-2 py-1 rounded ${getConvocationColor(eleve.convocation_mars || '')} truncate`}>
-                              {getConvocationLabel(eleve.convocation_mars || '').split(',')[0]}
-                            </div>
+                            {editingMode ? (
+                              <select
+                                value={eleve.convocation_mars || ''}
+                                onChange={(e) => handleUpdate(eleve.id, 'convocation_mars', e.target.value)}
+                                className={`w-full border rounded px-2 py-1 text-xs md:text-sm ${getConvocationColor(eleve.convocation_mars || '')}`}
+                                title={getConvocationLabel(eleve.convocation_mars || '')}
+                              >
+                                {CONVOCATION_OPTIONS.map(opt => (
+                                  <option key={opt.value} value={opt.value} className={opt.color}>
+                                    {opt.label}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <div className={`px-2 py-1 rounded ${getConvocationColor(eleve.convocation_mars || '')}`}>
+                                {getConvocationLabel(eleve.convocation_mars || '').split(',')[0]}
+                              </div>
+                            )}
                           </td>
                           
+                          {/* Présence 9 mars */}
                           <td className="px-3 py-3 text-center">
-                            <button
-                              onClick={() => handlePresenceUpdate(eleve.id, 'presence_9_mars', eleve.presence_9_mars)}
-                              className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presence9Mars.bgColor} ${presence9Mars.hoverColor} ${presence9Mars.textColor} font-bold text-lg`}
-                              title={`${presence9Mars.title} (cliquer pour changer)`}
-                            >
-                              {presence9Mars.icon}
-                            </button>
+                            {editingMode ? (
+                              <button
+                                onClick={() => handlePresenceUpdate(eleve.id, 'presence_9_mars', eleve.presence_9_mars)}
+                                className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presence9Mars.bgColor} ${presence9Mars.hoverColor} ${presence9Mars.textColor} font-bold text-lg`}
+                                title={`${presence9Mars.title} (cliquer pour changer)`}
+                              >
+                                {presence9Mars.icon}
+                              </button>
+                            ) : (
+                              <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center ${presence9Mars.bgColor} ${presence9Mars.textColor} font-bold text-lg`}>
+                                {presence9Mars.icon}
+                              </div>
+                            )}
                           </td>
                           
+                          {/* Présence 10 mars */}
                           <td className="px-3 py-3 text-center">
-                            <button
-                              onClick={() => handlePresenceUpdate(eleve.id, 'presence_10_mars', eleve.presence_10_mars)}
-                              className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presence10Mars.bgColor} ${presence10Mars.hoverColor} ${presence10Mars.textColor} font-bold text-lg`}
-                              title={`${presence10Mars.title} (cliquer pour changer)`}
-                            >
-                              {presence10Mars.icon}
-                            </button>
+                            {editingMode ? (
+                              <button
+                                onClick={() => handlePresenceUpdate(eleve.id, 'presence_10_mars', eleve.presence_10_mars)}
+                                className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presence10Mars.bgColor} ${presence10Mars.hoverColor} ${presence10Mars.textColor} font-bold text-lg`}
+                                title={`${presence10Mars.title} (cliquer pour changer)`}
+                              >
+                                {presence10Mars.icon}
+                              </button>
+                            ) : (
+                              <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center ${presence10Mars.bgColor} ${presence10Mars.textColor} font-bold text-lg`}>
+                                {presence10Mars.icon}
+                              </div>
+                            )}
                           </td>
                           
+                          {/* Convocation Avril */}
                           <td className="px-3 py-3">
-                            <select
-                              value={eleve.convocation_avril || ''}
-                              onChange={(e) => handleUpdate(eleve.id, 'convocation_avril', e.target.value)}
-                              className={`w-full border rounded px-2 py-1 text-xs md:text-sm ${getConvocationColor(eleve.convocation_avril || '')}`}
-                              title={getConvocationLabel(eleve.convocation_avril || '')}
-                            >
-                              {CONVOCATION_OPTIONS.map(opt => (
-                                <option key={opt.value} value={opt.value} className={opt.color}>
-                                  {opt.label}
-                                </option>
-                              ))}
-                            </select>
-                            <div className={`mt-1 text-xs px-2 py-1 rounded ${getConvocationColor(eleve.convocation_avril || '')} truncate`}>
-                              {getConvocationLabel(eleve.convocation_avril || '').split(',')[0]}
-                            </div>
+                            {editingMode ? (
+                              <select
+                                value={eleve.convocation_avril || ''}
+                                onChange={(e) => handleUpdate(eleve.id, 'convocation_avril', e.target.value)}
+                                className={`w-full border rounded px-2 py-1 text-xs md:text-sm ${getConvocationColor(eleve.convocation_avril || '')}`}
+                                title={getConvocationLabel(eleve.convocation_avril || '')}
+                              >
+                                {CONVOCATION_OPTIONS.map(opt => (
+                                  <option key={opt.value} value={opt.value} className={opt.color}>
+                                    {opt.label}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <div className={`px-2 py-1 rounded ${getConvocationColor(eleve.convocation_avril || '')}`}>
+                                {getConvocationLabel(eleve.convocation_avril || '').split(',')[0]}
+                              </div>
+                            )}
                           </td>
                           
+                          {/* Présence 16 avril */}
                           <td className="px-3 py-3 text-center">
-                            <button
-                              onClick={() => handlePresenceUpdate(eleve.id, 'presence_16_avril', eleve.presence_16_avril)}
-                              className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presence16Avril.bgColor} ${presence16Avril.hoverColor} ${presence16Avril.textColor} font-bold text-lg`}
-                              title={`${presence16Avril.title} (cliquer pour changer)`}
-                            >
-                              {presence16Avril.icon}
-                            </button>
+                            {editingMode ? (
+                              <button
+                                onClick={() => handlePresenceUpdate(eleve.id, 'presence_16_avril', eleve.presence_16_avril)}
+                                className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presence16Avril.bgColor} ${presence16Avril.hoverColor} ${presence16Avril.textColor} font-bold text-lg`}
+                                title={`${presence16Avril.title} (cliquer pour changer)`}
+                              >
+                                {presence16Avril.icon}
+                              </button>
+                            ) : (
+                              <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center ${presence16Avril.bgColor} ${presence16Avril.textColor} font-bold text-lg`}>
+                                {presence16Avril.icon}
+                              </div>
+                            )}
                           </td>
                           
+                          {/* Présence 17 avril */}
                           <td className="px-3 py-3 text-center">
-                            <button
-                              onClick={() => handlePresenceUpdate(eleve.id, 'presence_17_avril', eleve.presence_17_avril)}
-                              className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presence17Avril.bgColor} ${presence17Avril.hoverColor} ${presence17Avril.textColor} font-bold text-lg`}
-                              title={`${presence17Avril.title} (cliquer pour changer)`}
-                            >
-                              {presence17Avril.icon}
-                            </button>
+                            {editingMode ? (
+                              <button
+                                onClick={() => handlePresenceUpdate(eleve.id, 'presence_17_avril', eleve.presence_17_avril)}
+                                className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presence17Avril.bgColor} ${presence17Avril.hoverColor} ${presence17Avril.textColor} font-bold text-lg`}
+                                title={`${presence17Avril.title} (cliquer pour changer)`}
+                              >
+                                {presence17Avril.icon}
+                              </button>
+                            ) : (
+                              <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center ${presence17Avril.bgColor} ${presence17Avril.textColor} font-bold text-lg`}>
+                                {presence17Avril.icon}
+                              </div>
+                            )}
                           </td>
                         </tr>
                       );
@@ -664,7 +1106,7 @@ export default function CoordinateurDashboard() {
               </div>
             </div>
           </>
-        ) : (
+        ) : activeTab === 'defenses' ? (
           /* Onglet Gestion des Défenses */
           <div className="bg-white rounded-lg shadow overflow-x-auto">
             <div className="min-w-[1400px] md:min-w-full">
@@ -695,7 +1137,7 @@ export default function CoordinateurDashboard() {
                         {eleve.categorie || '-'}
                       </td>
                       <td className="px-3 py-3 text-xs md:text-sm">
-                        <div className="line-clamp-2">
+                        <div className="whitespace-pre-wrap break-words max-w-xs">
                           {eleve.problematique || '-'}
                         </div>
                       </td>
@@ -709,6 +1151,7 @@ export default function CoordinateurDashboard() {
                           value={eleve.lecteur_interne_id || ''}
                           onChange={(e) => handleSelectUpdate(eleve.id, 'lecteur_interne_id', e.target.value)}
                           className="w-full border rounded px-2 py-1 text-xs md:text-sm"
+                          disabled={!editingMode}
                         >
                           <option value="">-</option>
                           {guides.map(guide => (
@@ -725,6 +1168,7 @@ export default function CoordinateurDashboard() {
                           value={eleve.lecteur_externe_id || ''}
                           onChange={(e) => handleSelectUpdate(eleve.id, 'lecteur_externe_id', e.target.value)}
                           className="w-full border rounded px-2 py-1 text-xs md:text-sm"
+                          disabled={!editingMode}
                         >
                           <option value="">-</option>
                           {lecteursExternes.map(lecteur => (
@@ -741,7 +1185,7 @@ export default function CoordinateurDashboard() {
                           value={eleve.mediateur_id || ''}
                           onChange={(e) => handleSelectUpdate(eleve.id, 'mediateur_id', e.target.value)}
                           className="w-full border rounded px-2 py-1 text-xs md:text-sm"
-                          disabled={mediateurs.length === 0}
+                          disabled={!editingMode || mediateurs.length === 0}
                         >
                           <option value="">-</option>
                           {mediateurs.map(mediateur => (
@@ -750,11 +1194,6 @@ export default function CoordinateurDashboard() {
                             </option>
                           ))}
                         </select>
-                        {mediateurs.length === 0 && (
-                          <div className="text-xs text-red-500 mt-1">
-                            Table médiateurs non configurée
-                          </div>
-                        )}
                       </td>   
                                             
                       {/* Date de défense */}
@@ -768,8 +1207,9 @@ export default function CoordinateurDashboard() {
                               handleUpdate(eleve.id, 'date_defense', newValue);
                             }}
                             className="w-full border rounded px-2 py-1 text-xs md:text-sm"
+                            disabled={!editingMode}
                           />
-                          {eleve.date_defense && (
+                          {editingMode && eleve.date_defense && (
                             <button
                               onClick={() => handleUpdate(eleve.id, 'date_defense', '')}
                               className="p-1 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
@@ -792,8 +1232,9 @@ export default function CoordinateurDashboard() {
                               handleUpdate(eleve.id, 'heure_defense', newValue);
                             }}
                             className="w-full border rounded px-2 py-1 text-xs md:text-sm"
+                            disabled={!editingMode}
                           />
-                          {eleve.heure_defense && (
+                          {editingMode && eleve.heure_defense && (
                             <button
                               onClick={() => handleUpdate(eleve.id, 'heure_defense', '')}
                               className="p-1 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
@@ -817,8 +1258,9 @@ export default function CoordinateurDashboard() {
                             }}
                             className="w-full border rounded px-2 py-1 text-xs md:text-sm"
                             placeholder="Salle, bâtiment..."
+                            disabled={!editingMode}
                           />
-                          {eleve.localisation_defense && (
+                          {editingMode && eleve.localisation_defense && (
                             <button
                               onClick={() => handleUpdate(eleve.id, 'localisation_defense', '')}
                               className="p-1 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
@@ -835,6 +1277,401 @@ export default function CoordinateurDashboard() {
               </table>
             </div>
           </div>
+        ) : (
+          /* Onglet Gestion des Utilisateurs */
+          <div className="space-y-8">
+            {/* Section Ajout d'utilisateurs */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-xl font-semibold text-gray-800 mb-6">Ajouter de nouveaux utilisateurs</h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Ajouter un élève */}
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-medium text-gray-700 mb-3">Ajouter un élève</h3>
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      placeholder="Nom"
+                      value={newEleve.nom}
+                      onChange={(e) => setNewEleve({...newEleve, nom: e.target.value})}
+                      className="w-full border rounded px-3 py-1 text-sm"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Prénom"
+                      value={newEleve.prenom}
+                      onChange={(e) => setNewEleve({...newEleve, prenom: e.target.value})}
+                      className="w-full border rounded px-3 py-1 text-sm"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Classe"
+                      value={newEleve.classe}
+                      onChange={(e) => setNewEleve({...newEleve, classe: e.target.value})}
+                      className="w-full border rounded px-3 py-1 text-sm"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Catégorie"
+                      value={newEleve.categorie}
+                      onChange={(e) => setNewEleve({...newEleve, categorie: e.target.value})}
+                      className="w-full border rounded px-3 py-1 text-sm"
+                    />
+                    <select
+                      value={newEleve.guide_id}
+                      onChange={(e) => setNewEleve({...newEleve, guide_id: e.target.value})}
+                      className="w-full border rounded px-3 py-1 text-sm"
+                    >
+                      <option value="">Sélectionner un guide</option>
+                      {guides.map(guide => (
+                        <option key={guide.id} value={guide.id}>
+                          {guide.nom} {guide.initiale}.
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={handleAddEleve}
+                      className="w-full px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                    >
+                      Ajouter l'élève
+                    </button>
+                  </div>
+                </div>
+
+                {/* Ajouter un guide */}
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-medium text-gray-700 mb-3">Ajouter un guide</h3>
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      placeholder="Nom"
+                      value={newGuide.nom}
+                      onChange={(e) => setNewGuide({...newGuide, nom: e.target.value})}
+                      className="w-full border rounded px-3 py-1 text-sm"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Initiale"
+                      value={newGuide.initiale}
+                      onChange={(e) => setNewGuide({...newGuide, initiale: e.target.value})}
+                      className="w-full border rounded px-3 py-1 text-sm"
+                    />
+                    <input
+                      type="email"
+                      placeholder="Email"
+                      value={newGuide.email}
+                      onChange={(e) => setNewGuide({...newGuide, email: e.target.value})}
+                      className="w-full border rounded px-3 py-1 text-sm"
+                    />
+                    <input
+                      type="password"
+                      placeholder="Mot de passe"
+                      value={newGuide.password}
+                      onChange={(e) => setNewGuide({...newGuide, password: e.target.value})}
+                      className="w-full border rounded px-3 py-1 text-sm"
+                    />
+                    <button
+                      onClick={handleAddGuide}
+                      className="w-full px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                    >
+                      Ajouter le guide
+                    </button>
+                  </div>
+                </div>
+
+                {/* Ajouter un lecteur externe */}
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-medium text-gray-700 mb-3">Ajouter un lecteur externe</h3>
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      placeholder="Nom"
+                      value={newLecteurExterne.nom}
+                      onChange={(e) => setNewLecteurExterne({...newLecteurExterne, nom: e.target.value})}
+                      className="w-full border rounded px-3 py-1 text-sm"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Prénom"
+                      value={newLecteurExterne.prenom}
+                      onChange={(e) => setNewLecteurExterne({...newLecteurExterne, prenom: e.target.value})}
+                      className="w-full border rounded px-3 py-1 text-sm"
+                    />
+                    <input
+                      type="email"
+                      placeholder="Email"
+                      value={newLecteurExterne.email}
+                      onChange={(e) => setNewLecteurExterne({...newLecteurExterne, email: e.target.value})}
+                      className="w-full border rounded px-3 py-1 text-sm"
+                    />
+                    <button
+                      onClick={handleAddLecteurExterne}
+                      className="w-full px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                    >
+                      Ajouter le lecteur
+                    </button>
+                  </div>
+                </div>
+
+                {/* Ajouter un médiateur */}
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-medium text-gray-700 mb-3">Ajouter un médiateur</h3>
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      placeholder="Nom"
+                      value={newMediateur.nom}
+                      onChange={(e) => setNewMediateur({...newMediateur, nom: e.target.value})}
+                      className="w-full border rounded px-3 py-1 text-sm"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Prénom"
+                      value={newMediateur.prenom}
+                      onChange={(e) => setNewMediateur({...newMediateur, prenom: e.target.value})}
+                      className="w-full border rounded px-3 py-1 text-sm"
+                    />
+                    <input
+                      type="email"
+                      placeholder="Email"
+                      value={newMediateur.email}
+                      onChange={(e) => setNewMediateur({...newMediateur, email: e.target.value})}
+                      className="w-full border rounded px-3 py-1 text-sm"
+                    />
+                    <button
+                      onClick={handleAddMediateur}
+                      className="w-full px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                    >
+                      Ajouter le médiateur
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Ajouter un coordinateur */}
+              <div className="mt-6 border rounded-lg p-4 max-w-md">
+                <h3 className="font-medium text-gray-700 mb-3">Ajouter un coordinateur</h3>
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    placeholder="Nom"
+                    value={newCoordinateur.nom}
+                    onChange={(e) => setNewCoordinateur({...newCoordinateur, nom: e.target.value})}
+                    className="w-full border rounded px-3 py-1 text-sm"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Prénom"
+                    value={newCoordinateur.prenom}
+                    onChange={(e) => setNewCoordinateur({...newCoordinateur, prenom: e.target.value})}
+                    className="w-full border rounded px-3 py-1 text-sm"
+                  />
+                  <input
+                    type="email"
+                    placeholder="Email"
+                    value={newCoordinateur.email}
+                    onChange={(e) => setNewCoordinateur({...newCoordinateur, email: e.target.value})}
+                    className="w-full border rounded px-3 py-1 text-sm"
+                  />
+                  <input
+                    type="password"
+                    placeholder="Mot de passe"
+                    value={newCoordinateur.password}
+                    onChange={(e) => setNewCoordinateur({...newCoordinateur, password: e.target.value})}
+                    className="w-full border rounded px-3 py-1 text-sm"
+                  />
+                  <button
+                    onClick={handleAddCoordinateur}
+                    className="w-full px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                  >
+                    Ajouter le coordinateur
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Section Liste des utilisateurs */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-xl font-semibold text-gray-800 mb-6">Liste des utilisateurs</h2>
+              
+              {/* Élèves */}
+              <div className="mb-8">
+                <h3 className="text-lg font-medium text-gray-700 mb-4">Élèves ({eleves.length})</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-100 border-b">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Classe</th>
+                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Nom</th>
+                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Prénom</th>
+                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Catégorie</th>
+                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Guide</th>
+                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {eleves.slice(0, 10).map((eleve) => (
+                        <tr key={eleve.id} className="border-b hover:bg-gray-50">
+                          <td className="px-4 py-2 text-sm">{eleve.classe}</td>
+                          <td className="px-4 py-2 text-sm">{eleve.nom}</td>
+                          <td className="px-4 py-2 text-sm">{eleve.prenom}</td>
+                          <td className="px-4 py-2 text-sm">{eleve.categorie || '-'}</td>
+                          <td className="px-4 py-2 text-sm">{eleve.guide_nom} {eleve.guide_initiale}.</td>
+                          <td className="px-4 py-2">
+                            <button
+                              onClick={() => handleDeleteEleve(eleve.id, eleve.nom, eleve.prenom)}
+                              className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200"
+                            >
+                              Supprimer
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {eleves.length > 10 && (
+                        <tr>
+                          <td colSpan={6} className="px-4 py-2 text-sm text-gray-500 text-center">
+                            ... et {eleves.length - 10} autres élèves
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Guides */}
+              <div className="mb-8">
+                <h3 className="text-lg font-medium text-gray-700 mb-4">Guides ({guides.length})</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-100 border-b">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Nom</th>
+                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Initiale</th>
+                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {guides.map((guide) => (
+                        <tr key={guide.id} className="border-b hover:bg-gray-50">
+                          <td className="px-4 py-2 text-sm">{guide.nom}</td>
+                          <td className="px-4 py-2 text-sm">{guide.initiale}</td>
+                          <td className="px-4 py-2">
+                            <button
+                              onClick={() => handleDeleteGuide(guide.id, guide.nom)}
+                              className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200"
+                            >
+                              Supprimer
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Lecteurs externes */}
+              <div className="mb-8">
+                <h3 className="text-lg font-medium text-gray-700 mb-4">Lecteurs externes ({lecteursExternes.length})</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-100 border-b">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Nom</th>
+                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Prénom</th>
+                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {lecteursExternes.map((lecteur) => (
+                        <tr key={lecteur.id} className="border-b hover:bg-gray-50">
+                          <td className="px-4 py-2 text-sm">{lecteur.nom}</td>
+                          <td className="px-4 py-2 text-sm">{lecteur.prenom}</td>
+                          <td className="px-4 py-2">
+                            <button
+                              onClick={() => handleDeleteLecteurExterne(lecteur.id, lecteur.nom, lecteur.prenom)}
+                              className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200"
+                            >
+                              Supprimer
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Médiateurs */}
+              {mediateurs.length > 0 && (
+                <div className="mb-8">
+                  <h3 className="text-lg font-medium text-gray-700 mb-4">Médiateurs ({mediateurs.length})</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-100 border-b">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Nom</th>
+                          <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Prénom</th>
+                          <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {mediateurs.map((mediateur) => (
+                          <tr key={mediateur.id} className="border-b hover:bg-gray-50">
+                            <td className="px-4 py-2 text-sm">{mediateur.nom}</td>
+                            <td className="px-4 py-2 text-sm">{mediateur.prenom}</td>
+                            <td className="px-4 py-2">
+                              <button
+                                onClick={() => handleDeleteMediateur(mediateur.id, mediateur.nom, mediateur.prenom)}
+                                className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200"
+                              >
+                                Supprimer
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Coordinateurs */}
+              <div>
+                <h3 className="text-lg font-medium text-gray-700 mb-4">Coordinateurs ({coordinateurs.length})</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-100 border-b">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Nom</th>
+                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Prénom</th>
+                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Email</th>
+                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {coordinateurs.map((coordinateur) => (
+                        <tr key={coordinateur.id} className="border-b hover:bg-gray-50">
+                          <td className="px-4 py-2 text-sm">{coordinateur.nom}</td>
+                          <td className="px-4 py-2 text-sm">{coordinateur.prenom}</td>
+                          <td className="px-4 py-2 text-sm">{coordinateur.email}</td>
+                          <td className="px-4 py-2">
+                            <button
+                              onClick={() => handleDeleteCoordinateur(coordinateur.id, coordinateur.nom, coordinateur.prenom)}
+                              className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200"
+                            >
+                              Supprimer
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Note pour les utilisateurs mobiles */}
@@ -849,8 +1686,3 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
-
-
-
-
-
