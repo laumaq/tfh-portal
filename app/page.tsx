@@ -1,4 +1,4 @@
-// app/page.tsx - Page de connexion CORRIGÉE
+// app/page.tsx - Page de connexion avec médiateurs et lecteurs externes
 'use client';
 
 import { useState } from 'react';
@@ -23,7 +23,7 @@ export default function LoginPage() {
       const nomNormalized = nom.toUpperCase();
       const initialeNormalized = initiale.toUpperCase();
 
-      // 1. VÉRIFIER LES COORDINATEURS
+      // 1. VÉRIFIER LES COORDINATEURS (code existant)
       const { data: coordData, error: coordError } = await supabase
         .from('coordinateurs')
         .select('*')
@@ -41,7 +41,7 @@ export default function LoginPage() {
           isEmpty: storedPassword === ''
         });
       
-        // CAS 1: PREMIÈRE CONNEXION (NULL)
+        // CAS 1: PREMIÈRE CONNEXION (chaîne vide)
         if (storedPassword === '') {
           console.log("Première connexion - enregistrement du mot de passe");
           
@@ -66,12 +66,8 @@ export default function LoginPage() {
           return;
         }
         
-        // CAS 2 : MOT DE PASSE EXISTANT (chaîne vide ou valide)
-        // Si storedPassword est une chaîne vide "", elle ne correspondra jamais au password saisi
-        // donc ça tombera dans "Mot de passe incorrect" (ce qui est correct)
-        
+        // CAS 2: MOT DE PASSE EXISTANT
         if (storedPassword === password) {
-          // CAS 3: BON MOT DE PASSE
           console.log("Connexion réussie");
           localStorage.setItem('userType', 'coordinateur');
           localStorage.setItem('userId', coordData.id);
@@ -79,7 +75,6 @@ export default function LoginPage() {
           router.push('/dashboard/coordinateur');
           return;
         } else {
-          // CAS 3: MAUVAIS MOT DE PASSE
           console.log("Mot de passe incorrect ou vide");
           setError('Mot de passe incorrect');
           setLoading(false);
@@ -87,17 +82,21 @@ export default function LoginPage() {
         }
       }
 
-      // 2. VÉRIFIER LES GUIDES
+      // 2. VÉRIFIER LES GUIDES (code existant)
       const { data: guideData, error: guideError } = await supabase
         .from('guides')
         .select('*')
         .ilike('nom', nomNormalized)
         .ilike('initiale', initialeNormalized)
-        .maybeSingle(); // CHANGEMENT : .single() → .maybeSingle()
+        .maybeSingle();
 
       if (!guideError && guideData) {
-        // Première connexion - enregistrer le mot de passe
-        if (!guideData.mot_de_passe) {
+        const storedPassword = guideData.mot_de_passe;
+        
+        // CAS 1: PREMIÈRE CONNEXION (NULL ou chaîne vide)
+        if (!storedPassword || storedPassword === '') {
+          console.log("Première connexion guide - enregistrement du mot de passe");
+          
           await supabase
             .from('guides')
             .update({ mot_de_passe: password })
@@ -110,7 +109,7 @@ export default function LoginPage() {
           return;
         }
 
-        // Connexion normale
+        // CAS 2: MOT DE PASSE EXISTANT
         if (guideData.mot_de_passe === password) {
           localStorage.setItem('userType', 'guide');
           localStorage.setItem('userId', guideData.id);
@@ -124,17 +123,21 @@ export default function LoginPage() {
         }
       }
 
-      // 3. VÉRIFIER LES ÉLÈVES
+      // 3. VÉRIFIER LES ÉLÈVES (code existant)
       const { data: eleveData, error: eleveError } = await supabase
         .from('eleves')
         .select('*')
         .ilike('nom', nomNormalized)
         .ilike('initiale', initialeNormalized)
-        .maybeSingle(); // CHANGEMENT : .single() → .maybeSingle()
+        .maybeSingle();
 
       if (!eleveError && eleveData) {
-        // Première connexion - enregistrer le mot de passe
-        if (!eleveData.mot_de_passe) {
+        const storedPassword = eleveData.mot_de_passe;
+        
+        // CAS 1: PREMIÈRE CONNEXION (NULL ou chaîne vide)
+        if (!storedPassword || storedPassword === '') {
+          console.log("Première connexion élève - enregistrement du mot de passe");
+          
           await supabase
             .from('eleves')
             .update({ mot_de_passe: password })
@@ -147,12 +150,106 @@ export default function LoginPage() {
           return;
         }
 
-        // Connexion normale
+        // CAS 2: MOT DE PASSE EXISTANT
         if (eleveData.mot_de_passe === password) {
           localStorage.setItem('userType', 'eleve');
           localStorage.setItem('userId', eleveData.id);
           localStorage.setItem('userName', `${eleveData.nom} ${eleveData.prenom}`);
           router.push('/dashboard/eleve');
+          return;
+        } else {
+          setError('Mot de passe incorrect');
+          setLoading(false);
+          return;
+        }
+      }
+
+      // 4. VÉRIFIER LES MÉDIATEURS (NOUVEAU)
+      const { data: mediateurData, error: mediateurError } = await supabase
+        .from('mediateurs')
+        .select('*')
+        .ilike('nom', nomNormalized)
+        .ilike('prenom', initialeNormalized + '%') // Cherche par prénom commençant par l'initiale
+        .maybeSingle();
+
+      if (!mediateurError && mediateurData) {
+        const storedPassword = mediateurData.mot_de_passe;
+        
+        console.log("DEBUG - Médiateur trouvé:", {
+          nom: mediateurData.nom,
+          prenom: mediateurData.prenom,
+          storedPassword
+        });
+
+        // CAS 1: PREMIÈRE CONNEXION (NULL ou chaîne vide)
+        if (!storedPassword || storedPassword === '') {
+          console.log("Première connexion médiateur - enregistrement du mot de passe");
+          
+          await supabase
+            .from('mediateurs')
+            .update({ mot_de_passe: password })
+            .eq('id', mediateurData.id);
+          
+          localStorage.setItem('userType', 'mediateur');
+          localStorage.setItem('userId', mediateurData.id);
+          localStorage.setItem('userName', `${mediateurData.prenom} ${mediateurData.nom}`);
+          router.push('/dashboard/mediateur');
+          return;
+        }
+
+        // CAS 2: MOT DE PASSE EXISTANT
+        if (mediateurData.mot_de_passe === password) {
+          localStorage.setItem('userType', 'mediateur');
+          localStorage.setItem('userId', mediateurData.id);
+          localStorage.setItem('userName', `${mediateurData.prenom} ${mediateurData.nom}`);
+          router.push('/dashboard/mediateur');
+          return;
+        } else {
+          setError('Mot de passe incorrect');
+          setLoading(false);
+          return;
+        }
+      }
+
+      // 5. VÉRIFIER LES LECTEURS EXTERNES (NOUVEAU)
+      const { data: lecteurData, error: lecteurError } = await supabase
+        .from('lecteurs_externes')
+        .select('*')
+        .ilike('nom', nomNormalized)
+        .ilike('prenom', initialeNormalized + '%') // Cherche par prénom commençant par l'initiale
+        .maybeSingle();
+
+      if (!lecteurError && lecteurData) {
+        const storedPassword = lecteurData.mot_de_passe;
+        
+        console.log("DEBUG - Lecteur externe trouvé:", {
+          nom: lecteurData.nom,
+          prenom: lecteurData.prenom,
+          storedPassword
+        });
+
+        // CAS 1: PREMIÈRE CONNEXION (NULL ou chaîne vide)
+        if (!storedPassword || storedPassword === '') {
+          console.log("Première connexion lecteur externe - enregistrement du mot de passe");
+          
+          await supabase
+            .from('lecteurs_externes')
+            .update({ mot_de_passe: password })
+            .eq('id', lecteurData.id);
+          
+          localStorage.setItem('userType', 'lecteur_externe');
+          localStorage.setItem('userId', lecteurData.id);
+          localStorage.setItem('userName', `${lecteurData.prenom} ${lecteurData.nom}`);
+          router.push('/dashboard/lecteur-externe');
+          return;
+        }
+
+        // CAS 2: MOT DE PASSE EXISTANT
+        if (lecteurData.mot_de_passe === password) {
+          localStorage.setItem('userType', 'lecteur_externe');
+          localStorage.setItem('userId', lecteurData.id);
+          localStorage.setItem('userName', `${lecteurData.prenom} ${lecteurData.nom}`);
+          router.push('/dashboard/lecteur-externe');
           return;
         } else {
           setError('Mot de passe incorrect');
@@ -172,6 +269,7 @@ export default function LoginPage() {
     }
   };
 
+  // Le JSX reste identique...
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
@@ -249,6 +347,9 @@ export default function LoginPage() {
               <p>Valeurs testées:</p>
               <p>Nom: {nom || '(vide)'} → Normalisé: {nom.toUpperCase() || '(vide)'}</p>
               <p>Initiale: {initiale || '(vide)'} → Normalisé: {initiale.toUpperCase() || '(vide)'}</p>
+              <p className="text-xs text-gray-500">
+                Nouveaux types: Médiateur, Lecteur externe
+              </p>
               <button 
                 onClick={() => { 
                   setNom('TEST'); 
@@ -266,10 +367,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
-
-
-
-
-
-
