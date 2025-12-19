@@ -40,7 +40,6 @@ interface Guide {
   id: string;
   nom: string;
   initiale: string;
-  email: string;
 }
 
 interface LecteurExterne {
@@ -61,7 +60,6 @@ interface Coordinateur {
   id: string;
   nom: string;
   prenom: string;
-  email: string;
 }
 
 type TabType = 'convocations' | 'defenses' | 'gestion-utilisateurs';
@@ -1774,6 +1772,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
