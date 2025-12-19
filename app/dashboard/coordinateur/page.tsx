@@ -248,23 +248,36 @@ export default function CoordinateurDashboard() {
   const handleUpdate = async (eleveId: string, field: string, value: string) => {
     try {
       const updateData: any = {};
-      updateData[field] = value;
-
+      
+      // Convertir les chaînes vides en null pour les champs qui peuvent être null
+      if (value === '') {
+        updateData[field] = null;
+      } else {
+        updateData[field] = value;
+      }
+  
       const { error } = await supabase
         .from('eleves')
         .update(updateData)
         .eq('id', eleveId);
-
+  
       if (error) throw error;
-
+  
+      // Mettre à jour l'état local
       setEleves(prev => prev.map(eleve => 
-        eleve.id === eleveId ? { ...eleve, [field]: value } : eleve
+        eleve.id === eleveId ? { 
+          ...eleve, 
+          [field]: value === '' ? null : value 
+        } : eleve
       ));
       
       setFilteredEleves(prev => prev.map(eleve => 
-        eleve.id === eleveId ? { ...eleve, [field]: value } : eleve
+        eleve.id === eleveId ? { 
+          ...eleve, 
+          [field]: value === '' ? null : value 
+        } : eleve
       ));
-
+  
       setEditingCell(null);
     } catch (err) {
       console.error('Erreur mise à jour:', err);
@@ -343,8 +356,14 @@ export default function CoordinateurDashboard() {
 
   const formatDateForInput = (dateString: string | null) => {
     if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toISOString().split('T')[0];
+    try {
+      const date = new Date(dateString);
+      // S'assurer que la date est valide
+      if (isNaN(date.getTime())) return '';
+      return date.toISOString().split('T')[0];
+    } catch (error) {
+      return '';
+    }
   };
 
   if (loading) {
@@ -744,7 +763,10 @@ export default function CoordinateurDashboard() {
                           <input
                             type="date"
                             value={formatDateForInput(eleve.date_defense)}
-                            onChange={(e) => handleUpdate(eleve.id, 'date_defense', e.target.value)}
+                            onChange={(e) => {
+                              const newValue = e.target.value;
+                              handleUpdate(eleve.id, 'date_defense', newValue);
+                            }}
                             className="w-full border rounded px-2 py-1 text-xs md:text-sm"
                           />
                           {eleve.date_defense && (
@@ -758,14 +780,17 @@ export default function CoordinateurDashboard() {
                           )}
                         </div>
                       </td>
-                      
+                                            
                       {/* Heure de défense */}
                       <td className="px-3 py-3">
                         <div className="flex items-center gap-1">
                           <input
                             type="time"
                             value={eleve.heure_defense || ''}
-                            onChange={(e) => handleUpdate(eleve.id, 'heure_defense', e.target.value)}
+                            onChange={(e) => {
+                              const newValue = e.target.value;
+                              handleUpdate(eleve.id, 'heure_defense', newValue);
+                            }}
                             className="w-full border rounded px-2 py-1 text-xs md:text-sm"
                           />
                           {eleve.heure_defense && (
@@ -779,14 +804,17 @@ export default function CoordinateurDashboard() {
                           )}
                         </div>
                       </td>
-                      
+                                            
                       {/* Localisation */}
                       <td className="px-3 py-3">
                         <div className="flex items-center gap-1">
                           <input
                             type="text"
                             value={eleve.localisation_defense || ''}
-                            onChange={(e) => handleUpdate(eleve.id, 'localisation_defense', e.target.value)}
+                            onChange={(e) => {
+                              const newValue = e.target.value;
+                              handleUpdate(eleve.id, 'localisation_defense', newValue);
+                            }}
                             className="w-full border rounded px-2 py-1 text-xs md:text-sm"
                             placeholder="Salle, bâtiment..."
                           />
@@ -821,6 +849,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
