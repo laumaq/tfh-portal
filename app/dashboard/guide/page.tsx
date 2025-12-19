@@ -691,7 +691,6 @@ export default function GuideDashboard() {
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur externe</th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Médiateur</th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Localisation</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Statut défense</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -763,17 +762,6 @@ export default function GuideDashboard() {
                           <td className="px-4 py-3 text-sm">
                             {eleve.localisation_defense || '-'}
                           </td>
-                          <td className="px-4 py-3">
-                            {hasDefense ? (
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                Programmé
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                Non programmé
-                              </span>
-                            )}
-                          </td>
                         </tr>
                       );
                     })}
@@ -799,3 +787,4 @@ export default function GuideDashboard() {
     </div>
   );
 }
+
