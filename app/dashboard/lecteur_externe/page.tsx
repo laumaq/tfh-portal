@@ -92,7 +92,7 @@ export default function LecteurExterneDashboard() {
 
   const loadEleves = async (lecteurExterneId: string) => {
     try {
-      // Charger les élèves assignés à ce médiateur
+      // Charger les élèves assignés à ce lecteur externe
       const { data: elevesData, error: elevesError } = await supabase
         .from('eleves')
         .select(`
@@ -101,14 +101,14 @@ export default function LecteurExterneDashboard() {
           lecteur_interne:guides!lecteur_interne_id (nom, initiale),
           lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom)
         `)
-        .eq('lecteur_externe_id', lecteurId)
+        .eq('lecteur_externe_id', lecteurExterneId)  // <-- CHANGER ICI
         .order('date_defense', { ascending: true, nullsFirst: true })
         .order('heure_defense', { ascending: true, nullsFirst: true })
         .order('classe', { ascending: true })
         .order('nom', { ascending: true });
-
+  
       if (elevesError) throw elevesError;
-
+  
       // Formater les données
       const elevesFormatted = (elevesData || []).map(eleve => ({
         ...eleve,
@@ -119,7 +119,7 @@ export default function LecteurExterneDashboard() {
         lecteur_externe_nom: eleve.lecteur_externe?.nom || '-',
         lecteur_externe_prenom: eleve.lecteur_externe?.prenom || '-'
       }));
-
+  
       setEleves(elevesFormatted);
     } catch (err) {
       console.error('Erreur chargement des élèves:', err);
@@ -193,7 +193,7 @@ export default function LecteurExterneDashboard() {
           <div className="bg-white rounded-lg shadow p-8 text-center">
             <div className="text-4xl mb-4">📋</div>
             <h3 className="text-xl font-semibold text-gray-700 mb-2">Aucun élève assigné</h3>
-            <p className="text-gray-500">Aucun élève ne vous est actuellement assigné comme médiateur.</p>
+            <p className="text-gray-500">Aucun élève ne vous est actuellement assigné comme lecteur externe.</p>
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow overflow-x-auto">
@@ -290,7 +290,7 @@ export default function LecteurExterneDashboard() {
           <p className="text-sm text-blue-700 flex items-start gap-2">
             <span className="text-lg">ℹ️</span>
             <span>
-              Ce tableau affiche les élèves qui vous sont assignés comme médiateur, triés par date de défense.
+              Ce tableau affiche les élèves qui vous sont assignés comme lecteur externe, triés par date de défense.
               Les défenses passées sont en vert, les futures en bleu.
             </span>
           </p>
