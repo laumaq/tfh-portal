@@ -13,8 +13,6 @@ interface Eleve {
   problematique: string;
   categorie: string;
   guide_id: string;
-  convocation_mars: string;
-  convocation_avril: string;
   date_defense: string | null;
   heure_defense: string | null;
   localisation_defense: string | null;
@@ -211,8 +209,6 @@ export default function LecteurExterneDashboard() {
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur interne</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur externe</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Problématique</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Conv. Mars</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Conv. Avril</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -255,28 +251,6 @@ export default function LecteurExterneDashboard() {
                         <div className="line-clamp-2">
                           {eleve.problematique || '-'}
                         </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        <span className={`px-2 py-1 rounded text-xs ${
-                          eleve.convocation_mars?.includes('atteint bien') ? 'bg-green-100 text-green-800' :
-                          eleve.convocation_mars?.includes('n\'atteint pas') ? 'bg-yellow-100 text-yellow-800' :
-                          eleve.convocation_mars?.includes('pas avancé') ? 'bg-red-100 text-red-800' :
-                          eleve.convocation_mars?.includes('pas communiqué') ? 'bg-orange-100 text-orange-800' :
-                          'bg-gray-100 text-gray-600'
-                        }`}>
-                          {eleve.convocation_mars ? eleve.convocation_mars.split(',')[0] : '-'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        <span className={`px-2 py-1 rounded text-xs ${
-                          eleve.convocation_avril?.includes('atteint bien') ? 'bg-green-100 text-green-800' :
-                          eleve.convocation_avril?.includes('n\'atteint pas') ? 'bg-yellow-100 text-yellow-800' :
-                          eleve.convocation_avril?.includes('pas avancé') ? 'bg-red-100 text-red-800' :
-                          eleve.convocation_avril?.includes('pas communiqué') ? 'bg-orange-100 text-orange-800' :
-                          'bg-gray-100 text-gray-600'
-                        }`}>
-                          {eleve.convocation_avril ? eleve.convocation_avril.split(',')[0] : '-'}
-                        </span>
                       </td>
                     </tr>
                   ))}
