@@ -89,6 +89,7 @@ export default function CoordinateurDashboard() {
     classe: '',
     initiale: '',
     categorie: ''
+    // Plus d'email ni de password
   });
   const [showMassImport, setShowMassImport] = useState(false);
   const [massImportData, setMassImportData] = useState<string>('');
@@ -365,97 +366,72 @@ export default function CoordinateurDashboard() {
               categorie: newUser.categorie,
               guide_id: null
             }]);
-
+  
           if (eleveError) throw eleveError;
           break;
-
+  
         case 'guides':
-          // Créer dans Auth
-          const { data: authData, error: authError } = await supabase.auth.signUp({
-            email: newUser.email,
-            password: newUser.password || 'password123',
-            options: {
-              data: {
-                nom: newUser.nom,
-                initiale: newUser.initiale,
-                user_type: 'guide'
-              }
-            }
-          });
-
-          if (authError) throw authError;
-
-          // Créer dans la table guides
+          // SIMPLIFIEZ - plus d'auth Supabase
           const { error: guideError } = await supabase
             .from('guides')
             .insert([{
               nom: newUser.nom,
               initiale: newUser.initiale
+              // Plus d'email ni de password
             }]);
-
+  
           if (guideError) throw guideError;
           break;
-
+  
         case 'lecteurs-externes':
+          // Gardez email pour les lecteurs externes si la colonne existe
           const { error: lecteurError } = await supabase
             .from('lecteurs_externes')
             .insert([{
               nom: newUser.nom,
               prenom: newUser.prenom,
-              email: newUser.email
+              email: newUser.email || '' // Utilisez une valeur par défaut
             }]);
-
+  
           if (lecteurError) throw lecteurError;
           break;
-
+  
         case 'mediateurs':
+          // Gardez email pour les médiateurs si la colonne existe
           const { error: mediateurError } = await supabase
             .from('mediateurs')
             .insert([{
               nom: newUser.nom,
               prenom: newUser.prenom,
-              email: newUser.email
+              email: newUser.email || '' // Utilisez une valeur par défaut
             }]);
-
+  
           if (mediateurError) throw mediateurError;
           break;
-
+  
         case 'coordinateurs':
-          // Créer dans Auth
-          const { data: coordAuthData, error: coordAuthError } = await supabase.auth.signUp({
-            email: newUser.email,
-            password: newUser.password || 'password123',
-            options: {
-              data: {
-                nom: newUser.nom,
-                prenom: newUser.prenom,
-                user_type: 'coordinateur'
-              }
-            }
-          });
-
-          if (coordAuthError) throw coordAuthError;
-
-          // Créer dans la table coordinateurs
+          // SIMPLIFIEZ - plus d'auth Supabase
           const { error: coordError } = await supabase
             .from('coordinateurs')
             .insert([{
               nom: newUser.nom,
               prenom: newUser.prenom
+              // Plus d'email ni de password
             }]);
-
+  
           if (coordError) throw coordError;
           break;
       }
-
+  
       alert('Utilisateur ajouté avec succès!');
+      // Réinitialisez avec les bonnes propriétés
       setNewUser({
         nom: '',
         prenom: '',
         classe: '',
-        email: '',
+        // email: '', ← ENLEVEZ si plus utilisé
         initiale: '',
-        password: '',
+        // password: '', ← ENLEVEZ
         categorie: ''
       });
       loadData();
@@ -549,8 +525,6 @@ export default function CoordinateurDashboard() {
           break;
 
         case 'guides':
-          // Pour les guides, on pourrait ajouter directement dans la table
-          // Note: Pas d'auth ici pour simplifier
           const guidesToInsert = dataRows.map(row => {
             const values = row.split(',').map(v => v.trim());
             const guide: any = {};
@@ -560,8 +534,8 @@ export default function CoordinateurDashboard() {
               }
             });
             return guide;
-          }).filter(g => g.nom && g.email);
-
+          }).filter(g => g.nom && g.initiale); // ← Changez de g.email à g.initiale
+        
           if (guidesToInsert.length > 0) {
             const { error } = await supabase
               .from('guides')
