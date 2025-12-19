@@ -88,8 +88,8 @@ export default function CoordinateurDashboard() {
     prenom: '',
     classe: '',
     initiale: '',
-    categorie: ''
-    // Plus d'email ni de password
+    categorie: '',
+    email: '' // ← Important : ajoutez cette propriété
   });
   const [showMassImport, setShowMassImport] = useState(false);
   const [massImportData, setMassImportData] = useState<string>('');
@@ -371,52 +371,48 @@ export default function CoordinateurDashboard() {
           break;
   
         case 'guides':
-          // SIMPLIFIEZ - plus d'auth Supabase
           const { error: guideError } = await supabase
             .from('guides')
             .insert([{
               nom: newUser.nom,
               initiale: newUser.initiale
-              // Plus d'email ni de password
+              // Pas d'email pour les guides
             }]);
   
           if (guideError) throw guideError;
           break;
   
         case 'lecteurs-externes':
-          // Gardez email pour les lecteurs externes si la colonne existe
           const { error: lecteurError } = await supabase
             .from('lecteurs_externes')
             .insert([{
               nom: newUser.nom,
               prenom: newUser.prenom,
-              email: newUser.email || '' // Utilisez une valeur par défaut
+              email: newUser.email 
             }]);
   
           if (lecteurError) throw lecteurError;
           break;
   
         case 'mediateurs':
-          // Gardez email pour les médiateurs si la colonne existe
           const { error: mediateurError } = await supabase
             .from('mediateurs')
             .insert([{
               nom: newUser.nom,
               prenom: newUser.prenom,
-              email: newUser.email || '' // Utilisez une valeur par défaut
+              email: newUser.email // ← Utilisez newUser.email directement
             }]);
   
           if (mediateurError) throw mediateurError;
           break;
   
         case 'coordinateurs':
-          // SIMPLIFIEZ - plus d'auth Supabase
           const { error: coordError } = await supabase
             .from('coordinateurs')
             .insert([{
               nom: newUser.nom,
               prenom: newUser.prenom
-              // Plus d'email ni de password
+              // Pas d'email pour les coordinateurs
             }]);
   
           if (coordError) throw coordError;
@@ -424,14 +420,13 @@ export default function CoordinateurDashboard() {
       }
   
       alert('Utilisateur ajouté avec succès!');
-      // Réinitialisez avec les bonnes propriétés
+      // Réinitialisez avec TOUTES les propriétés
       setNewUser({
         nom: '',
         prenom: '',
         classe: '',
-        // email: '', ← ENLEVEZ si plus utilisé
+        email: '',
         initiale: '',
-        // password: '', ← ENLEVEZ
         categorie: ''
       });
       loadData();
@@ -1746,6 +1741,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
