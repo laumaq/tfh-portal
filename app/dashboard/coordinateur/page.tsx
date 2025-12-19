@@ -655,9 +655,9 @@ export default function CoordinateurDashboard() {
                     <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Classe</th>
                     <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Nom</th>
                     <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Prénom</th>
-                    <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Guide</th>
                     <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Catégorie</th>
                     <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Problématique</th>
+                    <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Guide</th>
                     <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Lecteur Interne</th>
                     <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Lecteur Externe</th>
                     <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Médiateur</th>
@@ -673,9 +673,6 @@ export default function CoordinateurDashboard() {
                       <td className="px-3 py-3 text-xs md:text-sm font-medium whitespace-nowrap">{eleve.nom}</td>
                       <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">{eleve.prenom}</td>
                       <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">
-                        {eleve.guide_nom} {eleve.guide_initiale}.
-                      </td>
-                      <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">
                         {eleve.categorie || '-'}
                       </td>
                       <td className="px-3 py-3 text-xs md:text-sm">
@@ -683,7 +680,9 @@ export default function CoordinateurDashboard() {
                           {eleve.problematique || '-'}
                         </div>
                       </td>
-                      
+                      <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">
+                        {eleve.guide_nom} {eleve.guide_initiale}.
+                      </td>                      
                       {/* Lecteur Interne */}
                       <td className="px-3 py-3">
                         <select
@@ -808,3 +807,4 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
