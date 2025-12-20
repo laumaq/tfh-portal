@@ -317,7 +317,25 @@ export default function CoordinateurDashboard() {
       loadData();
     }
   };
-
+  
+  const handleSimpleTextImport = () => {
+    const rows = massImportData.split('\n').filter(row => row.trim());
+    let count = 0;
+    
+    rows.forEach(row => {
+      const values = row.split(',').map(v => v.trim());
+      if (values.length >= 3) {
+        console.log(`Import: ${values[0]}, ${values[1]}, ${values[2]}`);
+        count++;
+      }
+    });
+    
+    console.log(`Total: ${count} lignes détectées`);
+    
+    // Ensuite appelez handleMassImport() qui traitera ces données
+    handleMassImport();
+  };
+  
   const handleSelectUpdate = async (eleveId: string, field: string, value: string) => {
     const isEditing = activeTab === 'convocations' ? editingModeConvocations : editingModeDefenses;
     if (!isEditing) return;
@@ -1195,9 +1213,9 @@ export default function CoordinateurDashboard() {
                 <table className="w-full">
                   <thead className="bg-gray-100 border-b">
                     <tr>
-                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Classe</th>
                       <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Nom</th>
                       <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Prénom</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Classe</th>
                       <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Catégorie</th>
                       <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Problématique</th>
                       <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Guide</th>
@@ -1212,9 +1230,11 @@ export default function CoordinateurDashboard() {
                   <tbody>
                     {filteredEleves.map((eleve) => (
                       <tr key={eleve.id} className="border-b hover:bg-gray-50">
-                        <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">{eleve.classe}</td>
-                        <td className="px-3 py-3 text-xs md:text-sm font-medium whitespace-nowrap">{eleve.nom}</td>
+                        <td className="px-3 py-3 text-xs md:text-sm font-medium whitespace-nowrap sticky-col">
+                          {eleve.nom}
+                        </td>
                         <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">{eleve.prenom}</td>
+                        <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">{eleve.classe}</td>
                         <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">
                           {eleve.categorie || '-'}
                         </td>
@@ -1733,12 +1753,17 @@ export default function CoordinateurDashboard() {
                   Annuler
                 </button>
                 <button
-                  onClick={handleMassImport}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
-                  disabled={!massImportData.trim()}
-                >
-                  Importer
-                </button>
+                onClick={() => {
+                  console.log('Données brutes:', massImportData);
+                  const testRows = massImportData.split('\n').filter(row => row.trim());
+                  console.log('Lignes détectées:', testRows);
+                  handleMassImport();
+                }}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                disabled={!massImportData.trim()}
+              >
+                Importer
+              </button>
               </div>
             </div>
           </div>
@@ -1810,6 +1835,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
