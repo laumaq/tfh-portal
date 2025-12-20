@@ -212,9 +212,9 @@ export default function CoordinateurDashboard() {
       const elevesFormatted = (elevesData || []).map(eleve => ({
         ...eleve,
         guide_nom: eleve.guide?.nom || '-',
-        guide_initiale: eleve.guide?.prenom || '-',
+        guide_prenom: eleve.guide?.prenom || '-', // ← DOIT correspondre à l'interface
         lecteur_interne_nom: eleve.lecteur_interne?.nom || '-',
-        lecteur_interne_initiale: eleve.lecteur_interne?.prenom || '-',
+        lecteur_interne_prenom: eleve.lecteur_interne?.prenom || '-', // ← DOIT correspondre
         lecteur_externe_nom: eleve.lecteur_externe?.nom || '-',
         lecteur_externe_prenom: eleve.lecteur_externe?.prenom || '-',
         mediateur_nom: eleve.mediateur?.nom || '-',
@@ -1837,6 +1837,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
