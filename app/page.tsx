@@ -24,13 +24,6 @@ export default function LoginPage() {
       const initialeNormalized = initiale.toUpperCase();
 
       // 1. VÉRIFIER LES COORDINATEURS (code existant)
-      const { data: coordData, error: coordError } = await supabase
-        .from('coordinateurs')
-        .select('*')
-        .ilike('nom', nomNormalized)
-        .ilike('initiale', initialeNormalized)
-        .maybeSingle();
-      
       if (!coordError && coordData) {
         const storedPassword = coordData.mot_de_passe;
         
@@ -41,8 +34,8 @@ export default function LoginPage() {
           isEmpty: storedPassword === ''
         });
       
-        // CAS 1: PREMIÈRE CONNEXION (chaîne vide)
-        if (storedPassword === '') {
+        // CAS 1: PREMIÈRE CONNEXION (NULL ou chaîne vide)
+        if (storedPassword === null || storedPassword === '') {
           console.log("Première connexion - enregistrement du mot de passe");
           
           // Enregistrer le mot de passe
@@ -75,7 +68,7 @@ export default function LoginPage() {
           router.push('/dashboard/coordinateur');
           return;
         } else {
-          console.log("Mot de passe incorrect ou vide");
+          console.log("Mot de passe incorrect");
           setError('Mot de passe incorrect');
           setLoading(false);
           return;
@@ -367,4 +360,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
 
