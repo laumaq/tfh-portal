@@ -382,7 +382,7 @@ export default function CoordinateurDashboard() {
               prenom: newUser.prenom,
               classe: newUser.classe,
               categorie: newUser.categorie,
-              initiale: initiale, 
+              initiale: initialeEleve, 
               guide_id: null
             }]);
   
@@ -1835,6 +1835,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
