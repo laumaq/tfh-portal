@@ -17,13 +17,20 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
-
+  
     try {
       // Normaliser les entrées (majuscules pour l'initiale, capitalisation pour le nom)
       const nomNormalized = nom.toUpperCase();
       const initialeNormalized = initiale.toUpperCase();
-
-      // 1. VÉRIFIER LES COORDINATEURS (code existant)
+  
+      // 1. VÉRIFIER LES COORDINATEURS (code existant) - REQUÊTE MANQUANTE !
+      const { data: coordData, error: coordError } = await supabase
+        .from('coordinateurs')
+        .select('*')
+        .ilike('nom', nomNormalized)
+        .ilike('initiale', initialeNormalized)
+        .maybeSingle();
+      
       if (!coordError && coordData) {
         const storedPassword = coordData.mot_de_passe;
         
@@ -74,7 +81,6 @@ export default function LoginPage() {
           return;
         }
       }
-
       // 2. VÉRIFIER LES GUIDES (code existant)
       const { data: guideData, error: guideError } = await supabase
         .from('guides')
@@ -360,5 +366,6 @@ export default function LoginPage() {
     </div>
   );
 }
+
 
 
