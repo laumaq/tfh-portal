@@ -364,6 +364,7 @@ export default function CoordinateurDashboard() {
               prenom: newUser.prenom,
               classe: newUser.classe,
               categorie: newUser.categorie,
+              initiale: initiale, 
               guide_id: null
             }]);
   
@@ -494,43 +495,59 @@ export default function CoordinateurDashboard() {
 
   const handleMassImport = async () => {
     try {
-      const rows = massImportData.split('\n').filter(row => row.trim());
-      const headers = rows[0].split(',').map(h => h.trim());
-      const dataRows = rows.slice(1);
-
+      const rows = massImportData.trim().split('\n').filter(row => row.trim());
+      if (rows.length === 0) {
+        alert('Aucune donnée à importer');
+        return;
+      }
+  
+      // Vérifier si la première ligne contient des en-têtes
+      const firstRow = rows[0].split(',').map(c => c.trim().toLowerCase());
+      const hasHeaders = firstRow.includes('nom') || firstRow.includes('prenom') || firstRow.includes('classe');
+      
+      const dataRows = hasHeaders ? rows.slice(1) : rows;
+      
+      console.log(`Import de ${dataRows.length} utilisateurs...`);
+  
       switch (selectedUserType) {
         case 'eleves':
           const elevesToInsert = dataRows.map(row => {
             const values = row.split(',').map(v => v.trim());
-            const eleve: any = {};
-            headers.forEach((header, index) => {
-              if (values[index]) {
-                eleve[header.toLowerCase()] = values[index];
-              }
-            });
+            const eleve: any = {
+              nom: values[0] || '',
+              prenom: values[1] || '',
+              classe: values[2] || '',
+              initiale: (values[1] || '').charAt(0).toUpperCase(), // Calculer l'initiale
+              categorie: values[3] || null,
+              guide_id: null
+            };
             return eleve;
           }).filter(e => e.nom && e.prenom && e.classe);
-
+  
+          console.log('Élèves à insérer:', elevesToInsert);
+  
           if (elevesToInsert.length > 0) {
-            const { error } = await supabase
+            const { data, error } = await supabase
               .from('eleves')
-              .insert(elevesToInsert);
+              .insert(elevesToInsert)
+              .select();
+            
             if (error) throw error;
+            console.log('Élèves insérés:', data);
           }
           break;
-
+  
         case 'guides':
           const guidesToInsert = dataRows.map(row => {
             const values = row.split(',').map(v => v.trim());
-            const guide: any = {};
-            headers.forEach((header, index) => {
-              if (values[index]) {
-                guide[header.toLowerCase()] = values[index];
-              }
-            });
+            const guide: any = {
+              nom: values[0] || '',
+              initiale: values[1] || '',
+              email: values[2] || null
+            };
             return guide;
-          }).filter(g => g.nom && g.initiale); // ← Changez de g.email à g.initiale
-        
+          }).filter(g => g.nom && g.initiale);
+  
           if (guidesToInsert.length > 0) {
             const { error } = await supabase
               .from('guides')
@@ -538,17 +555,69 @@ export default function CoordinateurDashboard() {
             if (error) throw error;
           }
           break;
-
-        // Similar logic for other user types...
+  
+        case 'lecteurs-externes':
+          const lecteursToInsert = dataRows.map(row => {
+            const values = row.split(',').map(v => v.trim());
+            return {
+              nom: values[0] || '',
+              prenom: values[1] || '',
+              email: values[2] || null
+            };
+          }).filter(l => l.nom && l.prenom);
+  
+          if (lecteursToInsert.length > 0) {
+            const { error } = await supabase
+              .from('lecteurs_externes')
+              .insert(lecteursToInsert);
+            if (error) throw error;
+          }
+          break;
+  
+        case 'mediateurs':
+          const mediateursToInsert = dataRows.map(row => {
+            const values = row.split(',').map(v => v.trim());
+            return {
+              nom: values[0] || '',
+              prenom: values[1] || '',
+              email: values[2] || null
+            };
+          }).filter(m => m.nom && m.prenom);
+  
+          if (mediateursToInsert.length > 0) {
+            const { error } = await supabase
+              .from('mediateurs')
+              .insert(mediateursToInsert);
+            if (error) throw error;
+          }
+          break;
+  
+        case 'coordinateurs':
+          const coordinateursToInsert = dataRows.map(row => {
+            const values = row.split(',').map(v => v.trim());
+            // Utilisez le format de votre table
+            return {
+              nom: values[0] || ''
+              // Ajoutez prenom si nécessaire
+            };
+          }).filter(c => c.nom);
+  
+          if (coordinateursToInsert.length > 0) {
+            const { error } = await supabase
+              .from('coordinateurs')
+              .insert(coordinateursToInsert);
+            if (error) throw error;
+          }
+          break;
       }
-
-      alert(`${dataRows.length} utilisateurs importés avec succès!`);
+  
+      alert(`${dataRows.length} utilisateur${dataRows.length > 1 ? 's' : ''} importé${dataRows.length > 1 ? 's' : ''} avec succès!`);
       setShowMassImport(false);
       setMassImportData('');
       loadData();
     } catch (err) {
       console.error('Erreur import massif:', err);
-      alert('Erreur lors de l\'importation');
+      alert('Erreur lors de l\'importation: ' + (err as Error).message);
     }
   };
 
@@ -1741,6 +1810,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
