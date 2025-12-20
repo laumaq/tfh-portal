@@ -1216,7 +1216,7 @@ export default function CoordinateurDashboard() {
                 <table className="w-full">
                   <thead className="bg-gray-100 border-b">
                     <tr>
-                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Nom</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap sticky-col">Nom</th>
                       <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Prénom</th>
                       <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Classe</th>
                       <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Catégorie</th>
@@ -1838,6 +1838,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
