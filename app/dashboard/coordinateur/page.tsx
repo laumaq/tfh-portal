@@ -613,23 +613,40 @@ export default function CoordinateurDashboard() {
           }
           break;
   
-        case 'coordinateurs':
-          const coordinateursToInsert = dataRows.map(row => {
-            const values = row.split(',').map(v => v.trim());
-            // Utilisez le format de votre table
-            return {
-              nom: values[0] || ''
-              // Ajoutez prenom si nécessaire
-            };
-          }).filter(c => c.nom);
-  
-          if (coordinateursToInsert.length > 0) {
-            const { error } = await supabase
-              .from('coordinateurs')
-              .insert(coordinateursToInsert);
-            if (error) throw error;
-          }
-          break;
+          case 'coordinateurs':
+            const coordinateursToInsert = dataRows.map(row => {
+              const values = row.split(',').map(v => v.trim());
+              const coordData: any = {
+                nom: values[0] || '',
+                prenom: values[1] || ''
+              };
+              
+              // Si vous avez un champ initiale dans la table coordinateurs
+              if (values[1]) {
+                coordData.initiale = values[1].charAt(0).toUpperCase();
+              }
+              
+              // Si vous avez un champ email dans la table
+              if (values[2]) {
+                coordData.email = values[2];
+              } else if (values[0] && values[1]) {
+                // Créer un email par défaut
+                coordData.email = `${values[1].toLowerCase()}.${values[0].toLowerCase()}@ecole.be`;
+              }
+              
+              return coordData;
+            }).filter(c => c.nom && c.prenom);
+          
+            if (coordinateursToInsert.length > 0) {
+              const { error } = await supabase
+                .from('coordinateurs')
+                .insert(coordinateursToInsert);
+              if (error) {
+                console.error('Erreur détaillée:', error);
+                throw error;
+              }
+            }
+            break;
       }
   
       alert(`${dataRows.length} utilisateur${dataRows.length > 1 ? 's' : ''} importé${dataRows.length > 1 ? 's' : ''} avec succès!`);
@@ -1838,6 +1855,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
