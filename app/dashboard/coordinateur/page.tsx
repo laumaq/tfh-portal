@@ -147,10 +147,14 @@ export default function CoordinateurDashboard() {
 
   const loadData = async () => {
     try {
-      // Charger les guides
+      // Charger les guides triés par nom
       const { data: guidesData, error: guidesError } = await supabase
         .from('guides')
-        .select('id, nom, initiale');
+        .select('id, nom, initiale')
+        .order('nom', { ascending: true }); // <-- AJOUTER CETTE LIGNE
+      
+      if (guidesError) throw guidesError;
+      setGuides(guidesData || []);
 
       if (guidesError) throw guidesError;
       setGuides(guidesData || []);
@@ -538,35 +542,29 @@ export default function CoordinateurDashboard() {
               nom: values[0] || '',
               prenom: values[1] || '',
               classe: values[2] || '',
-              initiale: (values[1] || '').charAt(0).toUpperCase(), // Calculer l'initiale
+              initiale: (values[1] || '').charAt(0).toUpperCase(),
               categorie: values[3] || null,
               guide_id: null
             };
             return eleve;
           }).filter(e => e.nom && e.prenom && e.classe);
   
-          console.log('Élèves à insérer:', elevesToInsert);
-  
           if (elevesToInsert.length > 0) {
-            const { data, error } = await supabase
+            const { error } = await supabase
               .from('eleves')
-              .insert(elevesToInsert)
-              .select();
-            
+              .insert(elevesToInsert);
             if (error) throw error;
-            console.log('Élèves insérés:', data);
           }
           break;
   
         case 'guides':
           const guidesToInsert = dataRows.map(row => {
             const values = row.split(',').map(v => v.trim());
-            const guide: any = {
+            const guideData: any = {
               nom: values[0] || '',
-              initiale: values[1] || '',
-              email: values[2] || null
+              initiale: values[1] || ''
             };
-            return guide;
+            return guideData;
           }).filter(g => g.nom && g.initiale);
   
           if (guidesToInsert.length > 0) {
@@ -613,40 +611,32 @@ export default function CoordinateurDashboard() {
           }
           break;
   
-          case 'coordinateurs':
-            const coordinateursToInsert = dataRows.map(row => {
-              const values = row.split(',').map(v => v.trim());
-              const coordData: any = {
-                nom: values[0] || '',
-                prenom: values[1] || ''
-              };
-              
-              // Si vous avez un champ initiale dans la table coordinateurs
-              if (values[1]) {
-                coordData.initiale = values[1].charAt(0).toUpperCase();
-              }
-              
-              // Si vous avez un champ email dans la table
-              if (values[2]) {
-                coordData.email = values[2];
-              } else if (values[0] && values[1]) {
-                // Créer un email par défaut
-                coordData.email = `${values[1].toLowerCase()}.${values[0].toLowerCase()}@ecole.be`;
-              }
-              
-              return coordData;
-            }).filter(c => c.nom && c.prenom);
-          
-            if (coordinateursToInsert.length > 0) {
-              const { error } = await supabase
-                .from('coordinateurs')
-                .insert(coordinateursToInsert);
-              if (error) {
-                console.error('Erreur détaillée:', error);
-                throw error;
-              }
+        case 'coordinateurs':
+          const coordinateursToInsert = dataRows.map(row => {
+            const values = row.split(',').map(v => v.trim());
+            const coordData: any = {
+              nom: values[0] || '',
+              prenom: values[1] || ''
+            };
+            
+            // Si la table a un champ initiale
+            if (values[1]) {
+              coordData.initiale = values[1].charAt(0).toUpperCase();
             }
-            break;
+            
+            return coordData;
+          }).filter(c => c.nom && c.prenom);
+  
+          if (coordinateursToInsert.length > 0) {
+            const { error } = await supabase
+              .from('coordinateurs')
+              .insert(coordinateursToInsert);
+            if (error) {
+              console.error('Erreur détaillée coordinateurs:', error);
+              throw error;
+            }
+          }
+          break;
       }
   
       alert(`${dataRows.length} utilisateur${dataRows.length > 1 ? 's' : ''} importé${dataRows.length > 1 ? 's' : ''} avec succès!`);
@@ -1734,9 +1724,9 @@ export default function CoordinateurDashboard() {
                   </label>
                   <div className="text-sm text-gray-600 mb-3">
                     {selectedUserType === 'eleves' && 'Colonnes: nom, prenom, classe, categorie (optionnel)'}
-                    {selectedUserType === 'guides' && 'Colonnes: nom, initiale, email'}
+                    {selectedUserType === 'guides' && 'Colonnes: nom, initiale'}
                     {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && 'Colonnes: nom, prenom, email'}
-                    {selectedUserType === 'coordinateurs' && 'Colonnes: nom, prenom, email'}
+                    {selectedUserType === 'coordinateurs' && 'Colonnes: nom, prenom'}
                   </div>
                   
                   <input
@@ -1855,6 +1845,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
