@@ -39,6 +39,7 @@ interface Eleve {
 interface Guide {
   id: string;
   nom: string;
+  prenom: string; // ← Ajouter prénom
   initiale: string;
 }
 
@@ -60,6 +61,7 @@ interface Coordinateur {
   id: string;
   nom: string;
   prenom: string;
+  initiale: string;
 }
 
 type TabType = 'convocations' | 'defenses' | 'gestion-utilisateurs';
@@ -150,7 +152,7 @@ export default function CoordinateurDashboard() {
       // Charger les guides triés par nom
       const { data: guidesData, error: guidesError } = await supabase
         .from('guides')
-        .select('id, nom, initiale')
+        .select('id, nom, prenom, initiale')
         .order('nom', { ascending: true }); // <-- AJOUTER CETTE LIGNE
       
       if (guidesError) throw guidesError;
@@ -182,7 +184,7 @@ export default function CoordinateurDashboard() {
       // Charger les coordinateurs
       const { data: coordinateursData, error: coordinateursError } = await supabase
         .from('coordinateurs')
-        .select('id, nom, prenom');
+        .select('id, nom, prenom, initiale');
 
       if (coordinateursError) {
         console.warn('Table coordinateurs non trouvée ou erreur:', coordinateursError);
@@ -196,8 +198,8 @@ export default function CoordinateurDashboard() {
         .from('eleves')
         .select(`
           *,
-          guide:guides!guide_id (nom, initiale),
-          lecteur_interne:guides!lecteur_interne_id (nom, initiale),
+          guide:guides!guide_id (nom, prenom),
+          lecteur_interne:guides!lecteur_interne_id (nom, prenom),
           lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
           mediateur:mediateurs!mediateur_id (nom, prenom)
         `)
@@ -209,9 +211,9 @@ export default function CoordinateurDashboard() {
       const elevesFormatted = (elevesData || []).map(eleve => ({
         ...eleve,
         guide_nom: eleve.guide?.nom || '-',
-        guide_initiale: eleve.guide?.initiale || '-',
+        guide_initiale: eleve.guide?.prenom || '-',
         lecteur_interne_nom: eleve.lecteur_interne?.nom || '-',
-        lecteur_interne_initiale: eleve.lecteur_interne?.initiale || '-',
+        lecteur_interne_initiale: eleve.lecteur_interne?.prenom || '-',
         lecteur_externe_nom: eleve.lecteur_externe?.nom || '-',
         lecteur_externe_prenom: eleve.lecteur_externe?.prenom || '-',
         mediateur_nom: eleve.mediateur?.nom || '-',
@@ -397,14 +399,18 @@ export default function CoordinateurDashboard() {
           break;
   
         case 'guides':
+          // Calculer l'initiale automatiquement
+          const initialeGuide = newUser.prenom.trim().charAt(0).toUpperCase();
+          
           const { error: guideError } = await supabase
             .from('guides')
             .insert([{
               nom: newUser.nom,
-              initiale: newUser.initiale
-              // Pas d'email pour les guides
+              prenom: newUser.prenom, // ← Ajouter prénom
+              initiale: initialeGuide, // ← Calculée automatiquement
+              email: newUser.email || null
             }]);
-  
+        
           if (guideError) throw guideError;
           break;
   
@@ -433,14 +439,17 @@ export default function CoordinateurDashboard() {
           break;
   
         case 'coordinateurs':
+          // Calculer l'initiale automatiquement
+          const initialeCoord = newUser.prenom.trim().charAt(0).toUpperCase();
+          
           const { error: coordError } = await supabase
             .from('coordinateurs')
             .insert([{
               nom: newUser.nom,
-              prenom: newUser.prenom
-              // Pas d'email pour les coordinateurs
+              prenom: newUser.prenom,
+              initiale: initialeCoord // ← Calculée automatiquement
             }]);
-  
+        
           if (coordError) throw coordError;
           break;
       }
@@ -562,18 +571,11 @@ export default function CoordinateurDashboard() {
             const values = row.split(',').map(v => v.trim());
             const guideData: any = {
               nom: values[0] || '',
-              initiale: values[1] || ''
+              prenom: values[1] || '', // ← Ajouter prénom
+              initiale: (values[1] || '').charAt(0).toUpperCase() // ← Calculer automatiquement
             };
             return guideData;
-          }).filter(g => g.nom && g.initiale);
-  
-          if (guidesToInsert.length > 0) {
-            const { error } = await supabase
-              .from('guides')
-              .insert(guidesToInsert);
-            if (error) throw error;
-          }
-          break;
+          }).filter(g => g.nom && g.prenom); // ← Vérifier prénom au lieu d'initiale
   
         case 'lecteurs-externes':
           const lecteursToInsert = dataRows.map(row => {
@@ -619,24 +621,13 @@ export default function CoordinateurDashboard() {
               prenom: values[1] || ''
             };
             
-            // Si la table a un champ initiale
+            // Calculer l'initiale automatiquement
             if (values[1]) {
               coordData.initiale = values[1].charAt(0).toUpperCase();
             }
             
             return coordData;
           }).filter(c => c.nom && c.prenom);
-  
-          if (coordinateursToInsert.length > 0) {
-            const { error } = await supabase
-              .from('coordinateurs')
-              .insert(coordinateursToInsert);
-            if (error) {
-              console.error('Erreur détaillée coordinateurs:', error);
-              throw error;
-            }
-          }
-          break;
       }
   
       alert(`${dataRows.length} utilisateur${dataRows.length > 1 ? 's' : ''} importé${dataRows.length > 1 ? 's' : ''} avec succès!`);
@@ -1004,13 +995,13 @@ export default function CoordinateurDashboard() {
                                 <option value="">-</option>
                                 {guides.map(guide => (
                                   <option key={guide.id} value={guide.id}>
-                                    {guide.nom} {guide.initiale}.
+                                    {guide.nom} {guide.prenom}.
                                   </option>
                                 ))}
                               </select>
                             ) : (
                               <span>
-                                {eleve.guide_nom} {eleve.guide_initiale}.
+                                {eleve.guide_nom} {eleve.guide_prenom}.
                               </span>
                             )}
                           </td>
@@ -1254,7 +1245,7 @@ export default function CoordinateurDashboard() {
                           </div>
                         </td>
                         <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">
-                          {eleve.guide_nom} {eleve.guide_initiale}.
+                          {eleve.guide_nom} {eleve.guide_prenom}.
                         </td>  
                         
                         {/* Lecteur Interne */}
@@ -1524,9 +1515,9 @@ export default function CoordinateurDashboard() {
                     />
                     <input
                       type="text"
-                      placeholder="Initiale"
-                      value={newUser.initiale}
-                      onChange={(e) => setNewUser({...newUser, initiale: e.target.value})}
+                      placeholder="Prénom"
+                      value={newUser.prenom}
+                      onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
                       className="border rounded px-3 py-2 text-sm"
                     />
                   </>
@@ -1613,7 +1604,7 @@ export default function CoordinateurDashboard() {
                       {selectedUserType === 'guides' && (
                         <>
                           <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Initiale</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
                           <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
                         </>
                       )}
@@ -1657,7 +1648,7 @@ export default function CoordinateurDashboard() {
                         {selectedUserType === 'guides' && (
                           <>
                             <td className="px-4 py-3 text-sm">{user.nom}</td>
-                            <td className="px-4 py-3 text-sm">{user.initiale}</td>
+                            <td className="px-4 py-3 text-sm">{user.prenom}</td>
                             <td className="px-4 py-3">
                               <button
                                 onClick={() => handleDeleteUser(user.id, user.nom)}
@@ -1724,7 +1715,7 @@ export default function CoordinateurDashboard() {
                   </label>
                   <div className="text-sm text-gray-600 mb-3">
                     {selectedUserType === 'eleves' && 'Colonnes: nom, prenom, classe, categorie (optionnel)'}
-                    {selectedUserType === 'guides' && 'Colonnes: nom, initiale'}
+                    {selectedUserType === 'guides' && 'Colonnes: nom, prenom'}
                     {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && 'Colonnes: nom, prenom, email'}
                     {selectedUserType === 'coordinateurs' && 'Colonnes: nom, prenom'}
                   </div>
@@ -1845,6 +1836,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
