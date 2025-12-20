@@ -159,9 +159,6 @@ export default function CoordinateurDashboard() {
       if (guidesError) throw guidesError;
       setGuides(guidesData || []);
 
-      if (guidesError) throw guidesError;
-      setGuides(guidesData || []);
-
       // Charger les lecteurs externes
       const { data: lecteursExternesData, error: lecteursError } = await supabase
         .from('lecteurs_externes')
@@ -380,9 +377,24 @@ export default function CoordinateurDashboard() {
   
   const handleAddUser = async () => {
     try {
+      // Vérifier les champs requis
+      if (!newUser.nom.trim()) {
+        alert('Le nom est requis');
+        return;
+      }
+  
+      if (!newUser.prenom.trim() && selectedUserType !== 'guides' && selectedUserType !== 'coordinateurs') {
+        alert('Le prénom est requis');
+        return;
+      }
+  
       switch (selectedUserType) {
         case 'eleves':
-          // Calculer l'initiale à partir du prénom
+          if (!newUser.classe.trim()) {
+            alert('La classe est requise pour un élève');
+            return;
+          }
+          
           const initialeEleve = newUser.prenom.trim().charAt(0).toUpperCase();
           
           const { error: eleveError } = await supabase
@@ -391,8 +403,8 @@ export default function CoordinateurDashboard() {
               nom: newUser.nom,
               prenom: newUser.prenom,
               classe: newUser.classe,
-              categorie: newUser.categorie,
-              initiale: initialeEleve,  // <-- CORRECTION ICI
+              categorie: newUser.categorie || null,
+              initiale: initialeEleve,
               guide_id: null
             }]);
   
@@ -400,47 +412,65 @@ export default function CoordinateurDashboard() {
           break;
   
         case 'guides':
-          // Calculer l'initiale automatiquement
+          if (!newUser.prenom.trim()) {
+            alert('Le prénom est requis pour un guide');
+            return;
+          }
+          
           const initialeGuide = newUser.prenom.trim().charAt(0).toUpperCase();
           
           const { error: guideError } = await supabase
             .from('guides')
             .insert([{
               nom: newUser.nom,
-              prenom: newUser.prenom, // ← Ajouter prénom
-              initiale: initialeGuide, // ← Calculée automatiquement
+              prenom: newUser.prenom,
+              initiale: initialeGuide,
               email: newUser.email || null
             }]);
-        
+  
           if (guideError) throw guideError;
           break;
   
         case 'lecteurs-externes':
+          if (!newUser.prenom.trim()) {
+            alert('Le prénom est requis pour un lecteur externe');
+            return;
+          }
+          
           const { error: lecteurError } = await supabase
             .from('lecteurs_externes')
             .insert([{
               nom: newUser.nom,
               prenom: newUser.prenom,
-              email: newUser.email 
+              email: newUser.email || null
             }]);
   
           if (lecteurError) throw lecteurError;
           break;
   
         case 'mediateurs':
+          if (!newUser.prenom.trim()) {
+            alert('Le prénom est requis pour un médiateur');
+            return;
+          }
+          
           const { error: mediateurError } = await supabase
             .from('mediateurs')
             .insert([{
               nom: newUser.nom,
               prenom: newUser.prenom,
-              email: newUser.email
+              email: newUser.email || null
             }]);
   
           if (mediateurError) throw mediateurError;
           break;
   
         case 'coordinateurs':
-          // Calculer l'initiale automatiquement
+          if (!newUser.prenom.trim()) {
+            alert('Le prénom est requis pour un coordinateur');
+            return;
+          }
+          
           const initialeCoord = newUser.prenom.trim().charAt(0).toUpperCase();
           
           const { error: coordError } = await supabase
@@ -448,15 +478,18 @@ export default function CoordinateurDashboard() {
             .insert([{
               nom: newUser.nom,
               prenom: newUser.prenom,
-              initiale: initialeCoord // ← Calculée automatiquement
+              initiale: initialeCoord
             }]);
-        
-          if (coordError) throw coordError;
+  
+          if (coordError) {
+            console.error('Erreur détaillée coordinateur:', coordError);
+            throw coordError;
+          }
           break;
       }
   
       alert('Utilisateur ajouté avec succès!');
-      // Réinitialisez avec TOUTES les propriétés
+      // Réinitialiser le formulaire
       setNewUser({
         nom: '',
         prenom: '',
@@ -468,7 +501,7 @@ export default function CoordinateurDashboard() {
       loadData();
     } catch (err) {
       console.error('Erreur ajout utilisateur:', err);
-      alert('Erreur lors de l\'ajout de l\'utilisateur');
+      alert('Erreur lors de l\'ajout de l\'utilisateur: ' + (err as Error).message);
     }
   };
 
@@ -567,16 +600,26 @@ export default function CoordinateurDashboard() {
           }
           break;
   
-        case 'guides':
-          const guidesToInsert = dataRows.map(row => {
-            const values = row.split(',').map(v => v.trim());
-            const guideData: any = {
-              nom: values[0] || '',
-              prenom: values[1] || '', // ← Ajouter prénom
-              initiale: (values[1] || '').charAt(0).toUpperCase() // ← Calculer automatiquement
-            };
-            return guideData;
-          }).filter(g => g.nom && g.prenom); // ← Vérifier prénom au lieu d'initiale
+          // Dans handleMassImport() - section pour les guides (~ligne 505)
+          case 'guides':
+            const guidesToInsert = dataRows.map(row => {
+              const values = row.split(',').map(v => v.trim());
+              const guideData: any = {
+                nom: values[0] || '',
+                prenom: values[1] || '',
+                initiale: (values[1] || '').charAt(0).toUpperCase()
+              };
+              return guideData;
+            }).filter(g => g.nom && g.prenom);
+          
+            // ← IL MANQUE LA PARTIE D'INSERTION !
+            if (guidesToInsert.length > 0) {
+              const { error } = await supabase
+                .from('guides')
+                .insert(guidesToInsert);
+              if (error) throw error;
+            }
+            break; // ← Ajouter break
   
         case 'lecteurs-externes':
           const lecteursToInsert = dataRows.map(row => {
@@ -614,6 +657,7 @@ export default function CoordinateurDashboard() {
           }
           break;
   
+        // Dans handleMassImport() - section pour les coordinateurs (~ligne 570)
         case 'coordinateurs':
           const coordinateursToInsert = dataRows.map(row => {
             const values = row.split(',').map(v => v.trim());
@@ -629,6 +673,15 @@ export default function CoordinateurDashboard() {
             
             return coordData;
           }).filter(c => c.nom && c.prenom);
+        
+          // ← IL MANQUE LA PARTIE D'INSERTION !
+          if (coordinateursToInsert.length > 0) {
+            const { error } = await supabase
+              .from('coordinateurs')
+              .insert(coordinateursToInsert);
+            if (error) throw error;
+          }
+          break; // ← Ajouter break
       }
   
       alert(`${dataRows.length} utilisateur${dataRows.length > 1 ? 's' : ''} importé${dataRows.length > 1 ? 's' : ''} avec succès!`);
@@ -1837,6 +1890,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
