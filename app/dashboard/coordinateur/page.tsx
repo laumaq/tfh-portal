@@ -370,11 +370,14 @@ export default function CoordinateurDashboard() {
       setNewCategory('');
     }
   };
-
+  
   const handleAddUser = async () => {
     try {
       switch (selectedUserType) {
         case 'eleves':
+          // Calculer l'initiale à partir du prénom
+          const initialeEleve = newUser.prenom.trim().charAt(0).toUpperCase();
+          
           const { error: eleveError } = await supabase
             .from('eleves')
             .insert([{
@@ -382,7 +385,7 @@ export default function CoordinateurDashboard() {
               prenom: newUser.prenom,
               classe: newUser.classe,
               categorie: newUser.categorie,
-              initiale: initialeEleve, 
+              initiale: initialeEleve,  // <-- CORRECTION ICI
               guide_id: null
             }]);
   
@@ -419,7 +422,7 @@ export default function CoordinateurDashboard() {
             .insert([{
               nom: newUser.nom,
               prenom: newUser.prenom,
-              email: newUser.email // ← Utilisez newUser.email directement
+              email: newUser.email
             }]);
   
           if (mediateurError) throw mediateurError;
@@ -1835,6 +1838,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
