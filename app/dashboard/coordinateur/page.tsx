@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import * as XLSX from 'xlsx';
 
+// Remplacer l'interface Eleve existante (lignes 6-37) :
 interface Eleve {
   id: string;
   nom: string;
@@ -27,9 +28,9 @@ interface Eleve {
   lecteur_externe_id: string | null;
   mediateur_id: string | null;
   guide_nom?: string;
-  guide_initiale?: string;
+  guide_prenom?: string; // ← Changer guide_initiale en guide_prenom
   lecteur_interne_nom?: string;
-  lecteur_interne_initiale?: string;
+  lecteur_interne_prenom?: string; // ← Changer initiale en prenom
   lecteur_externe_nom?: string;
   lecteur_externe_prenom?: string;
   mediateur_nom?: string;
@@ -1836,6 +1837,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
