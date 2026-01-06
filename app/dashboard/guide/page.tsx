@@ -84,13 +84,13 @@ export default function GuideDashboard() {
       color: 'bg-yellow-100 text-yellow-800 border-yellow-200'
     },
     { 
-      value: 'Oui, n\'a pas avancé', 
-      label: 'Oui, n\'a pas avancé',
+      value: 'Oui, l\'élève n\'a pas avancé', 
+      label: 'Oui, l\'élève n\'a pas avancé',
       color: 'bg-red-100 text-red-800 border-red-200'
     },
     { 
-      value: 'Oui n\'a pas communiqué', 
-      label: 'Oui n\'a pas communiqué',
+      value: 'Oui, l\'élève n\'a pas communiqué', 
+      label: 'Oui, l\'élève n\'a pas communiqué',
       color: 'bg-orange-100 text-orange-800 border-orange-200'
     }
   ];
@@ -903,4 +903,5 @@ export default function GuideDashboard() {
     </div>
   );
 }
+
 
