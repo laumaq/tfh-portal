@@ -966,16 +966,16 @@ export default function CoordinateurDashboard() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm font-medium text-gray-700 mb-2">Légende des convocations:</p>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {CONVOCATION_OPTIONS.filter(opt => opt.value).map((opt) => (
-                        <div key={opt.value} className={`${opt.color} px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1`}>
-                          <div className="w-2 h-2 rounded-full" style={{
+                        <div key={opt.value} className={`${opt.color} px-3 py-2 rounded-lg text-xs font-medium flex items-start gap-2`}>
+                          <div className="w-2 h-2 rounded-full mt-1 shrink-0" style={{
                             backgroundColor: opt.color.includes('green') ? '#10B981' :
                                            opt.color.includes('yellow') ? '#F59E0B' :
                                            opt.color.includes('orange') ? '#F97316' :
                                            opt.color.includes('red') ? '#EF4444' : '#6B7280'
                           }}></div>
-                          {opt.label.split(',')[0]}
+                          <span className="leading-tight">{opt.label}</span>
                         </div>
                       ))}
                     </div>
@@ -1890,6 +1890,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
