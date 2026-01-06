@@ -104,23 +104,23 @@ export default function CoordinateurDashboard() {
   const CONVOCATION_OPTIONS = [
     { value: '', label: '-', color: 'bg-gray-100' },
     { 
-      value: 'Non, l'élève atteint bien les objectifs', 
-      label: 'Non, l'élève atteint bien les objectifs',
+      value: 'Non, l\'élève atteint bien les objectifs', 
+      label: 'Non, l\'élève atteint bien les objectifs',
       color: 'bg-green-100 text-green-800 border-green-200'
     },
     { 
-      value: 'Oui, l'élève n\'atteint pas les objectifs', 
-      label: 'Oui, l'élève n\'atteint pas les objectifs',
+      value: 'Oui, l\'élève n\'atteint pas les objectifs', 
+      label: 'Oui, l\'élève n\'atteint pas les objectifs',
       color: 'bg-yellow-100 text-yellow-800 border-yellow-200'
     },
     { 
-      value: 'Oui, l'élève n\'a pas avancé', 
-      label: 'Oui, l'élève n\'a pas avancé',
+      value: 'Oui, l\'élève n\'a pas avancé', 
+      label: 'Oui, l\'élève n\'a pas avancé',
       color: 'bg-red-100 text-red-800 border-red-200'
     },
     { 
-      value: 'Oui, l'élève n\'a pas communiqué', 
-      label: 'Oui, l'élève n\'a pas communiqué',
+      value: 'Oui, l\'élève n\'a pas communiqué', 
+      label: 'Oui, l\'élève n\'a pas communiqué',
       color: 'bg-orange-100 text-orange-800 border-orange-200'
     }
   ];
@@ -1890,6 +1890,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
