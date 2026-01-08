@@ -69,8 +69,8 @@ interface DefenseEvent {
   id: string;
   eleveId: string;
   date: string;
-  startTime: string;
-  endTime: string;
+  startTime: string; // Format "HH:MM:SS"
+  endTime: string;   // Format "HH:MM:SS" (startTime + 50 minutes)
   location: string;
   eleveNom: string;
   elevePrenom: string;
@@ -85,16 +85,10 @@ interface DefenseEvent {
   categorie: string;
 }
 
-interface TimeSlot {
-  time: string;
-  displayTime: string;
-}
-
-interface DayPlanning {
+interface DayDefenses {
   date: string;
   displayDate: string;
   locations: string[];
-  timeSlots: TimeSlot[];
   defenses: DefenseEvent[];
 }
 
@@ -135,7 +129,7 @@ export default function CoordinateurDashboard() {
   const [selectedDates, setSelectedDates] = useState<string[]>([]); // Seront remplis après chargement
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]); // Seront remplis après chargement
   const [selectedCategory, setSelectedCategory] = useState<string>('toutes');
-  const [dayPlannings, setDayPlannings] = useState<DayPlanning[]>([]);
+  const [dayDefenses, setDayDefenses] = useState<DayDefenses[]>([]);
   const [conflicts, setConflicts] = useState<{
     guides: Array<{person: string, conflicts: DefenseEvent[]}>;
     lecteursInternes: Array<{person: string, conflicts: DefenseEvent[]}>;
@@ -905,12 +899,12 @@ export default function CoordinateurDashboard() {
     }
   };
   
-    // Ajouter ces fonctions après la fonction formatDateForInput (~ligne 460)
   
   // Fonction pour ajouter 50 minutes à une heure
   const add50Minutes = (time: string): string => {
     if (!time) return '';
     
+    // time est au format "HH:MM"
     const [hours, minutes] = time.split(':').map(Number);
     let newHours = hours;
     let newMinutes = minutes + 50;
@@ -1059,33 +1053,41 @@ export default function CoordinateurDashboard() {
     };
   };
   
-  // fonction prepareCalendarData  :
   const prepareCalendarData = () => {
+    console.log('=== PRÉPARATION CALENDRIER ===');
+    
     // Filtrer les élèves avec une date et heure de défense
     const defensesWithSchedule = eleves.filter(e => 
       e.date_defense && e.heure_defense
     );
     
+    console.log(`Élèves avec défense: ${defensesWithSchedule.length}`);
+    
     // Transformer en DefenseEvent
-    const defenseEvents: DefenseEvent[] = defensesWithSchedule.map(eleve => ({
-      id: eleve.id,
-      eleveId: eleve.id,
-      date: eleve.date_defense!,
-      startTime: eleve.heure_defense!,
-      endTime: add50Minutes(eleve.heure_defense!),
-      location: eleve.localisation_defense || 'Non défini',
-      eleveNom: eleve.nom,
-      elevePrenom: eleve.prenom,
-      guideNom: eleve.guide_nom || '-',
-      guidePrenom: eleve.guide_prenom || '-',
-      lecteurInterneNom: eleve.lecteur_interne_nom || '-',
-      lecteurInternePrenom: eleve.lecteur_interne_prenom || '-',
-      lecteurExterneNom: eleve.lecteur_externe_nom || '-',
-      lecteurExternePrenom: eleve.lecteur_externe_prenom || '-',
-      mediateurNom: eleve.mediateur_nom || '-',
-      mediateurPrenom: eleve.mediateur_prenom || '-',
-      categorie: eleve.categorie || 'Non catégorisé'
-    }));
+    const defenseEvents: DefenseEvent[] = defensesWithSchedule.map(eleve => {
+      // Convertir "HH:MM:SS" en "HH:MM" pour l'affichage
+      const startTime = eleve.heure_defense!.substring(0, 5); // Garde "HH:MM"
+      
+      return {
+        id: eleve.id,
+        eleveId: eleve.id,
+        date: eleve.date_defense!,
+        startTime: startTime,
+        endTime: add50Minutes(startTime),
+        location: eleve.localisation_defense || 'Non défini',
+        eleveNom: eleve.nom,
+        elevePrenom: eleve.prenom,
+        guideNom: eleve.guide_nom || '-',
+        guidePrenom: eleve.guide_prenom || '-',
+        lecteurInterneNom: eleve.lecteur_interne_nom || '-',
+        lecteurInternePrenom: eleve.lecteur_interne_prenom || '-',
+        lecteurExterneNom: eleve.lecteur_externe_nom || '-',
+        lecteurExternePrenom: eleve.lecteur_externe_prenom || '-',
+        mediateurNom: eleve.mediateur_nom || '-',
+        mediateurPrenom: eleve.mediateur_prenom || '-',
+        categorie: eleve.categorie || 'Non catégorisé'
+      };
+    });
     
     // Appliquer les filtres
     let filteredDefenses = defenseEvents;
@@ -1095,15 +1097,17 @@ export default function CoordinateurDashboard() {
       filteredDefenses = filteredDefenses.filter(d => d.categorie === selectedCategory);
     }
     
-    // Filtre par dates - SI des dates sont sélectionnées, filtrer, sinon TOUT afficher
+    // Filtre par dates
     if (selectedDates.length > 0) {
       filteredDefenses = filteredDefenses.filter(d => selectedDates.includes(d.date));
     }
     
-    // Filtre par locaux - SI des locaux sont sélectionnés, filtrer, sinon TOUT afficher
+    // Filtre par locaux
     if (selectedLocations.length > 0) {
       filteredDefenses = filteredDefenses.filter(d => selectedLocations.includes(d.location));
     }
+    
+    console.log(`Défenses après filtrage: ${filteredDefenses.length}`);
     
     // Détecter les conflits
     setConflicts(detectConflicts(filteredDefenses));
@@ -1111,15 +1115,10 @@ export default function CoordinateurDashboard() {
     // Grouper par date
     const dates = Array.from(new Set(filteredDefenses.map(d => d.date))).sort();
     
-    const plannings: DayPlanning[] = dates.map(date => {
+    const daysData: DayDefenses[] = dates.map(date => {
       const dateDefenses = filteredDefenses.filter(d => d.date === date);
       const locations = Array.from(new Set(dateDefenses.map(d => d.location)))
-        .sort((a, b) => {
-          // Trier par premier caractère (chiffre ou lettre)
-          const firstCharA = a.charAt(0);
-          const firstCharB = b.charAt(0);
-          return firstCharA.localeCompare(firstCharB);
-        });
+        .sort((a, b) => a.charAt(0).localeCompare(b.charAt(0)));
       
       return {
         date,
@@ -1129,40 +1128,16 @@ export default function CoordinateurDashboard() {
           month: 'long' 
         }),
         locations,
-        timeSlots: generateTimeSlots(dateDefenses),
-        defenses: dateDefenses
+        defenses: dateDefenses.sort((a, b) => a.startTime.localeCompare(b.startTime))
       };
     });
     
-    setDayPlannings(plannings);
-    
-    // Dans prepareCalendarData, après la création des plannings, ajoutez :
-    console.log('=== DÉBOGAGE CALENDRIER ===');
-    console.log('Total élèves:', eleves.length);
-    console.log('Élèves avec défense programmée:', defensesWithSchedule.length);
-    console.log('Événements de défense créés:', defenseEvents.length);
-    console.log('Événements après filtrage:', filteredDefenses.length);
-    
-    if (filteredDefenses.length > 0) {
-      console.log('Exemple de défense:', filteredDefenses[0]);
-      console.log('Date:', filteredDefenses[0].date);
-      console.log('Heure début:', filteredDefenses[0].startTime);
-      console.log('Heure fin:', filteredDefenses[0].endTime);
-      console.log('Local:', filteredDefenses[0].location);
+    console.log(`Jours avec défenses: ${daysData.length}`);
+    if (daysData.length > 0) {
+      console.log('Exemple jour:', daysData[0]);
     }
     
-    plannings.forEach((planning, index) => {
-      console.log(`\nPlanning ${index + 1} - ${planning.date}:`);
-      console.log('Locaux:', planning.locations);
-      console.log('Nombre de créneaux horaires:', planning.timeSlots.length);
-      console.log('Défenses pour ce jour:', planning.defenses.length);
-      
-      planning.defenses.forEach((defense, i) => {
-        console.log(`  Défense ${i + 1}: ${defense.elevePrenom} ${defense.eleveNom}`);
-        console.log(`    Local: ${defense.location}`);
-        console.log(`    Heure: ${defense.startTime} - ${defense.endTime}`);
-      });
-    });
+    setDayDefenses(daysData);
   };
   
   // Effet pour préparer les données quand les filtres changent ou quand les élèves sont chargés
@@ -1971,7 +1946,7 @@ export default function CoordinateurDashboard() {
             
             {/* Section des tableaux par jour */}
             <div className="space-y-8">
-              {dayPlannings.length === 0 ? (
+              {dayDefenses.length === 0 ? (
                 <div className="bg-white rounded-lg shadow p-8 text-center">
                   <p className="text-gray-500">
                     {eleves.filter(e => e.date_defense && e.heure_defense).length === 0
@@ -1980,7 +1955,7 @@ export default function CoordinateurDashboard() {
                   </p>
                 </div>
               ) : (
-                dayPlannings.map(day => (
+                dayDefenses.map(day => (
                   <div key={day.date} className="bg-white rounded-lg shadow overflow-hidden">
                     <div className="px-6 py-4 bg-gray-50 border-b">
                       <h3 className="text-lg font-semibold text-gray-800">
@@ -2011,67 +1986,75 @@ export default function CoordinateurDashboard() {
                             </tr>
                           </thead>
                           <tbody>
-                            {day.timeSlots.map(timeSlot => (
-                              <tr key={`${day.date}-${timeSlot.time}`} className="border-b">
-                                <td className="px-4 py-3 text-sm font-medium text-gray-700 bg-gray-50 border-r">
-                                  {timeSlot.displayTime}
-                                </td>
-                                {day.locations.map(location => {
-                                  // Trouver TOUTES les défenses dans ce local
-                                  const defensesInLocation = day.defenses.filter(d => 
-                                    d.location === location
-                                  );
+                            {/* Créer une ligne pour chaque intervalle de temps de 8h à 18h */}
+                            {(() => {
+                              const timeSlots = [];
+                              for (let hour = 8; hour <= 18; hour++) {
+                                for (let minute of [0, 30]) {
+                                  if (hour === 18 && minute > 0) continue;
                                   
-                                  // Trouver la défense qui commence à ce créneau
-                                  const defenseAtThisTime = defensesInLocation.find(d => {
-                                    // Vérifier si l'heure de début correspond au créneau
-                                    return d.startTime === timeSlot.time;
-                                  });
+                                  const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                                  const displayTime = `${hour}h${minute === 0 ? '00' : minute}`;
                                   
-                                  return (
-                                    <td 
-                                      key={`${day.date}-${location}-${timeSlot.time}`} 
-                                      className="px-4 py-3 border-r"
-                                    >
-                                      {defenseAtThisTime ? (
-                                        <div className="bg-blue-50 border border-blue-200 rounded p-3">
-                                          <div className="font-bold text-sm text-blue-800 mb-1">
-                                            {defenseAtThisTime.startTime} - {defenseAtThisTime.endTime}
-                                          </div>
-                                          <div className="space-y-1 text-xs">
-                                            <div className="font-medium">
-                                              Élève: {defenseAtThisTime.elevePrenom} {defenseAtThisTime.eleveNom}
+                                  timeSlots.push({ time, displayTime });
+                                }
+                              }
+                              
+                              return timeSlots.map(timeSlot => (
+                                <tr key={`${day.date}-${timeSlot.time}`} className="border-b">
+                                  <td className="px-4 py-3 text-sm font-medium text-gray-700 bg-gray-50 border-r">
+                                    {timeSlot.displayTime}
+                                  </td>
+                                  {day.locations.map(location => {
+                                    // Trouver toutes les défenses dans ce local à cette heure
+                                    const defensesAtThisTime = day.defenses.filter(d => 
+                                      d.location === location && 
+                                      d.startTime === timeSlot.time
+                                    );
+                                    
+                                    return (
+                                      <td 
+                                        key={`${day.date}-${location}-${timeSlot.time}`} 
+                                        className="px-4 py-3 border-r relative"
+                                        style={{ height: '80px' }}
+                                      >
+                                        {/* Afficher chaque défense qui commence à cette heure */}
+                                        {defensesAtThisTime.map(defense => (
+                                          <div
+                                            key={defense.id}
+                                            className="absolute left-1 right-1 bg-blue-50 border border-blue-200 rounded p-2 overflow-hidden"
+                                            style={{
+                                              top: '4px',
+                                              bottom: '4px',
+                                              zIndex: 10
+                                            }}
+                                          >
+                                            <div className="font-bold text-xs text-blue-800 mb-1">
+                                              {defense.startTime} - {defense.endTime}
                                             </div>
-                                            {defenseAtThisTime.guideNom !== '-' && (
-                                              <div>
-                                                Guide: {defenseAtThisTime.guidePrenom} {defenseAtThisTime.guideNom}
+                                            <div className="space-y-0.5 text-xs">
+                                              <div className="font-medium truncate">
+                                                {defense.elevePrenom} {defense.eleveNom}
                                               </div>
-                                            )}
-                                            {defenseAtThisTime.lecteurInterneNom !== '-' && (
-                                              <div>
-                                                Lecteur interne: {defenseAtThisTime.lecteurInternePrenom} {defenseAtThisTime.lecteurInterneNom}
-                                              </div>
-                                            )}
-                                            {defenseAtThisTime.lecteurExterneNom !== '-' && (
-                                              <div>
-                                                Lecteur externe: {defenseAtThisTime.lecteurExternePrenom} {defenseAtThisTime.lecteurExterneNom}
-                                              </div>
-                                            )}
-                                            {defenseAtThisTime.mediateurNom !== '-' && (
-                                              <div>
-                                                Médiateur: {defenseAtThisTime.mediateurPrenom} {defenseAtThisTime.mediateurNom}
-                                              </div>
-                                            )}
+                                              {defense.guideNom !== '-' && (
+                                                <div className="truncate">
+                                                  Guide: {defense.guidePrenom} {defense.guideNom}
+                                                </div>
+                                              )}
+                                              {defense.lecteurExterneNom !== '-' && (
+                                                <div className="truncate">
+                                                  Lecteur: {defense.lecteurExternePrenom} {defense.lecteurExterneNom}
+                                                </div>
+                                              )}
+                                            </div>
                                           </div>
-                                        </div>
-                                      ) : (
-                                        <div className="h-16"></div>
-                                      )}
-                                    </td>
-                                  );
-                                })}
-                              </tr>
-                            ))}
+                                        ))}
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              ));
+                            })()}
                           </tbody>
                         </table>
                       </div>
@@ -2536,6 +2519,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
