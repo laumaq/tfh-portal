@@ -1941,21 +1941,6 @@ export default function CoordinateurDashboard() {
                     </div>
                   </div>
                 </div>
-        
-                <div className="mt-2 flex justify-between">
-                  <button
-                    onClick={() => setSelectedCategory('toutes')}
-                    className="text-xs text-blue-600 hover:text-blue-800"
-                  >
-                    Tout sélectionner
-                  </button>
-                  <button
-                    onClick={() => setSelectedCategory('')}
-                    className="text-xs text-gray-600 hover:text-gray-800"
-                  >
-                    Aucune
-                  </button>
-                </div>
                 
                 {/* Filtre par locaux - inchangé */}
                 <div>
@@ -2646,6 +2631,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
