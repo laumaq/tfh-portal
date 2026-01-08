@@ -916,31 +916,7 @@ export default function CoordinateurDashboard() {
     
     return `${newHours.toString().padStart(2, '0')}:${newMinutes.toString().padStart(2, '0')}`;
   };
-  
-  // Fonction pour générer les créneaux horaires d'une journée
-  const generateTimeSlots = (defenses: DefenseEvent[]): TimeSlot[] => {
-    // Heures de travail standards (8h-18h)
-    const startHour = 8;
-    const endHour = 18;
-    
-    const slots: TimeSlot[] = [];
-    
-    // Générer des créneaux de 30 minutes de 8h à 18h
-    for (let hour = startHour; hour <= endHour; hour++) {
-      for (let minute of [0, 30]) {
-        // Ne pas créer de créneau après 18h00
-        if (hour === endHour && minute > 0) continue;
-        
-        const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-        const displayTime = `${hour}h${minute === 0 ? '00' : minute}`;
-        
-        slots.push({ time, displayTime });
-      }
-    }
-    
-    return slots;
-  };
-  
+   
   // Fonction pour détecter les conflits
   const detectConflicts = (defenses: DefenseEvent[]) => {
     const guideConflicts = new Map<string, DefenseEvent[]>();
@@ -2519,6 +2495,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
