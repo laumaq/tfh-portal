@@ -190,6 +190,10 @@ export default function CoordinateurDashboard() {
     };
   }, [router]);
 
+  const pluralize = (count: number, singular: string, plural: string) => {
+    return count === 1 ? singular : plural;
+  };
+  
   const loadData = async () => {
     try {
       // Charger les guides triés par nom
@@ -890,20 +894,37 @@ export default function CoordinateurDashboard() {
 
   const getCategoryColor = (categorie: string) => {
     const colors = [
-      { bg: '#DBEAFE', border: '#93C5FD', text: '#1E40AF' }, // Bleu
+      { bg: '#DBEAFE', border: '#93C5FD', text: '#1E40AF' }, // Bleu clair
       { bg: '#FEF3C7', border: '#FCD34D', text: '#92400E' }, // Jaune/Orange
-      { bg: '#D1FAE5', border: '#34D399', text: '#065F46' }, // Vert
+      { bg: '#D1FAE5', border: '#34D399', text: '#065F46' }, // Vert clair
       { bg: '#FCE7F3', border: '#F9A8D4', text: '#9D174D' }, // Rose
       { bg: '#E0E7FF', border: '#A5B4FC', text: '#3730A3' }, // Indigo
-      { bg: '#FEF9C3', border: '#FDE047', text: '#854D0E' }, // Jaune
+      { bg: '#FEF9C3', border: '#FDE047', text: '#854D0E' }, // Jaune vif
       { bg: '#E0F2FE', border: '#7DD3FC', text: '#0C4A6E' }, // Cyan
       { bg: '#F3E8FF', border: '#D8B4FE', text: '#6B21A8' }, // Violet
+      { bg: '#FEE2E2', border: '#FCA5A5', text: '#991B1B' }, // Rouge
+      { bg: '#DCFCE7', border: '#86EFAC', text: '#166534' }, // Vert émeraude
+      { bg: '#FEF9C3', border: '#FDE047', text: '#854D0E' }, // Jaune ambre
+      { bg: '#EDE9FE', border: '#C4B5FD', text: '#5B21B6' }, // Violet foncé
+      { bg: '#FCE7F3', border: '#F9A8D4', text: '#9D174D' }, // Rose fushia
+      { bg: '#CCFBF1', border: '#5EEAD4', text: '#0F766E' }, // Turquoise
+      { bg: '#FEFCE8', border: '#FEF08A', text: '#854D0E' }, // Jaune clair
+      { bg: '#F0F9FF', border: '#BAE6FD', text: '#0369A1' }, // Bleu ciel
+      { bg: '#FEF2F2', border: '#FECACA', text: '#DC2626' }, // Rouge clair
+      { bg: '#ECFCCB', border: '#BEF264', text: '#3F6212' }, // Vert lime
+      { bg: '#FAF5FF', border: '#E9D5FF', text: '#7C3AED' }, // Violet clair
+      { bg: '#FFFBEB', border: '#FDE68A', text: '#B45309' }, // Orange clair
     ];
     
-    // Générer un index basé sur la catégorie
-    const index = Math.abs(categorie.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % colors.length;
+    // Générer un index stable basé sur la catégorie
+    if (!categorie || categorie === 'Non catégorisé') {
+      return { bg: '#F3F4F6', border: '#D1D5DB', text: '#374151' }; // Gris par défaut
+    }
     
-    return colors[index] || colors[0];
+    const hash = categorie.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const index = hash % colors.length;
+    
+    return colors[index];
   };
 
   const formatDateForInput = (dateString: string | null) => {
@@ -1860,18 +1881,79 @@ export default function CoordinateurDashboard() {
                 {/* Filtre par catégorie */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Catégorie
+                    Catégories
                   </label>
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="w-full border rounded px-3 py-2 text-sm"
+                  <div className="max-h-60 overflow-y-auto border rounded p-3 bg-white">
+                    <div className="flex items-center mb-2">
+                      <input
+                        type="checkbox"
+                        id="cat-toutes"
+                        checked={selectedCategory === 'toutes'}
+                        onChange={(e) => {
+                          setSelectedCategory('toutes');
+                        }}
+                        className="mr-2"
+                      />
+                      <label 
+                        htmlFor="cat-toutes" 
+                        className="text-sm font-medium cursor-pointer flex items-center"
+                      >
+                        <div className="w-4 h-4 rounded mr-2 border" style={{ 
+                          backgroundColor: '#F3F4F6',
+                          borderColor: '#D1D5DB'
+                        }}></div>
+                        Toutes les catégories
+                      </label>
+                    </div>
+                    
+                    <div className="space-y-1">
+                      {categories.map(cat => {
+                        const color = getCategoryColor(cat);
+                        return (
+                          <div key={cat} className="flex items-center">
+                            <input
+                              type="checkbox"
+                              id={`cat-${cat}`}
+                              checked={selectedCategory === cat}
+                              onChange={(e) => {
+                                setSelectedCategory(cat);
+                              }}
+                              className="mr-2"
+                            />
+                            <label 
+                              htmlFor={`cat-${cat}`} 
+                              className="text-sm cursor-pointer flex items-center group"
+                            >
+                              <div 
+                                className="w-4 h-4 rounded mr-2 border group-hover:opacity-80 transition-opacity"
+                                style={{ 
+                                  backgroundColor: color.bg,
+                                  borderColor: color.border
+                                }}
+                                title={cat}
+                              ></div>
+                              <span className="truncate">{cat}</span>
+                            </label>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-2 flex justify-between">
+                  <button
+                    onClick={() => setSelectedCategory('toutes')}
+                    className="text-xs text-blue-600 hover:text-blue-800"
                   >
-                    <option value="toutes">Toutes les catégories</option>
-                    {categories.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
+                    Tout sélectionner
+                  </button>
+                  <button
+                    onClick={() => setSelectedCategory('')}
+                    className="text-xs text-gray-600 hover:text-gray-800"
+                  >
+                    Aucune
+                  </button>
                 </div>
                 
                 {/* Filtre par locaux */}
@@ -1927,10 +2009,10 @@ export default function CoordinateurDashboard() {
               {/* Résumé des filtres */}
               <div className="text-sm text-gray-600">
                 <p>
-                  Affichage de {dayDefenses.length} jour{dayDefenses.length > 1 ? 's' : ''} 
+                  Affichage de {dayDefenses.length} {pluralize(dayDefenses.length, 'jour', 'jours')}
                   {' • '}
                   {selectedLocations.length > 0 
-                    ? `${selectedLocations.length} local${selectedLocations.length > 1 ? 'aux' : ''} sélectionné${selectedLocations.length > 1 ? 's' : ''}`
+                    ? `${selectedLocations.length} ${pluralize(selectedLocations.length, 'local', 'locaux')} sélectionné${selectedLocations.length > 1 ? 's' : ''}`
                     : 'Tous les locaux'}
                   {' • '}
                   {selectedCategory === 'toutes' ? 'Toutes catégories' : `Catégorie: ${selectedCategory}`}
@@ -1939,173 +2021,104 @@ export default function CoordinateurDashboard() {
             </div>
             
             {/* Section des tableaux par jour */}
-            <div className="space-y-8">
-              {dayDefenses.length === 0 ? (
-                <div className="bg-white rounded-lg shadow p-8 text-center">
-                  <p className="text-gray-500">
-                    {eleves.filter(e => e.date_defense && e.heure_defense).length === 0
-                      ? 'Aucune défense programmée'
-                      : 'Aucune défense ne correspond aux filtres sélectionnés'}
-                  </p>
-                </div>
-              ) : (
-                dayDefenses.map(day => (
-                  <div key={day.date} className="bg-white rounded-lg shadow overflow-hidden">
-                    <div className="px-6 py-4 bg-gray-50 border-b">
-                      <h3 className="text-lg font-semibold text-gray-800">
-                        {day.displayDate}
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        {day.defenses.length} défense{day.defenses.length > 1 ? 's' : ''} • 
-                        {day.locations.length} local{day.locations.length > 1 ? 'aux' : ''}
-                      </p>
-                    </div>
+            <div className="overflow-x-auto">
+              <div className="min-w-full">
+                <div className="relative" style={{ height: `${(18 - 8) * 60 + 50}px` }}> {/* 8h-18h = 10h * 60px/heure + marge */}
+                  {/* Lignes horizontales pour les heures */}
+                  {Array.from({ length: (18 - 8) * 2 + 1 }).map((_, i) => {
+                    const hour = 8 + i * 0.5;
+                    const displayHour = Math.floor(hour);
+                    const displayMinute = hour % 1 === 0 ? '00' : '30';
                     
-                    <div className="overflow-x-auto">
-                      <div className="min-w-full">
-                        <table className="w-full">
-                          <thead>
-                            <tr className="bg-gray-100">
-                              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-r w-24">
-                                Heure
-                              </th>
-                              {day.locations.map(location => (
-                                <th 
-                                  key={`${day.date}-${location}`} 
-                                  className="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-r min-w-48"
-                                >
-                                  {location}
-                                </th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {/* Créer des créneaux adaptés aux défenses du jour */}
-                            {(() => {
-                              if (day.defenses.length === 0) return null;
-                              
-                              // Trouver l'heure de début la plus tôt et l'heure de fin la plus tard
-                              const startTimes = day.defenses.map(d => d.startTime);
-                              const endTimes = day.defenses.map(d => d.endTime);
-                              
-                              const earliest = startTimes.reduce((earliest, current) => 
-                                current < earliest ? current : earliest
-                              );
-                              const latest = endTimes.reduce((latest, current) => 
-                                current > latest ? current : latest
-                              );
-                              
-                              // Convertir en heures
-                              const [startHour, startMinute] = earliest.split(':').map(Number);
-                              const [endHour, endMinute] = latest.split(':').map(Number);
-                              
-                              // Arrondir l'heure de début à l'heure ou demi-heure inférieure
-                              let roundedStartHour = startHour;
-                              let roundedStartMinute = startMinute < 30 ? 0 : 30;
-                              
-                              // Arrondir l'heure de fin à l'heure ou demi-heure supérieure
-                              let roundedEndHour = endHour;
-                              let roundedEndMinute = endMinute === 0 ? 0 : 30;
-                              if (endMinute > 30) {
-                                roundedEndHour += 1;
-                                roundedEndMinute = 0;
-                              }
-                              
-                              // Générer les créneaux
-                              const timeSlots = [];
-                              let currentHour = roundedStartHour;
-                              let currentMinute = roundedStartMinute;
-                              
-                              while (currentHour < roundedEndHour || (currentHour === roundedEndHour && currentMinute <= roundedEndMinute)) {
-                                const time = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
-                                const displayTime = `${currentHour}h${currentMinute === 0 ? '00' : currentMinute}`;
-                                
-                                timeSlots.push({ time, displayTime });
-                                
-                                // Passer au créneau suivant (30 minutes)
-                                currentMinute += 30;
-                                if (currentMinute >= 60) {
-                                  currentHour += 1;
-                                  currentMinute = 0;
-                                }
-                              }
-                              
-                              return timeSlots.map(timeSlot => (
-                                <tr key={`${day.date}-${timeSlot.time}`} className="border-b">
-                                  <td className="px-4 py-3 text-sm font-medium text-gray-700 bg-gray-50 border-r">
-                                    {timeSlot.displayTime}
-                                  </td>
-                                  {day.locations.map(location => {
-                                    // Trouver TOUTES les défenses dans ce local pour cette journée
-                                    const defensesInThisLocation = day.defenses.filter(d => 
-                                      d.location === location
-                                    );
-                                    
-                                    // Trouver les défenses qui commencent PENDANT ce créneau
-                                    const defensesDuringThisSlot = defensesInThisLocation.filter(defense => {
-                                      const defenseStart = defense.startTime; // "HH:MM"
-                                      const slotStart = timeSlot.time; // "HH:MM"
-                                      const slotEnd = add50Minutes(slotStart); // Créneau suivant
-                                      
-                                      // La défense commence pendant ce créneau
-                                      return defenseStart >= slotStart && defenseStart < slotEnd;
-                                    });
-                                    
-                                    return (
-                                      <td 
-                                        key={`${day.date}-${location}-${timeSlot.time}`} 
-                                        className="px-4 py-3 border-r relative"
-                                        style={{ height: '80px' }}
-                                      >
-                                        {/* Afficher chaque défense qui commence pendant ce créneau */}
-                                        {defensesDuringThisSlot.map(defense => (
-                                          <div
-                                            key={defense.id}
-                                            className="absolute left-1 right-1 rounded p-2 overflow-hidden border"
-                                            style={{
-                                              top: '4px',
-                                              bottom: '4px',
-                                              zIndex: 10,
-                                              backgroundColor: getCategoryColor(defense.categorie).bg,
-                                              borderColor: getCategoryColor(defense.categorie).border,
-                                              color: getCategoryColor(defense.categorie).text
-                                            }}
-                                          >
-                                            <div className="font-bold text-xs mb-1">
-                                              {defense.startTime} - {defense.endTime}
-                                            </div>
-                                            <div className="space-y-0.5 text-xs">
-                                              <div className="font-medium truncate">
-                                                {defense.elevePrenom} {defense.eleveNom}
-                                              </div>
-                                              {defense.guideNom !== '-' && (
-                                                <div className="truncate">
-                                                  Guide: {defense.guidePrenom} {defense.guideNom}
-                                                </div>
-                                              )}
-                                              {defense.lecteurExterneNom !== '-' && (
-                                                <div className="truncate">
-                                                  Lecteur: {defense.lecteurExternePrenom} {defense.lecteurExterneNom}
-                                                </div>
-                                              )}
-                                            </div>
-                                          </div>
-                                        ))}
-                                      </td>
-                                    );
-                                  })}
-                                </tr>
-                              ));
-                            })()}
-                          </tbody>
-                        </table>
+                    return (
+                      <div
+                        key={`hour-line-${hour}`}
+                        className="absolute left-0 right-0 border-t border-gray-200"
+                        style={{ top: `${i * 60}px` }}
+                      >
+                        <div className="absolute left-0 w-24 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50">
+                          {displayHour}h{displayMinute}
+                        </div>
                       </div>
-                    </div>
+                    );
+                  })}
+                  
+                  {/* En-têtes des locaux */}
+                  <div className="absolute left-24 right-0 top-0 h-12 flex">
+                    {day.locations.map((location, index) => (
+                      <div
+                        key={`header-${location}`}
+                        className="flex-1 px-4 py-3 text-sm font-semibold text-gray-700 border-r border-b bg-gray-100"
+                        style={{ 
+                          minWidth: '192px',
+                          left: `${index * 192}px`
+                        }}
+                      >
+                        {location}
+                      </div>
+                    ))}
                   </div>
-                ))
-              )}
+                  
+                  {/* Colonnes des locaux */}
+                  <div className="absolute left-24 right-0 top-12 bottom-0 flex">
+                    {day.locations.map(location => (
+                      <div
+                        key={`col-${location}`}
+                        className="flex-1 border-r relative"
+                        style={{ minWidth: '192px' }}
+                      >
+                        {/* Défenses dans ce local */}
+                        {day.defenses
+                          .filter(defense => defense.location === location)
+                          .map(defense => {
+                            // Calculer la position exacte
+                            const [hours, minutes] = defense.startTime.split(':').map(Number);
+                            const [endHours, endMinutes] = defense.endTime.split(':').map(Number);
+                            
+                            // Position en pixels depuis le haut (8h = 0px)
+                            const top = ((hours - 8) * 60 + minutes) + 12; // +12 pour l'header
+                            const height = ((endHours - hours) * 60 + (endMinutes - minutes));
+                            
+                            return (
+                              <div
+                                key={defense.id}
+                                className="absolute left-1 right-1 rounded p-2 overflow-hidden border shadow-sm"
+                                style={{
+                                  top: `${top}px`,
+                                  height: `${height}px`,
+                                  backgroundColor: getCategoryColor(defense.categorie).bg,
+                                  borderColor: getCategoryColor(defense.categorie).border,
+                                  color: getCategoryColor(defense.categorie).text,
+                                  zIndex: 10
+                                }}
+                              >
+                                <div className="font-bold text-xs mb-1">
+                                  {defense.startTime} - {defense.endTime}
+                                </div>
+                                <div className="space-y-0.5 text-xs">
+                                  <div className="font-medium truncate">
+                                    {defense.elevePrenom} {defense.eleveNom}
+                                  </div>
+                                  {defense.guideNom !== '-' && (
+                                    <div className="truncate">
+                                      G: {defense.guidePrenom} {defense.guideNom}
+                                    </div>
+                                  )}
+                                  {defense.lecteurExterneNom !== '-' && (
+                                    <div className="truncate">
+                                      L: {defense.lecteurExternePrenom} {defense.lecteurExterneNom}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
         ): (
           /* Onglet Gestion des Utilisateurs */
           <div className="space-y-6">
@@ -2561,4 +2574,5 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
