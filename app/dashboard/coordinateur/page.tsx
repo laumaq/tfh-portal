@@ -2021,7 +2021,7 @@ export default function CoordinateurDashboard() {
               </div>
             </div>
             
-            {/* NOUVELLE SECTION DES TABLEAUX PAR JOUR - CORRIGÉE */}
+            {/* NOUVELLE SECTION DES TABLEAUX PAR JOUR - STRUCTURE SIMPLIFIÉE */}
             <div className="space-y-8">
               {dayDefenses.length === 0 ? (
                 <div className="bg-white rounded-lg shadow p-8 text-center">
@@ -2032,91 +2032,104 @@ export default function CoordinateurDashboard() {
                   </p>
                 </div>
               ) : (
-                dayDefenses.map(day => (
-                  <div key={day.date} className="bg-white rounded-lg shadow overflow-hidden">
-                    <div className="px-6 py-4 bg-gray-50 border-b">
-                      <h3 className="text-lg font-semibold text-gray-800">
-                        {day.displayDate}
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        {day.defenses.length} {pluralize(day.defenses.length, 'défense', 'défenses')} •  
-                        {day.locations.length} {pluralize(day.locations.length, 'local', 'locaux')}
-                      </p>
-                    </div>
-                    
-                    {/* NOUVEAU CALENDRIER AVEC STRUCTURE CORRIGÉE */}
-                    <div className="overflow-x-auto">
-                      <div className="min-w-full">
-                        {/* Table structure pour un contrôle plus précis */}
-                        <div className="flex border-t border-gray-200">
-                          {/* Colonne des heures - FIXE */}
-                          <div className="w-24 bg-gray-50 border-r border-gray-200">
-                            {Array.from({ length: (18 - 8) }).map((_, i) => {
-                              const hour = 8 + i;
-                              return (
-                                <div key={`hour-${hour}`} className="border-b border-gray-200">
-                                  <div className="h-16 flex items-center justify-center">
-                                    <div className="text-sm font-medium text-gray-700">
-                                      {hour}h00
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
+                dayDefenses.map(day => {
+                  // Calcul de la hauteur totale : 8h-18h = 10 heures
+                  const totalHours = 18 - 8;
+                  const hourHeight = 100; // 100px par heure pour plus de lisibilité
+                  const totalHeight = totalHours * hourHeight;
+                  
+                  return (
+                    <div key={day.date} className="bg-white rounded-lg shadow overflow-hidden">
+                      <div className="px-6 py-4 bg-gray-50 border-b">
+                        <h3 className="text-lg font-semibold text-gray-800">
+                          {day.displayDate}
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          {day.defenses.length} {pluralize(day.defenses.length, 'défense', 'défenses')} •  
+                          {day.locations.length} {pluralize(day.locations.length, 'local', 'locaux')}
+                        </p>
+                      </div>
+                      
+                      {/* CONTENEUR PRINCIPAL DU CALENDRIER */}
+                      <div className="overflow-x-auto">
+                        <div className="min-w-full">
+                          {/* EN-TÊTE DES LOCAUX - EN DEHORS DU TABLEAU */}
+                          <div className="flex border-t border-gray-200">
+                            {/* Colonne vide pour les heures */}
+                            <div className="w-24 bg-gray-50"></div>
+                            
+                            {/* En-tête des locaux */}
+                            {day.locations.map(location => (
+                              <div
+                                key={`header-${location}`}
+                                className="flex-1 min-w-[200px] px-4 py-3 text-sm font-semibold text-gray-700 border-r border-b bg-gray-100"
+                              >
+                                {location}
+                              </div>
+                            ))}
                           </div>
                           
-                          {/* Contenu principal avec les locaux */}
-                          <div className="flex-1">
-                            {/* En-tête des locaux - maintenant DANS la structure de table */}
-                            <div className="flex border-b border-gray-200">
-                              {day.locations.map(location => (
-                                <div
-                                  key={`header-${location}`}
-                                  className="flex-1 min-w-[192px] px-4 py-3 text-sm font-semibold text-gray-700 border-r bg-gray-100"
-                                >
-                                  {location}
-                                </div>
-                              ))}
+                          {/* CORPS DU CALENDRIER */}
+                          <div className="flex border-b border-gray-200">
+                            {/* COLONNE DES HEURES (fixe) */}
+                            <div className="w-24 bg-gray-50 border-r border-gray-200">
+                              {Array.from({ length: totalHours }).map((_, i) => {
+                                const hour = 8 + i;
+                                return (
+                                  <div 
+                                    key={`hour-${hour}`} 
+                                    className="border-b border-gray-200"
+                                    style={{ height: `${hourHeight}px` }}
+                                  >
+                                    <div className="h-full flex items-center justify-center">
+                                      <div className="text-sm font-medium text-gray-700">
+                                        {hour}h00
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
                             
-                            {/* Corps du calendrier avec les événements */}
-                            <div className="relative" style={{ height: `${(18 - 8) * 64}px` }}>
-                              {/* Lignes horizontales discrètes (optionnel) */}
-                              {Array.from({ length: (18 - 8) }).map((_, i) => (
+                            {/* CONTENEUR DES LOCAUX AVEC ÉVÉNEMENTS */}
+                            <div className="flex-1 relative" style={{ height: `${totalHeight}px` }}>
+                              {/* Lignes horizontales discrètes pour les heures */}
+                              {Array.from({ length: totalHours + 1 }).map((_, i) => (
                                 <div
                                   key={`line-${i}`}
                                   className="absolute left-0 right-0 border-t border-gray-100"
-                                  style={{ top: `${i * 64}px` }}
+                                  style={{ top: `${i * hourHeight}px` }}
                                 />
                               ))}
                               
                               {/* Colonnes des locaux */}
                               <div className="absolute inset-0 flex">
-                                {day.locations.map(location => (
+                                {day.locations.map((location, index) => (
                                   <div
                                     key={`col-${location}`}
                                     className="flex-1 border-r relative"
-                                    style={{ minWidth: '192px' }}
+                                    style={{ minWidth: '200px' }}
                                   >
                                     {/* Défenses dans ce local */}
                                     {day.defenses
                                       .filter(defense => defense.location === location)
                                       .map(defense => {
-                                        // CALCULS CORRIGÉS
+                                        // CALCULS CORRIGÉS - ÉCHELLE COHÉRENTE
                                         const [startHours, startMinutes] = defense.startTime.split(':').map(Number);
                                         const [endHours, endMinutes] = defense.endTime.split(':').map(Number);
                                         
                                         // Position depuis 8h00
-                                        // 64px = hauteur d'une heure (60px pour le contenu + 4px de marge)
-                                        const top = ((startHours - 8) * 64) + (startMinutes / 60 * 64);
+                                        const hoursFrom8 = startHours - 8;
+                                        const minutesFraction = startMinutes / 60;
+                                        const top = (hoursFrom8 + minutesFraction) * hourHeight;
                                         
                                         // Hauteur proportionnelle à la durée
                                         const durationHours = endHours - startHours;
                                         const durationMinutes = endMinutes - startMinutes;
-                                        const height = (durationHours * 64) + (durationMinutes / 60 * 64);
+                                        const height = (durationHours + (durationMinutes / 60)) * hourHeight;
                                         
-                                        // Ajustement pour que les événements de 50 minutes soient lisibles
-                                        const minHeight = 80; // Minimum pour afficher 5 lignes de texte
+                                        // Hauteur minimale pour lisibilité
+                                        const minHeight = 120; // Minimum pour afficher 5 lignes
                                         const actualHeight = Math.max(height, minHeight);
                                         
                                         return (
@@ -2130,39 +2143,34 @@ export default function CoordinateurDashboard() {
                                               borderColor: getCategoryColor(defense.categorie).border,
                                               color: getCategoryColor(defense.categorie).text,
                                               zIndex: 10,
-                                              fontSize: '11px' // Taille réduite pour plus de contenu
+                                              fontSize: '12px'
                                             }}
                                           >
                                             <div className="font-bold mb-1">
                                               {defense.startTime} - {defense.endTime}
                                             </div>
                                             <div className="space-y-0.5">
-                                              <div className="font-semibold truncate">
+                                              <div className="font-semibold">
                                                 {defense.elevePrenom} {defense.eleveNom}
                                               </div>
                                               {defense.guideNom !== '-' && (
-                                                <div className="truncate">
-                                                  G: {defense.guidePrenom} {defense.guideNom}
+                                                <div>
+                                                  Guide: {defense.guidePrenom} {defense.guideNom}
                                                 </div>
                                               )}
                                               {defense.lecteurInterneNom !== '-' && (
-                                                <div className="truncate">
-                                                  LI: {defense.lecteurInternePrenom} {defense.lecteurInterneNom}
+                                                <div>
+                                                  Lecteur interne: {defense.lecteurInternePrenom} {defense.lecteurInterneNom}
                                                 </div>
                                               )}
                                               {defense.lecteurExterneNom !== '-' && (
-                                                <div className="truncate">
-                                                  LE: {defense.lecteurExternePrenom} {defense.lecteurExterneNom}
+                                                <div>
+                                                  Lecteur externe: {defense.lecteurExternePrenom} {defense.lecteurExterneNom}
                                                 </div>
                                               )}
                                               {defense.mediateurNom !== '-' && (
-                                                <div className="truncate">
-                                                  M: {defense.mediateurPrenom} {defense.mediateurNom}
-                                                </div>
-                                              )}
-                                              {defense.categorie && defense.categorie !== 'Non catégorisé' && (
-                                                <div className="truncate opacity-75">
-                                                  {defense.categorie}
+                                                <div>
+                                                  Médiateur: {defense.mediateurPrenom} {defense.mediateurNom}
                                                 </div>
                                               )}
                                             </div>
@@ -2177,8 +2185,8 @@ export default function CoordinateurDashboard() {
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
@@ -2638,6 +2646,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
