@@ -65,7 +65,40 @@ interface Coordinateur {
   initiale: string;
 }
 
-type TabType = 'convocations' | 'defenses' | 'gestion-utilisateurs';
+interface DefenseEvent {
+  id: string;
+  eleveId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+  eleveNom: string;
+  elevePrenom: string;
+  guideNom: string;
+  guidePrenom: string;
+  lecteurInterneNom: string;
+  lecteurInternePrenom: string;
+  lecteurExterneNom: string;
+  lecteurExternePrenom: string;
+  mediateurNom: string;
+  mediateurPrenom: string;
+  categorie: string;
+}
+
+interface TimeSlot {
+  time: string;
+  displayTime: string;
+}
+
+interface DayPlanning {
+  date: string;
+  displayDate: string;
+  locations: string[];
+  timeSlots: TimeSlot[];
+  defenses: DefenseEvent[];
+}
+
+type TabType = 'convocations' | 'defenses' | 'gestion-utilisateurs' | 'calendrier';
 type UserType = 'eleves' | 'guides' | 'lecteurs-externes' | 'mediateurs' | 'coordinateurs';
 
 export default function CoordinateurDashboard() {
@@ -99,6 +132,21 @@ export default function CoordinateurDashboard() {
   const [showClearConfirmations, setShowClearConfirmations] = useState(false);
   const [clearConfirmations, setClearConfirmations] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedDates, setSelectedDates] = useState<string[]>([]);
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('toutes');
+  const [dayPlannings, setDayPlannings] = useState<DayPlanning[]>([]);
+  const [conflicts, setConflicts] = useState<{
+    guides: Array<{person: string, conflicts: DefenseEvent[]}>;
+    lecteursInternes: Array<{person: string, conflicts: DefenseEvent[]}>;
+    lecteursExternes: Array<{person: string, conflicts: DefenseEvent[]}>;
+    mediateurs: Array<{person: string, conflicts: DefenseEvent[]}>;
+  }>({
+    guides: [],
+    lecteursInternes: [],
+    lecteursExternes: [],
+    mediateurs: []
+  });
   const router = useRouter();
 
   const CONVOCATION_OPTIONS = [
@@ -834,6 +882,260 @@ export default function CoordinateurDashboard() {
       return '';
     }
   };
+  
+    // Ajouter ces fonctions après la fonction formatDateForInput (~ligne 460)
+  
+  // Fonction pour ajouter 50 minutes à une heure
+  const add50Minutes = (time: string): string => {
+    if (!time) return '';
+    
+    const [hours, minutes] = time.split(':').map(Number);
+    let newHours = hours;
+    let newMinutes = minutes + 50;
+    
+    if (newMinutes >= 60) {
+      newHours += Math.floor(newMinutes / 60);
+      newMinutes = newMinutes % 60;
+    }
+    
+    return `${newHours.toString().padStart(2, '0')}:${newMinutes.toString().padStart(2, '0')}`;
+  };
+  
+  // Fonction pour générer les créneaux horaires d'une journée
+  const generateTimeSlots = (defenses: DefenseEvent[]): TimeSlot[] => {
+    if (defenses.length === 0) return [];
+    
+    // Trouver l'heure de début la plus tôt et l'heure de fin la plus tard
+    const times = defenses.flatMap(d => [d.startTime, d.endTime]).filter(Boolean);
+    if (times.length === 0) return [];
+    
+    const earliest = times.reduce((earliest, current) => 
+      current < earliest ? current : earliest
+    );
+    const latest = times.reduce((latest, current) => 
+      current > latest ? current : latest
+    );
+    
+    // Convertir en minutes depuis minuit
+    const toMinutes = (time: string) => {
+      const [h, m] = time.split(':').map(Number);
+      return h * 60 + m;
+    };
+    
+    const startMinutes = toMinutes(earliest);
+    const endMinutes = toMinutes(latest);
+    
+    // Générer des créneaux de 30 minutes
+    const slots: TimeSlot[] = [];
+    for (let minutes = startMinutes; minutes <= endMinutes; minutes += 30) {
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      const time = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+      slots.push({
+        time,
+        displayTime: `${hours}h${mins === 0 ? '00' : mins}`
+      });
+    }
+    
+    return slots;
+  };
+  
+  // Fonction pour détecter les conflits
+  const detectConflicts = (defenses: DefenseEvent[]) => {
+    const guideConflicts = new Map<string, DefenseEvent[]>();
+    const lecteurInterneConflicts = new Map<string, DefenseEvent[]>();
+    const lecteurExterneConflicts = new Map<string, DefenseEvent[]>();
+    const mediateurConflicts = new Map<string, DefenseEvent[]>();
+    
+    // Trier les défenses par date et heure
+    const sortedDefenses = [...defenses].sort((a, b) => {
+      if (a.date !== b.date) return a.date.localeCompare(b.date);
+      return a.startTime.localeCompare(b.startTime);
+    });
+    
+    // Vérifier les chevauchements pour chaque personne
+    sortedDefenses.forEach(defense => {
+      // Guide
+      if (defense.guideNom && defense.guideNom !== '-') {
+        const guideKey = `${defense.guidePrenom} ${defense.guideNom}`;
+        const conflicts = sortedDefenses.filter(d => 
+          d.id !== defense.id && 
+          d.date === defense.date &&
+          d.guideNom === defense.guideNom &&
+          d.guidePrenom === defense.guidePrenom &&
+          ((d.startTime <= defense.startTime && d.endTime > defense.startTime) ||
+           (defense.startTime <= d.startTime && defense.endTime > d.startTime))
+        );
+        
+        if (conflicts.length > 0) {
+          const existing = guideConflicts.get(guideKey) || [];
+          guideConflicts.set(guideKey, [...existing, defense, ...conflicts]);
+        }
+      }
+      
+      // Lecteur interne (même logique que guide)
+      if (defense.lecteurInterneNom && defense.lecteurInterneNom !== '-') {
+        const lecteurKey = `${defense.lecteurInternePrenom} ${defense.lecteurInterneNom}`;
+        const conflicts = sortedDefenses.filter(d => 
+          d.id !== defense.id && 
+          d.date === defense.date &&
+          d.lecteurInterneNom === defense.lecteurInterneNom &&
+          d.lecteurInternePrenom === defense.lecteurInternePrenom &&
+          ((d.startTime <= defense.startTime && d.endTime > defense.startTime) ||
+           (defense.startTime <= d.startTime && defense.endTime > d.startTime))
+        );
+        
+        if (conflicts.length > 0) {
+          const existing = lecteurInterneConflicts.get(lecteurKey) || [];
+          lecteurInterneConflicts.set(lecteurKey, [...existing, defense, ...conflicts]);
+        }
+      }
+      
+      // Lecteur externe
+      if (defense.lecteurExterneNom && defense.lecteurExterneNom !== '-') {
+        const lecteurKey = `${defense.lecteurExternePrenom} ${defense.lecteurExterneNom}`;
+        const conflicts = sortedDefenses.filter(d => 
+          d.id !== defense.id && 
+          d.date === defense.date &&
+          d.lecteurExterneNom === defense.lecteurExterneNom &&
+          d.lecteurExternePrenom === defense.lecteurExternePrenom &&
+          ((d.startTime <= defense.startTime && d.endTime > defense.startTime) ||
+           (defense.startTime <= d.startTime && defense.endTime > d.startTime))
+        );
+        
+        if (conflicts.length > 0) {
+          const existing = lecteurExterneConflicts.get(lecteurKey) || [];
+          lecteurExterneConflicts.set(lecteurKey, [...existing, defense, ...conflicts]);
+        }
+      }
+      
+      // Médiateur
+      if (defense.mediateurNom && defense.mediateurNom !== '-') {
+        const mediateurKey = `${defense.mediateurPrenom} ${defense.mediateurNom}`;
+        const conflicts = sortedDefenses.filter(d => 
+          d.id !== defense.id && 
+          d.date === defense.date &&
+          d.mediateurNom === defense.mediateurNom &&
+          d.mediateurPrenom === defense.mediateurPrenom &&
+          ((d.startTime <= defense.startTime && d.endTime > defense.startTime) ||
+           (defense.startTime <= d.startTime && defense.endTime > d.startTime))
+        );
+        
+        if (conflicts.length > 0) {
+          const existing = mediateurConflicts.get(mediateurKey) || [];
+          mediateurConflicts.set(mediateurKey, [...existing, defense, ...conflicts]);
+        }
+      }
+    });
+    
+    // Éliminer les doublons
+    const unique = (arr: DefenseEvent[]) => 
+      Array.from(new Map(arr.map(item => [item.id, item])).values());
+    
+    return {
+      guides: Array.from(guideConflicts.entries()).map(([person, conflicts]) => ({
+        person,
+        conflicts: unique(conflicts)
+      })),
+      lecteursInternes: Array.from(lecteurInterneConflicts.entries()).map(([person, conflicts]) => ({
+        person,
+        conflicts: unique(conflicts)
+      })),
+      lecteursExternes: Array.from(lecteurExterneConflicts.entries()).map(([person, conflicts]) => ({
+        person,
+        conflicts: unique(conflicts)
+      })),
+      mediateurs: Array.from(mediateurConflicts.entries()).map(([person, conflicts]) => ({
+        person,
+        conflicts: unique(conflicts)
+      }))
+    };
+  };
+  
+  // Fonction pour préparer les données du calendrier
+  const prepareCalendarData = () => {
+    // Filtrer les élèves avec une date et heure de défense
+    const defensesWithSchedule = eleves.filter(e => 
+      e.date_defense && e.heure_defense
+    );
+    
+    // Transformer en DefenseEvent
+    const defenseEvents: DefenseEvent[] = defensesWithSchedule.map(eleve => ({
+      id: eleve.id,
+      eleveId: eleve.id,
+      date: eleve.date_defense!,
+      startTime: eleve.heure_defense!,
+      endTime: add50Minutes(eleve.heure_defense!),
+      location: eleve.localisation_defense || 'Non défini',
+      eleveNom: eleve.nom,
+      elevePrenom: eleve.prenom,
+      guideNom: eleve.guide_nom || '-',
+      guidePrenom: eleve.guide_prenom || '-',
+      lecteurInterneNom: eleve.lecteur_interne_nom || '-',
+      lecteurInternePrenom: eleve.lecteur_interne_prenom || '-',
+      lecteurExterneNom: eleve.lecteur_externe_nom || '-',
+      lecteurExternePrenom: eleve.lecteur_externe_prenom || '-',
+      mediateurNom: eleve.mediateur_nom || '-',
+      mediateurPrenom: eleve.mediateur_prenom || '-',
+      categorie: eleve.categorie || 'Non catégorisé'
+    }));
+    
+    // Appliquer les filtres
+    let filteredDefenses = defenseEvents;
+    
+    // Filtre par catégorie
+    if (selectedCategory !== 'toutes') {
+      filteredDefenses = filteredDefenses.filter(d => d.categorie === selectedCategory);
+    }
+    
+    // Filtre par dates
+    if (selectedDates.length > 0) {
+      filteredDefenses = filteredDefenses.filter(d => selectedDates.includes(d.date));
+    }
+    
+    // Filtre par locaux
+    if (selectedLocations.length > 0) {
+      filteredDefenses = filteredDefenses.filter(d => selectedLocations.includes(d.location));
+    }
+    
+    // Détecter les conflits
+    setConflicts(detectConflicts(filteredDefenses));
+    
+    // Grouper par date
+    const dates = Array.from(new Set(filteredDefenses.map(d => d.date))).sort();
+    
+    const plannings: DayPlanning[] = dates.map(date => {
+      const dateDefenses = filteredDefenses.filter(d => d.date === date);
+      const locations = Array.from(new Set(dateDefenses.map(d => d.location)))
+        .sort((a, b) => {
+          // Trier par premier caractère (chiffre ou lettre)
+          const firstCharA = a.charAt(0);
+          const firstCharB = b.charAt(0);
+          return firstCharA.localeCompare(firstCharB);
+        });
+      
+      return {
+        date,
+        displayDate: new Date(date).toLocaleDateString('fr-FR', { 
+          weekday: 'long', 
+          day: 'numeric', 
+          month: 'long' 
+        }),
+        locations,
+        timeSlots: generateTimeSlots(dateDefenses),
+        defenses: dateDefenses
+      };
+    });
+    
+    setDayPlannings(plannings);
+  };
+  
+  // Effet pour préparer les données quand les filtres changent ou quand les élèves sont chargés
+  useEffect(() => {
+    if (eleves.length > 0) {
+      prepareCalendarData();
+    }
+  }, [eleves, selectedDates, selectedLocations, selectedCategory]);
 
   if (loading) {
     return (
@@ -881,15 +1183,15 @@ export default function CoordinateurDashboard() {
             Déconnexion
           </button>
         </div>
-
+        
         {/* Onglets */}
-        <div className="flex border-b border-gray-200 mb-6">
+        <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
           <button
             onClick={() => {
               setActiveTab('convocations');
               setShowConvoques(false);
             }}
-            className={`px-4 py-2 font-medium text-sm md:text-base ${
+            className={`px-4 py-2 font-medium text-sm md:text-base whitespace-nowrap ${
               activeTab === 'convocations'
                 ? 'text-blue-600 border-b-2 border-blue-600'
                 : 'text-gray-500 hover:text-gray-700'
@@ -902,7 +1204,7 @@ export default function CoordinateurDashboard() {
               setActiveTab('defenses');
               setShowConvoques(false);
             }}
-            className={`px-4 py-2 font-medium text-sm md:text-base ${
+            className={`px-4 py-2 font-medium text-sm md:text-base whitespace-nowrap ${
               activeTab === 'defenses'
                 ? 'text-blue-600 border-b-2 border-blue-600'
                 : 'text-gray-500 hover:text-gray-700'
@@ -912,10 +1214,23 @@ export default function CoordinateurDashboard() {
           </button>
           <button
             onClick={() => {
+              setActiveTab('calendrier');
+              setShowConvoques(false);
+            }}
+            className={`px-4 py-2 font-medium text-sm md:text-base whitespace-nowrap ${
+              activeTab === 'calendrier'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Calendrier des Défenses
+          </button>
+          <button
+            onClick={() => {
               setActiveTab('gestion-utilisateurs');
               setShowConvoques(false);
             }}
-            className={`px-4 py-2 font-medium text-sm md:text-base ${
+            className={`px-4 py-2 font-medium text-sm md:text-base whitespace-nowrap ${
               activeTab === 'gestion-utilisateurs'
                 ? 'text-blue-600 border-b-2 border-blue-600'
                 : 'text-gray-500 hover:text-gray-700'
@@ -1435,7 +1750,284 @@ export default function CoordinateurDashboard() {
               </div>
             </div>
           </div>
-        ) : (
+        ) : activeTab === 'calendrier' ? (
+          /* Onglet Calendrier des Défenses */
+          <div className="space-y-6">
+          
+            {/* Section des conflits */}
+            {(conflicts.guides.length > 0 || conflicts.lecteursInternes.length > 0 || 
+              conflicts.lecteursExternes.length > 0 || conflicts.mediateurs.length > 0) && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <h3 className="text-lg font-medium text-yellow-800 mb-2">⚠️ Conflits détectés</h3>
+                <div className="space-y-2">
+                  {conflicts.guides.map(({person, conflicts}) => (
+                    <div key={`guide-${person}`} className="text-sm">
+                      <span className="font-medium">Guide {person}:</span>{' '}
+                      {conflicts.map(c => 
+                        `${c.elevePrenom} ${c.eleveNom} (${c.date} ${c.startTime}-${c.endTime})`
+                      ).join(', ')}
+                    </div>
+                  ))}
+                  {conflicts.lecteursInternes.map(({person, conflicts}) => (
+                    <div key={`lecteur-int-${person}`} className="text-sm">
+                      <span className="font-medium">Lecteur interne {person}:</span>{' '}
+                      {conflicts.map(c => 
+                        `${c.elevePrenom} ${c.eleveNom} (${c.date} ${c.startTime}-${c.endTime})`
+                      ).join(', ')}
+                    </div>
+                  ))}
+                  {conflicts.lecteursExternes.map(({person, conflicts}) => (
+                    <div key={`lecteur-ext-${person}`} className="text-sm">
+                      <span className="font-medium">Lecteur externe {person}:</span>{' '}
+                      {conflicts.map(c => 
+                        `${c.elevePrenom} ${c.eleveNom} (${c.date} ${c.startTime}-${c.endTime})`
+                      ).join(', ')}
+                    </div>
+                  ))}
+                  {conflicts.mediateurs.map(({person, conflicts}) => (
+                    <div key={`mediateur-${person}`} className="text-sm">
+                      <span className="font-medium">Médiateur {person}:</span>{' '}
+                      {conflicts.map(c => 
+                        `${c.elevePrenom} ${c.eleveNom} (${c.date} ${c.startTime}-${c.endTime})`
+                      ).join(', ')}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {/* Section des filtres */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">Filtres du Calendrier</h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                {/* Filtre par dates */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Sélectionner les jours
+                  </label>
+                  <div className="max-h-40 overflow-y-auto border rounded p-2">
+                    {Array.from(new Set(eleves
+                      .filter(e => e.date_defense)
+                      .map(e => e.date_defense!)
+                      .sort()
+                    )).map(date => (
+                      <div key={date} className="flex items-center mb-1">
+                        <input
+                          type="checkbox"
+                          id={`date-${date}`}
+                          checked={selectedDates.includes(date)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedDates([...selectedDates, date]);
+                            } else {
+                              setSelectedDates(selectedDates.filter(d => d !== date));
+                            }
+                          }}
+                          className="mr-2"
+                        />
+                        <label htmlFor={`date-${date}`} className="text-sm">
+                          {new Date(date).toLocaleDateString('fr-FR', { 
+                            weekday: 'short', 
+                            day: 'numeric', 
+                            month: 'short' 
+                          })}
+                        </label>
+                      </div>
+                    ))}
+                    {eleves.filter(e => e.date_defense).length === 0 && (
+                      <p className="text-sm text-gray-500">Aucune date de défense programmée</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setSelectedDates([])}
+                    className="mt-2 text-sm text-blue-600 hover:text-blue-800"
+                  >
+                    Tout désélectionner
+                  </button>
+                </div>
+                
+                {/* Filtre par catégorie */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Catégorie
+                  </label>
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="w-full border rounded px-3 py-2 text-sm"
+                  >
+                    <option value="toutes">Toutes les catégories</option>
+                    {categories.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                {/* Filtre par locaux */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Sélectionner les locaux
+                  </label>
+                  <div className="max-h-40 overflow-y-auto border rounded p-2">
+                    {Array.from(new Set(eleves
+                      .filter(e => e.localisation_defense)
+                      .map(e => e.localisation_defense!)
+                      .sort((a, b) => a.charAt(0).localeCompare(b.charAt(0)))
+                    )).map(location => (
+                      <div key={location} className="flex items-center mb-1">
+                        <input
+                          type="checkbox"
+                          id={`loc-${location}`}
+                          checked={selectedLocations.includes(location)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedLocations([...selectedLocations, location]);
+                            } else {
+                              setSelectedLocations(selectedLocations.filter(l => l !== location));
+                            }
+                          }}
+                          className="mr-2"
+                        />
+                        <label htmlFor={`loc-${location}`} className="text-sm truncate">
+                          {location}
+                        </label>
+                      </div>
+                    ))}
+                    {eleves.filter(e => e.localisation_defense).length === 0 && (
+                      <p className="text-sm text-gray-500">Aucun local défini</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setSelectedLocations([])}
+                    className="mt-2 text-sm text-blue-600 hover:text-blue-800"
+                  >
+                    Tout désélectionner
+                  </button>
+                </div>
+              </div>
+              
+              {/* Résumé des filtres */}
+              <div className="text-sm text-gray-600">
+                <p>
+                  Affichage de {dayPlannings.length} jour{dayPlannings.length > 1 ? 's' : ''} 
+                  {' • '}
+                  {selectedLocations.length > 0 
+                    ? `${selectedLocations.length} local${selectedLocations.length > 1 ? 'ux' : ''} sélectionné${selectedLocations.length > 1 ? 's' : ''}`
+                    : 'Tous les locaux'}
+                  {' • '}
+                  {selectedCategory === 'toutes' ? 'Toutes catégories' : `Catégorie: ${selectedCategory}`}
+                </p>
+              </div>
+            </div>
+            
+            {/* Section des tableaux par jour */}
+            <div className="space-y-8">
+              {dayPlannings.length === 0 ? (
+                <div className="bg-white rounded-lg shadow p-8 text-center">
+                  <p className="text-gray-500">
+                    {eleves.filter(e => e.date_defense && e.heure_defense).length === 0
+                      ? 'Aucune défense programmée'
+                      : 'Aucune défense ne correspond aux filtres sélectionnés'}
+                  </p>
+                </div>
+              ) : (
+                dayPlannings.map(day => (
+                  <div key={day.date} className="bg-white rounded-lg shadow overflow-hidden">
+                    <div className="px-6 py-4 bg-gray-50 border-b">
+                      <h3 className="text-lg font-semibold text-gray-800">
+                        {day.displayDate}
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        {day.defenses.length} défense{day.defenses.length > 1 ? 's' : ''} • 
+                        {day.locations.length} local{day.locations.length > 1 ? 'ux' : ''}
+                      </p>
+                    </div>
+                    
+                    <div className="overflow-x-auto">
+                      <div className="min-w-full">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="bg-gray-100">
+                              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-r w-24">
+                                Heure
+                              </th>
+                              {day.locations.map(location => (
+                                <th 
+                                  key={`${day.date}-${location}`} 
+                                  className="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-r min-w-48"
+                                >
+                                  {location}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {day.timeSlots.map(timeSlot => (
+                              <tr key={`${day.date}-${timeSlot.time}`} className="border-b">
+                                <td className="px-4 py-3 text-sm font-medium text-gray-700 bg-gray-50 border-r">
+                                  {timeSlot.displayTime}
+                                </td>
+                                {day.locations.map(location => {
+                                  // Trouver la défense à ce créneau et local
+                                  const defense = day.defenses.find(d => 
+                                    d.location === location && 
+                                    d.startTime === timeSlot.time
+                                  );
+                                  
+                                  return (
+                                    <td 
+                                      key={`${day.date}-${location}-${timeSlot.time}`} 
+                                      className="px-4 py-3 border-r"
+                                    >
+                                      {defense ? (
+                                        <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                                          <div className="font-bold text-sm text-blue-800 mb-1">
+                                            {defense.startTime} - {defense.endTime}
+                                          </div>
+                                          <div className="space-y-1 text-xs">
+                                            <div className="font-medium">
+                                              Élève: {defense.elevePrenom} {defense.eleveNom}
+                                            </div>
+                                            {defense.guideNom !== '-' && (
+                                              <div>
+                                                Guide: {defense.guidePrenom} {defense.guideNom}
+                                              </div>
+                                            )}
+                                            {defense.lecteurInterneNom !== '-' && (
+                                              <div>
+                                                Lecteur interne: {defense.lecteurInternePrenom} {defense.lecteurInterneNom}
+                                              </div>
+                                            )}
+                                            {defense.lecteurExterneNom !== '-' && (
+                                              <div>
+                                                Lecteur externe: {defense.lecteurExternePrenom} {defense.lecteurExterneNom}
+                                              </div>
+                                            )}
+                                            {defense.mediateurNom !== '-' && (
+                                              <div>
+                                                Médiateur: {defense.mediateurPrenom} {defense.mediateurNom}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div className="h-16"></div>
+                                      )}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        ): (
           /* Onglet Gestion des Utilisateurs */
           <div className="space-y-6">
             {/* Menu de sélection du type d'utilisateur */}
@@ -1890,6 +2482,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
