@@ -1165,6 +1165,15 @@ export default function CoordinateurDashboard() {
     });
     
     setDayPlannings(plannings);
+
+      // Ajouter dans prepareCalendarData pour déboguer :
+      console.log('Total élèves:', eleves.length);
+      console.log('Élèves avec défense programmée:', defensesWithSchedule.length);
+      console.log('Événements de défense:', defenseEvents.length);
+      console.log('Événements filtrés:', filteredDefenses.length);
+      console.log('Dates sélectionnées:', selectedDates);
+      console.log('Locaux sélectionnés:', selectedLocations);
+      console.log('Plannings générés:', plannings.length);
   };
   
   // Effet pour préparer les données quand les filtres changent ou quand les élèves sont chargés
@@ -1876,10 +1885,17 @@ export default function CoordinateurDashboard() {
                     )}
                   </div>
                   <button
-                    onClick={() => setSelectedDates([])}
+                    onClick={() => {
+                      const allDates = Array.from(new Set(
+                        eleves
+                          .filter(e => e.date_defense)
+                          .map(e => e.date_defense!)
+                      )).sort();
+                      setSelectedDates(selectedDates.length === allDates.length ? [] : allDates);
+                    }}
                     className="mt-2 text-sm text-blue-600 hover:text-blue-800"
                   >
-                    Tout désélectionner
+                    {selectedDates.length > 0 ? "Tout désélectionner" : "Tout sélectionner"}
                   </button>
                 </div>
                 
@@ -1935,10 +1951,17 @@ export default function CoordinateurDashboard() {
                     )}
                   </div>
                   <button
-                    onClick={() => setSelectedLocations([])}
+                    onClick={() => {
+                      const allLocations = Array.from(new Set(
+                        eleves
+                          .filter(e => e.localisation_defense)
+                          .map(e => e.localisation_defense!)
+                      )).sort((a, b) => a.charAt(0).localeCompare(b.charAt(0)));
+                      setSelectedLocations(selectedLocations.length === allLocations.length ? [] : allLocations);
+                    }}
                     className="mt-2 text-sm text-blue-600 hover:text-blue-800"
                   >
-                    Tout désélectionner
+                    {selectedLocations.length > 0 ? "Tout désélectionner" : "Tout sélectionner"}
                   </button>
                 </div>
               </div>
@@ -2519,6 +2542,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
