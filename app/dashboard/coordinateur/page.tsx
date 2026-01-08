@@ -1777,390 +1777,415 @@ export default function CoordinateurDashboard() {
           </div>
         ) : activeTab === 'calendrier' ? (
       
-          /* Onglet Calendrier des Défenses */
-          <div className="space-y-6">
-            
-            {/* Section des conflits */}
-            {(conflicts.guides.length > 0 || conflicts.lecteursInternes.length > 0 || 
-              conflicts.lecteursExternes.length > 0 || conflicts.mediateurs.length > 0) && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <h3 className="text-lg font-medium text-yellow-800 mb-2">⚠️ Conflits détectés</h3>
-                <div className="space-y-2">
-                  {conflicts.guides.map(({person, conflicts}) => (
-                    <div key={`guide-${person}`} className="text-sm">
-                      <span className="font-medium">Guide {person}:</span>{' '}
-                      {conflicts.map(c => 
-                        `${c.elevePrenom} ${c.eleveNom} (${c.date} ${c.startTime}-${c.endTime})`
-                      ).join(', ')}
-                    </div>
-                  ))}
-                  {conflicts.lecteursInternes.map(({person, conflicts}) => (
-                    <div key={`lecteur-int-${person}`} className="text-sm">
-                      <span className="font-medium">Lecteur interne {person}:</span>{' '}
-                      {conflicts.map(c => 
-                        `${c.elevePrenom} ${c.eleveNom} (${c.date} ${c.startTime}-${c.endTime})`
-                      ).join(', ')}
-                    </div>
-                  ))}
-                  {conflicts.lecteursExternes.map(({person, conflicts}) => (
-                    <div key={`lecteur-ext-${person}`} className="text-sm">
-                      <span className="font-medium">Lecteur externe {person}:</span>{' '}
-                      {conflicts.map(c => 
-                        `${c.elevePrenom} ${c.eleveNom} (${c.date} ${c.startTime}-${c.endTime})`
-                      ).join(', ')}
-                    </div>
-                  ))}
-                  {conflicts.mediateurs.map(({person, conflicts}) => (
-                    <div key={`mediateur-${person}`} className="text-sm">
-                      <span className="font-medium">Médiateur {person}:</span>{' '}
-                      {conflicts.map(c => 
-                        `${c.elevePrenom} ${c.eleveNom} (${c.date} ${c.startTime}-${c.endTime})`
-                      ).join(', ')}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {/* Section des filtres */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Filtres du Calendrier</h2>
+          {/* Onglet Calendrier des Défenses */}
+          {activeTab === 'calendrier' ? (
+            <div className="space-y-6">
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                {/* Filtre par dates */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Sélectionner les jours
-                  </label>
-                  <div className="max-h-40 overflow-y-auto border rounded p-2">
-                    {Array.from(new Set(eleves
-                      .filter(e => e.date_defense)
-                      .map(e => e.date_defense!)
-                      .sort()
-                    )).map(date => (
-                      <div key={date} className="flex items-center mb-1">
+              {/* Section des conflits - inchangé */}
+              {(conflicts.guides.length > 0 || conflicts.lecteursInternes.length > 0 || 
+                conflicts.lecteursExternes.length > 0 || conflicts.mediateurs.length > 0) && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <h3 className="text-lg font-medium text-yellow-800 mb-2">⚠️ Conflits détectés</h3>
+                  <div className="space-y-2">
+                    {conflicts.guides.map(({person, conflicts}) => (
+                      <div key={`guide-${person}`} className="text-sm">
+                        <span className="font-medium">Guide {person}:</span>{' '}
+                        {conflicts.map(c => 
+                          `${c.elevePrenom} ${c.eleveNom} (${c.date} ${c.startTime}-${c.endTime})`
+                        ).join(', ')}
+                      </div>
+                    ))}
+                    {conflicts.lecteursInternes.map(({person, conflicts}) => (
+                      <div key={`lecteur-int-${person}`} className="text-sm">
+                        <span className="font-medium">Lecteur interne {person}:</span>{' '}
+                        {conflicts.map(c => 
+                          `${c.elevePrenom} ${c.eleveNom} (${c.date} ${c.startTime}-${c.endTime})`
+                        ).join(', ')}
+                      </div>
+                    ))}
+                    {conflicts.lecteursExternes.map(({person, conflicts}) => (
+                      <div key={`lecteur-ext-${person}`} className="text-sm">
+                        <span className="font-medium">Lecteur externe {person}:</span>{' '}
+                        {conflicts.map(c => 
+                          `${c.elevePrenom} ${c.eleveNom} (${c.date} ${c.startTime}-${c.endTime})`
+                        ).join(', ')}
+                      </div>
+                    ))}
+                    {conflicts.mediateurs.map(({person, conflicts}) => (
+                      <div key={`mediateur-${person}`} className="text-sm">
+                        <span className="font-medium">Médiateur {person}:</span>{' '}
+                        {conflicts.map(c => 
+                          `${c.elevePrenom} ${c.eleveNom} (${c.date} ${c.startTime}-${c.endTime})`
+                        ).join(', ')}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Section des filtres - inchangé */}
+              <div className="bg-white rounded-lg shadow p-6">
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">Filtres du Calendrier</h2>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  {/* Filtre par dates - inchangé */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Sélectionner les jours
+                    </label>
+                    <div className="max-h-40 overflow-y-auto border rounded p-2">
+                      {Array.from(new Set(eleves
+                        .filter(e => e.date_defense)
+                        .map(e => e.date_defense!)
+                        .sort()
+                      )).map(date => (
+                        <div key={date} className="flex items-center mb-1">
+                          <input
+                            type="checkbox"
+                            id={`date-${date}`}
+                            checked={selectedDates.includes(date)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedDates([...selectedDates, date]);
+                              } else {
+                                setSelectedDates(selectedDates.filter(d => d !== date));
+                              }
+                            }}
+                            className="mr-2"
+                          />
+                          <label htmlFor={`date-${date}`} className="text-sm">
+                            {new Date(date).toLocaleDateString('fr-FR', { 
+                              weekday: 'short', 
+                              day: 'numeric', 
+                              month: 'short' 
+                            })}
+                          </label>
+                        </div>
+                      ))}
+                      {eleves.filter(e => e.date_defense).length === 0 && (
+                        <p className="text-sm text-gray-500">Aucune date de défense programmée</p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => {
+                        const allDates = Array.from(new Set(
+                          eleves
+                            .filter(e => e.date_defense)
+                            .map(e => e.date_defense!)
+                        )).sort();
+                        setSelectedDates(selectedDates.length === allDates.length ? [] : allDates);
+                      }}
+                      className="mt-2 text-sm text-blue-600 hover:text-blue-800"
+                    >
+                      {selectedDates.length > 0 ? "Tout désélectionner" : "Tout sélectionner"}
+                    </button>
+                  </div>
+                  
+                  {/* Filtre par catégorie - inchangé */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Catégories
+                    </label>
+                    <div className="max-h-60 overflow-y-auto border rounded p-3 bg-white">
+                      <div className="flex items-center mb-2">
                         <input
                           type="checkbox"
-                          id={`date-${date}`}
-                          checked={selectedDates.includes(date)}
+                          id="cat-toutes"
+                          checked={selectedCategory === 'toutes'}
                           onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedDates([...selectedDates, date]);
-                            } else {
-                              setSelectedDates(selectedDates.filter(d => d !== date));
-                            }
+                            setSelectedCategory('toutes');
                           }}
                           className="mr-2"
                         />
-                        <label htmlFor={`date-${date}`} className="text-sm">
-                          {new Date(date).toLocaleDateString('fr-FR', { 
-                            weekday: 'short', 
-                            day: 'numeric', 
-                            month: 'short' 
-                          })}
+                        <label 
+                          htmlFor="cat-toutes" 
+                          className="text-sm font-medium cursor-pointer flex items-center"
+                        >
+                          <div className="w-4 h-4 rounded mr-2 border" style={{ 
+                            backgroundColor: '#F3F4F6',
+                            borderColor: '#D1D5DB'
+                          }}></div>
+                          Toutes les catégories
                         </label>
                       </div>
-                    ))}
-                    {eleves.filter(e => e.date_defense).length === 0 && (
-                      <p className="text-sm text-gray-500">Aucune date de défense programmée</p>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => {
-                      const allDates = Array.from(new Set(
-                        eleves
-                          .filter(e => e.date_defense)
-                          .map(e => e.date_defense!)
-                      )).sort();
-                      setSelectedDates(selectedDates.length === allDates.length ? [] : allDates);
-                    }}
-                    className="mt-2 text-sm text-blue-600 hover:text-blue-800"
-                  >
-                    {selectedDates.length > 0 ? "Tout désélectionner" : "Tout sélectionner"}
-                  </button>
-                </div>
-                
-                {/* Filtre par catégorie */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Catégories
-                  </label>
-                  <div className="max-h-60 overflow-y-auto border rounded p-3 bg-white">
-                    <div className="flex items-center mb-2">
-                      <input
-                        type="checkbox"
-                        id="cat-toutes"
-                        checked={selectedCategory === 'toutes'}
-                        onChange={(e) => {
-                          setSelectedCategory('toutes');
-                        }}
-                        className="mr-2"
-                      />
-                      <label 
-                        htmlFor="cat-toutes" 
-                        className="text-sm font-medium cursor-pointer flex items-center"
-                      >
-                        <div className="w-4 h-4 rounded mr-2 border" style={{ 
-                          backgroundColor: '#F3F4F6',
-                          borderColor: '#D1D5DB'
-                        }}></div>
-                        Toutes les catégories
-                      </label>
-                    </div>
-                    
-                    <div className="space-y-1">
-                      {categories.map(cat => {
-                        const color = getCategoryColor(cat);
-                        return (
-                          <div key={cat} className="flex items-center">
-                            <input
-                              type="checkbox"
-                              id={`cat-${cat}`}
-                              checked={selectedCategory === cat}
-                              onChange={(e) => {
-                                setSelectedCategory(cat);
-                              }}
-                              className="mr-2"
-                            />
-                            <label 
-                              htmlFor={`cat-${cat}`} 
-                              className="text-sm cursor-pointer flex items-center group"
-                            >
-                              <div 
-                                className="w-4 h-4 rounded mr-2 border group-hover:opacity-80 transition-opacity"
-                                style={{ 
-                                  backgroundColor: color.bg,
-                                  borderColor: color.border
+                      
+                      <div className="space-y-1">
+                        {categories.map(cat => {
+                          const color = getCategoryColor(cat);
+                          return (
+                            <div key={cat} className="flex items-center">
+                              <input
+                                type="checkbox"
+                                id={`cat-${cat}`}
+                                checked={selectedCategory === cat}
+                                onChange={(e) => {
+                                  setSelectedCategory(cat);
                                 }}
-                                title={cat}
-                              ></div>
-                              <span className="truncate">{cat}</span>
-                            </label>
-                          </div>
-                        );
-                      })}
+                                className="mr-2"
+                              />
+                              <label 
+                                htmlFor={`cat-${cat}`} 
+                                className="text-sm cursor-pointer flex items-center group"
+                              >
+                                <div 
+                                  className="w-4 h-4 rounded mr-2 border group-hover:opacity-80 transition-opacity"
+                                  style={{ 
+                                    backgroundColor: color.bg,
+                                    borderColor: color.border
+                                  }}
+                                  title={cat}
+                                ></div>
+                                <span className="truncate">{cat}</span>
+                              </label>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
-                </div>
-
-                <div className="mt-2 flex justify-between">
-                  <button
-                    onClick={() => setSelectedCategory('toutes')}
-                    className="text-xs text-blue-600 hover:text-blue-800"
-                  >
-                    Tout sélectionner
-                  </button>
-                  <button
-                    onClick={() => setSelectedCategory('')}
-                    className="text-xs text-gray-600 hover:text-gray-800"
-                  >
-                    Aucune
-                  </button>
+          
+                  <div className="mt-2 flex justify-between">
+                    <button
+                      onClick={() => setSelectedCategory('toutes')}
+                      className="text-xs text-blue-600 hover:text-blue-800"
+                    >
+                      Tout sélectionner
+                    </button>
+                    <button
+                      onClick={() => setSelectedCategory('')}
+                      className="text-xs text-gray-600 hover:text-gray-800"
+                    >
+                      Aucune
+                    </button>
+                  </div>
+                  
+                  {/* Filtre par locaux - inchangé */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Sélectionner les locaux
+                    </label>
+                    <div className="max-h-40 overflow-y-auto border rounded p-2">
+                      {Array.from(new Set(eleves
+                        .filter(e => e.localisation_defense)
+                        .map(e => e.localisation_defense!)
+                        .sort((a, b) => a.charAt(0).localeCompare(b.charAt(0)))
+                      )).map(location => (
+                        <div key={location} className="flex items-center mb-1">
+                          <input
+                            type="checkbox"
+                            id={`loc-${location}`}
+                            checked={selectedLocations.includes(location)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedLocations([...selectedLocations, location]);
+                              } else {
+                                setSelectedLocations(selectedLocations.filter(l => l !== location));
+                              }
+                            }}
+                            className="mr-2"
+                          />
+                          <label htmlFor={`loc-${location}`} className="text-sm truncate">
+                            {location}
+                          </label>
+                        </div>
+                      ))}
+                      {eleves.filter(e => e.localisation_defense).length === 0 && (
+                        <p className="text-sm text-gray-500">Aucun local défini</p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => {
+                        const allLocations = Array.from(new Set(
+                          eleves
+                            .filter(e => e.localisation_defense)
+                            .map(e => e.localisation_defense!)
+                        )).sort((a, b) => a.charAt(0).localeCompare(b.charAt(0)));
+                        setSelectedLocations(selectedLocations.length === allLocations.length ? [] : allLocations);
+                      }}
+                      className="mt-2 text-sm text-blue-600 hover:text-blue-800"
+                    >
+                      {selectedLocations.length > 0 ? "Tout désélectionner" : "Tout sélectionner"}
+                    </button>
+                  </div>
                 </div>
                 
-                {/* Filtre par locaux */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Sélectionner les locaux
-                  </label>
-                  <div className="max-h-40 overflow-y-auto border rounded p-2">
-                    {Array.from(new Set(eleves
-                      .filter(e => e.localisation_defense)
-                      .map(e => e.localisation_defense!)
-                      .sort((a, b) => a.charAt(0).localeCompare(b.charAt(0)))
-                    )).map(location => (
-                      <div key={location} className="flex items-center mb-1">
-                        <input
-                          type="checkbox"
-                          id={`loc-${location}`}
-                          checked={selectedLocations.includes(location)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedLocations([...selectedLocations, location]);
-                            } else {
-                              setSelectedLocations(selectedLocations.filter(l => l !== location));
-                            }
-                          }}
-                          className="mr-2"
-                        />
-                        <label htmlFor={`loc-${location}`} className="text-sm truncate">
-                          {location}
-                        </label>
-                      </div>
-                    ))}
-                    {eleves.filter(e => e.localisation_defense).length === 0 && (
-                      <p className="text-sm text-gray-500">Aucun local défini</p>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => {
-                      const allLocations = Array.from(new Set(
-                        eleves
-                          .filter(e => e.localisation_defense)
-                          .map(e => e.localisation_defense!)
-                      )).sort((a, b) => a.charAt(0).localeCompare(b.charAt(0)));
-                      setSelectedLocations(selectedLocations.length === allLocations.length ? [] : allLocations);
-                    }}
-                    className="mt-2 text-sm text-blue-600 hover:text-blue-800"
-                  >
-                    {selectedLocations.length > 0 ? "Tout désélectionner" : "Tout sélectionner"}
-                  </button>
-                </div>
-              </div>
-              
-              {/* Résumé des filtres */}
-              <div className="text-sm text-gray-600">
-                <p>
-                  Affichage de {dayDefenses.length} {pluralize(dayDefenses.length, 'jour', 'jours')}
-                  {' • '}
-                  {selectedLocations.length > 0 
-                    ? `${selectedLocations.length} ${pluralize(selectedLocations.length, 'local', 'locaux')} sélectionné${selectedLocations.length > 1 ? 's' : ''}`
-                    : 'Tous les locaux'}
-                  {' • '}
-                  {selectedCategory === 'toutes' ? 'Toutes catégories' : `Catégorie: ${selectedCategory}`}
-                </p>
-              </div>
-            </div>
-            {/* Section des tableaux par jour */}
-            <div className="space-y-8">
-              {dayDefenses.length === 0 ? (
-                <div className="bg-white rounded-lg shadow p-8 text-center">
-                  <p className="text-gray-500">
-                    {eleves.filter(e => e.date_defense && e.heure_defense).length === 0
-                      ? 'Aucune défense programmée'
-                      : 'Aucune défense ne correspond aux filtres sélectionnés'}
+                {/* Résumé des filtres - inchangé */}
+                <div className="text-sm text-gray-600">
+                  <p>
+                    Affichage de {dayDefenses.length} {pluralize(dayDefenses.length, 'jour', 'jours')}
+                    {' • '}
+                    {selectedLocations.length > 0 
+                      ? `${selectedLocations.length} ${pluralize(selectedLocations.length, 'local', 'locaux')} sélectionné${selectedLocations.length > 1 ? 's' : ''}`
+                      : 'Tous les locaux'}
+                    {' • '}
+                    {selectedCategory === 'toutes' ? 'Toutes catégories' : `Catégorie: ${selectedCategory}`}
                   </p>
                 </div>
-              ) : (
-                dayDefenses.map(day => (
-                  <div key={day.date} className="bg-white rounded-lg shadow overflow-hidden">
-                    <div className="px-6 py-4 bg-gray-50 border-b">
-                      <h3 className="text-lg font-semibold text-gray-800">
-                        {day.displayDate}
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        {day.defenses.length} {pluralize(day.defenses.length, 'défense', 'défenses')} • 
-                        {day.locations.length} {pluralize(day.locations.length, 'local', 'locaux')}
-                      </p>
-                    </div>
-                    
-                    {/* ICI le nouveau calendrier avec positionnement absolu */}
-                    <div className="overflow-x-auto">
-                      <div className="min-w-full">
-                        <div className="relative" style={{ height: `${(18 - 8) * 60}px` }}>
-                          {/* Lignes horizontales pour les heures */}
-                          {Array.from({ length: (18 - 8) * 2 + 1 }).map((_, i) => {
-                            const hour = 8 + i * 0.5;
-                            const displayHour = Math.floor(hour);
-                            const displayMinute = hour % 1 === 0 ? '00' : '30';
+              </div>
+              
+              {/* NOUVELLE SECTION DES TABLEAUX PAR JOUR - CORRIGÉE */}
+              <div className="space-y-8">
+                {dayDefenses.length === 0 ? (
+                  <div className="bg-white rounded-lg shadow p-8 text-center">
+                    <p className="text-gray-500">
+                      {eleves.filter(e => e.date_defense && e.heure_defense).length === 0
+                        ? 'Aucune défense programmée'
+                        : 'Aucune défense ne correspond aux filtres sélectionnés'}
+                    </p>
+                  </div>
+                ) : (
+                  dayDefenses.map(day => (
+                    <div key={day.date} className="bg-white rounded-lg shadow overflow-hidden">
+                      <div className="px-6 py-4 bg-gray-50 border-b">
+                        <h3 className="text-lg font-semibold text-gray-800">
+                          {day.displayDate}
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          {day.defenses.length} {pluralize(day.defenses.length, 'défense', 'défenses')} •  
+                          {day.locations.length} {pluralize(day.locations.length, 'local', 'locaux')}
+                        </p>
+                      </div>
+                      
+                      {/* NOUVEAU CALENDRIER AVEC STRUCTURE CORRIGÉE */}
+                      <div className="overflow-x-auto">
+                        <div className="min-w-full">
+                          {/* Table structure pour un contrôle plus précis */}
+                          <div className="flex border-t border-gray-200">
+                            {/* Colonne des heures - FIXE */}
+                            <div className="w-24 bg-gray-50 border-r border-gray-200">
+                              {Array.from({ length: (18 - 8) }).map((_, i) => {
+                                const hour = 8 + i;
+                                return (
+                                  <div key={`hour-${hour}`} className="border-b border-gray-200">
+                                    <div className="h-16 flex items-center justify-center">
+                                      <div className="text-sm font-medium text-gray-700">
+                                        {hour}h00
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
                             
-                            return (
-                              <div
-                                key={`hour-line-${hour}`}
-                                className="absolute left-0 right-0 border-t border-gray-200"
-                                style={{ top: `${i * 60}px` }}
-                              >
-                                <div className="absolute left-0 w-24 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50">
-                                  {displayHour}h{displayMinute}
+                            {/* Contenu principal avec les locaux */}
+                            <div className="flex-1">
+                              {/* En-tête des locaux - maintenant DANS la structure de table */}
+                              <div className="flex border-b border-gray-200">
+                                {day.locations.map(location => (
+                                  <div
+                                    key={`header-${location}`}
+                                    className="flex-1 min-w-[192px] px-4 py-3 text-sm font-semibold text-gray-700 border-r bg-gray-100"
+                                  >
+                                    {location}
+                                  </div>
+                                ))}
+                              </div>
+                              
+                              {/* Corps du calendrier avec les événements */}
+                              <div className="relative" style={{ height: `${(18 - 8) * 64}px` }}>
+                                {/* Lignes horizontales discrètes (optionnel) */}
+                                {Array.from({ length: (18 - 8) }).map((_, i) => (
+                                  <div
+                                    key={`line-${i}`}
+                                    className="absolute left-0 right-0 border-t border-gray-100"
+                                    style={{ top: `${i * 64}px` }}
+                                  />
+                                ))}
+                                
+                                {/* Colonnes des locaux */}
+                                <div className="absolute inset-0 flex">
+                                  {day.locations.map(location => (
+                                    <div
+                                      key={`col-${location}`}
+                                      className="flex-1 border-r relative"
+                                      style={{ minWidth: '192px' }}
+                                    >
+                                      {/* Défenses dans ce local */}
+                                      {day.defenses
+                                        .filter(defense => defense.location === location)
+                                        .map(defense => {
+                                          // CALCULS CORRIGÉS
+                                          const [startHours, startMinutes] = defense.startTime.split(':').map(Number);
+                                          const [endHours, endMinutes] = defense.endTime.split(':').map(Number);
+                                          
+                                          // Position depuis 8h00
+                                          // 64px = hauteur d'une heure (60px pour le contenu + 4px de marge)
+                                          const top = ((startHours - 8) * 64) + (startMinutes / 60 * 64);
+                                          
+                                          // Hauteur proportionnelle à la durée
+                                          const durationHours = endHours - startHours;
+                                          const durationMinutes = endMinutes - startMinutes;
+                                          const height = (durationHours * 64) + (durationMinutes / 60 * 64);
+                                          
+                                          // Ajustement pour que les événements de 50 minutes soient lisibles
+                                          const minHeight = 80; // Minimum pour afficher 5 lignes de texte
+                                          const actualHeight = Math.max(height, minHeight);
+                                          
+                                          return (
+                                            <div
+                                              key={defense.id}
+                                              className="absolute left-1 right-1 rounded p-2 overflow-hidden border shadow-sm hover:shadow-md transition-shadow"
+                                              style={{
+                                                top: `${top}px`,
+                                                height: `${actualHeight}px`,
+                                                backgroundColor: getCategoryColor(defense.categorie).bg,
+                                                borderColor: getCategoryColor(defense.categorie).border,
+                                                color: getCategoryColor(defense.categorie).text,
+                                                zIndex: 10,
+                                                fontSize: '11px' // Taille réduite pour plus de contenu
+                                              }}
+                                            >
+                                              <div className="font-bold mb-1">
+                                                {defense.startTime} - {defense.endTime}
+                                              </div>
+                                              <div className="space-y-0.5">
+                                                <div className="font-semibold truncate">
+                                                  {defense.elevePrenom} {defense.eleveNom}
+                                                </div>
+                                                {defense.guideNom !== '-' && (
+                                                  <div className="truncate">
+                                                    G: {defense.guidePrenom} {defense.guideNom}
+                                                  </div>
+                                                )}
+                                                {defense.lecteurInterneNom !== '-' && (
+                                                  <div className="truncate">
+                                                    LI: {defense.lecteurInternePrenom} {defense.lecteurInterneNom}
+                                                  </div>
+                                                )}
+                                                {defense.lecteurExterneNom !== '-' && (
+                                                  <div className="truncate">
+                                                    LE: {defense.lecteurExternePrenom} {defense.lecteurExterneNom}
+                                                  </div>
+                                                )}
+                                                {defense.mediateurNom !== '-' && (
+                                                  <div className="truncate">
+                                                    M: {defense.mediateurPrenom} {defense.mediateurNom}
+                                                  </div>
+                                                )}
+                                                {defense.categorie && defense.categorie !== 'Non catégorisé' && (
+                                                  <div className="truncate opacity-75">
+                                                    {defense.categorie}
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                    </div>
+                                  ))}
                                 </div>
                               </div>
-                            );
-                          })}
-                          
-                          {/* En-têtes des locaux */}
-                          <div className="absolute left-24 right-0 top-0 h-12 flex">
-                            {day.locations.map((location, index) => (
-                              <div
-                                key={`header-${location}`}
-                                className="flex-1 px-4 py-3 text-sm font-semibold text-gray-700 border-r border-b bg-gray-100"
-                                style={{ minWidth: '192px' }}
-                              >
-                                {location}
-                              </div>
-                            ))}
-                          </div>
-                          
-                          {/* Colonnes des locaux */}
-                          <div className="absolute left-24 right-0 top-12 bottom-0 flex">
-                            {day.locations.map(location => (
-                              <div
-                                key={`col-${location}`}
-                                className="flex-1 border-r relative"
-                                style={{ minWidth: '192px' }}
-                              >
-                                {/* Défenses dans ce local */}
-                                {day.defenses
-                                  .filter(defense => defense.location === location)
-                                  .map(defense => {
-                                    // Calculer la position exacte
-                                    const [hours, minutes] = defense.startTime.split(':').map(Number);
-                                    const [endHours, endMinutes] = defense.endTime.split(':').map(Number);
-                                    
-                                    // Position en pixels depuis le haut (8h = 0px)
-                                    const top = ((hours - 8) * 60 + minutes) ;
-                                    const height = ((endHours - hours) * 60 + (endMinutes - minutes));
-                                    
-                                    return (
-                                      <div
-                                        key={defense.id}
-                                        className="absolute left-1 right-1 rounded p-2 overflow-hidden border shadow-sm hover:shadow-md transition-shadow"
-                                        style={{
-                                          top: `${top}px`,
-                                          height: `${height}px`,
-                                          backgroundColor: getCategoryColor(defense.categorie).bg,
-                                          borderColor: getCategoryColor(defense.categorie).border,
-                                          color: getCategoryColor(defense.categorie).text,
-                                          zIndex: 10
-                                        }}
-                                      >
-                                        <div className="font-bold text-xs mb-1">
-                                          {defense.startTime} - {defense.endTime}
-                                        </div>
-                                        <div className="space-y-0.5 text-xs">
-                                          <div className="font-medium truncate">
-                                            Élève: {defense.elevePrenom} {defense.eleveNom}
-                                          </div>
-                                          {defense.guideNom !== '-' && (
-                                            <div className="truncate">
-                                              Guide: {defense.guidePrenom} {defense.guideNom}
-                                            </div>
-                                          )}
-                                          {defense.lecteurInterneNom !== '-' && (
-                                            <div className="truncate">
-                                              Lecteur interne: {defense.lecteurInternePrenom} {defense.lecteurInterneNom}
-                                            </div>
-                                          )}
-                                          {defense.lecteurExterneNom !== '-' && (
-                                            <div className="truncate">
-                                              Lecteur externe: {defense.lecteurExternePrenom} {defense.lecteurExterneNom}
-                                            </div>
-                                          )}
-                                          {defense.mediateurNom !== '-' && (
-                                            <div className="truncate">
-                                              Médiateur: {defense.mediateurPrenom} {defense.mediateurNom}
-                                            </div>
-                                          )}
-                                          {defense.categorie && defense.categorie !== 'Non catégorisé' && (
-                                            <div className="truncate text-xs opacity-75">
-                                              Catégorie: {defense.categorie}
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                              </div>
-                            ))}
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))
-              )}
+                  ))
+                )}
+              </div>
             </div>
-          </div>
-        ) : (
+          ) : (
+  
           /* Onglet Gestion des Utilisateurs */
           <div className="space-y-6">
             {/* Menu de sélection du type d'utilisateur */}
@@ -2615,6 +2640,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
