@@ -888,6 +888,24 @@ export default function CoordinateurDashboard() {
     }
   };
 
+  const getCategoryColor = (categorie: string) => {
+    const colors = [
+      { bg: '#DBEAFE', border: '#93C5FD', text: '#1E40AF' }, // Bleu
+      { bg: '#FEF3C7', border: '#FCD34D', text: '#92400E' }, // Jaune/Orange
+      { bg: '#D1FAE5', border: '#34D399', text: '#065F46' }, // Vert
+      { bg: '#FCE7F3', border: '#F9A8D4', text: '#9D174D' }, // Rose
+      { bg: '#E0E7FF', border: '#A5B4FC', text: '#3730A3' }, // Indigo
+      { bg: '#FEF9C3', border: '#FDE047', text: '#854D0E' }, // Jaune
+      { bg: '#E0F2FE', border: '#7DD3FC', text: '#0C4A6E' }, // Cyan
+      { bg: '#F3E8FF', border: '#D8B4FE', text: '#6B21A8' }, // Violet
+    ];
+    
+    // Générer un index basé sur la catégorie
+    const index = Math.abs(categorie.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % colors.length;
+    
+    return colors[index] || colors[0];
+  };
+
   const formatDateForInput = (dateString: string | null) => {
     if (!dateString) return '';
     try {
@@ -1962,17 +1980,53 @@ export default function CoordinateurDashboard() {
                             </tr>
                           </thead>
                           <tbody>
-                            {/* Créer une ligne pour chaque intervalle de temps de 8h à 18h */}
+                            {/* Créer des créneaux adaptés aux défenses du jour */}
                             {(() => {
+                              if (day.defenses.length === 0) return null;
+                              
+                              // Trouver l'heure de début la plus tôt et l'heure de fin la plus tard
+                              const startTimes = day.defenses.map(d => d.startTime);
+                              const endTimes = day.defenses.map(d => d.endTime);
+                              
+                              const earliest = startTimes.reduce((earliest, current) => 
+                                current < earliest ? current : earliest
+                              );
+                              const latest = endTimes.reduce((latest, current) => 
+                                current > latest ? current : latest
+                              );
+                              
+                              // Convertir en heures
+                              const [startHour, startMinute] = earliest.split(':').map(Number);
+                              const [endHour, endMinute] = latest.split(':').map(Number);
+                              
+                              // Arrondir l'heure de début à l'heure ou demi-heure inférieure
+                              let roundedStartHour = startHour;
+                              let roundedStartMinute = startMinute < 30 ? 0 : 30;
+                              
+                              // Arrondir l'heure de fin à l'heure ou demi-heure supérieure
+                              let roundedEndHour = endHour;
+                              let roundedEndMinute = endMinute === 0 ? 0 : 30;
+                              if (endMinute > 30) {
+                                roundedEndHour += 1;
+                                roundedEndMinute = 0;
+                              }
+                              
+                              // Générer les créneaux
                               const timeSlots = [];
-                              for (let hour = 8; hour <= 18; hour++) {
-                                for (let minute of [0, 30]) {
-                                  if (hour === 18 && minute > 0) continue;
-                                  
-                                  const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-                                  const displayTime = `${hour}h${minute === 0 ? '00' : minute}`;
-                                  
-                                  timeSlots.push({ time, displayTime });
+                              let currentHour = roundedStartHour;
+                              let currentMinute = roundedStartMinute;
+                              
+                              while (currentHour < roundedEndHour || (currentHour === roundedEndHour && currentMinute <= roundedEndMinute)) {
+                                const time = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
+                                const displayTime = `${currentHour}h${currentMinute === 0 ? '00' : currentMinute}`;
+                                
+                                timeSlots.push({ time, displayTime });
+                                
+                                // Passer au créneau suivant (30 minutes)
+                                currentMinute += 30;
+                                if (currentMinute >= 60) {
+                                  currentHour += 1;
+                                  currentMinute = 0;
                                 }
                               }
                               
@@ -1982,11 +2036,20 @@ export default function CoordinateurDashboard() {
                                     {timeSlot.displayTime}
                                   </td>
                                   {day.locations.map(location => {
-                                    // Trouver toutes les défenses dans ce local à cette heure
-                                    const defensesAtThisTime = day.defenses.filter(d => 
-                                      d.location === location && 
-                                      d.startTime === timeSlot.time
+                                    // Trouver TOUTES les défenses dans ce local pour cette journée
+                                    const defensesInThisLocation = day.defenses.filter(d => 
+                                      d.location === location
                                     );
+                                    
+                                    // Trouver les défenses qui commencent PENDANT ce créneau
+                                    const defensesDuringThisSlot = defensesInThisLocation.filter(defense => {
+                                      const defenseStart = defense.startTime; // "HH:MM"
+                                      const slotStart = timeSlot.time; // "HH:MM"
+                                      const slotEnd = add50Minutes(slotStart); // Créneau suivant
+                                      
+                                      // La défense commence pendant ce créneau
+                                      return defenseStart >= slotStart && defenseStart < slotEnd;
+                                    });
                                     
                                     return (
                                       <td 
@@ -1994,18 +2057,21 @@ export default function CoordinateurDashboard() {
                                         className="px-4 py-3 border-r relative"
                                         style={{ height: '80px' }}
                                       >
-                                        {/* Afficher chaque défense qui commence à cette heure */}
-                                        {defensesAtThisTime.map(defense => (
+                                        {/* Afficher chaque défense qui commence pendant ce créneau */}
+                                        {defensesDuringThisSlot.map(defense => (
                                           <div
                                             key={defense.id}
-                                            className="absolute left-1 right-1 bg-blue-50 border border-blue-200 rounded p-2 overflow-hidden"
+                                            className="absolute left-1 right-1 rounded p-2 overflow-hidden border"
                                             style={{
                                               top: '4px',
                                               bottom: '4px',
-                                              zIndex: 10
+                                              zIndex: 10,
+                                              backgroundColor: getCategoryColor(defense.categorie).bg,
+                                              borderColor: getCategoryColor(defense.categorie).border,
+                                              color: getCategoryColor(defense.categorie).text
                                             }}
                                           >
-                                            <div className="font-bold text-xs text-blue-800 mb-1">
+                                            <div className="font-bold text-xs mb-1">
                                               {defense.startTime} - {defense.endTime}
                                             </div>
                                             <div className="space-y-0.5 text-xs">
@@ -2495,3 +2561,4 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
