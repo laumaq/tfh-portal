@@ -1909,7 +1909,7 @@ export default function CoordinateurDashboard() {
               {/* Résumé des filtres */}
               <div className="text-sm text-gray-600">
                 <p>
-                  Affichage de {dayPlannings.length} jour{dayPlannings.length > 1 ? 's' : ''} 
+                  Affichage de {dayDefenses.length} jour{dayDefenses.length > 1 ? 's' : ''} 
                   {' • '}
                   {selectedLocations.length > 0 
                     ? `${selectedLocations.length} local${selectedLocations.length > 1 ? 'aux' : ''} sélectionné${selectedLocations.length > 1 ? 's' : ''}`
@@ -2495,28 +2495,3 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
