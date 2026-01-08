@@ -132,8 +132,8 @@ export default function CoordinateurDashboard() {
   const [showClearConfirmations, setShowClearConfirmations] = useState(false);
   const [clearConfirmations, setClearConfirmations] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [selectedDates, setSelectedDates] = useState<string[]>([]);
-  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  const [selectedDates, setSelectedDates] = useState<string[]>([]); // Seront remplis après chargement
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]); // Seront remplis après chargement
   const [selectedCategory, setSelectedCategory] = useState<string>('toutes');
   const [dayPlannings, setDayPlannings] = useState<DayPlanning[]>([]);
   const [conflicts, setConflicts] = useState<{
@@ -281,6 +281,28 @@ export default function CoordinateurDashboard() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (eleves.length > 0) {
+      // Initialiser toutes les dates par défaut
+      const allDates = Array.from(new Set(
+        eleves
+          .filter(e => e.date_defense)
+          .map(e => e.date_defense!)
+      )).sort();
+      
+      // Initialiser tous les locaux par défaut
+      const allLocations = Array.from(new Set(
+        eleves
+          .filter(e => e.localisation_defense)
+          .map(e => e.localisation_defense!)
+      )).sort((a, b) => a.charAt(0).localeCompare(b.charAt(0)));
+      
+      setSelectedDates(allDates);
+      setSelectedLocations(allLocations);
+    }
+  }, [eleves]);
+  
 
   useEffect(() => {
     if (activeTab === 'convocations' && showConvoques) {
@@ -903,7 +925,18 @@ export default function CoordinateurDashboard() {
   
   // Fonction pour générer les créneaux horaires d'une journée
   const generateTimeSlots = (defenses: DefenseEvent[]): TimeSlot[] => {
-    if (defenses.length === 0) return [];
+    if (defenses.length === 0) {
+      // Si pas de défenses, créer des créneaux par défaut (8h-18h)
+      const slots: TimeSlot[] = [];
+      for (let hour = 8; hour <= 18; hour++) {
+        for (let minute = 0; minute < 60; minute += 30) {
+          const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+          const displayTime = `${hour}h${minute === 0 ? '00' : minute}`;
+          slots.push({ time, displayTime });
+        }
+      }
+      return slots;
+    }
     
     // Trouver l'heure de début la plus tôt et l'heure de fin la plus tard
     const times = defenses.flatMap(d => [d.startTime, d.endTime]).filter(Boolean);
@@ -922,8 +955,12 @@ export default function CoordinateurDashboard() {
       return h * 60 + m;
     };
     
-    const startMinutes = toMinutes(earliest);
-    const endMinutes = toMinutes(latest);
+    let startMinutes = toMinutes(earliest);
+    let endMinutes = toMinutes(latest);
+    
+    // Arrondir à l'heure ou demi-heure inférieure/supérieure
+    startMinutes = Math.floor(startMinutes / 30) * 30;
+    endMinutes = Math.ceil(endMinutes / 30) * 30;
     
     // Générer des créneaux de 30 minutes
     const slots: TimeSlot[] = [];
@@ -1052,7 +1089,7 @@ export default function CoordinateurDashboard() {
     };
   };
   
-  // Fonction pour préparer les données du calendrier
+  // fonction prepareCalendarData  :
   const prepareCalendarData = () => {
     // Filtrer les élèves avec une date et heure de défense
     const defensesWithSchedule = eleves.filter(e => 
@@ -1088,12 +1125,12 @@ export default function CoordinateurDashboard() {
       filteredDefenses = filteredDefenses.filter(d => d.categorie === selectedCategory);
     }
     
-    // Filtre par dates
+    // Filtre par dates - SI des dates sont sélectionnées, filtrer, sinon TOUT afficher
     if (selectedDates.length > 0) {
       filteredDefenses = filteredDefenses.filter(d => selectedDates.includes(d.date));
     }
     
-    // Filtre par locaux
+    // Filtre par locaux - SI des locaux sont sélectionnés, filtrer, sinon TOUT afficher
     if (selectedLocations.length > 0) {
       filteredDefenses = filteredDefenses.filter(d => selectedLocations.includes(d.location));
     }
@@ -2482,6 +2519,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
