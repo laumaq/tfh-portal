@@ -191,7 +191,9 @@ export default function CoordinateurDashboard() {
     
     window.addEventListener('resize', checkAndForceLandscape);
     window.addEventListener('orientationchange', checkAndForceLandscape);
-    
+		
+		loadSystemSettings();
+		
     return () => {
       window.removeEventListener('resize', checkAndForceLandscape);
       window.removeEventListener('orientationchange', checkAndForceLandscape);
@@ -488,7 +490,51 @@ export default function CoordinateurDashboard() {
 	    loadData();
 	  }
 	};
+	
+	const [lecteurInterneEnabled, setLecteurInterneEnabled] = useState(false);
+	const [loadingSettings, setLoadingSettings] = useState(false);
+	
+	// Fonction pour charger le paramètre
+	const loadSystemSettings = async () => {
+	  try {
+	    const { data, error } = await supabase
+	      .from('system_settings')
+	      .select('*')
+	      .eq('setting_key', 'guide_lecteur_interne_enabled')
+	      .single();
+	    
+	    if (!error && data) {
+	      setLecteurInterneEnabled(data.setting_value === 'true');
+	    }
+	  } catch (err) {
+	    console.error('Erreur chargement paramètres:', err);
+	  }
+	};
+	
+	// Fonction pour mettre à jour le paramètre
+	const toggleLecteurInterne = async (enabled: boolean) => {
+	  try {
+	    const { error } = await supabase
+	      .from('system_settings')
+	      .upsert({
+	        setting_key: 'guide_lecteur_interne_enabled',
+	        setting_value: enabled ? 'true' : 'false',
+	        updated_at: new Date().toISOString()
+	      }, {
+	        onConflict: 'setting_key'
+	      });
+	    
+	    if (error) throw error;
+	    
+	    setLecteurInterneEnabled(enabled);
+	    alert(`Onglet "Lecteur interne" ${enabled ? 'activé' : 'désactivé'} pour les guides.`);
+	  } catch (err) {
+	    console.error('Erreur mise à jour paramètre:', err);
+	    alert('Erreur lors de la mise à jour');
+	  }
+	};
 
+	
   const handleAddCategory = () => {
     if (newCategory.trim() && !categories.includes(newCategory.trim())) {
       setCategories(prev => [...prev, newCategory.trim()].sort());
@@ -2577,6 +2623,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
