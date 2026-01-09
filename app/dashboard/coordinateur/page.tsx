@@ -1871,7 +1871,7 @@ export default function CoordinateurDashboard() {
 						      </button>
 						    </div>
 						  </div>
-            
+            </div>
             {/* Section des conflits */}
             {(conflicts.guides.length > 0 || conflicts.lecteursInternes.length > 0 || 
               conflicts.lecteursExternes.length > 0 || conflicts.mediateurs.length > 0) && (
@@ -2707,6 +2707,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
