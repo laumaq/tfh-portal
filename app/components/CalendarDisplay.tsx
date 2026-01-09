@@ -84,7 +84,115 @@ export default function CalendarDisplay({
     
     return colors[index];
   };
-
+  
+  const detectConflicts = (defenses: DefenseEvent[]) => {
+    const guideConflicts = new Map<string, DefenseEvent[]>();
+    const lecteurInterneConflicts = new Map<string, DefenseEvent[]>();
+    const lecteurExterneConflicts = new Map<string, DefenseEvent[]>();
+    const mediateurConflicts = new Map<string, DefenseEvent[]>();
+    
+    const sortedDefenses = [...defenses].sort((a, b) => {
+      if (a.date !== b.date) return a.date.localeCompare(b.date);
+      return a.startTime.localeCompare(b.startTime);
+    });
+    
+    sortedDefenses.forEach(defense => {
+      // Guide
+      if (defense.guideNom && defense.guideNom !== '-') {
+        const guideKey = `${defense.guidePrenom} ${defense.guideNom}`;
+        const conflicts = sortedDefenses.filter(d => 
+          d.id !== defense.id && 
+          d.date === defense.date &&
+          d.guideNom === defense.guideNom &&
+          d.guidePrenom === defense.guidePrenom &&
+          ((d.startTime <= defense.startTime && d.endTime > defense.startTime) ||
+           (defense.startTime <= d.startTime && defense.endTime > d.startTime))
+        );
+        
+        if (conflicts.length > 0) {
+          const existing = guideConflicts.get(guideKey) || [];
+          guideConflicts.set(guideKey, [...existing, defense, ...conflicts]);
+        }
+      }
+      
+      // Lecteur interne
+      if (defense.lecteurInterneNom && defense.lecteurInterneNom !== '-') {
+        const lecteurKey = `${defense.lecteurInternePrenom} ${defense.lecteurInterneNom}`;
+        const conflicts = sortedDefenses.filter(d => 
+          d.id !== defense.id && 
+          d.date === defense.date &&
+          d.lecteurInterneNom === defense.lecteurInterneNom &&
+          d.lecteurInternePrenom === defense.lecteurInternePrenom &&
+          ((d.startTime <= defense.startTime && d.endTime > defense.startTime) ||
+           (defense.startTime <= d.startTime && defense.endTime > d.startTime))
+        );
+        
+        if (conflicts.length > 0) {
+          const existing = lecteurInterneConflicts.get(lecteurKey) || [];
+          lecteurInterneConflicts.set(lecteurKey, [...existing, defense, ...conflicts]);
+        }
+      }
+      
+      // Lecteur externe
+      if (defense.lecteurExterneNom && defense.lecteurExterneNom !== '-') {
+        const lecteurKey = `${defense.lecteurExternePrenom} ${defense.lecteurExterneNom}`;
+        const conflicts = sortedDefenses.filter(d => 
+          d.id !== defense.id && 
+          d.date === defense.date &&
+          d.lecteurExterneNom === defense.lecteurExterneNom &&
+          d.lecteurExternePrenom === defense.lecteurExternePrenom &&
+          ((d.startTime <= defense.startTime && d.endTime > defense.startTime) ||
+           (defense.startTime <= d.startTime && defense.endTime > d.startTime))
+        );
+        
+        if (conflicts.length > 0) {
+          const existing = lecteurExterneConflicts.get(lecteurKey) || [];
+          lecteurExterneConflicts.set(lecteurKey, [...existing, defense, ...conflicts]);
+        }
+      }
+      
+      // Médiateur
+      if (defense.mediateurNom && defense.mediateurNom !== '-') {
+        const mediateurKey = `${defense.mediateurPrenom} ${defense.mediateurNom}`;
+        const conflicts = sortedDefenses.filter(d => 
+          d.id !== defense.id && 
+          d.date === defense.date &&
+          d.mediateurNom === defense.mediateurNom &&
+          d.mediateurPrenom === defense.mediateurPrenom &&
+          ((d.startTime <= defense.startTime && d.endTime > defense.startTime) ||
+           (defense.startTime <= d.startTime && defense.endTime > d.startTime))
+        );
+        
+        if (conflicts.length > 0) {
+          const existing = mediateurConflicts.get(mediateurKey) || [];
+          mediateurConflicts.set(mediateurKey, [...existing, defense, ...conflicts]);
+        }
+      }
+    });
+    
+    const unique = (arr: DefenseEvent[]) => 
+      Array.from(new Map(arr.map(item => [item.id, item])).values());
+    
+    return {
+      guides: Array.from(guideConflicts.entries()).map(([person, conflicts]) => ({
+        person,
+        conflicts: unique(conflicts)
+      })),
+      lecteursInternes: Array.from(lecteurInterneConflicts.entries()).map(([person, conflicts]) => ({
+        person,
+        conflicts: unique(conflicts)
+      })),
+      lecteursExternes: Array.from(lecteurExterneConflicts.entries()).map(([person, conflicts]) => ({
+        person,
+        conflicts: unique(conflicts)
+      })),
+      mediateurs: Array.from(mediateurConflicts.entries()).map(([person, conflicts]) => ({
+        person,
+        conflicts: unique(conflicts)
+      }))
+    };
+  };
+  
   const prepareCalendarData = useCallback(() => {
     console.log('=== PRÉPARATION CALENDRIER (COMPOSANT SÉPARÉ) ===');
     console.log('Refresh key:', refreshKey);
