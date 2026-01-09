@@ -34,15 +34,13 @@ interface CalendarDisplayProps {
   selectedCategory: string;
   selectedDates: string[];
   selectedLocations: string[];
-  refreshKey: number;
 }
 
 export default function CalendarDisplay({ 
   eleves, 
   selectedCategory, 
   selectedDates, 
-  selectedLocations,
-  refreshKey 
+  selectedLocations
 }: CalendarDisplayProps) {
   const [dayDefenses, setDayDefenses] = useState<DayDefenses[]>([]);
   const [conflicts, setConflicts] = useState<any>({
@@ -214,7 +212,6 @@ export default function CalendarDisplay({
   const prepareCalendarData = useCallback(() => {
     setIsProcessing(true);
     console.log('=== PRÉPARATION CALENDRIER (COMPOSANT SÉPARÉ) ===');
-    console.log('Refresh key:', refreshKey);
     console.log('Nombre d\'élèves reçus:', eleves.length);
     
     const defensesWithSchedule = eleves.filter(e => 
@@ -296,7 +293,7 @@ export default function CalendarDisplay({
     setDayDefenses(daysData);
     setIsProcessing(false);
     
-  }, [eleves, selectedCategory, selectedDates, selectedLocations, refreshKey]);
+  }, [eleves, selectedCategory, selectedDates, selectedLocations]);
 
   useEffect(() => {
     console.log('Effet déclenché dans CalendarDisplay');
