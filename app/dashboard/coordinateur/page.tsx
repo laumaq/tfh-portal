@@ -1812,49 +1812,51 @@ export default function CoordinateurDashboard() {
             </div>
           </div>
         ) : activeTab === 'calendrier' ? (
-          /* Onglet Calendrier des Défenses - AVEC LES CORRECTIONS */
-          <div className="space-y-6">
-						<div className="bg-white rounded-lg shadow p-6">
-						  <div className="flex justify-between items-center mb-4">
-						    <h2 className="text-xl font-semibold text-gray-800">Calendrier des Défenses</h2>
-						    <div className="flex gap-2">
-						      <button
-						        onClick={refreshCalendar}
-						        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center gap-2"
-						      >
-						        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-						        </svg>
-						        Rafraîchir
-						      </button>
-									<button
-									  onClick={() => {
-									    console.log('=== TEST CALENDRIER ===');
-									    console.log('Élèves dans state:', eleves.length);
-									    console.log('Élèves avec date_defense:', eleves.filter(e => e.date_defense).length);
-									    console.log('Premier élève:', eleves[0]?.nom, eleves[0]?.date_defense, eleves[0]?.heure_defense);
-									    console.log('Premier élève complet:', eleves[0]);
-									  }}
-									  className="px-4 py-2 bg-purple-600 text-white rounded"
-									>
-									  Test Données
-									</button>
-						      <button
-						        onClick={() => {
-						          console.log('État actuel:');
-						          console.log('Élèves:', eleves.length);
-						          console.log('DayDefenses:', dayDefenses.length);
-						          console.log('Filtres - Dates:', selectedDates);
-						          console.log('Filtres - Locaux:', selectedLocations);
-						          console.log('Filtres - Catégorie:', selectedCategory);
-						        }}
-						        className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm"
-						      >
-						        Debug
-						      </button>
-						    </div>
-						  </div>
-            </div>
+          /* Onglet Calendrier des Défenses */
+				<div key={`calendrier-${calendarRefreshTrigger}`} className="space-y-6">
+		          <div className="space-y-6">
+								<div className="bg-white rounded-lg shadow p-6">
+								  <div className="flex justify-between items-center mb-4">
+								    <h2 className="text-xl font-semibold text-gray-800">Calendrier des Défenses</h2>
+								    <div className="flex gap-2">
+								      <button
+								        onClick={refreshCalendar}
+								        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center gap-2"
+								      >
+								        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+								        </svg>
+								        Rafraîchir
+								      </button>
+											<button
+											  onClick={() => {
+											    console.log('=== TEST CALENDRIER ===');
+											    console.log('Élèves dans state:', eleves.length);
+											    console.log('Élèves avec date_defense:', eleves.filter(e => e.date_defense).length);
+											    console.log('Premier élève:', eleves[0]?.nom, eleves[0]?.date_defense, eleves[0]?.heure_defense);
+											    console.log('Premier élève complet:', eleves[0]);
+											  }}
+											  className="px-4 py-2 bg-purple-600 text-white rounded"
+											>
+											  Test Données
+											</button>
+								      <button
+								        onClick={() => {
+								          console.log('État actuel:');
+								          console.log('Élèves:', eleves.length);
+								          console.log('DayDefenses:', dayDefenses.length);
+								          console.log('Filtres - Dates:', selectedDates);
+								          console.log('Filtres - Locaux:', selectedLocations);
+								          console.log('Filtres - Catégorie:', selectedCategory);
+								        }}
+								        className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm"
+								      >
+								        Debug
+								      </button>
+								    </div>
+								  </div>
+		            </div>
+		          </div>
             {/* Section des conflits */}
             {(conflicts.guides.length > 0 || conflicts.lecteursInternes.length > 0 || 
               conflicts.lecteursExternes.length > 0 || conflicts.mediateurs.length > 0) && (
@@ -2690,6 +2692,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
