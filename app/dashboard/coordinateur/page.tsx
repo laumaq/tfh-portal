@@ -361,16 +361,9 @@ export default function CoordinateurDashboard() {
 	  
 	  try {
 	    const updateData: any = {};
-	    
-	    if (value === '') {
-	      updateData[field] = null;
-	    } else {
-	      updateData[field] = value;
-	    }
+	    updateData[field] = value === '' ? null : value;
 	
-	    console.log(`Mise à jour ${field} pour élève ${eleveId}:`, value);
-	
-	    // 1. Mettre à jour dans Supabase
+	    // Mettre à jour dans Supabase
 	    const { error } = await supabase
 	      .from('eleves')
 	      .update(updateData)
@@ -378,47 +371,22 @@ export default function CoordinateurDashboard() {
 	
 	    if (error) throw error;
 	
-	    // 2. Vérifier si c'est un champ qui affecte le calendrier
-	    const isDefenseField = field.includes('date_defense') || 
-	                          field.includes('heure_defense') || 
-	                          field.includes('localisation_defense') ||
-	                          field.includes('guide_id') ||
-	                          field.includes('lecteur_interne_id') ||
-	                          field.includes('lecteur_externe_id') ||
-	                          field.includes('mediateur_id');
+	    console.log(`Mise à jour réussie: ${field} = ${value}`);
+	
+	    // Recharger TOUTES les données depuis la base
+	    // C'est plus sûr que de tenter des mises à jour partielles
+	    await loadData();
 	    
-	    // 3. Mettre à jour l'état local IMMÉDIATEMENT
-	    setEleves(prev => prev.map(eleve => 
-	      eleve.id === eleveId 
-	        ? { ...eleve, [field]: value === '' ? null : value }
-	        : eleve
-	    ));
-	    
-	    setFilteredEleves(prev => prev.map(eleve => 
-	      eleve.id === eleveId 
-	        ? { ...eleve, [field]: value === '' ? null : value }
-	        : eleve
-	    ));
-	    
-	    // 4. Si c'est un champ de défense, déclencher un rechargement COMPLET
-	    if (isDefenseField) {
-	      console.log('Champ de défense modifié -> rechargement complet des données');
-	      
-	      // Option A : Recharger immédiatement toutes les données
-	      await loadData();
-	      
-	      // Option B : Forcer un rafraîchissement du calendrier
+	    // Forcer le rafraîchissement du calendrier
+	    if (activeTab === 'defenses') {
 	      setCalendarRefreshTrigger(prev => prev + 1);
 	    }
 	    
 	    setEditingCell(null);
-		  
-		await loadData();
 	    
 	  } catch (err) {
 	    console.error('Erreur mise à jour:', err);
-	    // Recharger en cas d'erreur
-	    loadData();
+	    alert('Erreur lors de la mise à jour');
 	  }
 	};
   
@@ -2683,6 +2651,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
