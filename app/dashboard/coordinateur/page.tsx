@@ -145,7 +145,6 @@ export default function CoordinateurDashboard() {
   });
   const router = useRouter();
 
-	const [calendarResetKey, setCalendarResetKey] = useState(0);
 
   // ⚙️ PARAMÈTRE CENTRAL D'ÉCHELLE DE TEMPS
   // Changez cette valeur pour ajuster la taille verticale de tout le calendrier
@@ -397,7 +396,7 @@ export default function CoordinateurDashboard() {
 	    await loadData();
 	    
 	    // TOUJOURS rafraîchir le calendrier
-	    setCalendarResetKey(prev => prev + 1);
+	    setCalendarRefreshTrigger(prev => prev + 1);
 	    
 	    setEditingCell(null);
 	    
@@ -2550,6 +2549,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
