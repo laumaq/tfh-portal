@@ -1825,7 +1825,7 @@ export default function CoordinateurDashboard() {
         <div className="flex gap-2">
           <button
             onClick={() => {
-              setCalendarResetKey(prev => prev + 1);
+              setCalendarRefreshTrigger(prev => prev + 1);
               loadData();
             }}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center gap-2"
@@ -2549,6 +2549,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
