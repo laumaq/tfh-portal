@@ -1357,9 +1357,202 @@ export default function CoordinateurDashboard() {
             </div>
           </>
         ) : activeTab === 'defenses' ? (
-          /* Onglet Gestion des Défenses - Code complet maintenu */
+		
+          /* Onglet Gestion des Défenses */
           <div className="space-y-6">
-            {/* ... Contenu défenses complet (non modifié) ... */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-4">
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editingModeDefenses}
+                      onChange={(e) => setEditingModeDefenses(e.target.checked)}
+                      className="w-5 h-5 text-blue-600 rounded"
+                    />
+                    <span className="text-sm font-medium">
+                      Mode édition défenses
+                    </span>
+                  </label>
+                </div>
+                
+                <span className="text-sm text-gray-500">
+                  ({filteredEleves.length} élève{filteredEleves.length > 1 ? 's' : ''})
+                </span>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow overflow-x-auto">
+              <div className="min-w-[1400px] md:min-w-full">
+                <table className="w-full">
+                  <thead className="bg-gray-100 border-b">
+                    <tr>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap sticky-col">Nom</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Prénom</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Classe</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Catégorie</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Problématique</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Guide</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Lecteur Interne</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Lecteur Externe</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Médiateur</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Date Défense</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Heure Défense</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Localisation</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredEleves.map((eleve) => (
+                      <tr key={eleve.id} className="border-b hover:bg-gray-50">
+                        <td className="px-3 py-3 text-xs md:text-sm font-medium whitespace-nowrap sticky-col">
+                          {eleve.nom}
+                        </td>
+                        <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">{eleve.prenom}</td>
+                        <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">{eleve.classe}</td>
+                        <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">
+                          {eleve.categorie || '-'}
+                        </td>
+                        <td className="px-3 py-3 text-xs md:text-sm">
+                          <div className="whitespace-pre-wrap break-words max-w-xs">
+                            {eleve.problematique || '-'}
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">
+                          {eleve.guide_nom} {eleve.guide_prenom}.
+                        </td>  
+                        
+                        {/* Lecteur Interne */}
+                        <td className="px-3 py-3">
+                          <select
+                            value={eleve.lecteur_interne_id || ''}
+                            onChange={(e) => handleSelectUpdate(eleve.id, 'lecteur_interne_id', e.target.value)}
+                            className="w-full border rounded px-2 py-1 text-xs md:text-sm"
+                            disabled={!editingModeDefenses}
+                          >
+                            <option value="">-</option>
+                            {guides.map(guide => (
+                              <option key={guide.id} value={guide.id}>
+                                {guide.nom} {guide.initiale}.
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        
+                        {/* Lecteur Externe */}
+                        <td className="px-3 py-3">
+                          <select
+                            value={eleve.lecteur_externe_id || ''}
+                            onChange={(e) => handleSelectUpdate(eleve.id, 'lecteur_externe_id', e.target.value)}
+                            className="w-full border rounded px-2 py-1 text-xs md:text-sm"
+                            disabled={!editingModeDefenses}
+                          >
+                            <option value="">-</option>
+                            {lecteursExternes.map(lecteur => (
+                              <option key={lecteur.id} value={lecteur.id}>
+                                {lecteur.prenom} {lecteur.nom}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        
+                        {/* Médiateur */}
+                        <td className="px-3 py-3">
+                          <select
+                            value={eleve.mediateur_id || ''}
+                            onChange={(e) => handleSelectUpdate(eleve.id, 'mediateur_id', e.target.value)}
+                            className="w-full border rounded px-2 py-1 text-xs md:text-sm"
+                            disabled={!editingModeDefenses || mediateurs.length === 0}
+                          >
+                            <option value="">-</option>
+                            {mediateurs.map(mediateur => (
+                              <option key={mediateur.id} value={mediateur.id}>
+                                {mediateur.prenom} {mediateur.nom}
+                              </option>
+                            ))}
+                          </select>
+                        </td>   
+                                              
+                        {/* Date de défense */}
+                        <td className="px-3 py-3">
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="date"
+                              value={formatDateForInput(eleve.date_defense)}
+                              onChange={(e) => {
+                                const newValue = e.target.value;
+                                handleUpdate(eleve.id, 'date_defense', newValue);
+                              }}
+                              className="w-full border rounded px-2 py-1 text-xs md:text-sm"
+                              disabled={!editingModeDefenses}
+                            />
+                            {editingModeDefenses && eleve.date_defense && (
+                              <button
+                                onClick={() => handleUpdate(eleve.id, 'date_defense', '')}
+                                className="p-1 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
+                                title="Effacer la date"
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                                              
+                        {/* Heure de défense */}
+                        <td className="px-3 py-3">
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="time"
+                              value={eleve.heure_defense || ''}
+                              onChange={(e) => {
+                                const newValue = e.target.value;
+                                handleUpdate(eleve.id, 'heure_defense', newValue);
+                              }}
+                              className="w-full border rounded px-2 py-1 text-xs md:text-sm"
+                              disabled={!editingModeDefenses}
+                            />
+                            {editingModeDefenses && eleve.heure_defense && (
+                              <button
+                                onClick={() => handleUpdate(eleve.id, 'heure_defense', '')}
+                                className="p-1 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
+                                title="Effacer l'heure"
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                                              
+                        {/* Localisation */}
+                        <td className="px-3 py-3">
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="text"
+                              value={eleve.localisation_defense || ''}
+                              onChange={(e) => {
+                                const newValue = e.target.value;
+                                handleUpdate(eleve.id, 'localisation_defense', newValue);
+                              }}
+                              className="w-full border rounded px-2 py-1 text-xs md:text-sm"
+                              placeholder="Salle, bâtiment..."
+                              disabled={!editingModeDefenses}
+                            />
+                            {editingModeDefenses && eleve.localisation_defense && (
+                              <button
+                                onClick={() => handleUpdate(eleve.id, 'localisation_defense', '')}
+                                className="p-1 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
+                                title="Effacer la localisation"
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         ) : activeTab === 'calendrier' ? (
           /* Onglet Calendrier des Défenses - AVEC LES CORRECTIONS */
