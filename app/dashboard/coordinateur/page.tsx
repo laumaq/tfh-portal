@@ -368,6 +368,9 @@ export default function CoordinateurDashboard() {
 	      updateData[field] = value;
 	    }
 	
+	    console.log(`Mise à jour ${field} pour élève ${eleveId}:`, value);
+	
+	    // 1. Mettre à jour dans Supabase
 	    const { error } = await supabase
 	      .from('eleves')
 	      .update(updateData)
@@ -375,9 +378,7 @@ export default function CoordinateurDashboard() {
 	
 	    if (error) throw error;
 	
-	    console.log(`Mise à jour ${field} pour élève ${eleveId}:`, value);
-	
-	    // Vérifier si le champ modifié affecte le calendrier
+	    // 2. Vérifier si c'est un champ qui affecte le calendrier
 	    const isDefenseField = field.includes('date_defense') || 
 	                          field.includes('heure_defense') || 
 	                          field.includes('localisation_defense') ||
@@ -386,72 +387,35 @@ export default function CoordinateurDashboard() {
 	                          field.includes('lecteur_externe_id') ||
 	                          field.includes('mediateur_id');
 	    
+	    // 3. Mettre à jour l'état local IMMÉDIATEMENT
+	    setEleves(prev => prev.map(eleve => 
+	      eleve.id === eleveId 
+	        ? { ...eleve, [field]: value === '' ? null : value }
+	        : eleve
+	    ));
+	    
+	    setFilteredEleves(prev => prev.map(eleve => 
+	      eleve.id === eleveId 
+	        ? { ...eleve, [field]: value === '' ? null : value }
+	        : eleve
+	    ));
+	    
+	    // 4. Si c'est un champ de défense, déclencher un rechargement COMPLET
 	    if (isDefenseField) {
-	      console.log('Champ de défense modifié, recalcul du calendrier...');
+	      console.log('Champ de défense modifié -> rechargement complet des données');
 	      
-	      // **IMPORTANT : Recharger les données depuis la base de données**
-	      // Récupérer l'élève mis à jour avec TOUTES ses relations
-	      const { data: updatedEleveData, error: fetchError } = await supabase
-	        .from('eleves')
-	        .select(`
-	          *,
-	          guide:guides!guide_id (nom, prenom),
-	          lecteur_interne:guides!lecteur_interne_id (nom, prenom),
-	          lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
-	          mediateur:mediateurs!mediateur_id (nom, prenom)
-	        `)
-	        .eq('id', eleveId)
-	        .single();
-	
-	      if (!fetchError && updatedEleveData) {
-	        console.log('Données fraîches récupérées pour élève:', updatedEleveData.nom);
-	        
-	        // Formater les données comme dans loadData()
-	        const formattedEleve = {
-	          ...updatedEleveData,
-	          guide_nom: updatedEleveData.guide?.nom || '-',
-	          guide_prenom: updatedEleveData.guide?.prenom || '-',
-	          lecteur_interne_nom: updatedEleveData.lecteur_interne?.nom || '-',
-	          lecteur_interne_prenom: updatedEleveData.lecteur_interne?.prenom || '-',
-	          lecteur_externe_nom: updatedEleveData.lecteur_externe?.nom || '-',
-	          lecteur_externe_prenom: updatedEleveData.lecteur_externe?.prenom || '-',
-	          mediateur_nom: updatedEleveData.mediateur?.nom || '-',
-	          mediateur_prenom: updatedEleveData.mediateur?.prenom || '-'
-	        };
-	        
-	        // Mettre à jour l'état avec les données fraîches
-	        const updatedEleves = eleves.map(eleve => 
-	          eleve.id === eleveId ? formattedEleve : eleve
-	        );
-	        
-	        setEleves(updatedEleves);
-	        setFilteredEleves(updatedEleves);
-	        
-	        console.log('Élèves mis à jour, appel de prepareCalendarData...');
-	        
-	        setCalendarRefreshTrigger(prev => prev + 1);
-	      } else {
-	        console.error('Erreur récupération données fraîches:', fetchError);
-	        // Fallback : recharger toutes les données
-	        loadData();
-	      }
-	    } else {
-	      // Pour les autres champs, mettre à jour localement
-	      const updatedEleves = eleves.map(eleve => 
-	        eleve.id === eleveId 
-	          ? { ...eleve, [field]: value === '' ? null : value }
-	          : eleve
-	      );
+	      // Option A : Recharger immédiatement toutes les données
+	      await loadData();
 	      
-	      setEleves(updatedEleves);
-	      setFilteredEleves(updatedEleves);
+	      // Option B : Forcer un rafraîchissement du calendrier
+	      setCalendarRefreshTrigger(prev => prev + 1);
 	    }
 	    
 	    setEditingCell(null);
 	    
 	  } catch (err) {
 	    console.error('Erreur mise à jour:', err);
-	    // En cas d'erreur, recharger toutes les données
+	    // Recharger en cas d'erreur
 	    loadData();
 	  }
 	};
@@ -2717,4 +2681,5 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
