@@ -324,6 +324,14 @@ export default function CoordinateurDashboard() {
     if (currentState === true) return false;
     return null;
   };
+	
+	const refreshCalendar = () => {
+	  console.log('Rafraîchissement manuel du calendrier');
+	  loadData(); // Recharger toutes les données
+	  setTimeout(() => {
+	    prepareCalendarData();
+	  }, 500);
+	};
 
   const handlePresenceUpdate = async (eleveId: string, field: string, currentValue: boolean | null) => {
     if (!editingModeConvocations) return;
@@ -1835,6 +1843,34 @@ export default function CoordinateurDashboard() {
         ) : activeTab === 'calendrier' ? (
           /* Onglet Calendrier des Défenses - AVEC LES CORRECTIONS */
           <div className="space-y-6">
+						<div className="bg-white rounded-lg shadow p-6">
+						  <div className="flex justify-between items-center mb-4">
+						    <h2 className="text-xl font-semibold text-gray-800">Calendrier des Défenses</h2>
+						    <div className="flex gap-2">
+						      <button
+						        onClick={refreshCalendar}
+						        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center gap-2"
+						      >
+						        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+						        </svg>
+						        Rafraîchir
+						      </button>
+						      <button
+						        onClick={() => {
+						          console.log('État actuel:');
+						          console.log('Élèves:', eleves.length);
+						          console.log('DayDefenses:', dayDefenses.length);
+						          console.log('Filtres - Dates:', selectedDates);
+						          console.log('Filtres - Locaux:', selectedLocations);
+						          console.log('Filtres - Catégorie:', selectedCategory);
+						        }}
+						        className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm"
+						      >
+						        Debug
+						      </button>
+						    </div>
+						  </div>
             
             {/* Section des conflits */}
             {(conflicts.guides.length > 0 || conflicts.lecteursInternes.length > 0 || 
@@ -2671,6 +2707,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
