@@ -5,6 +5,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import * as XLSX from 'xlsx';
+import CalendarDisplay from '@/app/components/CalendarDisplay';
 
 // Remplacer l'interface Eleve existante (lignes 6-37) :
 interface Eleve {
@@ -391,13 +392,22 @@ export default function CoordinateurDashboard() {
 	    if (error) throw error;
 	
 	    console.log('Mise à jour Supabase réussie');
-
-			if (isDefenseField) {
-		    console.log('Champ de défense modifié -> réinitialisation calendrier');
-		    // Forcer une réinitialisation complète
-		    setCalendarResetKey(prev => prev + 1);
-		    await loadData();
-		  }
+	
+	    // Vérifier si c'est un champ qui affecte le calendrier
+	    const isDefenseField = field.includes('date_defense') || 
+	                          field.includes('heure_defense') || 
+	                          field.includes('localisation_defense') ||
+	                          field.includes('guide_id') ||
+	                          field.includes('lecteur_interne_id') ||
+	                          field.includes('lecteur_externe_id') ||
+	                          field.includes('mediateur_id');
+	
+	    if (isDefenseField) {
+	      console.log('Champ de défense modifié -> réinitialisation calendrier');
+	      // Forcer une réinitialisation complète
+	      setCalendarResetKey(prev => prev + 1);
+	      await loadData();
+	    }
 	    
 	    // Forcer un rafraîchissement du calendrier
 	    setCalendarRefreshTrigger(prev => prev + 1);
@@ -1817,7 +1827,7 @@ export default function CoordinateurDashboard() {
               </div>
             </div>
           </div>
-        ) : {activeTab === 'calendrier' ? (
+        ) : activeTab === 'calendrier' ? (
   <div className="space-y-6">
     {/* En-tête avec boutons */}
     <div className="bg-white rounded-lg shadow p-6">
@@ -2550,6 +2560,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
