@@ -95,21 +95,45 @@ export default function GuideDashboard() {
     }
   ];
 
+  
+  const [lecteurInterneEnabled, setLecteurInterneEnabled] = useState(false);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+  
+  // Fonction pour charger le paramètre
+  const loadSystemSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('setting_value')
+        .eq('setting_key', 'guide_lecteur_interne_enabled')
+        .single();
+      
+      if (!error && data) {
+        setLecteurInterneEnabled(data.setting_value === 'true');
+      }
+    } catch (err) {
+      console.error('Erreur chargement paramètres:', err);
+    } finally {
+      setSettingsLoaded(true);
+    }
+  };
+
   useEffect(() => {
     const userType = localStorage.getItem('userType');
     const userId = localStorage.getItem('userId');
     const name = localStorage.getItem('userName');
-
+  
     if (userType !== 'guide' || !userId) {
       router.push('/');
       return;
     }
-
+  
     setUserName(name || '');
     setUserGuideId(userId);
     loadData(userId);
+    loadSystemSettings(); // ← AJOUTEZ CETTE LIGNE
   }, [router]);
-
+  
   const loadData = async (guideId: string) => {
     try {
       setLoading(true);
@@ -410,14 +434,18 @@ export default function GuideDashboard() {
           >
             Guide ({eleves.length} élève(s))
           </button>
-          <button
-            onClick={() => setActiveTab('lecteur-interne')}
-            className={`px-4 py-2 font-medium text-sm md:text-base ${
-              activeTab === 'lecteur-interne'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
+          {settingsLoaded && lecteurInterneEnabled && (
+            <button
+              onClick={() => setActiveTab('lecteur-interne')}
+              className={`px-4 py-2 font-medium text-sm md:text-base ${
+                activeTab === 'lecteur-interne'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Lecteur interne
+            </button>
+          )}
             Lecteur interne
           </button>
           <button
@@ -903,5 +931,6 @@ export default function GuideDashboard() {
     </div>
   );
 }
+
 
 
