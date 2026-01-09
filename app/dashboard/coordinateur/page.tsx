@@ -1,7 +1,7 @@
 // app/dashboard/coordinateur/page.tsx
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import * as XLSX from 'xlsx';
@@ -374,20 +374,20 @@ export default function CoordinateurDashboard() {
 	
 	    if (error) throw error;
 	
-	    // Mettre à jour l'état local IMMÉDIATEMENT
+	    // IMPORTANT : Créer un NOUVEAU tableau au lieu de muter l'ancien
 	    const updatedEleves = eleves.map(eleve => 
 	      eleve.id === eleveId 
 	        ? { ...eleve, [field]: value === '' ? null : value }
 	        : eleve
 	    );
 	    
-	    setEleves(updatedEleves);
-	    setFilteredEleves(updatedEleves);
+	    // Forcer un nouveau tableau avec spread operator
+	    setEleves([...updatedEleves]);
+	    setFilteredEleves([...updatedEleves]);
 	    setEditingCell(null);
 	
 	    console.log(`Mise à jour ${field} pour élève ${eleveId}:`, value);
 	
-	    // ⚡ SOLUTION CRITIQUE : Forcer le recalcul du calendrier
 	    // Vérifier si le champ modifié affecte le calendrier
 	    const isDefenseField = field.includes('date_defense') || 
 	                          field.includes('heure_defense') || 
@@ -400,49 +400,15 @@ export default function CoordinateurDashboard() {
 	    if (isDefenseField) {
 	      console.log('Champ de défense modifié, recalcul du calendrier...');
 	      
-	      // Recharger les données depuis la base pour être sûr d'avoir les dernières valeurs
-	      const { data: updatedEleveData, error: fetchError } = await supabase
-	        .from('eleves')
-	        .select(`
-	          *,
-	          guide:guides!guide_id (nom, prenom),
-	          lecteur_interne:guides!lecteur_interne_id (nom, prenom),
-	          lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
-	          mediateur:mediateurs!mediateur_id (nom, prenom)
-	        `)
-	        .eq('id', eleveId)
-	        .single();
-	
-	      if (!fetchError && updatedEleveData) {
-	        // Mettre à jour avec les données fraîches
-	        const refreshedEleves = eleves.map(e => 
-	          e.id === eleveId 
-	            ? {
-	                ...updatedEleveData,
-	                guide_nom: updatedEleveData.guide?.nom || '-',
-	                guide_prenom: updatedEleveData.guide?.prenom || '-',
-	                lecteur_interne_nom: updatedEleveData.lecteur_interne?.nom || '-',
-	                lecteur_interne_prenom: updatedEleveData.lecteur_interne?.prenom || '-',
-	                lecteur_externe_nom: updatedEleveData.lecteur_externe?.nom || '-',
-	                lecteur_externe_prenom: updatedEleveData.lecteur_externe?.prenom || '-',
-	                mediateur_nom: updatedEleveData.mediateur?.nom || '-',
-	                mediateur_prenom: updatedEleveData.mediateur?.prenom || '-'
-	              }
-	            : e
-	        );
-	        
-	        setEleves(refreshedEleves);
-	        setFilteredEleves(refreshedEleves);
-	      }
-	      
-	      // Appeler prepareCalendarData avec un léger délai pour être sûr
+	      // Forcer un rafraîchissement avec un timeout
 	      setTimeout(() => {
+	        console.log('Appel de prepareCalendarData après mise à jour');
 	        prepareCalendarData();
-	      }, 100);
+	      }, 50);
 	    }
 	  } catch (err) {
 	    console.error('Erreur mise à jour:', err);
-	    // Recharger toutes les données en cas d'erreur
+	    // Recharger toutes les données
 	    loadData();
 	  }
 	};
@@ -1130,7 +1096,7 @@ export default function CoordinateurDashboard() {
   };
   
 
-    const prepareCalendarData = () => {
+	const prepareCalendarData = useCallback(() => {
 	  console.log('=== PRÉPARATION CALENDRIER (début) ===');
 	  console.log('Nombre total d\'élèves:', eleves.length);
 	  
@@ -1141,95 +1107,117 @@ export default function CoordinateurDashboard() {
 	  
 	  console.log(`Élèves avec défense programmée: ${defensesWithSchedule.length}`);
 	  
-	  // Afficher les premiers élèves pour vérification
-	  defensesWithSchedule.slice(0, 3).forEach(e => {
-	    console.log(`- ${e.prenom} ${e.nom}: ${e.date_defense} ${e.heure_defense} (${e.localisation_defense})`);
+	  // Transformer en DefenseEvent
+	  const defenseEvents: DefenseEvent[] = defensesWithSchedule.map(eleve => {
+	    // Convertir "HH:MM:SS" en "HH:MM" pour l'affichage
+	    const startTime = eleve.heure_defense!.substring(0, 5);
+	    
+	    return {
+	      id: eleve.id,
+	      eleveId: eleve.id,
+	      date: eleve.date_defense!,
+	      startTime: startTime,
+	      endTime: add50Minutes(startTime),
+	      location: eleve.localisation_defense || 'Non défini',
+	      eleveNom: eleve.nom,
+	      elevePrenom: eleve.prenom,
+	      guideNom: eleve.guide_nom || '-',
+	      guidePrenom: eleve.guide_prenom || '-',
+	      lecteurInterneNom: eleve.lecteur_interne_nom || '-',
+	      lecteurInternePrenom: eleve.lecteur_interne_prenom || '-',
+	      lecteurExterneNom: eleve.lecteur_externe_nom || '-',
+	      lecteurExternePrenom: eleve.lecteur_externe_prenom || '-',
+	      mediateurNom: eleve.mediateur_nom || '-',
+	      mediateurPrenom: eleve.mediateur_prenom || '-',
+	      categorie: eleve.categorie || 'Non catégorisé'
+	    };
 	  });
-    
-    // Transformer en DefenseEvent
-    const defenseEvents: DefenseEvent[] = defensesWithSchedule.map(eleve => {
-      // Convertir "HH:MM:SS" en "HH:MM" pour l'affichage
-      const startTime = eleve.heure_defense!.substring(0, 5); // Garde "HH:MM"
-      
-      return {
-        id: eleve.id,
-        eleveId: eleve.id,
-        date: eleve.date_defense!,
-        startTime: startTime,
-        endTime: add50Minutes(startTime),
-        location: eleve.localisation_defense || 'Non défini',
-        eleveNom: eleve.nom,
-        elevePrenom: eleve.prenom,
-        guideNom: eleve.guide_nom || '-',
-        guidePrenom: eleve.guide_prenom || '-',
-        lecteurInterneNom: eleve.lecteur_interne_nom || '-',
-        lecteurInternePrenom: eleve.lecteur_interne_prenom || '-',
-        lecteurExterneNom: eleve.lecteur_externe_nom || '-',
-        lecteurExternePrenom: eleve.lecteur_externe_prenom || '-',
-        mediateurNom: eleve.mediateur_nom || '-',
-        mediateurPrenom: eleve.mediateur_prenom || '-',
-        categorie: eleve.categorie || 'Non catégorisé'
-      };
-    });
-    
-    // Appliquer les filtres
-    let filteredDefenses = defenseEvents;
-    
-    // Filtre par catégorie
-    if (selectedCategory !== 'toutes') {
-      filteredDefenses = filteredDefenses.filter(d => d.categorie === selectedCategory);
-    }
-    
-    // Filtre par dates
-    if (selectedDates.length > 0) {
-      filteredDefenses = filteredDefenses.filter(d => selectedDates.includes(d.date));
-    }
-    
-    // Filtre par locaux
-    if (selectedLocations.length > 0) {
-      filteredDefenses = filteredDefenses.filter(d => selectedLocations.includes(d.location));
-    }
-    
-    console.log(`Défenses après filtrage: ${filteredDefenses.length}`);
-    
-    // Détecter les conflits
-    setConflicts(detectConflicts(filteredDefenses));
-    
-    // Grouper par date
-    const dates = Array.from(new Set(filteredDefenses.map(d => d.date))).sort();
-    
-    const daysData: DayDefenses[] = dates.map(date => {
-      const dateDefenses = filteredDefenses.filter(d => d.date === date);
-      const locations = Array.from(new Set(dateDefenses.map(d => d.location)))
-        .sort((a, b) => a.charAt(0).localeCompare(b.charAt(0)));
-      
-      return {
-        date,
-        displayDate: new Date(date).toLocaleDateString('fr-FR', { 
-          weekday: 'long', 
-          day: 'numeric', 
-          month: 'long' 
-        }),
-        locations,
-        defenses: dateDefenses.sort((a, b) => a.startTime.localeCompare(b.startTime))
-      };
-    });
-    
-    console.log(`Jours avec défenses: ${daysData.length}`);
-    if (daysData.length > 0) {
-      console.log('Exemple jour:', daysData[0]);
-    }
-    
-    setDayDefenses(daysData);
-  };
+	  
+	  // Appliquer les filtres
+	  let filteredDefenses = defenseEvents;
+	  
+	  if (selectedCategory !== 'toutes') {
+	    filteredDefenses = filteredDefenses.filter(d => d.categorie === selectedCategory);
+	  }
+	  
+	  if (selectedDates.length > 0) {
+	    filteredDefenses = filteredDefenses.filter(d => selectedDates.includes(d.date));
+	  }
+	  
+	  if (selectedLocations.length > 0) {
+	    filteredDefenses = filteredDefenses.filter(d => selectedLocations.includes(d.location));
+	  }
+	  
+	  console.log(`Défenses après filtrage: ${filteredDefenses.length}`);
+	  
+	  // IMPORTANT : Créer un NOUVEAU tableau pour les conflits
+	  const newConflicts = detectConflicts(filteredDefenses);
+	  
+	  // Vérifier si les conflits ont vraiment changé
+	  const conflictsChanged = 
+	    JSON.stringify(newConflicts.guides) !== JSON.stringify(conflicts.guides) ||
+	    JSON.stringify(newConflicts.lecteursInternes) !== JSON.stringify(conflicts.lecteursInternes) ||
+	    JSON.stringify(newConflicts.lecteursExternes) !== JSON.stringify(conflicts.lecteursExternes) ||
+	    JSON.stringify(newConflicts.mediateurs) !== JSON.stringify(conflicts.mediateurs);
+	  
+	  if (conflictsChanged) {
+	    console.log('Conflits mis à jour');
+	    setConflicts(newConflicts);
+	  }
+	  
+	  // Grouper par date
+	  const dates = Array.from(new Set(filteredDefenses.map(d => d.date))).sort();
+	  
+	  const daysData: DayDefenses[] = dates.map(date => {
+	    const dateDefenses = filteredDefenses.filter(d => d.date === date);
+	    const locations = Array.from(new Set(dateDefenses.map(d => d.location)))
+	      .sort((a, b) => a.charAt(0).localeCompare(b.charAt(0)));
+	    
+	    return {
+	      date,
+	      displayDate: new Date(date).toLocaleDateString('fr-FR', { 
+	        weekday: 'long', 
+	        day: 'numeric', 
+	        month: 'long' 
+	      }),
+	      locations,
+	      defenses: dateDefenses.sort((a, b) => a.startTime.localeCompare(b.startTime))
+	    };
+	  });
+	  
+	  console.log(`Jours avec défenses: ${daysData.length}`);
+	  
+	  // IMPORTANT : Vérifier si les données ont réellement changé avant de mettre à jour l'état
+	  const dayDefensesChanged = 
+	    JSON.stringify(daysData) !== JSON.stringify(dayDefenses);
+	  
+	  if (dayDefensesChanged) {
+	    console.log('Mise à jour du calendrier avec nouvelles données');
+	    // Forcer un nouveau tableau avec spread operator
+	    setDayDefenses([...daysData]);
+	  } else {
+	    console.log('Pas de changement dans les données du calendrier');
+	  }
+	}, [eleves, selectedCategory, selectedDates, selectedLocations, dayDefenses, conflicts]);
 
   // Effet pour préparer les données quand les filtres changent ou quand les élèves sont chargés
-  useEffect(() => {
-    if (eleves.length > 0) {
-      prepareCalendarData();
-    }
-  }, [eleves, selectedDates, selectedLocations, selectedCategory]);
-
+	useEffect(() => {
+	  if (eleves.length > 0 && activeTab === 'calendrier') {
+	    console.log('Effet déclenché - préparation calendrier');
+	    prepareCalendarData();
+	  }
+	}, [eleves, selectedDates, selectedLocations, selectedCategory, activeTab, prepareCalendarData]);
+	
+	useEffect(() => {
+	  if (activeTab === 'calendrier') {
+	    console.log('Changement vers onglet calendrier - rafraîchissement');
+	    // Petit délai pour s'assurer que le DOM est prêt
+	    setTimeout(() => {
+	      prepareCalendarData();
+	    }, 100);
+	  }
+	}, [activeTab]);
+	
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -2683,6 +2671,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
