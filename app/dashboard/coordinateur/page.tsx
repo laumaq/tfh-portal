@@ -1800,6 +1800,18 @@ export default function CoordinateurDashboard() {
 						        </svg>
 						        Rafraîchir
 						      </button>
+									<button
+									  onClick={() => {
+									    console.log('=== TEST CALENDRIER ===');
+									    console.log('Élèves dans state:', eleves.length);
+									    console.log('Élèves avec date_defense:', eleves.filter(e => e.date_defense).length);
+									    console.log('Premier élève:', eleves[0]?.nom, eleves[0]?.date_defense, eleves[0]?.heure_defense);
+									    console.log('Dernière modification:', eleves[0]?.updated_at);
+									  }}
+									  className="px-4 py-2 bg-purple-600 text-white rounded"
+									>
+									  Test Données
+									</button>
 						      <button
 						        onClick={() => {
 						          console.log('État actuel:');
@@ -2651,6 +2663,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
