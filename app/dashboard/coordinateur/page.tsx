@@ -146,7 +146,7 @@ export default function CoordinateurDashboard() {
   // ⚙️ PARAMÈTRE CENTRAL D'ÉCHELLE DE TEMPS
   // Changez cette valeur pour ajuster la taille verticale de tout le calendrier
   // Valeurs recommandées : 120-200 pixels par heure
-  const PIXELS_PER_HOUR = 180;
+  const PIXELS_PER_HOUR = 200;
 
   const CONVOCATION_OPTIONS = [
     { value: '', label: '-', color: 'bg-gray-100' },
@@ -389,6 +389,11 @@ export default function CoordinateurDashboard() {
       ));
   
       setEditingCell(null);
+
+	  // AJOUTER ICI : Recalculer le calendrier si on modifie une donnée de défense
+	  if (field.includes('date_defense') || field.includes('heure_defense') || field.includes('localisation_defense')) {
+	    prepareCalendarData();
+			
     } catch (err) {
       console.error('Erreur mise à jour:', err);
       loadData();
@@ -435,6 +440,10 @@ export default function CoordinateurDashboard() {
       setFilteredEleves(prev => prev.map(eleve => 
         eleve.id === eleveId ? { ...eleve, [field]: value === '' ? null : value } : eleve
       ));
+
+	  if (field.includes('lecteur') || field.includes('mediateur') || field.includes('guide')) {
+        prepareCalendarData();
+      }
     } catch (err) {
       console.error('Erreur mise à jour select:', err);
       loadData();
@@ -2620,3 +2629,4 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
