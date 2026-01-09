@@ -205,7 +205,127 @@ export default function CalendarDisplay({
                 </p>
               </div>
               
-              {/* ... reste de votre rendu calendrier ... */}
+              <div className="overflow-x-auto">
+                <div className="min-w-full">
+                  <div className="flex border-t border-gray-200">
+                    <div className="w-24 bg-gray-50"></div>
+                    {day.locations.map(location => (
+                      <div
+                        key={`header-${location}`}
+                        className="flex-1 min-w-[200px] px-4 py-3 text-sm font-semibold text-gray-700 border-r border-b bg-gray-100"
+                      >
+                        {location}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="flex border-b border-gray-200">
+                    {/* COLONNE DES HEURES */}
+                    <div className="w-24 bg-gray-50 border-r border-gray-200">
+                      {Array.from({ length: totalHours }).map((_, i) => {
+                        const hour = 8 + i;
+                        return (
+                          <div 
+                            key={`hour-${hour}`} 
+                            className="border-b border-gray-200"
+                            style={{ height: `${PIXELS_PER_HOUR}px` }}
+                          >
+                            <div className="h-full flex items-center justify-center">
+                              <div className="text-sm font-medium text-gray-700">
+                                {hour}h00
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    
+                    {/* CONTENEUR DES LOCAUX */}
+                    <div className="flex-1 relative" style={{ height: `${totalHeight}px` }}>
+                      {/* Lignes horizontales */}
+                      {Array.from({ length: totalHours + 1 }).map((_, i) => (
+                        <div
+                          key={`line-${i}`}
+                          className="absolute left-0 right-0 border-t border-gray-100"
+                          style={{ top: `${i * PIXELS_PER_HOUR}px` }}
+                        />
+                      ))}
+                      
+                      <div className="absolute inset-0 flex">
+                        {day.locations.map((location, index) => (
+                          <div
+                            key={`col-${location}`}
+                            className="flex-1 border-r relative"
+                            style={{ minWidth: '200px' }}
+                          >
+                            {day.defenses
+                              .filter(defense => defense.location === location)
+                              .map(defense => {
+                                const [startHours, startMinutes] = defense.startTime.split(':').map(Number);
+                                
+                                // Position avec PIXELS_PER_HOUR
+                                const hoursFrom8 = startHours - 8;
+                                const minutesFraction = startMinutes / 60;
+                                const top = (hoursFrom8 + minutesFraction) * PIXELS_PER_HOUR;
+                                
+                                // Hauteur fixe de 50 minutes
+                                const DEFENSE_DURATION_MINUTES = 50;
+                                const height = (DEFENSE_DURATION_MINUTES / 60) * PIXELS_PER_HOUR;
+                                
+                                const color = getCategoryColor(defense.categorie);
+                                
+                                return (
+                                  <div
+                                    key={defense.id}
+                                    className="absolute left-1 right-1 rounded p-2 overflow-hidden border shadow-sm hover:shadow-md transition-shadow"
+                                    style={{
+                                      top: `${top}px`,
+                                      height: `${height}px`,
+                                      backgroundColor: color.bg,
+                                      borderColor: color.border,
+                                      color: color.text,
+                                      zIndex: 10,
+                                      fontSize: '13px'
+                                    }}
+                                  >
+                                    <div className="font-bold mb-1">
+                                      {defense.startTime} - {defense.endTime}
+                                    </div>
+                                    <div className="space-y-0.5">
+                                      <div className="font-semibold">
+                                        {defense.elevePrenom} {defense.eleveNom}
+                                      </div>
+                                      {defense.guideNom !== '-' && (
+                                        <div>
+                                          Guide: {defense.guidePrenom} {defense.guideNom}
+                                        </div>
+                                      )}
+                                      {defense.lecteurInterneNom !== '-' && (
+                                        <div>
+                                          Lecteur interne: {defense.lecteurInternePrenom} {defense.lecteurInterneNom}
+                                        </div>
+                                      )}
+                                      {defense.lecteurExterneNom !== '-' && (
+                                        <div>
+                                          Lecteur externe: {defense.lecteurExternePrenom} {defense.lecteurExterneNom}
+                                        </div>
+                                      )}
+                                      {defense.mediateurNom !== '-' && (
+                                        <div>
+                                          Médiateur: {defense.mediateurPrenom} {defense.mediateurNom}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           );
         })
