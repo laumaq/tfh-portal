@@ -195,6 +195,14 @@ export default function CoordinateurDashboard() {
     };
   }, [router]);
 
+	// Effet pour préparer les données quand les filtres changent ou quand les élèves sont chargés
+	useEffect(() => {
+	  console.log('useEffect déclenché - eleves:', eleves.length);
+	  if (eleves.length > 0) {
+	    prepareCalendarData();
+	  }
+	}, [eleves, selectedDates, selectedLocations, selectedCategory]);
+	
   const pluralize = (count: number, singular: string, plural: string) => {
     return count === 1 ? singular : plural;
   };
@@ -354,51 +362,61 @@ export default function CoordinateurDashboard() {
     }
   };
 
-  const handleUpdate = async (eleveId: string, field: string, value: string) => {
-    const isEditing = activeTab === 'convocations' ? editingModeConvocations : editingModeDefenses;
-    if (!isEditing) return;
-    
-    try {
-      const updateData: any = {};
-      
-      if (value === '') {
-        updateData[field] = null;
-      } else {
-        updateData[field] = value;
-      }
-  
-      const { error } = await supabase
-        .from('eleves')
-        .update(updateData)
-        .eq('id', eleveId);
-  
-      if (error) throw error;
-  
-      setEleves(prev => prev.map(eleve => 
-        eleve.id === eleveId ? { 
-          ...eleve, 
-          [field]: value === '' ? null : value 
-        } : eleve
-      ));
-      
-      setFilteredEleves(prev => prev.map(eleve => 
-        eleve.id === eleveId ? { 
-          ...eleve, 
-          [field]: value === '' ? null : value 
-        } : eleve
-      ));
-  
-      setEditingCell(null);
-
-	  if (field.includes('date_defense') || field.includes('heure_defense') || field.includes('localisation_defense')) {
-	    prepareCalendarData();
-			
-      }
-	} catch (err) {
-      console.error('Erreur mise à jour:', err);
-      loadData();
-    }
-  };
+	const handleUpdate = async (eleveId: string, field: string, value: string) => {
+	  const isEditing = activeTab === 'convocations' ? editingModeConvocations : editingModeDefenses;
+	  if (!isEditing) return;
+	  
+	  try {
+	    const updateData: any = {};
+	    
+	    if (value === '') {
+	      updateData[field] = null;
+	    } else {
+	      updateData[field] = value;
+	    }
+	
+	    const { error } = await supabase
+	      .from('eleves')
+	      .update(updateData)
+	      .eq('id', eleveId);
+	
+	    if (error) throw error;
+	
+	    // Créer une copie mise à jour des élèves
+	    const updatedEleves = eleves.map(eleve => 
+	      eleve.id === eleveId ? { 
+	        ...eleve, 
+	        [field]: value === '' ? null : value 
+	      } : eleve
+	    );
+	    
+	    // Mettre à jour les états
+	    setEleves(updatedEleves);
+	    setFilteredEleves(updatedEleves);
+	    setEditingCell(null);
+	
+	    // DEBUG: Vérifier que la donnée est bien mise à jour
+	    console.log(`Mise à jour ${field} pour élève ${eleveId}:`, value);
+	    console.log('Nombre d\'élèves après mise à jour:', updatedEleves.length);
+	
+	    // Forcer le recalcul du calendrier si c'est une donnée de défense
+	    const isDefenseField = field.includes('date_defense') || field.includes('heure_defense') || field.includes('localisation_defense');
+	    if (isDefenseField) {
+	      console.log('Champ de défense modifié, recalcul calendrier...');
+	      // Utiliser les données fraîchement mises à jour
+	      const defensesWithSchedule = updatedEleves.filter(e => 
+	        e.date_defense && e.heure_defense
+	      );
+	      console.log(`Élèves avec défense après update: ${defensesWithSchedule.length}`);
+	      
+	      // Appeler prepareCalendarData directement
+	      prepareCalendarData();
+	    }
+	  } catch (err) {
+	    console.error('Erreur mise à jour:', err);
+	    loadData(); // Recharger toutes les données
+	  }
+	};
   
   const handleSimpleTextImport = () => {
     const rows = massImportData.split('\n').filter(row => row.trim());
@@ -1082,15 +1100,22 @@ export default function CoordinateurDashboard() {
     };
   };
   
-  const prepareCalendarData = () => {
-    console.log('=== PRÉPARATION CALENDRIER ===');
-    
-    // Filtrer les élèves avec une date et heure de défense
-    const defensesWithSchedule = eleves.filter(e => 
-      e.date_defense && e.heure_defense
-    );
-    
-    console.log(`Élèves avec défense: ${defensesWithSchedule.length}`);
+
+    const prepareCalendarData = () => {
+	  console.log('=== PRÉPARATION CALENDRIER (début) ===');
+	  console.log('Nombre total d\'élèves:', eleves.length);
+	  
+	  // Filtrer les élèves avec une date et heure de défense
+	  const defensesWithSchedule = eleves.filter(e => 
+	    e.date_defense && e.heure_defense
+	  );
+	  
+	  console.log(`Élèves avec défense programmée: ${defensesWithSchedule.length}`);
+	  
+	  // Afficher les premiers élèves pour vérification
+	  defensesWithSchedule.slice(0, 3).forEach(e => {
+	    console.log(`- ${e.prenom} ${e.nom}: ${e.date_defense} ${e.heure_defense} (${e.localisation_defense})`);
+	  });
     
     // Transformer en DefenseEvent
     const defenseEvents: DefenseEvent[] = defensesWithSchedule.map(eleve => {
@@ -2629,5 +2654,6 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
