@@ -1698,27 +1698,46 @@ export default function CoordinateurDashboard() {
 		
           /* Onglet Gestion des Défenses */
           <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-4">
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={editingModeDefenses}
-                      onChange={(e) => setEditingModeDefenses(e.target.checked)}
-                      className="w-5 h-5 text-blue-600 rounded"
-                    />
-                    <span className="text-sm font-medium">
-                      Mode édition défenses
-                    </span>
-                  </label>
-                </div>
-                
-                <span className="text-sm text-gray-500">
-                  ({filteredEleves.length} élève{filteredEleves.length > 1 ? 's' : ''})
-                </span>
-              </div>
-            </div>
+					  <div className="bg-white rounded-lg shadow p-6">
+					    <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-4">
+					      <div className="flex items-center gap-4">
+					        <label className="flex items-center gap-2 cursor-pointer">
+					          <input
+					            type="checkbox"
+					            checked={editingModeDefenses}
+					            onChange={(e) => setEditingModeDefenses(e.target.checked)}
+					            className="w-5 h-5 text-blue-600 rounded"
+					          />
+					          <span className="text-sm font-medium">
+					            Mode édition défenses
+					          </span>
+					        </label>
+					        
+					        {/* NOUVEAU : Contrôle de l'onglet Lecteur interne */}
+					        <div className="flex items-center gap-2 border-l pl-4">
+					          <label className="flex items-center gap-2 cursor-pointer">
+					            <input
+					              type="checkbox"
+					              checked={lecteurInterneEnabled}
+					              onChange={(e) => toggleLecteurInterne(e.target.checked)}
+					              className="w-5 h-5 text-purple-600 rounded"
+					              disabled={loadingSettings}
+					            />
+					            <span className="text-sm font-medium">
+					              Autoriser sélection lecteur interne par les guides
+					            </span>
+					          </label>
+					          <div className="text-xs text-gray-500">
+					            {lecteurInterneEnabled ? '🟢 Activé' : '🔴 Désactivé'}
+					          </div>
+					        </div>
+					      </div>
+					      
+					      <span className="text-sm text-gray-500">
+					        ({filteredEleves.length} élève{filteredEleves.length > 1 ? 's' : ''})
+					      </span>
+					    </div>
+					  </div>
 
             <div className="bg-white rounded-lg shadow overflow-x-auto">
               <div className="min-w-[1400px] md:min-w-full">
@@ -2623,6 +2642,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
