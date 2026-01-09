@@ -383,11 +383,15 @@ export default function CoordinateurDashboard() {
 	    if (error) throw error;
 	
 	    // Créer une copie mise à jour des élèves
-	    const updatedEleves = eleves.map(eleve => 
-	      eleve.id === eleveId ? { 
-	        ...eleve, 
-	        [field]: value === '' ? null : value 
-	      } : eleve
+	    // Au lieu de .map(), créer un nouvel array avec spread operator
+			const updatedEleves = [...eleves];
+			const index = updatedEleves.findIndex(e => e.id === eleveId);
+			if (index !== -1) {
+			  updatedEleves[index] = {
+			    ...updatedEleves[index],
+			    [field]: value === '' ? null : value
+			  };
+			}
 	    );
 	    
 	    // Mettre à jour les états
@@ -2654,6 +2658,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
