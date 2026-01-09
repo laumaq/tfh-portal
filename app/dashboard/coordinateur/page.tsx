@@ -412,6 +412,8 @@ export default function CoordinateurDashboard() {
 	    }
 	    
 	    setEditingCell(null);
+		  
+		await loadData();
 	    
 	  } catch (err) {
 	    console.error('Erreur mise à jour:', err);
@@ -2681,5 +2683,6 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
