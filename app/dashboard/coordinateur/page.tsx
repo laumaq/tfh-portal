@@ -392,40 +392,15 @@ export default function CoordinateurDashboard() {
 	    if (error) throw error;
 	
 	    console.log('Mise à jour Supabase réussie');
-	
-	    // Mise à jour IMMÉDIATE de l'état local
-	    setEleves(prev => prev.map(eleve => 
-	      eleve.id === eleveId ? { ...eleve, [field]: value === '' ? null : value } : eleve
-	    ));
-	    
-	    setFilteredEleves(prev => prev.map(eleve => 
-	      eleve.id === eleveId ? { ...eleve, [field]: value === '' ? null : value } : eleve
-	    ));
-	
-	    // Vérifier si c'est un champ qui affecte le calendrier
-	    const isDefenseField = field.includes('date_defense') || 
-	                          field.includes('heure_defense') || 
-	                          field.includes('localisation_defense') ||
-	                          field.includes('guide_id') ||
-	                          field.includes('lecteur_interne_id') ||
-	                          field.includes('lecteur_externe_id') ||
-	                          field.includes('mediateur_id');
-	
-	    if (isDefenseField) {
-	      console.log('Champ de défense modifié -> réinitialisation calendrier');
-	      // Forcer une réinitialisation complète
-	      setCalendarResetKey(prev => prev + 1);
-	      // Recharger aussi les données pour être sûr
-	      setTimeout(() => loadData(), 100);
-	    }
-	    
-	    setEditingCell(null);
-	    
-	  } catch (err) {
-	    console.error('Erreur mise à jour:', err);
-	    alert('Erreur lors de la mise à jour');
-	  }
+
+		await loadData();
+  
+	  // TOUJOURS rafraîchir le calendrier
+	  setCalendarResetKey(prev => prev + 1);
+	  
+	  setEditingCell(null);
 	};
+
   
   const handleSimpleTextImport = () => {
     const rows = massImportData.split('\n').filter(row => row.trim());
@@ -2567,6 +2542,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
