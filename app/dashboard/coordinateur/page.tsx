@@ -1214,7 +1214,7 @@ export default function CoordinateurDashboard() {
           </button>
         </div>
         
-        {/* Onglets */}
+         {/* Onglets */}
         <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
           <button
             onClick={() => {
@@ -1273,7 +1273,6 @@ export default function CoordinateurDashboard() {
         {/* Contenu selon l'onglet */}
         {activeTab === 'convocations' ? (
           <>
-            {/* ONGLET CONVOCATIONS - Code inchangé */}
             <div className="bg-white rounded-lg shadow p-4 md:p-6 mb-6">
               <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-4">
                 <div className="flex items-center gap-4">
@@ -1351,9 +1350,237 @@ export default function CoordinateurDashboard() {
               </div>
             </div>
 
-            {/* Tableau des convocations - Code complet maintenu */}
+            {/* Tableau des convocations */}
             <div className="bg-white rounded-lg shadow overflow-x-auto">
-              {/* ... Tableau convocations complet ici (non modifié) ... */}
+              <div className="min-w-[1300px] md:min-w-full">
+                <table className="w-full">
+                  <thead className="bg-gray-100 border-b">
+                    <tr>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Classe</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Nom</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Prénom</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Guide</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Catégorie</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Problématique</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Convoc. 9-10 mars</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Prés. 9 mars</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Prés. 10 mars</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Convoc. 16-17 avril</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Prés. 16 avril</th>
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Prés. 17 avril</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredEleves.map((eleve) => {
+                      const presence9Mars = getPresenceStyles(eleve.presence_9_mars);
+                      const presence10Mars = getPresenceStyles(eleve.presence_10_mars);
+                      const presence16Avril = getPresenceStyles(eleve.presence_16_avril);
+                      const presence17Avril = getPresenceStyles(eleve.presence_17_avril);
+                      
+                      return (
+                        <tr key={eleve.id} className="border-b hover:bg-gray-50">
+                          <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">{eleve.classe}</td>
+                          <td className="px-3 py-3 text-xs md:text-sm font-medium whitespace-nowrap">{eleve.nom}</td>
+                          <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">{eleve.prenom}</td>
+                          
+                          {/* Guide */}
+                          <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">
+                            {editingModeConvocations ? (
+                              <select
+                                value={eleve.guide_id || ''}
+                                onChange={(e) => handleSelectUpdate(eleve.id, 'guide_id', e.target.value)}
+                                className="w-full border rounded px-2 py-1 text-xs md:text-sm"
+                              >
+                                <option value="">-</option>
+                                {guides.map(guide => (
+                                  <option key={guide.id} value={guide.id}>
+                                    {guide.nom} {guide.prenom}.
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <span>
+                                {eleve.guide_nom} {eleve.guide_prenom}.
+                              </span>
+                            )}
+                          </td>
+                          
+                          {/* Catégorie */}
+                          <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">
+                            {editingModeConvocations ? (
+                              <div className="flex flex-col gap-1">
+                                <select
+                                  value={eleve.categorie || ''}
+                                  onChange={(e) => handleSelectUpdate(eleve.id, 'categorie', e.target.value)}
+                                  className="w-full border rounded px-2 py-1 text-xs md:text-sm"
+                                >
+                                  <option value="">-</option>
+                                  {categories.map(cat => (
+                                    <option key={cat} value={cat}>{cat}</option>
+                                  ))}
+                                </select>
+                                <div className="flex gap-1">
+                                  <input
+                                    type="text"
+                                    value={newCategory}
+                                    onChange={(e) => setNewCategory(e.target.value)}
+                                    placeholder="Nouvelle catégorie"
+                                    className="flex-1 border rounded px-2 py-1 text-xs"
+                                  />
+                                  <button
+                                    onClick={handleAddCategory}
+                                    className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <span>{eleve.categorie || '-'}</span>
+                            )}
+                          </td>
+                          
+                          {/* Problématique */}
+                          <td className="px-3 py-3 text-xs md:text-sm">
+                            {editingModeConvocations && editingCell?.id === eleve.id && editingCell?.field === 'problematique' ? (
+                              <textarea
+                                defaultValue={eleve.problematique}
+                                onBlur={(e) => handleUpdate(eleve.id, 'problematique', e.target.value)}
+                                className="w-full border rounded px-2 py-1 text-xs md:text-sm"
+                                rows={3}
+                                autoFocus
+                              />
+                            ) : editingModeConvocations ? (
+                              <div
+                                onClick={() => setEditingCell({id: eleve.id, field: 'problematique'})}
+                                className="cursor-pointer hover:bg-gray-100 p-1 rounded min-h-[60px] flex items-start"
+                              >
+                                {eleve.problematique || '-'}
+                              </div>
+                            ) : (
+                              <div className="min-h-[60px] flex items-start">
+                                {eleve.problematique || '-'}
+                              </div>
+                            )}
+                          </td>
+                          
+                          {/* Convocation Mars */}
+                          <td className="px-3 py-3">
+                            {editingModeConvocations ? (
+                              <select
+                                value={eleve.convocation_mars || ''}
+                                onChange={(e) => handleUpdate(eleve.id, 'convocation_mars', e.target.value)}
+                                className={`w-full border rounded px-2 py-1 text-xs md:text-sm ${getConvocationColor(eleve.convocation_mars || '')}`}
+                                title={getConvocationLabel(eleve.convocation_mars || '')}
+                              >
+                                {CONVOCATION_OPTIONS.map(opt => (
+                                  <option key={opt.value} value={opt.value} className={opt.color}>
+                                    {opt.label}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <div className={`px-2 py-1 rounded ${getConvocationColor(eleve.convocation_mars || '')}`}>
+                                {getConvocationLabel(eleve.convocation_mars || '').split(',')[0]}
+                              </div>
+                            )}
+                          </td>
+                          
+                          {/* Présence 9 mars */}
+                          <td className="px-3 py-3 text-center">
+                            {editingModeConvocations ? (
+                              <button
+                                onClick={() => handlePresenceUpdate(eleve.id, 'presence_9_mars', eleve.presence_9_mars)}
+                                className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presence9Mars.bgColor} ${presence9Mars.hoverColor} ${presence9Mars.textColor} font-bold text-lg`}
+                                title={`${presence9Mars.title} (cliquer pour changer)`}
+                              >
+                                {presence9Mars.icon}
+                              </button>
+                            ) : (
+                              <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center ${presence9Mars.bgColor} ${presence9Mars.textColor} font-bold text-lg`}>
+                                {presence9Mars.icon}
+                              </div>
+                            )}
+                          </td>
+                          
+                          {/* Présence 10 mars */}
+                          <td className="px-3 py-3 text-center">
+                            {editingModeConvocations ? (
+                              <button
+                                onClick={() => handlePresenceUpdate(eleve.id, 'presence_10_mars', eleve.presence_10_mars)}
+                                className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presence10Mars.bgColor} ${presence10Mars.hoverColor} ${presence10Mars.textColor} font-bold text-lg`}
+                                title={`${presence10Mars.title} (cliquer pour changer)`}
+                              >
+                                {presence10Mars.icon}
+                              </button>
+                            ) : (
+                              <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center ${presence10Mars.bgColor} ${presence10Mars.textColor} font-bold text-lg`}>
+                                {presence10Mars.icon}
+                              </div>
+                            )}
+                          </td>
+                          
+                          {/* Convocation Avril */}
+                          <td className="px-3 py-3">
+                            {editingModeConvocations ? (
+                              <select
+                                value={eleve.convocation_avril || ''}
+                                onChange={(e) => handleUpdate(eleve.id, 'convocation_avril', e.target.value)}
+                                className={`w-full border rounded px-2 py-1 text-xs md:text-sm ${getConvocationColor(eleve.convocation_avril || '')}`}
+                                title={getConvocationLabel(eleve.convocation_avril || '')}
+                              >
+                                {CONVOCATION_OPTIONS.map(opt => (
+                                  <option key={opt.value} value={opt.value} className={opt.color}>
+                                    {opt.label}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <div className={`px-2 py-1 rounded ${getConvocationColor(eleve.convocation_avril || '')}`}>
+                                {getConvocationLabel(eleve.convocation_avril || '').split(',')[0]}
+                              </div>
+                            )}
+                          </td>
+                          
+                          {/* Présence 16 avril */}
+                          <td className="px-3 py-3 text-center">
+                            {editingModeConvocations ? (
+                              <button
+                                onClick={() => handlePresenceUpdate(eleve.id, 'presence_16_avril', eleve.presence_16_avril)}
+                                className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presence16Avril.bgColor} ${presence16Avril.hoverColor} ${presence16Avril.textColor} font-bold text-lg`}
+                                title={`${presence16Avril.title} (cliquer pour changer)`}
+                              >
+                                {presence16Avril.icon}
+                              </button>
+                            ) : (
+                              <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center ${presence16Avril.bgColor} ${presence16Avril.textColor} font-bold text-lg`}>
+                                {presence16Avril.icon}
+                              </div>
+                            )}
+                          </td>
+                          
+                          {/* Présence 17 avril */}
+                          <td className="px-3 py-3 text-center">
+                            {editingModeConvocations ? (
+                              <button
+                                onClick={() => handlePresenceUpdate(eleve.id, 'presence_17_avril', eleve.presence_17_avril)}
+                                className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presence17Avril.bgColor} ${presence17Avril.hoverColor} ${presence17Avril.textColor} font-bold text-lg`}
+                                title={`${presence17Avril.title} (cliquer pour changer)`}
+                              >
+                                {presence17Avril.icon}
+                              </button>
+                            ) : (
+                              <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center ${presence17Avril.bgColor} ${presence17Avril.textColor} font-bold text-lg`}>
+                                {presence17Avril.icon}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </>
         ) : activeTab === 'defenses' ? (
