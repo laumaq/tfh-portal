@@ -209,7 +209,7 @@ export default function CoordinateurDashboard() {
       const { data: guidesData, error: guidesError } = await supabase
         .from('guides')
         .select('id, nom, prenom, initiale')
-        .order('nom', { ascending: true }); // <-- AJOUTER CETTE LIGNE
+        .order('nom', { ascending: true });
       
       if (guidesError) throw guidesError;
       setGuides(guidesData || []);
@@ -276,19 +276,20 @@ export default function CoordinateurDashboard() {
 	    }
 
       const elevesFormatted = (elevesData || []).map(eleve => ({
-        ...eleve,
-        guide_nom: eleve.guide?.nom || '-',
-        guide_prenom: eleve.guide?.prenom || '-', // ← DOIT correspondre à l'interface
-        lecteur_interne_nom: eleve.lecteur_interne?.nom || '-',
-        lecteur_interne_prenom: eleve.lecteur_interne?.prenom || '-', // ← DOIT correspondre
-        lecteur_externe_nom: eleve.lecteur_externe?.nom || '-',
-        lecteur_externe_prenom: eleve.lecteur_externe?.prenom || '-',
-        mediateur_nom: eleve.mediateur?.nom || '-',
-        mediateur_prenom: eleve.mediateur?.prenom || '-'
-      }));
-
-      setEleves(elevesFormatted);
-      setFilteredEleves(elevesFormatted);
+			  ...eleve,
+			  guide_nom: eleve.guide?.nom || '-',
+			  guide_prenom: eleve.guide?.prenom || '-',
+			  lecteur_interne_nom: eleve.lecteur_interne?.nom || '-',
+			  lecteur_interne_prenom: eleve.lecteur_interne?.prenom || '-',
+			  lecteur_externe_nom: eleve.lecteur_externe?.nom || '-',
+			  lecteur_externe_prenom: eleve.lecteur_externe?.prenom || '-',
+			  mediateur_nom: eleve.mediateur?.nom || '-',
+			  mediateur_prenom: eleve.mediateur?.prenom || '-'
+			}));
+			
+			// FORCER une nouvelle référence
+			setEleves([...elevesFormatted]);
+			setFilteredEleves([...elevesFormatted]);
 
       // Extraire les catégories uniques
       const uniqueCategories = Array.from(
@@ -337,6 +338,14 @@ export default function CoordinateurDashboard() {
     }
   }, [showConvoques, eleves, activeTab]);
 
+	useEffect(() => {
+	  console.log('🔄 État eleves a changé:', {
+	    count: eleves.length,
+	    withDateDefense: eleves.filter(e => e.date_defense).length,
+	    withTimeDefense: eleves.filter(e => e.heure_defense).length
+	  });
+	}, [eleves]);
+
   const cyclePresenceState = (currentState: boolean | null): boolean | null => {
     if (currentState === null) return true;
     if (currentState === true) return false;
@@ -359,14 +368,13 @@ export default function CoordinateurDashboard() {
 
       if (error) throw error;
 
-      setEleves(prev => prev.map(eleve => 
-        eleve.id === eleveId ? { ...eleve, [field]: newValue } : eleve
-      ));
-      
-      setFilteredEleves(prev => prev.map(eleve => 
-        eleve.id === eleveId ? { ...eleve, [field]: newValue } : eleve
-      ));
-    } catch (err) {
+      const updatedEleves = eleves.map(eleve => 
+			  eleve.id === eleveId ? { ...eleve, [field]: newValue } : eleve
+			);
+			
+			setEleves([...updatedEleves]);
+			setFilteredEleves([...updatedEleves]);
+		} catch (err) {
       console.error('Erreur mise à jour présence:', err);
       loadData();
     }
@@ -380,9 +388,18 @@ export default function CoordinateurDashboard() {
 	    const updateData: any = {};
 	    updateData[field] = value === '' ? null : value;
 	
-	    console.log(`Mise à jour ${field} pour élève ${eleveId}:`, value);
+	    console.log(`📝 Mise à jour ${field} pour élève ${eleveId}:`, value);
 	
-	    // Mettre à jour dans Supabase
+	    // 1. Mise à jour IMMÉDIATE de l'état local
+	    const updatedEleves = eleves.map(eleve => 
+	      eleve.id === eleveId ? { ...eleve, [field]: value === '' ? null : value } : eleve
+	    );
+	    
+	    // Créer une NOUVELLE référence
+	    setEleves([...updatedEleves]);
+	    setFilteredEleves([...updatedEleves]);
+	
+	    // 2. Mettre à jour dans Supabase
 	    const { error } = await supabase
 	      .from('eleves')
 	      .update(updateData)
@@ -390,13 +407,21 @@ export default function CoordinateurDashboard() {
 	
 	    if (error) throw error;
 	
-	    console.log('✅ Mise à jour réussie, rechargement des données...');
-	    
-	    // TOUJOURS recharger les données après une mise à jour
-	    await loadData();
-	    
-	    // TOUJOURS rafraîchir le calendrier
-	    setCalendarRefreshTrigger(prev => prev + 1);
+	    console.log('✅ Mise à jour réussie');
+	
+	    // 3. Vérifier si c'est un champ qui affecte le calendrier
+	    const isDefenseField = field.includes('date_defense') || 
+	                          field.includes('heure_defense') || 
+	                          field.includes('localisation_defense') ||
+	                          field.includes('guide_id') ||
+	                          field.includes('lecteur_interne_id') ||
+	                          field.includes('lecteur_externe_id') ||
+	                          field.includes('mediateur_id');
+	
+	    if (isDefenseField) {
+	      console.log('🔄 Champ de défense modifié -> rafraîchissement calendrier');
+	      setCalendarRefreshTrigger(prev => prev + 1);
+	    }
 	    
 	    setEditingCell(null);
 	    
@@ -427,37 +452,42 @@ export default function CoordinateurDashboard() {
     handleMassImport();
   };
   
-  const handleSelectUpdate = async (eleveId: string, field: string, value: string) => {
-    const isEditing = activeTab === 'convocations' ? editingModeConvocations : editingModeDefenses;
-    if (!isEditing) return;
-    
-    try {
-      const updateData: any = {};
-      updateData[field] = value === '' ? null : value;
-
-      const { error } = await supabase
-        .from('eleves')
-        .update(updateData)
-        .eq('id', eleveId);
-
-      if (error) throw error;
-
-      setEleves(prev => prev.map(eleve => 
-        eleve.id === eleveId ? { ...eleve, [field]: value === '' ? null : value } : eleve
-      ));
-      
-      setFilteredEleves(prev => prev.map(eleve => 
-        eleve.id === eleveId ? { ...eleve, [field]: value === '' ? null : value } : eleve
-      ));
-
-	  if (field.includes('lecteur') || field.includes('mediateur') || field.includes('guide')) {
-        prepareCalendarData();
-      }
-    } catch (err) {
-      console.error('Erreur mise à jour select:', err);
-      loadData();
-    }
-  };
+	const handleSelectUpdate = async (eleveId: string, field: string, value: string) => {
+	  const isEditing = activeTab === 'convocations' ? editingModeConvocations : editingModeDefenses;
+	  if (!isEditing) return;
+	  
+	  try {
+	    const updateData: any = {};
+	    updateData[field] = value === '' ? null : value;
+	
+	    // 1. Mise à jour IMMÉDIATE de l'état local
+	    const updatedEleves = eleves.map(eleve => 
+	      eleve.id === eleveId ? { ...eleve, [field]: value === '' ? null : value } : eleve
+	    );
+	    
+	    // Créer une NOUVELLE référence
+	    setEleves([...updatedEleves]);
+	    setFilteredEleves([...updatedEleves]);
+	
+	    // 2. Mettre à jour dans Supabase
+	    const { error } = await supabase
+	      .from('eleves')
+	      .update(updateData)
+	      .eq('id', eleveId);
+	
+	    if (error) throw error;
+	
+	    console.log(`✅ Mise à jour ${field} réussie`);
+	
+	    // 3. TOUJOURS rafraîchir le calendrier pour ces champs
+	    console.log(`🔄 Champ ${field} modifié -> rafraîchissement calendrier`);
+	    setCalendarRefreshTrigger(prev => prev + 1);
+	    
+	  } catch (err) {
+	    console.error('Erreur mise à jour select:', err);
+	    loadData();
+	  }
+	};
 
   const handleAddCategory = () => {
     if (newCategory.trim() && !categories.includes(newCategory.trim())) {
@@ -2085,6 +2115,7 @@ export default function CoordinateurDashboard() {
             
             {/* TABLEAUX PAR JOUR - ✅ CORRECTIONS #2 et #3 appliquées */}
             <CalendarDisplay
+							key={`calendar-${calendarRefreshTrigger}`} // ← AJOUTEZ CETTE LIGNE
 				      eleves={eleves}
 				      selectedCategory={selectedCategory}
 				      selectedDates={selectedDates}
@@ -2546,6 +2577,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
