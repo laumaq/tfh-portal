@@ -202,6 +202,7 @@ export default function CoordinateurDashboard() {
   
   const loadData = async () => {
     try {
+			console.log('=== CHARGEMENT DES DONNÉES ===');
       // Charger les guides triés par nom
       const { data: guidesData, error: guidesError } = await supabase
         .from('guides')
@@ -245,18 +246,32 @@ export default function CoordinateurDashboard() {
 
       // Charger les élèves avec toutes les données
       const { data: elevesData, error: elevesError } = await supabase
-        .from('eleves')
-        .select(`
-          *,
-          guide:guides!guide_id (nom, prenom),
-          lecteur_interne:guides!lecteur_interne_id (nom, prenom),
-          lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
-          mediateur:mediateurs!mediateur_id (nom, prenom)
-        `)
-        .order('classe', { ascending: true })
-        .order('nom', { ascending: true });
-
-      if (elevesError) throw elevesError;
+	      .from('eleves')
+	      .select(`
+	        *,
+	        guide:guides!guide_id (nom, prenom),
+	        lecteur_interne:guides!lecteur_interne_id (nom, prenom),
+	        lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
+	        mediateur:mediateurs!mediateur_id (nom, prenom)
+	      `)
+	      .order('classe', { ascending: true })
+	      .order('nom', { ascending: true });
+	
+	    if (elevesError) throw elevesError;
+	
+	    console.log(`Données brutes reçues: ${elevesData?.length || 0} élèves`);
+	    
+	    // Vérifier les données d'un élève spécifique
+	    if (elevesData && elevesData.length > 0) {
+	      const testEleve = elevesData[0];
+	      console.log('Test élève #1:', {
+	        id: testEleve.id,
+	        nom: testEleve.nom,
+	        date_defense: testEleve.date_defense,
+	        heure_defense: testEleve.heure_defense,
+	        localisation_defense: testEleve.localisation_defense
+	      });
+	    }
 
       const elevesFormatted = (elevesData || []).map(eleve => ({
         ...eleve,
@@ -363,6 +378,8 @@ export default function CoordinateurDashboard() {
 	    const updateData: any = {};
 	    updateData[field] = value === '' ? null : value;
 	
+	    console.log(`Mise à jour ${field} pour élève ${eleveId}:`, value);
+	
 	    // Mettre à jour dans Supabase
 	    const { error } = await supabase
 	      .from('eleves')
@@ -371,16 +388,13 @@ export default function CoordinateurDashboard() {
 	
 	    if (error) throw error;
 	
-	    console.log(`Mise à jour réussie: ${field} = ${value}`);
+	    console.log('Mise à jour Supabase réussie');
 	
-	    // Recharger TOUTES les données depuis la base
-	    // C'est plus sûr que de tenter des mises à jour partielles
+	    // FORCER le rechargement des données
 	    await loadData();
 	    
-	    // Forcer le rafraîchissement du calendrier
-	    if (activeTab === 'defenses') {
-	      setCalendarRefreshTrigger(prev => prev + 1);
-	    }
+	    // Forcer un rafraîchissement du calendrier
+	    setCalendarRefreshTrigger(prev => prev + 1);
 	    
 	    setEditingCell(null);
 	    
@@ -1075,6 +1089,7 @@ export default function CoordinateurDashboard() {
 
 	const prepareCalendarData = useCallback(() => {
 	  console.log('=== PRÉPARATION CALENDRIER (version FORCÉE) ===');
+	  console.log('Nombre total d\'élèves:', eleves.length);
 	  
 	  // Filtrer les élèves avec une date et heure de défense
 	  const defensesWithSchedule = eleves.filter(e => 
@@ -1082,6 +1097,18 @@ export default function CoordinateurDashboard() {
 	  );
 	  
 	  console.log(`Élèves avec défense programmée: ${defensesWithSchedule.length}`);
+	  
+	  // Afficher les 5 premières pour vérifier
+	  if (defensesWithSchedule.length > 0) {
+	    console.log('Exemple de défenses (5 premières):', 
+	      defensesWithSchedule.slice(0, 5).map(e => ({
+	        nom: e.nom,
+	        date: e.date_defense,
+	        heure: e.heure_defense,
+	        local: e.localisation_defense
+	      }))
+	    );
+	  }
 	  
 	  // Transformer en DefenseEvent
 	  const defenseEvents: DefenseEvent[] = defensesWithSchedule.map(eleve => {
@@ -1806,7 +1833,7 @@ export default function CoordinateurDashboard() {
 									    console.log('Élèves dans state:', eleves.length);
 									    console.log('Élèves avec date_defense:', eleves.filter(e => e.date_defense).length);
 									    console.log('Premier élève:', eleves[0]?.nom, eleves[0]?.date_defense, eleves[0]?.heure_defense);
-									    console.log('Dernière modification:', eleves[0]?.updated_at);
+									    console.log('Premier élève complet:', eleves[0]);
 									  }}
 									  className="px-4 py-2 bg-purple-600 text-white rounded"
 									>
@@ -2663,6 +2690,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
