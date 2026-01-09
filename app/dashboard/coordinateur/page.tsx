@@ -374,42 +374,76 @@ export default function CoordinateurDashboard() {
 	
 	    if (error) throw error;
 	
-	    // Créer une copie mise à jour des élèves
-	    // Au lieu de .map(), créer un nouvel array avec spread operator
-		const updatedEleves = [...eleves];
-		const index = updatedEleves.findIndex(e => e.id === eleveId);
-		if (index !== -1) {
-			updatedEleves[index] = {
-				...updatedEleves[index],
-				[field]: value === '' ? null : value
-			};
-		}
+	    // Mettre à jour l'état local IMMÉDIATEMENT
+	    const updatedEleves = eleves.map(eleve => 
+	      eleve.id === eleveId 
+	        ? { ...eleve, [field]: value === '' ? null : value }
+	        : eleve
+	    );
 	    
-	    // Mettre à jour les états
 	    setEleves(updatedEleves);
 	    setFilteredEleves(updatedEleves);
 	    setEditingCell(null);
 	
-	    // DEBUG: Vérifier que la donnée est bien mise à jour
 	    console.log(`Mise à jour ${field} pour élève ${eleveId}:`, value);
-	    console.log('Nombre d\'élèves après mise à jour:', updatedEleves.length);
 	
-	    // Forcer le recalcul du calendrier si c'est une donnée de défense
-	    const isDefenseField = field.includes('date_defense') || field.includes('heure_defense') || field.includes('localisation_defense');
+	    // ⚡ SOLUTION CRITIQUE : Forcer le recalcul du calendrier
+	    // Vérifier si le champ modifié affecte le calendrier
+	    const isDefenseField = field.includes('date_defense') || 
+	                          field.includes('heure_defense') || 
+	                          field.includes('localisation_defense') ||
+	                          field.includes('guide_id') ||
+	                          field.includes('lecteur_interne_id') ||
+	                          field.includes('lecteur_externe_id') ||
+	                          field.includes('mediateur_id');
+	    
 	    if (isDefenseField) {
-	      console.log('Champ de défense modifié, recalcul calendrier...');
-	      // Utiliser les données fraîchement mises à jour
-	      const defensesWithSchedule = updatedEleves.filter(e => 
-	        e.date_defense && e.heure_defense
-	      );
-	      console.log(`Élèves avec défense après update: ${defensesWithSchedule.length}`);
+	      console.log('Champ de défense modifié, recalcul du calendrier...');
 	      
-	      // Appeler prepareCalendarData directement
-	      prepareCalendarData();
+	      // Recharger les données depuis la base pour être sûr d'avoir les dernières valeurs
+	      const { data: updatedEleveData, error: fetchError } = await supabase
+	        .from('eleves')
+	        .select(`
+	          *,
+	          guide:guides!guide_id (nom, prenom),
+	          lecteur_interne:guides!lecteur_interne_id (nom, prenom),
+	          lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
+	          mediateur:mediateurs!mediateur_id (nom, prenom)
+	        `)
+	        .eq('id', eleveId)
+	        .single();
+	
+	      if (!fetchError && updatedEleveData) {
+	        // Mettre à jour avec les données fraîches
+	        const refreshedEleves = eleves.map(e => 
+	          e.id === eleveId 
+	            ? {
+	                ...updatedEleveData,
+	                guide_nom: updatedEleveData.guide?.nom || '-',
+	                guide_prenom: updatedEleveData.guide?.prenom || '-',
+	                lecteur_interne_nom: updatedEleveData.lecteur_interne?.nom || '-',
+	                lecteur_interne_prenom: updatedEleveData.lecteur_interne?.prenom || '-',
+	                lecteur_externe_nom: updatedEleveData.lecteur_externe?.nom || '-',
+	                lecteur_externe_prenom: updatedEleveData.lecteur_externe?.prenom || '-',
+	                mediateur_nom: updatedEleveData.mediateur?.nom || '-',
+	                mediateur_prenom: updatedEleveData.mediateur?.prenom || '-'
+	              }
+	            : e
+	        );
+	        
+	        setEleves(refreshedEleves);
+	        setFilteredEleves(refreshedEleves);
+	      }
+	      
+	      // Appeler prepareCalendarData avec un léger délai pour être sûr
+	      setTimeout(() => {
+	        prepareCalendarData();
+	      }, 100);
 	    }
 	  } catch (err) {
 	    console.error('Erreur mise à jour:', err);
-	    loadData(); // Recharger toutes les données
+	    // Recharger toutes les données en cas d'erreur
+	    loadData();
 	  }
 	};
   
@@ -2649,6 +2683,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
