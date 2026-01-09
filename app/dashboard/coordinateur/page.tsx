@@ -391,14 +391,22 @@ export default function CoordinateurDashboard() {
 	
 	    if (error) throw error;
 	
-	    console.log('Mise à jour Supabase réussie');
-
-		await loadData();
-  
-	  // TOUJOURS rafraîchir le calendrier
-	  setCalendarResetKey(prev => prev + 1);
-	  
-	  setEditingCell(null);
+	    console.log('✅ Mise à jour réussie, rechargement des données...');
+	    
+	    // TOUJOURS recharger les données après une mise à jour
+	    await loadData();
+	    
+	    // TOUJOURS rafraîchir le calendrier
+	    setCalendarResetKey(prev => prev + 1);
+	    
+	    setEditingCell(null);
+	    
+	  } catch (err) {
+	    console.error('❌ Erreur mise à jour:', err);
+	    alert('Erreur lors de la mise à jour: ' + (err as Error).message);
+	    // Recharger les données pour récupérer l'état correct
+	    loadData();
+	  }
 	};
 
   
@@ -2542,6 +2550,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
