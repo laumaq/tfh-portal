@@ -144,6 +144,8 @@ export default function CoordinateurDashboard() {
   });
   const router = useRouter();
 
+	const [calendarResetKey, setCalendarResetKey] = useState(0);
+
   // ⚙️ PARAMÈTRE CENTRAL D'ÉCHELLE DE TEMPS
   // Changez cette valeur pour ajuster la taille verticale de tout le calendrier
   // Valeurs recommandées : 120-200 pixels par heure
@@ -389,9 +391,13 @@ export default function CoordinateurDashboard() {
 	    if (error) throw error;
 	
 	    console.log('Mise à jour Supabase réussie');
-	
-	    // FORCER le rechargement des données
-	    await loadData();
+
+			if (isDefenseField) {
+		    console.log('Champ de défense modifié -> réinitialisation calendrier');
+		    // Forcer une réinitialisation complète
+		    setCalendarResetKey(prev => prev + 1);
+		    await loadData();
+		  }
 	    
 	    // Forcer un rafraîchissement du calendrier
 	    setCalendarRefreshTrigger(prev => prev + 1);
@@ -1811,52 +1817,47 @@ export default function CoordinateurDashboard() {
               </div>
             </div>
           </div>
-        ) : activeTab === 'calendrier' ? (
-          /* Onglet Calendrier des Défenses */
-				<div key={`calendrier-${calendarRefreshTrigger}`} className="space-y-6">
-		          <div className="space-y-6">
-								<div className="bg-white rounded-lg shadow p-6">
-								  <div className="flex justify-between items-center mb-4">
-								    <h2 className="text-xl font-semibold text-gray-800">Calendrier des Défenses</h2>
-								    <div className="flex gap-2">
-								      <button
-								        onClick={refreshCalendar}
-								        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center gap-2"
-								      >
-								        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-								        </svg>
-								        Rafraîchir
-								      </button>
-											<button
-											  onClick={() => {
-											    console.log('=== TEST CALENDRIER ===');
-											    console.log('Élèves dans state:', eleves.length);
-											    console.log('Élèves avec date_defense:', eleves.filter(e => e.date_defense).length);
-											    console.log('Premier élève:', eleves[0]?.nom, eleves[0]?.date_defense, eleves[0]?.heure_defense);
-											    console.log('Premier élève complet:', eleves[0]);
-											  }}
-											  className="px-4 py-2 bg-purple-600 text-white rounded"
-											>
-											  Test Données
-											</button>
-								      <button
-								        onClick={() => {
-								          console.log('État actuel:');
-								          console.log('Élèves:', eleves.length);
-								          console.log('DayDefenses:', dayDefenses.length);
-								          console.log('Filtres - Dates:', selectedDates);
-								          console.log('Filtres - Locaux:', selectedLocations);
-								          console.log('Filtres - Catégorie:', selectedCategory);
-								        }}
-								        className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm"
-								      >
-								        Debug
-								      </button>
-								    </div>
-								  </div>
-		            </div>
-		          </div>
+        ) : {activeTab === 'calendrier' ? (
+  <div className="space-y-6">
+    {/* En-tête avec boutons */}
+    <div className="bg-white rounded-lg shadow p-6">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold text-gray-800">Calendrier des Défenses</h2>
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              setCalendarResetKey(prev => prev + 1);
+              loadData();
+            }}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Rafraîchir
+          </button>
+          
+          <button
+            onClick={() => {
+              console.log('=== DEBUG CALENDRIER ===');
+              console.log('Calendar reset key:', calendarResetKey);
+              console.log('Élèves reçus:', eleves.length);
+              console.log('Élèves modifiés récemment:');
+              eleves.slice(0, 3).forEach(e => {
+                console.log(`${e.prenom} ${e.nom}:`, {
+                  date: e.date_defense,
+                  heure: e.heure_defense,
+                  local: e.localisation_defense
+                });
+              });
+            }}
+            className="px-4 py-2 bg-purple-600 text-white rounded"
+          >
+            Debug
+          </button>
+        </div>
+      </div>
+    </div>
             {/* Section des conflits */}
             {(conflicts.guides.length > 0 || conflicts.lecteursInternes.length > 0 || 
               conflicts.lecteursExternes.length > 0 || conflicts.mediateurs.length > 0) && (
@@ -2085,157 +2086,14 @@ export default function CoordinateurDashboard() {
             </div>
             
             {/* TABLEAUX PAR JOUR - ✅ CORRECTIONS #2 et #3 appliquées */}
-            <div className="space-y-8">
-              {dayDefenses.length === 0 ? (
-                <div className="bg-white rounded-lg shadow p-8 text-center">
-                  <p className="text-gray-500">
-                    {eleves.filter(e => e.date_defense && e.heure_defense).length === 0
-                      ? 'Aucune défense programmée'
-                      : 'Aucune défense ne correspond aux filtres sélectionnés'}
-                  </p>
-                </div>
-              ) : (
-                dayDefenses.map(day => {
-                  // ✅ CORRECTION #2 : Utilisation de PIXELS_PER_HOUR
-                  const totalHours = 18 - 8;
-                  const totalHeight = totalHours * PIXELS_PER_HOUR;
-                  
-                  return (
-                    <div key={day.date} className="bg-white rounded-lg shadow overflow-hidden">
-                      <div className="px-6 py-4 bg-gray-50 border-b">
-                        <h3 className="text-lg font-semibold text-gray-800">
-                          {day.displayDate}
-                        </h3>
-                        <p className="text-sm text-gray-600">
-                          {day.defenses.length} {pluralize(day.defenses.length, 'défense', 'défenses')} •  
-                          {day.locations.length} {pluralize(day.locations.length, 'local', 'locaux')}
-                        </p>
-                      </div>
-                      
-                      <div className="overflow-x-auto">
-                        <div className="min-w-full">
-                          <div className="flex border-t border-gray-200">
-                            <div className="w-24 bg-gray-50"></div>
-                            {day.locations.map(location => (
-                              <div
-                                key={`header-${location}`}
-                                className="flex-1 min-w-[200px] px-4 py-3 text-sm font-semibold text-gray-700 border-r border-b bg-gray-100"
-                              >
-                                {location}
-                              </div>
-                            ))}
-                          </div>
-                          
-                          <div className="flex border-b border-gray-200">
-                            {/* COLONNE DES HEURES - ✅ CORRECTION #2 */}
-                            <div className="w-24 bg-gray-50 border-r border-gray-200">
-                              {Array.from({ length: totalHours }).map((_, i) => {
-                                const hour = 8 + i;
-                                return (
-                                  <div 
-                                    key={`hour-${hour}`} 
-                                    className="border-b border-gray-200"
-                                    style={{ height: `${PIXELS_PER_HOUR}px` }}
-                                  >
-                                    <div className="h-full flex items-center justify-center">
-                                      <div className="text-sm font-medium text-gray-700">
-                                        {hour}h00
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                            
-                            {/* CONTENEUR DES LOCAUX - ✅ CORRECTIONS #2 et #3 */}
-                            <div className="flex-1 relative" style={{ height: `${totalHeight}px` }}>
-                              {/* Lignes horizontales - ✅ CORRECTION #2 */}
-                              {Array.from({ length: totalHours + 1 }).map((_, i) => (
-                                <div
-                                  key={`line-${i}`}
-                                  className="absolute left-0 right-0 border-t border-gray-100"
-                                  style={{ top: `${i * PIXELS_PER_HOUR}px` }}
-                                />
-                              ))}
-                              
-                              <div className="absolute inset-0 flex">
-                                {day.locations.map((location, index) => (
-                                  <div
-                                    key={`col-${location}`}
-                                    className="flex-1 border-r relative"
-                                    style={{ minWidth: '200px' }}
-                                  >
-                                    {day.defenses
-                                      .filter(defense => defense.location === location)
-                                      .map(defense => {
-                                        const [startHours, startMinutes] = defense.startTime.split(':').map(Number);
-                                        
-                                        // ✅ CORRECTION #2 : Position avec PIXELS_PER_HOUR
-                                        const hoursFrom8 = startHours - 8;
-                                        const minutesFraction = startMinutes / 60;
-                                        const top = (hoursFrom8 + minutesFraction) * PIXELS_PER_HOUR;
-                                        
-                                        // ✅ CORRECTION #3 : Hauteur fixe de 50 minutes
-                                        const DEFENSE_DURATION_MINUTES = 50;
-                                        const height = (DEFENSE_DURATION_MINUTES / 60) * PIXELS_PER_HOUR;
-                                        
-                                        return (
-                                          <div
-                                            key={defense.id}
-                                            className="absolute left-1 right-1 rounded p-2 overflow-hidden border shadow-sm hover:shadow-md transition-shadow"
-                                            style={{
-                                              top: `${top}px`,
-                                              height: `${height}px`,
-                                              backgroundColor: getCategoryColor(defense.categorie).bg,
-                                              borderColor: getCategoryColor(defense.categorie).border,
-                                              color: getCategoryColor(defense.categorie).text,
-                                              zIndex: 10,
-                                              fontSize: '13px'
-                                            }}
-                                          >
-                                            <div className="font-bold mb-1">
-                                              {defense.startTime} - {defense.endTime}
-                                            </div>
-                                            <div className="space-y-0.5">
-                                              <div className="font-semibold">
-                                                {defense.elevePrenom} {defense.eleveNom}
-                                              </div>
-                                              {defense.guideNom !== '-' && (
-                                                <div>
-                                                  Guide: {defense.guidePrenom} {defense.guideNom}
-                                                </div>
-                                              )}
-                                              {defense.lecteurInterneNom !== '-' && (
-                                                <div>
-                                                  Lecteur interne: {defense.lecteurInternePrenom} {defense.lecteurInterneNom}
-                                                </div>
-                                              )}
-                                              {defense.lecteurExterneNom !== '-' && (
-                                                <div>
-                                                  Lecteur externe: {defense.lecteurExternePrenom} {defense.lecteurExterneNom}
-                                                </div>
-                                              )}
-                                              {defense.mediateurNom !== '-' && (
-                                                <div>
-                                                  Médiateur: {defense.mediateurPrenom} {defense.mediateurNom}
-                                                </div>
-                                              )}
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
+            <CalendarDisplay
+				      key={`calendar-${calendarResetKey}`}
+				      eleves={eleves}
+				      selectedCategory={selectedCategory}
+				      selectedDates={selectedDates}
+				      selectedLocations={selectedLocations}
+				      refreshKey={calendarResetKey}
+				    />
           </div>
         ) : (
           /* Onglet Gestion des Utilisateurs */
@@ -2692,6 +2550,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
