@@ -1839,7 +1839,6 @@ export default function CoordinateurDashboard() {
           <button
             onClick={() => {
               console.log('=== DEBUG CALENDRIER ===');
-              console.log('Calendar reset key:', calendarResetKey);
               console.log('Élèves reçus:', eleves.length);
               console.log('Élèves modifiés récemment:');
               eleves.slice(0, 3).forEach(e => {
@@ -2086,12 +2085,10 @@ export default function CoordinateurDashboard() {
             
             {/* TABLEAUX PAR JOUR - ✅ CORRECTIONS #2 et #3 appliquées */}
             <CalendarDisplay
-				      key={`calendar-${calendarResetKey}`}
 				      eleves={eleves}
 				      selectedCategory={selectedCategory}
 				      selectedDates={selectedDates}
 				      selectedLocations={selectedLocations}
-				      refreshKey={calendarResetKey}
 				    />
           </div>
         ) : (
@@ -2549,6 +2546,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
