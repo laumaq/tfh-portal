@@ -194,14 +194,6 @@ export default function CoordinateurDashboard() {
       window.removeEventListener('orientationchange', checkAndForceLandscape);
     };
   }, [router]);
-
-	// Effet pour préparer les données quand les filtres changent ou quand les élèves sont chargés
-	useEffect(() => {
-	  console.log('useEffect déclenché - eleves:', eleves.length);
-	  if (eleves.length > 0) {
-	    prepareCalendarData();
-	  }
-	}, [eleves, selectedDates, selectedLocations, selectedCategory]);
 	
   const pluralize = (count: number, singular: string, plural: string) => {
     return count === 1 ? singular : plural;
@@ -1196,6 +1188,13 @@ export default function CoordinateurDashboard() {
     
     setDayDefenses(daysData);
   };
+
+  useEffect(() => {
+  console.log('useEffect déclenché - eleves:', eleves.length);
+  if (eleves.length > 0) {
+    prepareCalendarData();
+  }
+}, [eleves, selectedDates, selectedLocations, selectedCategory]);
   
   // Effet pour préparer les données quand les filtres changent ou quand les élèves sont chargés
   useEffect(() => {
@@ -2657,6 +2656,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
