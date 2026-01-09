@@ -390,11 +390,11 @@ export default function CoordinateurDashboard() {
   
       setEditingCell(null);
 
-	  // AJOUTER ICI : Recalculer le calendrier si on modifie une donnée de défense
 	  if (field.includes('date_defense') || field.includes('heure_defense') || field.includes('localisation_defense')) {
 	    prepareCalendarData();
 			
-    } catch (err) {
+      }
+	} catch (err) {
       console.error('Erreur mise à jour:', err);
       loadData();
     }
@@ -2629,4 +2629,5 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
