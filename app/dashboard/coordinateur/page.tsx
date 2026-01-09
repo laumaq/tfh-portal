@@ -393,6 +393,15 @@ export default function CoordinateurDashboard() {
 	
 	    console.log('Mise à jour Supabase réussie');
 	
+	    // Mise à jour IMMÉDIATE de l'état local
+	    setEleves(prev => prev.map(eleve => 
+	      eleve.id === eleveId ? { ...eleve, [field]: value === '' ? null : value } : eleve
+	    ));
+	    
+	    setFilteredEleves(prev => prev.map(eleve => 
+	      eleve.id === eleveId ? { ...eleve, [field]: value === '' ? null : value } : eleve
+	    ));
+	
 	    // Vérifier si c'est un champ qui affecte le calendrier
 	    const isDefenseField = field.includes('date_defense') || 
 	                          field.includes('heure_defense') || 
@@ -406,11 +415,9 @@ export default function CoordinateurDashboard() {
 	      console.log('Champ de défense modifié -> réinitialisation calendrier');
 	      // Forcer une réinitialisation complète
 	      setCalendarResetKey(prev => prev + 1);
-	      await loadData();
+	      // Recharger aussi les données pour être sûr
+	      setTimeout(() => loadData(), 100);
 	    }
-	    
-	    // Forcer un rafraîchissement du calendrier
-	    setCalendarRefreshTrigger(prev => prev + 1);
 	    
 	    setEditingCell(null);
 	    
@@ -2560,6 +2567,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
