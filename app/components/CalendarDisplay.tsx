@@ -34,7 +34,7 @@ interface CalendarDisplayProps {
   selectedCategory: string;
   selectedDates: string[];
   selectedLocations: string[];
-  refreshKey: number; // Nouvelle prop pour forcer le refresh
+  refreshKey: number;
 }
 
 export default function CalendarDisplay({ 
@@ -51,6 +51,7 @@ export default function CalendarDisplay({
     lecteursExternes: [],
     mediateurs: []
   });
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const PIXELS_PER_HOUR = 200;
 
@@ -69,10 +70,27 @@ export default function CalendarDisplay({
   };
 
   const getCategoryColor = (categorie: string) => {
-    // ... copiez votre fonction getCategoryColor existante ...
     const colors = [
       { bg: '#DBEAFE', border: '#93C5FD', text: '#1E40AF' },
-      // ... toutes vos couleurs ...
+      { bg: '#FEF3C7', border: '#FCD34D', text: '#92400E' },
+      { bg: '#D1FAE5', border: '#34D399', text: '#065F46' },
+      { bg: '#FCE7F3', border: '#F9A8D4', text: '#9D174D' },
+      { bg: '#E0E7FF', border: '#A5B4FC', text: '#3730A3' },
+      { bg: '#FEF9C3', border: '#FDE047', text: '#854D0E' },
+      { bg: '#E0F2FE', border: '#7DD3FC', text: '#0C4A6E' },
+      { bg: '#F3E8FF', border: '#D8B4FE', text: '#6B21A8' },
+      { bg: '#FEE2E2', border: '#FCA5A5', text: '#991B1B' },
+      { bg: '#DCFCE7', border: '#86EFAC', text: '#166534' },
+      { bg: '#FEF9C3', border: '#FDE047', text: '#854D0E' },
+      { bg: '#EDE9FE', border: '#C4B5FD', text: '#5B21B6' },
+      { bg: '#FCE7F3', border: '#F9A8D4', text: '#9D174D' },
+      { bg: '#CCFBF1', border: '#5EEAD4', text: '#0F766E' },
+      { bg: '#FEFCE8', border: '#FEF08A', text: '#854D0E' },
+      { bg: '#F0F9FF', border: '#BAE6FD', text: '#0369A1' },
+      { bg: '#FEF2F2', border: '#FECACA', text: '#DC2626' },
+      { bg: '#ECFCCB', border: '#BEF264', text: '#3F6212' },
+      { bg: '#FAF5FF', border: '#E9D5FF', text: '#7C3AED' },
+      { bg: '#FFFBEB', border: '#FDE68A', text: '#B45309' },
     ];
     
     if (!categorie || categorie === 'Non catégorisé') {
@@ -84,7 +102,7 @@ export default function CalendarDisplay({
     
     return colors[index];
   };
-  
+
   const detectConflicts = (defenses: DefenseEvent[]) => {
     const guideConflicts = new Map<string, DefenseEvent[]>();
     const lecteurInterneConflicts = new Map<string, DefenseEvent[]>();
@@ -192,8 +210,9 @@ export default function CalendarDisplay({
       }))
     };
   };
-  
+
   const prepareCalendarData = useCallback(() => {
+    setIsProcessing(true);
     console.log('=== PRÉPARATION CALENDRIER (COMPOSANT SÉPARÉ) ===');
     console.log('Refresh key:', refreshKey);
     console.log('Nombre d\'élèves reçus:', eleves.length);
@@ -233,8 +252,6 @@ export default function CalendarDisplay({
       };
     });
     
-    // ... reste de votre logique de filtrage et transformation ...
-    
     let filteredDefenses = defenseEvents;
     
     if (selectedCategory !== 'toutes') {
@@ -250,6 +267,10 @@ export default function CalendarDisplay({
     }
     
     console.log('Défenses après filtrage:', filteredDefenses.length);
+    
+    // Détecter les conflits
+    const detectedConflicts = detectConflicts(filteredDefenses);
+    setConflicts(detectedConflicts);
     
     // Grouper par date
     const dates = Array.from(new Set(filteredDefenses.map(d => d.date))).sort();
@@ -273,6 +294,7 @@ export default function CalendarDisplay({
     
     console.log('Jours avec défenses:', daysData.length);
     setDayDefenses(daysData);
+    setIsProcessing(false);
     
   }, [eleves, selectedCategory, selectedDates, selectedLocations, refreshKey]);
 
@@ -285,7 +307,14 @@ export default function CalendarDisplay({
     return count === 1 ? singular : plural;
   };
 
-  // Retournez votre JSX de calendrier existant
+  if (isProcessing) {
+    return (
+      <div className="flex justify-center items-center p-8">
+        <div className="text-gray-500">Mise à jour du calendrier...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       {dayDefenses.length === 0 ? (
@@ -328,7 +357,6 @@ export default function CalendarDisplay({
                   </div>
                   
                   <div className="flex border-b border-gray-200">
-                    {/* COLONNE DES HEURES */}
                     <div className="w-24 bg-gray-50 border-r border-gray-200">
                       {Array.from({ length: totalHours }).map((_, i) => {
                         const hour = 8 + i;
@@ -348,9 +376,7 @@ export default function CalendarDisplay({
                       })}
                     </div>
                     
-                    {/* CONTENEUR DES LOCAUX */}
                     <div className="flex-1 relative" style={{ height: `${totalHeight}px` }}>
-                      {/* Lignes horizontales */}
                       {Array.from({ length: totalHours + 1 }).map((_, i) => (
                         <div
                           key={`line-${i}`}
@@ -371,12 +397,10 @@ export default function CalendarDisplay({
                               .map(defense => {
                                 const [startHours, startMinutes] = defense.startTime.split(':').map(Number);
                                 
-                                // Position avec PIXELS_PER_HOUR
                                 const hoursFrom8 = startHours - 8;
                                 const minutesFraction = startMinutes / 60;
                                 const top = (hoursFrom8 + minutesFraction) * PIXELS_PER_HOUR;
                                 
-                                // Hauteur fixe de 50 minutes
                                 const DEFENSE_DURATION_MINUTES = 50;
                                 const height = (DEFENSE_DURATION_MINUTES / 60) * PIXELS_PER_HOUR;
                                 
