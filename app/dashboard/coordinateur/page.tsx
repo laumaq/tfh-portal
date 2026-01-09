@@ -130,6 +130,7 @@ export default function CoordinateurDashboard() {
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]); // Seront remplis après chargement
   const [selectedCategory, setSelectedCategory] = useState<string>('toutes');
   const [dayDefenses, setDayDefenses] = useState<DayDefenses[]>([]);
+	const [calendarRefreshTrigger, setCalendarRefreshTrigger] = useState(0);
   const [conflicts, setConflicts] = useState<{
     guides: Array<{person: string, conflicts: DefenseEvent[]}>;
     lecteursInternes: Array<{person: string, conflicts: DefenseEvent[]}>;
@@ -325,14 +326,6 @@ export default function CoordinateurDashboard() {
     return null;
   };
 	
-	const refreshCalendar = () => {
-	  console.log('Rafraîchissement manuel du calendrier');
-	  loadData(); // Recharger toutes les données
-	  setTimeout(() => {
-	    prepareCalendarData();
-	  }, 500);
-	};
-
   const handlePresenceUpdate = async (eleveId: string, field: string, currentValue: boolean | null) => {
     if (!editingModeConvocations) return;
     
@@ -436,10 +429,7 @@ export default function CoordinateurDashboard() {
 	        
 	        console.log('Élèves mis à jour, appel de prepareCalendarData...');
 	        
-	        // Forcer le recalcul du calendrier avec un délai
-	        setTimeout(() => {
-	          prepareCalendarData();
-	        }, 100);
+	        setCalendarRefreshTrigger(prev => prev + 1);
 	      } else {
 	        console.error('Erreur récupération données fraîches:', fetchError);
 	        // Fallback : recharger toutes les données
@@ -1150,8 +1140,7 @@ export default function CoordinateurDashboard() {
   
 
 	const prepareCalendarData = useCallback(() => {
-	  console.log('=== PRÉPARATION CALENDRIER (début) ===');
-	  console.log('Nombre total d\'élèves:', eleves.length);
+	  console.log('=== PRÉPARATION CALENDRIER (version FORCÉE) ===');
 	  
 	  // Filtrer les élèves avec une date et heure de défense
 	  const defensesWithSchedule = eleves.filter(e => 
@@ -1160,17 +1149,8 @@ export default function CoordinateurDashboard() {
 	  
 	  console.log(`Élèves avec défense programmée: ${defensesWithSchedule.length}`);
 	  
-	  // DEBUG: Afficher quelques élèves pour vérification
-	  if (defensesWithSchedule.length > 0) {
-	    console.log('Exemples d\'élèves avec défense:');
-	    defensesWithSchedule.slice(0, 3).forEach(e => {
-	      console.log(`- ${e.prenom} ${e.nom}: ${e.date_defense} ${e.heure_defense} (${e.localisation_defense})`);
-	    });
-	  }
-	  
 	  // Transformer en DefenseEvent
 	  const defenseEvents: DefenseEvent[] = defensesWithSchedule.map(eleve => {
-	    // Convertir "HH:MM:SS" en "HH:MM" pour l'affichage
 	    const startTime = eleve.heure_defense!.substring(0, 5);
 	    
 	    return {
@@ -1212,10 +1192,7 @@ export default function CoordinateurDashboard() {
 	  console.log(`Défenses après filtrage: ${filteredDefenses.length}`);
 	  
 	  // Détecter les conflits
-	  const newConflicts = detectConflicts(filteredDefenses);
-	  
-	  // Toujours mettre à jour les conflits
-	  setConflicts(newConflicts);
+	  setConflicts(detectConflicts(filteredDefenses));
 	  
 	  // Grouper par date
 	  const dates = Array.from(new Set(filteredDefenses.map(d => d.date))).sort();
@@ -1239,42 +1216,25 @@ export default function CoordinateurDashboard() {
 	  
 	  console.log(`Jours avec défenses: ${daysData.length}`);
 	  
-	  // **IMPORTANT : Simplifier la comparaison**
-	  // Au lieu de comparer avec JSON.stringify, comparer juste la longueur ou forcer l'update
-	  const shouldUpdate = 
-	    daysData.length !== dayDefenses.length ||
-	    daysData.some((day, index) => {
-	      if (index >= dayDefenses.length) return true;
-	      const existingDay = dayDefenses[index];
-	      return day.date !== existingDay.date || 
-	             day.defenses.length !== existingDay.defenses.length;
-	    });
-	  
-	  if (shouldUpdate) {
-	    console.log('Mise à jour du calendrier avec nouvelles données');
-	    setDayDefenses(daysData);
-	  } else {
-	    console.log('Pas de changement dans les données du calendrier (comparaison simple)');
-	  }
-	}, [eleves, selectedCategory, selectedDates, selectedLocations, dayDefenses]);
+	  // **TOUJOURS mettre à jour** (évite les problèmes de comparaison)
+	  setDayDefenses(daysData);
+	  console.log('Calendrier mis à jour (forcé)');
+	}, [eleves, selectedCategory, selectedDates, selectedLocations]);
+	
+	const refreshCalendar = () => {
+	  console.log('Rafraîchissement manuel du calendrier');
+	  loadData(); // Recharger toutes les données
+	  setTimeout(() => {
+	    prepareCalendarData();
+	  }, 500);
+	};
 
-  // Effet pour préparer les données quand les filtres changent ou quand les élèves sont chargés
 	useEffect(() => {
-	  if (eleves.length > 0 && activeTab === 'calendrier') {
-	    console.log('Effet déclenché - préparation calendrier');
+	  if (eleves.length > 0) {
+	    console.log('Rafraîchissement calendrier déclenché');
 	    prepareCalendarData();
 	  }
-	}, [eleves, selectedDates, selectedLocations, selectedCategory, activeTab, prepareCalendarData]);
-	
-	useEffect(() => {
-	  if (activeTab === 'calendrier') {
-	    console.log('Changement vers onglet calendrier - rafraîchissement');
-	    // Petit délai pour s'assurer que le DOM est prêt
-	    setTimeout(() => {
-	      prepareCalendarData();
-	    }, 100);
-	  }
-	}, [activeTab]);
+	}, [eleves, selectedDates, selectedLocations, selectedCategory, calendarRefreshTrigger, prepareCalendarData]);
 	
   if (loading) {
     return (
@@ -2757,3 +2717,4 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
