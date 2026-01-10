@@ -5,6 +5,9 @@ on:
     - cron: '0 2 * * *'  # Tous les jours à 2h UTC
   workflow_dispatch:      # Permet de lancer manuellement
 
+permissions:
+  contents: write  # ⚠️ DONNE LA PERMISSION D'ÉCRIRE
+
 jobs:
   backup:
     runs-on: ubuntu-latest
@@ -13,6 +16,8 @@ jobs:
       # 1. Récupérer le code
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}  # ⚠️ UTILISE VOTRE TOKEN
       
       # 2. Configurer Node.js
       - name: Setup Node.js
@@ -20,21 +25,16 @@ jobs:
         with:
           node-version: '18'
       
-      # 3. Installer les dépendances DANS scripts/
+      # 3. Installer les dépendances
       - name: Install dependencies
         run: |
-          echo "📦 Installation des dépendances..."
           cd scripts
-          npm install --production
-          echo "✅ Dépendances installées"
-          echo "📄 Liste des modules:"
-          ls -la node_modules/
+          npm install
       
       # 4. Créer le fichier .env.local
       - name: Create env file
         run: |
           cd scripts
-          echo "🔐 Création du fichier .env.local..."
           cat > .env.local << 'EOF'
           SUPABASE_URL=${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -43,97 +43,48 @@ jobs:
           GITHUB_REPO=tfh-portal
           EOF
           echo "✅ .env.local créé"
-          echo "Contenu (variables masquées):"
-          cat .env.local | sed 's/=.*/=***/'  # Masque les valeurs
       
-      # 5. Test simple SANS dépendances externes
-      - name: Test sans dépendances
+      # 5. Exécuter le script de backup
+      - name: Run backup script
+        id: run-script
         run: |
           cd scripts
-          echo "🧪 Test sans dépendances..."
+          echo "🚀 Lancement du backup..."
+          node backup.js
           
-          # Créer un test ultra simple
-          cat > test-ultra-simple.js << 'EOF'
-          const fs = require('fs');
-          const path = require('path');
-          
-          console.log('=== TEST ULTRA SIMPLE ===');
-          
-          // 1. Vérifier si .env.local existe
-          const envPath = path.join(__dirname, '.env.local');
-          console.log('.env.local existe?', fs.existsSync(envPath));
-          
-          if (fs.existsSync(envPath)) {
-            const content = fs.readFileSync(envPath, 'utf8');
-            console.log('Taille du fichier:', content.length, 'caractères');
-            console.log('Contient SUPABASE_URL?', content.includes('SUPABASE_URL'));
-            console.log('Contient GITHUB_TOKEN?', content.includes('GITHUB_TOKEN'));
-          }
-          
-          // 2. Créer un dossier backups
-          const backupDir = path.join(__dirname, '..', 'backups');
-          if (!fs.existsSync(backupDir)) {
-            fs.mkdirSync(backupDir, { recursive: true });
-            console.log('📁 Dossier backups créé');
-          }
-          
-          // 3. Créer un fichier test
-          const testFile = path.join(backupDir, 'test_simple.json');
-          fs.writeFileSync(testFile, JSON.stringify({
-            test: 'ok',
-            timestamp: new Date().toISOString(),
-            message: 'Test réussi sans dépendances'
-          }, null, 2));
-          
-          console.log('✅ Fichier créé:', testFile);
-          console.log('📄 Taille:', fs.statSync(testFile).size, 'bytes');
-          console.log('=== TEST RÉUSSI ===');
-          EOF
-          
-          # Exécuter le test
-          node test-ultra-simple.js
-      
-      # 6. Vérifier les résultats
-      - name: Verify backup folder
-        run: |
-          echo "📁 Vérification du dossier backups..."
-          if [ -d "backups" ]; then
-            echo "✅ Dossier backups existe!"
-            echo "📄 Contenu:"
-            ls -la backups/
-            
-            # Compter les fichiers
-            file_count=$(find backups -name "*.json" | wc -l)
-            echo "📊 Nombre de fichiers .json: $file_count"
-            
-            if [ $file_count -gt 0 ]; then
-              echo "backup_exists=true" >> $GITHUB_OUTPUT
-            else
-              echo "backup_exists=false" >> $GITHUB_OUTPUT
-            fi
+          # Vérifier si un backup a été créé
+          if ls ../backups/backup_*.json 1>/dev/null 2>&1; then
+            echo "✅ Backup créé avec succès!"
+            echo "success=true" >> $GITHUB_OUTPUT
           else
-            echo "❌ Dossier backups n'existe pas"
-            echo "backup_exists=false" >> $GITHUB_OUTPUT
+            echo "❌ Aucun backup créé"
+            echo "success=false" >> $GITHUB_OUTPUT
           fi
-        id: verify-backup
       
-      # 7. Commit et push (seulement si backup réussi)
-      - name: Commit and push backup
-        if: steps.verify-backup.outputs.backup_exists == 'true'
+      # 6. Afficher les résultats
+      - name: Show results
+        if: steps.run-script.outputs.success == 'true'
         run: |
-          echo "🚀 Préparation du commit..."
+          echo "📊 Résultats du backup:"
+          echo "📁 Dossier backups:"
+          ls -la backups/
+          echo ""
+          echo "📄 Dernier backup:"
+          ls -t backups/backup_*.json | head -1
+      
+      # 7. Commit et push AUTOMATIQUE
+      - name: Commit and push
+        if: steps.run-script.outputs.success == 'true'
+        run: |
+          echo "🚀 Préparation du push..."
           git config --global user.name "GitHub Backup Bot"
           git config --global user.email "backup-bot@github.com"
           
-          # Ajouter les backups
           git add backups/
           
-          # Vérifier s'il y a des changements
-          if git diff --staged --quiet; then
-            echo "⚠️ Aucun changement à commiter"
-          else
-            git commit -m "📦 Backup automatique $(date +'%Y-%m-%d %H:%M')"
-            echo "✅ Commit créé"
-            git push
-            echo "✅ Push réussi vers GitHub"
-          fi
+          # Créer le commit
+          git commit -m "📦 Backup automatique $(date +'%Y-%m-%d')" || echo "⚠️ Aucun changement"
+          
+          # Pousser les changements
+          git push
+          echo "✅ Backup poussé sur GitHub!"
