@@ -44,13 +44,17 @@ jobs:
           EOF
           echo "✅ .env.local créé"
       
-      # 5. Exécuter le script de backup
+      # 5. Exécuter le script de backup FIXED
       - name: Run backup script
         id: run-script
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cd scripts
-          echo "🚀 Lancement du backup..."
-          node backup.js
+          echo "🚀 Lancement du backup FIXED..."
+          node backup-fixed.js
           
           # Vérifier si un backup a été créé
           if ls ../backups/backup_*.json 1>/dev/null 2>&1; then
