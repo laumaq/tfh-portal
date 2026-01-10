@@ -1,0 +1,49 @@
+name: Daily Supabase Backup
+
+on:
+  schedule:
+    # Exécute tous les jours à 2h du matin (UTC)
+    - cron: '0 2 * * *'
+  
+  # Permet aussi de déclencher manuellement
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 1. Récupérer le code
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      # 2. Configurer Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      # 3. Installer les dépendances
+      - name: Install dependencies
+        run: |
+          cd scripts
+          npm install
+      
+      # 4. Exécuter le backup
+      - name: Run Supabase Backup
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd scripts
+          node backup.js
+      
+      # 5. Commit et push du backup local
+      - name: Commit and push backup file
+        run: |
+          git config --global user.name "GitHub Backup Bot"
+          git config --global user.email "backup@github.com"
+          git add backups/
+          git commit -m "📦 Backup automatique $(date +'%Y-%m-%d')" || echo "Aucun changement"
+          git push origin HEAD:${{ github.ref }}
