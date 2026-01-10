@@ -1,120 +1,42 @@
-// backup.js - VERSION CORRIGÉE (nom de variable fixé)
-console.log('=== BACKUP TFH PORTAL ===');
+// backup.js - VERSION DEBUG
+console.log('=== DEBUG BACKUP ===');
 
-// 1. Vérifier les modules
-try {
-  require('dotenv');
-  console.log('✅ dotenv OK');
-} catch (e) {
-  console.error('❌ dotenv manquant');
-  process.exit(1);
+// 1. Vérifier où on est
+const fs = require('fs');
+const path = require('path');
+console.log('Répertoire courant:', __dirname);
+console.log('Fichiers dans scripts/:');
+fs.readdirSync(__dirname).forEach(file => {
+  console.log(' -', file);
+});
+
+// 2. Vérifier si .env.local existe AVANT de le charger
+const envPath = path.join(__dirname, '.env.local');
+console.log('\nChemin .env.local:', envPath);
+console.log('.env.local existe?', fs.existsSync(envPath) ? '✅ OUI' : '❌ NON');
+
+if (fs.existsSync(envPath)) {
+  console.log('Contenu .env.local (premières 200 chars):');
+  const content = fs.readFileSync(envPath, 'utf8');
+  console.log(content.substring(0, 200) + '...');
+  console.log('Contient SUPABASE_SERVICE_ROLE_KEY?', content.includes('SUPABASE_SERVICE_ROLE_KEY') ? '✅ OUI' : '❌ NON');
 }
 
-try {
-  require('@supabase/supabase-js');
-  console.log('✅ supabase-js OK');
-} catch (e) {
-  console.error('❌ supabase-js manquant');
-  process.exit(1);
-}
+// 3. Maintenant charger dotenv
+require('dotenv').config({ path: envPath });
 
-// 2. Charger les variables
-require('dotenv').config({ path: '.env.local' });
+// 4. Afficher TOUTES les variables d'environnement chargées
+console.log('\n🔍 Variables d\'environnement chargées:');
+console.log('SUPABASE_URL:', process.env.SUPABASE_URL ? `✅ "${process.env.SUPABASE_URL.substring(0, 30)}..."` : '❌ MANQUANT');
+console.log('SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? `✅ "${process.env.SUPABASE_SERVICE_ROLE_KEY.substring(0, 10)}..."` : '❌ MANQUANT');
+console.log('GITHUB_TOKEN:', process.env.GITHUB_TOKEN ? `✅ "${process.env.GITHUB_TOKEN.substring(0, 10)}..."` : '❌ MANQUANT');
 
-console.log('\n🔍 Vérification des variables:');
-console.log('SUPABASE_URL:', process.env.SUPABASE_URL ? '✅ OK' : '❌ MANQUANT');
-console.log('SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ OK' : '❌ MANQUANT');
-console.log('GITHUB_TOKEN:', process.env.GITHUB_TOKEN ? '✅ OK' : '❌ MANQUANT');
-
-if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  console.error('💥 Variables manquantes!');
-  process.exit(1);
-}
-
-// 3. Créer le client Supabase
-const { createClient } = require('@supabase/supabase-js');
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY // CORRIGÉ ICI
-);
-
-// 4. Fonction principale
-async function createBackup() {
-  try {
-    console.log('\n🚀 Démarrage du backup...');
-    
-    // Tables à sauvegarder
-    const tables = ['eleves', 'guides', 'lecteurs_externes', 'mediateurs', 'coordinateurs'];
-    const backupData = { date: new Date().toISOString() };
-    
-    // Pour chaque table
-    for (const table of tables) {
-      console.log(`📊 ${table}...`);
-      
-      try {
-        const { data, error } = await supabase.from(table).select('*');
-        
-        if (error) {
-          console.log(`  ⚠️ ${table}: ${error.message}`);
-          backupData[table] = [];
-        } else {
-          console.log(`  ✅ ${table}: ${data?.length || 0} lignes`);
-          backupData[table] = data || [];
-        }
-      } catch (err) {
-        console.log(`  ❌ ${table}: ${err.message}`);
-        backupData[table] = [];
-      }
-    }
-    
-    // Créer le dossier backups
-    const fs = require('fs');
-    const path = require('path');
-    
-    const backupDir = path.join(__dirname, '..', 'backups');
-    if (!fs.existsSync(backupDir)) {
-      fs.mkdirSync(backupDir, { recursive: true });
-    }
-    
-    // Sauvegarder le fichier
-    const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    const fileName = `backup_${date}.json`;
-    const filePath = path.join(backupDir, fileName);
-    
-    fs.writeFileSync(filePath, JSON.stringify(backupData, null, 2));
-    
-    const size = (fs.statSync(filePath).size / 1024).toFixed(2);
-    console.log(`\n💾 Backup sauvegardé: ${fileName} (${size} KB)`);
-    
-    // Nettoyer les vieux backups (30 jours)
-    const files = fs.readdirSync(backupDir);
-    const now = Date.now();
-    const thirtyDays = 30 * 24 * 60 * 60 * 1000;
-    
-    let deleted = 0;
-    for (const file of files) {
-      if (file.startsWith('backup_') && file.endsWith('.json')) {
-        const filePath = path.join(backupDir, file);
-        const stats = fs.statSync(filePath);
-        if (now - stats.mtimeMs > thirtyDays) {
-          fs.unlinkSync(filePath);
-          deleted++;
-          console.log(`🗑️ Supprimé: ${file}`);
-        }
-      }
-    }
-    
-    if (deleted > 0) {
-      console.log(`🧹 ${deleted} vieux backups supprimés`);
-    }
-    
-    console.log('🎉 Backup terminé avec succès!');
-    
-  } catch (error) {
-    console.error('💥 ERREUR:', error.message);
-    process.exit(1);
+// 5. Afficher TOUTES les variables pour debug
+console.log('\n📋 Toutes les variables .env:');
+Object.keys(process.env).forEach(key => {
+  if (key.includes('SUPABASE') || key.includes('GITHUB') || key.includes('NODE')) {
+    console.log(`  ${key}: "${process.env[key]?.substring(0, 20)}..."`);
   }
-}
+});
 
-// Démarrer
-createBackup();
+// ... le reste de votre script existant
