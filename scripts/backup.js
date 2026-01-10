@@ -1,4 +1,4 @@
-// backup.js - VERSION CORRIGÉE
+// backup.js - VERSION CORRIGÉE (nom de variable fixé)
 console.log('=== BACKUP TFH PORTAL ===');
 
 // 1. Vérifier les modules
@@ -23,7 +23,7 @@ require('dotenv').config({ path: '.env.local' });
 
 console.log('\n🔍 Vérification des variables:');
 console.log('SUPABASE_URL:', process.env.SUPABASE_URL ? '✅ OK' : '❌ MANQUANT');
-console.log('SUPABASE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ OK' : '❌ MANQUANT');
+console.log('SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ OK' : '❌ MANQUANT');
 console.log('GITHUB_TOKEN:', process.env.GITHUB_TOKEN ? '✅ OK' : '❌ MANQUANT');
 
 if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -35,10 +35,10 @@ if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
 const { createClient } = require('@supabase/supabase-js');
 const supabase = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
+  process.env.SUPABASE_SERVICE_ROLE_KEY // CORRIGÉ ICI
 );
 
-// 4. Fonction principale MODIFIÉE pour être plus simple
+// 4. Fonction principale
 async function createBackup() {
   try {
     console.log('\n🚀 Démarrage du backup...');
