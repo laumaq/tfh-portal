@@ -1,3 +1,28 @@
+async function createBackup() {
+  try {
+    console.log('=== DÉBUT DU BACKUP ===');
+    console.log('1. Vérification des variables d\'environnement...');
+    
+    // Vérifiez les variables
+    console.log('SUPABASE_URL:', process.env.SUPABASE_URL ? '✅ Défini' : '❌ Manquant');
+    console.log('SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ Défini' : '❌ Manquant');
+    console.log('GITHUB_TOKEN:', process.env.GITHUB_TOKEN ? '✅ Défini' : '❌ Manquant');
+    
+    // Test de connexion rapide à Supabase
+    console.log('2. Test de connexion à Supabase...');
+    try {
+      const testResult = await supabase.from('eleves').select('*').limit(1);
+      if (testResult.error) {
+        console.log('❌ Erreur Supabase:', testResult.error.message);
+      } else {
+        console.log(`✅ Connexion OK! ${testResult.data?.length || 0} élève(s) trouvé(s)`);
+      }
+    } catch (supabaseError) {
+      console.log('❌ Exception Supabase:', supabaseError.message);
+    }
+    
+    console.log('3. Début de l\'export des tables...');    
+
 // 11. Pousser sur GitHub (version nouveau token)
 async function pushToGitHub(filePath, fileName) {
   try {
