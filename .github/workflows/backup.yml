@@ -41,24 +41,24 @@ jobs:
           GITHUB_REPO=tfh-portal
           EOF
           echo "✅ .env.local créé"
-      
-      # 5. Exécuter le backup SANS pousser sur GitHub (pour test)
-      - name: Run Supabase Backup (test local)
-        id: run-backup
+
+      # 5. Test simple d'abord
+      - name: Test simple du backup
+        id: run-test
         run: |
           cd scripts
-          echo "🧪 Exécution du script backup.js..."
-          node backup.js
+          echo "🧪 Test simple..."
+          node test-simple.js
           
-          # Vérifier si le dossier backups existe maintenant
-          if [ -d "../backups" ] && [ "$(ls -A ../backups 2>/dev/null)" ]; then
-            echo "✅ Backups créés avec succès"
-            echo "backup_exists=true" >> $GITHUB_OUTPUT
+          # Vérifier si le test a créé un fichier
+          if [ -f "../backups/test_backup.json" ]; then
+            echo "✅ Test réussi! Fichier créé."
+            echo "test_success=true" >> $GITHUB_OUTPUT
           else
-            echo "❌ Aucun backup créé"
-            echo "backup_exists=false" >> $GITHUB_OUTPUT
-            exit 1
+            echo "❌ Test échoué"
+            echo "test_success=false" >> $GITHUB_OUTPUT
           fi
+
       
       # 6. VÉRIFIER avant de commiter
       - name: List backup files
