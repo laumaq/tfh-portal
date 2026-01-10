@@ -68,6 +68,8 @@ export default function GuideDashboard() {
   const [selectedEleves, setSelectedEleves] = useState<string[]>([]);
   const [selectedCategorie, setSelectedCategorie] = useState<string>('toutes');
   const [categories, setCategories] = useState<string[]>([]);
+  const [lecteurInterneEnabled, setLecteurInterneEnabled] = useState(false);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
   const router = useRouter();
 
   // Options de convocation identiques à celles du coordinateur
@@ -95,45 +97,22 @@ export default function GuideDashboard() {
     }
   ];
 
-  
-  const [lecteurInterneEnabled, setLecteurInterneEnabled] = useState(false);
-  const [settingsLoaded, setSettingsLoaded] = useState(false);
-  
-  // Fonction pour charger le paramètre
-  const loadSystemSettings = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('system_settings')
-        .select('setting_value')
-        .eq('setting_key', 'guide_lecteur_interne_enabled')
-        .single();
-      
-      if (!error && data) {
-        setLecteurInterneEnabled(data.setting_value === 'true');
-      }
-    } catch (err) {
-      console.error('Erreur chargement paramètres:', err);
-    } finally {
-      setSettingsLoaded(true);
-    }
-  };
-
   useEffect(() => {
     const userType = localStorage.getItem('userType');
     const userId = localStorage.getItem('userId');
     const name = localStorage.getItem('userName');
-  
+
     if (userType !== 'guide' || !userId) {
       router.push('/');
       return;
     }
-  
+
     setUserName(name || '');
     setUserGuideId(userId);
     loadData(userId);
-    loadSystemSettings(); // ← AJOUTEZ CETTE LIGNE
+    loadSystemSettings();
   }, [router]);
-  
+
   const loadData = async (guideId: string) => {
     try {
       setLoading(true);
@@ -227,6 +206,24 @@ export default function GuideDashboard() {
       console.error('Erreur chargement des données:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadSystemSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('setting_value')
+        .eq('setting_key', 'guide_lecteur_interne_enabled')
+        .single();
+      
+      if (!error && data) {
+        setLecteurInterneEnabled(data.setting_value === 'true');
+      }
+    } catch (err) {
+      console.error('Erreur chargement paramètres:', err);
+    } finally {
+      setSettingsLoaded(true);
     }
   };
 
@@ -434,6 +431,8 @@ export default function GuideDashboard() {
           >
             Guide ({eleves.length} élève(s))
           </button>
+          
+          {/* Afficher l'onglet seulement si autorisé */}
           {settingsLoaded && lecteurInterneEnabled && (
             <button
               onClick={() => setActiveTab('lecteur-interne')}
@@ -446,8 +445,7 @@ export default function GuideDashboard() {
               Lecteur interne
             </button>
           )}
-            Lecteur interne
-          </button>
+          
           <button
             onClick={() => setActiveTab('defenses')}
             className={`px-4 py-2 font-medium text-sm md:text-base ${
@@ -566,6 +564,24 @@ export default function GuideDashboard() {
           </>
         ) : activeTab === 'lecteur-interne' ? (
           <div className="space-y-6">
+            {/* Indicateur d'état */}
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-medium text-purple-800">
+                    Mode sélection lecteur interne
+                  </h3>
+                  <p className="text-sm text-purple-600 mt-1">
+                    Sélectionnez les élèves pour lesquels vous serez lecteur interne.
+                    Cet onglet est activé par l'administration.
+                  </p>
+                </div>
+                <div className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
+                  {selectedEleves.length} sélectionné(s)
+                </div>
+              </div>
+            </div>
+
             {/* En-tête avec filtres et bouton de sauvegarde */}
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -931,6 +947,3 @@ export default function GuideDashboard() {
     </div>
   );
 }
-
-
-
