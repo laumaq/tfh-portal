@@ -2,20 +2,20 @@ name: Daily Supabase Backup
 
 on:
   schedule:
-    # Exécute tous les jours à 2h du matin (UTC)
-    - cron: '0 2 * * *'
-  
-  # Permet aussi de déclencher manuellement
-  workflow_dispatch:
+    - cron: '0 2 * * *'  # Tous les jours à 2h UTC
+  workflow_dispatch:      # Permet de lancer manuellement
 
 jobs:
   backup:
     runs-on: ubuntu-latest
     
     steps:
-      # 1. Récupérer le code
+      # 1. Récupérer le code AVEC permissions d'écriture
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0  # Récupère toute l'histoire
       
       # 2. Configurer Node.js
       - name: Setup Node.js
@@ -29,21 +29,61 @@ jobs:
           cd scripts
           npm install
       
-      # 4. Exécuter le backup
-      - name: Run Supabase Backup
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # 4. Créer le fichier .env.local temporaire
+      - name: Create env file
         run: |
           cd scripts
-          node backup.js
+          cat > .env.local << EOF
+          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          GITHUB_USERNAME=laumaq
+          GITHUB_REPO=tfh-portal
+          EOF
+          echo "✅ .env.local créé"
       
-      # 5. Commit et push du backup local
-      - name: Commit and push backup file
+      # 5. Exécuter le backup SANS pousser sur GitHub (pour test)
+      - name: Run Supabase Backup (test local)
+        id: run-backup
+        run: |
+          cd scripts
+          echo "🧪 Exécution du script backup.js..."
+          node backup.js
+          
+          # Vérifier si le dossier backups existe maintenant
+          if [ -d "../backups" ] && [ "$(ls -A ../backups 2>/dev/null)" ]; then
+            echo "✅ Backups créés avec succès"
+            echo "backup_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Aucun backup créé"
+            echo "backup_exists=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+      
+      # 6. VÉRIFIER avant de commiter
+      - name: List backup files
+        if: steps.run-backup.outputs.backup_exists == 'true'
+        run: |
+          echo "📁 Contenu du dossier backups:"
+          ls -la backups/
+          echo "📄 Dernier fichier:"
+          ls -t backups/ | head -1
+      
+      # 7. Commit et push SEULEMENT si des fichiers existent
+      - name: Commit and push backup
+        if: steps.run-backup.outputs.backup_exists == 'true'
         run: |
           git config --global user.name "GitHub Backup Bot"
-          git config --global user.email "backup@github.com"
+          git config --global user.email "backup-bot@github.com"
+          
+          # Vérifier qu'il y a des changements
           git add backups/
-          git commit -m "📦 Backup automatique $(date +'%Y-%m-%d')" || echo "Aucun changement"
-          git push origin HEAD:${{ github.ref }}
+          
+          if git diff --staged --quiet; then
+            echo "⚠️ Aucun changement à commiter"
+          else
+            git commit -m "📦 Backup automatique $(date +'%Y-%m-%d %H:%M')"
+            echo "✅ Commit créé"
+            git push
+            echo "✅ Push réussi"
+          fi
