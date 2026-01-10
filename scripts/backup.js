@@ -1,93 +1,120 @@
+// backup.js - VERSION CORRIGÉE
+console.log('=== BACKUP TFH PORTAL ===');
+
+// 1. Vérifier les modules
+try {
+  require('dotenv');
+  console.log('✅ dotenv OK');
+} catch (e) {
+  console.error('❌ dotenv manquant');
+  process.exit(1);
+}
+
+try {
+  require('@supabase/supabase-js');
+  console.log('✅ supabase-js OK');
+} catch (e) {
+  console.error('❌ supabase-js manquant');
+  process.exit(1);
+}
+
+// 2. Charger les variables
+require('dotenv').config({ path: '.env.local' });
+
+console.log('\n🔍 Vérification des variables:');
+console.log('SUPABASE_URL:', process.env.SUPABASE_URL ? '✅ OK' : '❌ MANQUANT');
+console.log('SUPABASE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ OK' : '❌ MANQUANT');
+console.log('GITHUB_TOKEN:', process.env.GITHUB_TOKEN ? '✅ OK' : '❌ MANQUANT');
+
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('💥 Variables manquantes!');
+  process.exit(1);
+}
+
+// 3. Créer le client Supabase
+const { createClient } = require('@supabase/supabase-js');
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+// 4. Fonction principale MODIFIÉE pour être plus simple
 async function createBackup() {
   try {
-    console.log('=== DÉBUT DU BACKUP ===');
-    console.log('1. Vérification des variables d\'environnement...');
+    console.log('\n🚀 Démarrage du backup...');
     
-    // Vérifiez les variables
-    console.log('SUPABASE_URL:', process.env.SUPABASE_URL ? '✅ Défini' : '❌ Manquant');
-    console.log('SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ Défini' : '❌ Manquant');
-    console.log('GITHUB_TOKEN:', process.env.GITHUB_TOKEN ? '✅ Défini' : '❌ Manquant');
+    // Tables à sauvegarder
+    const tables = ['eleves', 'guides', 'lecteurs_externes', 'mediateurs', 'coordinateurs'];
+    const backupData = { date: new Date().toISOString() };
     
-    // Test de connexion rapide à Supabase
-    console.log('2. Test de connexion à Supabase...');
-    try {
-      const testResult = await supabase.from('eleves').select('*').limit(1);
-      if (testResult.error) {
-        console.log('❌ Erreur Supabase:', testResult.error.message);
-      } else {
-        console.log(`✅ Connexion OK! ${testResult.data?.length || 0} élève(s) trouvé(s)`);
-      }
-    } catch (supabaseError) {
-      console.log('❌ Exception Supabase:', supabaseError.message);
-    }
-    
-    console.log('3. Début de l\'export des tables...');    
-
-// 11. Pousser sur GitHub (version nouveau token)
-async function pushToGitHub(filePath, fileName) {
-  try {
-    console.log('🐙 Pushing to GitHub...');
-    
-    const token = process.env.GITHUB_TOKEN;
-    const username = process.env.GITHUB_USERNAME || 'laumaq';
-    const repo = process.env.GITHUB_REPO || 'tfh-portal';
-    
-    // Lire le contenu du fichier
-    const fileContent = fs.readFileSync(filePath, 'utf8');
-    
-    // Encodage base64 pour GitHub API
-    const contentBase64 = Buffer.from(fileContent).toString('base64');
-    
-    // URL de l'API GitHub
-    const apiUrl = `https://api.github.com/repos/${username}/${repo}/contents/backups/${fileName}`;
-    
-    // Headers pour le nouveau token
-    const headers = {
-      'Authorization': `Bearer ${token}`,
-      'Accept': 'application/vnd.github+json',
-      'X-GitHub-Api-Version': '2022-11-28',
-      'User-Agent': 'TFH-Backup-Bot'
-    };
-    
-    // 1. Vérifier si le fichier existe déjà
-    let sha = null;
-    try {
-      const checkResponse = await fetch(apiUrl, { headers });
+    // Pour chaque table
+    for (const table of tables) {
+      console.log(`📊 ${table}...`);
       
-      if (checkResponse.ok) {
-        const existingFile = await checkResponse.json();
-        sha = existingFile.sha;
-        console.log('📝 Mise à jour du fichier existant');
+      try {
+        const { data, error } = await supabase.from(table).select('*');
+        
+        if (error) {
+          console.log(`  ⚠️ ${table}: ${error.message}`);
+          backupData[table] = [];
+        } else {
+          console.log(`  ✅ ${table}: ${data?.length || 0} lignes`);
+          backupData[table] = data || [];
+        }
+      } catch (err) {
+        console.log(`  ❌ ${table}: ${err.message}`);
+        backupData[table] = [];
       }
-    } catch (e) {
-      // Fichier n'existe pas encore
     }
     
-    // 2. Corps de la requête
-    const body = {
-      message: `📦 Backup automatique ${new Date().toLocaleDateString('fr-FR')}`,
-      content: contentBase64,
-      ...(sha && { sha }) // Inclure SHA si mise à jour
-    };
+    // Créer le dossier backups
+    const fs = require('fs');
+    const path = require('path');
     
-    // 3. Envoyer la requête
-    const response = await fetch(apiUrl, {
-      method: 'PUT',
-      headers,
-      body: JSON.stringify(body)
-    });
-    
-    if (response.ok) {
-      const result = await response.json();
-      console.log('✅ Backup poussé sur GitHub avec succès !');
-      console.log(`🔗 ${result.content.html_url}`);
-    } else {
-      const error = await response.json();
-      console.log('⚠️ Erreur GitHub:', error.message || 'Unknown error');
+    const backupDir = path.join(__dirname, '..', 'backups');
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
     }
+    
+    // Sauvegarder le fichier
+    const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const fileName = `backup_${date}.json`;
+    const filePath = path.join(backupDir, fileName);
+    
+    fs.writeFileSync(filePath, JSON.stringify(backupData, null, 2));
+    
+    const size = (fs.statSync(filePath).size / 1024).toFixed(2);
+    console.log(`\n💾 Backup sauvegardé: ${fileName} (${size} KB)`);
+    
+    // Nettoyer les vieux backups (30 jours)
+    const files = fs.readdirSync(backupDir);
+    const now = Date.now();
+    const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+    
+    let deleted = 0;
+    for (const file of files) {
+      if (file.startsWith('backup_') && file.endsWith('.json')) {
+        const filePath = path.join(backupDir, file);
+        const stats = fs.statSync(filePath);
+        if (now - stats.mtimeMs > thirtyDays) {
+          fs.unlinkSync(filePath);
+          deleted++;
+          console.log(`🗑️ Supprimé: ${file}`);
+        }
+      }
+    }
+    
+    if (deleted > 0) {
+      console.log(`🧹 ${deleted} vieux backups supprimés`);
+    }
+    
+    console.log('🎉 Backup terminé avec succès!');
     
   } catch (error) {
-    console.log('⚠️ Impossible de pousser sur GitHub:', error.message);
-    console.log('💡 Le backup local est toujours disponible');
+    console.error('💥 ERREUR:', error.message);
+    process.exit(1);
   }
 }
+
+// Démarrer
+createBackup();
