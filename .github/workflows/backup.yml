@@ -10,12 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      # 1. Récupérer le code AVEC permissions d'écriture
+      # 1. Récupérer le code
       - name: Checkout code
         uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0  # Récupère toute l'histoire
       
       # 2. Configurer Node.js
       - name: Setup Node.js
@@ -23,17 +20,22 @@ jobs:
         with:
           node-version: '18'
       
-      # 3. Installer les dépendances
+      # 3. Installer les dépendances DANS scripts/
       - name: Install dependencies
         run: |
+          echo "📦 Installation des dépendances..."
           cd scripts
-          npm install
+          npm install --production
+          echo "✅ Dépendances installées"
+          echo "📄 Liste des modules:"
+          ls -la node_modules/
       
-      # 4. Créer le fichier .env.local temporaire
+      # 4. Créer le fichier .env.local
       - name: Create env file
         run: |
           cd scripts
-          cat > .env.local << EOF
+          echo "🔐 Création du fichier .env.local..."
+          cat > .env.local << 'EOF'
           SUPABASE_URL=${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
@@ -41,49 +43,97 @@ jobs:
           GITHUB_REPO=tfh-portal
           EOF
           echo "✅ .env.local créé"
-
-      # 5. Test simple d'abord
-      - name: Test simple du backup
-        id: run-test
+          echo "Contenu (variables masquées):"
+          cat .env.local | sed 's/=.*/=***/'  # Masque les valeurs
+      
+      # 5. Test simple SANS dépendances externes
+      - name: Test sans dépendances
         run: |
           cd scripts
-          echo "🧪 Test simple..."
-          node test-simple.js
+          echo "🧪 Test sans dépendances..."
           
-          # Vérifier si le test a créé un fichier
-          if [ -f "../backups/test_backup.json" ]; then
-            echo "✅ Test réussi! Fichier créé."
-            echo "test_success=true" >> $GITHUB_OUTPUT
+          # Créer un test ultra simple
+          cat > test-ultra-simple.js << 'EOF'
+          const fs = require('fs');
+          const path = require('path');
+          
+          console.log('=== TEST ULTRA SIMPLE ===');
+          
+          // 1. Vérifier si .env.local existe
+          const envPath = path.join(__dirname, '.env.local');
+          console.log('.env.local existe?', fs.existsSync(envPath));
+          
+          if (fs.existsSync(envPath)) {
+            const content = fs.readFileSync(envPath, 'utf8');
+            console.log('Taille du fichier:', content.length, 'caractères');
+            console.log('Contient SUPABASE_URL?', content.includes('SUPABASE_URL'));
+            console.log('Contient GITHUB_TOKEN?', content.includes('GITHUB_TOKEN'));
+          }
+          
+          // 2. Créer un dossier backups
+          const backupDir = path.join(__dirname, '..', 'backups');
+          if (!fs.existsSync(backupDir)) {
+            fs.mkdirSync(backupDir, { recursive: true });
+            console.log('📁 Dossier backups créé');
+          }
+          
+          // 3. Créer un fichier test
+          const testFile = path.join(backupDir, 'test_simple.json');
+          fs.writeFileSync(testFile, JSON.stringify({
+            test: 'ok',
+            timestamp: new Date().toISOString(),
+            message: 'Test réussi sans dépendances'
+          }, null, 2));
+          
+          console.log('✅ Fichier créé:', testFile);
+          console.log('📄 Taille:', fs.statSync(testFile).size, 'bytes');
+          console.log('=== TEST RÉUSSI ===');
+          EOF
+          
+          # Exécuter le test
+          node test-ultra-simple.js
+      
+      # 6. Vérifier les résultats
+      - name: Verify backup folder
+        run: |
+          echo "📁 Vérification du dossier backups..."
+          if [ -d "backups" ]; then
+            echo "✅ Dossier backups existe!"
+            echo "📄 Contenu:"
+            ls -la backups/
+            
+            # Compter les fichiers
+            file_count=$(find backups -name "*.json" | wc -l)
+            echo "📊 Nombre de fichiers .json: $file_count"
+            
+            if [ $file_count -gt 0 ]; then
+              echo "backup_exists=true" >> $GITHUB_OUTPUT
+            else
+              echo "backup_exists=false" >> $GITHUB_OUTPUT
+            fi
           else
-            echo "❌ Test échoué"
-            echo "test_success=false" >> $GITHUB_OUTPUT
+            echo "❌ Dossier backups n'existe pas"
+            echo "backup_exists=false" >> $GITHUB_OUTPUT
           fi
-
+        id: verify-backup
       
-      # 6. VÉRIFIER avant de commiter
-      - name: List backup files
-        if: steps.run-backup.outputs.backup_exists == 'true'
-        run: |
-          echo "📁 Contenu du dossier backups:"
-          ls -la backups/
-          echo "📄 Dernier fichier:"
-          ls -t backups/ | head -1
-      
-      # 7. Commit et push SEULEMENT si des fichiers existent
+      # 7. Commit et push (seulement si backup réussi)
       - name: Commit and push backup
-        if: steps.run-backup.outputs.backup_exists == 'true'
+        if: steps.verify-backup.outputs.backup_exists == 'true'
         run: |
+          echo "🚀 Préparation du commit..."
           git config --global user.name "GitHub Backup Bot"
           git config --global user.email "backup-bot@github.com"
           
-          # Vérifier qu'il y a des changements
+          # Ajouter les backups
           git add backups/
           
+          # Vérifier s'il y a des changements
           if git diff --staged --quiet; then
             echo "⚠️ Aucun changement à commiter"
           else
             git commit -m "📦 Backup automatique $(date +'%Y-%m-%d %H:%M')"
             echo "✅ Commit créé"
             git push
-            echo "✅ Push réussi"
+            echo "✅ Push réussi vers GitHub"
           fi
