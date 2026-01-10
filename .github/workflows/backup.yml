@@ -6,7 +6,7 @@ on:
   workflow_dispatch:      # Permet de lancer manuellement
 
 permissions:
-  contents: write  # ⚠️ DONNE LA PERMISSION D'ÉCRIRE
+  contents: write
 
 jobs:
   backup:
@@ -17,13 +17,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}  # ⚠️ UTILISE VOTRE TOKEN
+          token: ${{ secrets.GITHUB_TOKEN }}
       
-      # 2. Configurer Node.js
+      # 2. Configurer Node.js 20 (pas 18)
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: '20'
       
       # 3. Installer les dépendances
       - name: Install dependencies
@@ -31,30 +31,19 @@ jobs:
           cd scripts
           npm install
       
-      # 4. Créer le fichier .env.local
-      - name: Create env file
-        run: |
-          cd scripts
-          cat > .env.local << 'EOF'
-          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
-          GITHUB_USERNAME=laumaq
-          GITHUB_REPO=tfh-portal
-          EOF
-          echo "✅ .env.local créé"
-      
-      # 5. Exécuter le script de backup FIXED
+      # 4. Exécuter le script de backup AVEC variables d'environnement
       - name: Run backup script
         id: run-script
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_USERNAME: laumaq
+          GITHUB_REPO: tfh-portal
         run: |
           cd scripts
-          echo "🚀 Lancement du backup FIXED..."
-          node backup-fixed.js
+          echo "🚀 Lancement du backup..."
+          node backup.js
           
           # Vérifier si un backup a été créé
           if ls ../backups/backup_*.json 1>/dev/null 2>&1; then
@@ -65,7 +54,7 @@ jobs:
             echo "success=false" >> $GITHUB_OUTPUT
           fi
       
-      # 6. Afficher les résultats
+      # 5. Afficher les résultats
       - name: Show results
         if: steps.run-script.outputs.success == 'true'
         run: |
@@ -76,7 +65,7 @@ jobs:
           echo "📄 Dernier backup:"
           ls -t backups/backup_*.json | head -1
       
-      # 7. Commit et push AUTOMATIQUE
+      # 6. Commit et push AUTOMATIQUE
       - name: Commit and push
         if: steps.run-script.outputs.success == 'true'
         run: |
