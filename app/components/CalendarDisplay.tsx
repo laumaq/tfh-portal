@@ -40,7 +40,8 @@ export default function CalendarDisplay({
   eleves, 
   selectedCategory, 
   selectedDates, 
-  selectedLocations
+  selectedLocations,
+  onEventClick
 }: CalendarDisplayProps) {
   const [dayDefenses, setDayDefenses] = useState<DayDefenses[]>([]);
   const [conflicts, setConflicts] = useState<any>({
