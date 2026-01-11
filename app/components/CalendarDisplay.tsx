@@ -35,6 +35,9 @@ interface CalendarDisplayProps {
   selectedDates: string[];
   selectedLocations: string[];
   onEventClick?: (event: DefenseEvent) => void;
+  selectedEventIds?: string[];
+  busyEventIds?: string[];      
+  userLecteurExterneId?: string;
 }
 
 export default function CalendarDisplay({ 
@@ -42,7 +45,10 @@ export default function CalendarDisplay({
   selectedCategory, 
   selectedDates, 
   selectedLocations,
-  onEventClick
+  onEventClick,
+  selectedEventIds = [],    // Ajoute avec valeur par défaut
+  busyEventIds = [],       // Ajoute avec valeur par défaut
+  userLecteurExterneId = '' // Ajoute avec valeur par défaut
 }: CalendarDisplayProps) {
   const [dayDefenses, setDayDefenses] = useState<DayDefenses[]>([]);
   const [conflicts, setConflicts] = useState<any>({
