@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import CalendarDisplay from '@/app/components/CalendarDisplay';
 
 interface Eleve {
   id: string;
@@ -18,41 +19,57 @@ interface Eleve {
   localisation_defense: string | null;
   lecteur_interne_id: string | null;
   lecteur_externe_id: string | null;
+  mediateur_id: string | null;
   guide_nom?: string;
-  guide_initiale?: string;
+  guide_prenom?: string;
   lecteur_interne_nom?: string;
-  lecteur_interne_initiale?: string;
+  lecteur_interne_prenom?: string;
   lecteur_externe_nom?: string;
   lecteur_externe_prenom?: string;
   mediateur_nom?: string;
   mediateur_prenom?: string;
 }
 
-interface Guide {
+interface DefenseEvent {
   id: string;
-  nom: string;
-  initiale: string;
+  eleveId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+  eleveNom: string;
+  elevePrenom: string;
+  guideNom: string;
+  guidePrenom: string;
+  lecteurInterneNom: string;
+  lecteurInternePrenom: string;
+  lecteurExterneNom: string;
+  lecteurExternePrenom: string;
+  mediateurNom: string;
+  mediateurPrenom: string;
+  categorie: string;
 }
 
-interface LecteurExterne {
-  id: string;
-  nom: string;
-  prenom: string;
-}
-
+type ViewMode = 'choice' | 'planning' | 'list' | 'calendar';
 type TabType = 'dashboard' | 'selection';
 
 export default function LecteurExterneDashboard() {
   const [eleves, setEleves] = useState<Eleve[]>([]);
   const [elevesDisponibles, setElevesDisponibles] = useState<Eleve[]>([]);
-  const [guides, setGuides] = useState<Guide[]>([]);
   const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState('');
   const [userLecteurExterneId, setUserLecteurExterneId] = useState<string>('');
+  const [viewMode, setViewMode] = useState<ViewMode>('choice');
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [selectedEleves, setSelectedEleves] = useState<string[]>([]);
   const [selectedCategorie, setSelectedCategorie] = useState<string>('toutes');
+  const [selectedDates, setSelectedDates] = useState<string[]>([]);
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
+  const [dates, setDates] = useState<string[]>([]);
+  const [locations, setLocations] = useState<string[]>([]);
+  const [defenseEvents, setDefenseEvents] = useState<DefenseEvent[]>([]);
+  const [busySlots, setBusySlots] = useState<Set<string>>(new Set());
   const router = useRouter();
 
   useEffect(() => {
@@ -74,19 +91,13 @@ export default function LecteurExterneDashboard() {
     try {
       setLoading(true);
       
-      // Charger les guides pour l'affichage
-      const { data: guidesData } = await supabase
-        .from('guides')
-        .select('id, nom, initiale');
-      setGuides(guidesData || []);
-
       // Charger les élèves assignés à ce lecteur externe
       const { data: elevesData, error: elevesError } = await supabase
         .from('eleves')
         .select(`
           *,
-          guide:guides!guide_id (nom, initiale),
-          lecteur_interne:guides!lecteur_interne_id (nom, initiale),
+          guide:guides!guide_id (nom, prenom),
+          lecteur_interne:guides!lecteur_interne_id (nom, prenom),
           lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
           mediateur:mediateurs!mediateur_id (nom, prenom)
         `)
@@ -98,13 +109,12 @@ export default function LecteurExterneDashboard() {
 
       if (elevesError) throw elevesError;
 
-      // Formater les données
       const elevesFormatted = (elevesData || []).map(eleve => ({
         ...eleve,
         guide_nom: eleve.guide?.nom || '-',
-        guide_initiale: eleve.guide?.initiale || '-',
+        guide_prenom: eleve.guide?.prenom || '-',
         lecteur_interne_nom: eleve.lecteur_interne?.nom || '-',
-        lecteur_interne_initiale: eleve.lecteur_interne?.initiale || '-',
+        lecteur_interne_prenom: eleve.lecteur_interne?.prenom || '-',
         lecteur_externe_nom: eleve.lecteur_externe?.nom || '-',
         lecteur_externe_prenom: eleve.lecteur_externe?.prenom || '-',
         mediateur_nom: eleve.mediateur?.nom || '-',
@@ -113,45 +123,66 @@ export default function LecteurExterneDashboard() {
 
       setEleves(elevesFormatted);
 
-      // Pour l'onglet Sélection: charger les élèves qui n'ont pas encore de lecteur externe
-      // OU dont le lecteur externe est l'utilisateur actuel
-      const { data: elevesDispoData, error: elevesDispoError } = await supabase
+      // Charger TOUS les élèves pour la sélection
+      const { data: allElevesData, error: allElevesError } = await supabase
         .from('eleves')
         .select(`
           *,
-          guide:guides!guide_id (nom, initiale),
-          lecteur_interne:guides!lecteur_interne_id (nom, initiale)
+          guide:guides!guide_id (nom, prenom),
+          lecteur_interne:guides!lecteur_interne_id (nom, prenom),
+          lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom)
         `)
-        .or(`lecteur_externe_id.is.null,lecteur_externe_id.eq.${lecteurExterneId}`)
-        // Filtrer les élèves qui ont une catégorie
         .not('categorie', 'is', null)
         .not('categorie', 'eq', '')
         .order('classe', { ascending: true })
         .order('nom', { ascending: true });
 
-      if (elevesDispoError) throw elevesDispoError;
+      if (allElevesError) throw allElevesError;
 
-      const elevesDispoFormatted = (elevesDispoData || []).map(eleve => ({
+      const allElevesFormatted = (allElevesData || []).map(eleve => ({
         ...eleve,
         guide_nom: eleve.guide?.nom || '-',
-        guide_initiale: eleve.guide?.initiale || '-',
+        guide_prenom: eleve.guide?.prenom || '-',
         lecteur_interne_nom: eleve.lecteur_interne?.nom || '-',
-        lecteur_interne_initiale: eleve.lecteur_interne?.initiale || '-'
+        lecteur_interne_prenom: eleve.lecteur_interne?.prenom || '-',
+        lecteur_externe_nom: eleve.lecteur_externe?.nom || '-',
+        lecteur_externe_prenom: eleve.lecteur_externe?.prenom || '-'
       }));
 
-      setElevesDisponibles(elevesDispoFormatted);
+      setElevesDisponibles(allElevesFormatted);
 
-      // Extraire les catégories uniques pour le filtre
+      // Extraire les catégories uniques
       const uniqueCategories = Array.from(
-        new Set(elevesDispoFormatted.map(e => e.categorie).filter(Boolean))
+        new Set(allElevesFormatted.map(e => e.categorie).filter(Boolean))
       ).sort();
       setCategories(uniqueCategories);
 
+      // Extraire les dates uniques
+      const uniqueDates = Array.from(
+        new Set(allElevesFormatted
+          .filter(e => e.date_defense)
+          .map(e => e.date_defense!))
+      ).sort();
+      setDates(uniqueDates);
+      setSelectedDates(uniqueDates);
+
+      // Extraire les locaux uniques
+      const uniqueLocations = Array.from(
+        new Set(allElevesFormatted
+          .filter(e => e.localisation_defense)
+          .map(e => e.localisation_defense!))
+      ).sort((a, b) => a.charAt(0).localeCompare(b.charAt(0)));
+      setLocations(uniqueLocations);
+      setSelectedLocations(uniqueLocations);
+
       // Pré-sélectionner les élèves où l'utilisateur est déjà lecteur externe
-      const preSelected = elevesDispoFormatted
+      const preSelected = allElevesFormatted
         .filter(e => e.lecteur_externe_id === lecteurExterneId)
         .map(e => e.id);
       setSelectedEleves(preSelected);
+
+      // Générer les créneaux occupés
+      generateBusySlots(elevesFormatted, lecteurExterneId);
 
     } catch (err) {
       console.error('Erreur chargement des données:', err);
@@ -160,13 +191,104 @@ export default function LecteurExterneDashboard() {
     }
   };
 
-  // Filtrer les élèves disponibles par catégorie
+  const generateBusySlots = (assignedEleves: Eleve[], lecteurExterneId: string) => {
+    const slots = new Set<string>();
+    
+    // Ajouter les créneaux des élèves déjà assignés
+    assignedEleves.forEach(eleve => {
+      if (eleve.date_defense && eleve.heure_defense) {
+        const slotKey = `${eleve.date_defense}_${eleve.heure_defense.substring(0, 5)}`;
+        slots.add(slotKey);
+      }
+    });
+
+    setBusySlots(slots);
+  };
+
+  const add50Minutes = (time: string): string => {
+    if (!time) return '';
+    const [hours, minutes] = time.split(':').map(Number);
+    let newHours = hours;
+    let newMinutes = minutes + 50;
+    
+    if (newMinutes >= 60) {
+      newHours += Math.floor(newMinutes / 60);
+      newMinutes = newMinutes % 60;
+    }
+    
+    return `${newHours.toString().padStart(2, '0')}:${newMinutes.toString().padStart(2, '0')}`;
+  };
+
+  const prepareCalendarData = () => {
+    const defensesWithSchedule = elevesDisponibles.filter(e => 
+      e.date_defense && e.heure_defense
+    );
+    
+    const events: DefenseEvent[] = defensesWithSchedule.map(eleve => {
+      const startTime = eleve.heure_defense!.substring(0, 5);
+      
+      return {
+        id: eleve.id,
+        eleveId: eleve.id,
+        date: eleve.date_defense!,
+        startTime: startTime,
+        endTime: add50Minutes(startTime),
+        location: eleve.localisation_defense || 'Non défini',
+        eleveNom: eleve.nom,
+        elevePrenom: eleve.prenom,
+        guideNom: eleve.guide_nom || '-',
+        guidePrenom: eleve.guide_prenom || '-',
+        lecteurInterneNom: eleve.lecteur_interne_nom || '-',
+        lecteurInternePrenom: eleve.lecteur_interne_prenom || '-',
+        lecteurExterneNom: eleve.lecteur_externe_nom || '-',
+        lecteurExternePrenom: eleve.lecteur_externe_prenom || '-',
+        mediateurNom: '-',
+        mediateurPrenom: '-',
+        categorie: eleve.categorie || 'Non catégorisé'
+      };
+    });
+
+    setDefenseEvents(events);
+  };
+
+  useEffect(() => {
+    if (elevesDisponibles.length > 0) {
+      prepareCalendarData();
+    }
+  }, [elevesDisponibles]);
+
+  const isTimeSlotBusy = (eleve: Eleve): boolean => {
+    if (!eleve.date_defense || !eleve.heure_defense) return false;
+    const slotKey = `${eleve.date_defense}_${eleve.heure_defense.substring(0, 5)}`;
+    return busySlots.has(slotKey) && eleve.lecteur_externe_id !== userLecteurExterneId;
+  };
+
   const filteredElevesDisponibles = elevesDisponibles.filter(eleve => {
-    if (selectedCategorie === 'toutes') return true;
-    return eleve.categorie === selectedCategorie;
+    // Filtre par catégorie
+    if (selectedCategorie !== 'toutes' && eleve.categorie !== selectedCategorie) {
+      return false;
+    }
+    
+    // Filtre par date
+    if (selectedDates.length > 0 && eleve.date_defense && !selectedDates.includes(eleve.date_defense)) {
+      return false;
+    }
+    
+    // Filtre par local
+    if (selectedLocations.length > 0 && eleve.localisation_defense && !selectedLocations.includes(eleve.localisation_defense)) {
+      return false;
+    }
+    
+    return true;
   });
 
   const handleToggleSelection = (eleveId: string) => {
+    const eleve = elevesDisponibles.find(e => e.id === eleveId);
+    if (eleve && isTimeSlotBusy(eleve)) {
+      alert('Vous avez déjà une défense à ce créneau horaire !');
+      return;
+    }
+
     setSelectedEleves(prev => {
       if (prev.includes(eleveId)) {
         return prev.filter(id => id !== eleveId);
@@ -177,10 +299,12 @@ export default function LecteurExterneDashboard() {
   };
 
   const handleSelectAll = () => {
-    if (selectedEleves.length === filteredElevesDisponibles.length) {
+    const availableEleves = filteredElevesDisponibles.filter(eleve => !isTimeSlotBusy(eleve));
+    
+    if (selectedEleves.length === availableEleves.length) {
       setSelectedEleves([]);
     } else {
-      setSelectedEleves(filteredElevesDisponibles.map(e => e.id));
+      setSelectedEleves(availableEleves.map(e => e.id));
     }
   };
 
@@ -207,8 +331,8 @@ export default function LecteurExterneDashboard() {
       // Recharger les données
       await loadData(userLecteurExterneId);
       
-      // Revenir à l'onglet dashboard
-      setActiveTab('dashboard');
+      // Retourner au planning
+      setViewMode('planning');
       
       alert('Modifications enregistrées avec succès !');
     } catch (err) {
@@ -217,12 +341,18 @@ export default function LecteurExterneDashboard() {
     }
   };
 
+  const handleCalendarEventClick = (event: DefenseEvent) => {
+    const eleve = elevesDisponibles.find(e => e.id === event.eleveId);
+    if (eleve) {
+      handleToggleSelection(eleve.id);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.clear();
     router.push('/');
   };
 
-  // Formater la date en français
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '-';
     const date = new Date(dateString);
@@ -233,212 +363,217 @@ export default function LecteurExterneDashboard() {
     });
   };
 
-  // Formater l'heure
   const formatHeure = (heureString: string | null) => {
     if (!heureString) return '-';
     return heureString.substring(0, 5);
   };
 
-  // Compter les élèves par statut
-  const elevesAvecDateDefense = eleves.filter(e => e.date_defense !== null).length;
-  const elevesSansDateDefense = eleves.length - elevesAvecDateDefense;
-
-  if (loading && activeTab === 'dashboard') {
+  // Écran de choix initial
+  if (viewMode === 'choice') {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">Chargement de vos élèves...</div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-gray-50 flex items-center justify-center p-4">
+        <div className="max-w-2xl w-full">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Bienvenue {userName} !</h1>
+            <p className="text-gray-600">Que souhaitez-vous faire aujourd'hui ?</p>
+          </div>
+
+          <div className="space-y-4">
+            <button
+              onClick={() => setViewMode('planning')}
+              className="w-full p-6 bg-white rounded-xl shadow-sm border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all text-left group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                  <span className="text-2xl">📅</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800">Voir mon planning</h3>
+                  <p className="text-gray-600 text-sm mt-1">
+                    Consulter les {eleves.length} TFH qui me sont assignés
+                  </p>
+                </div>
+                <div className="ml-auto text-gray-400 group-hover:text-blue-600">
+                  →
+                </div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => setViewMode('list')}
+              className="w-full p-6 bg-white rounded-xl shadow-sm border border-gray-200 hover:border-green-300 hover:shadow-md transition-all text-left group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center group-hover:bg-green-200 transition-colors">
+                  <span className="text-2xl">📋</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800">Choisir des TFH</h3>
+                  <p className="text-gray-600 text-sm mt-1">
+                    Sélectionner de nouveaux TFH à évaluer
+                  </p>
+                </div>
+                <div className="ml-auto text-gray-400 group-hover:text-green-600">
+                  →
+                </div>
+              </div>
+            </button>
+          </div>
+
+          <div className="mt-8 text-center">
+            <button
+              onClick={handleLogout}
+              className="text-gray-500 hover:text-gray-700 text-sm"
+            >
+              Se déconnecter
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Dashboard Lecteur Externe</h1>
-            <p className="text-gray-600 mt-1">Connecté en tant que {userName}</p>
+  // Écran de paramétrage pour la sélection
+  if (viewMode === 'list' || viewMode === 'calendar') {
+    return (
+      <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
+                {viewMode === 'list' ? 'Sélection en liste' : 'Sélection en calendrier'}
+              </h1>
+              <p className="text-gray-600 mt-1">Connecté en tant que {userName}</p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setViewMode(viewMode === 'list' ? 'calendar' : 'list')}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm md:text-base"
+              >
+                {viewMode === 'list' ? 'Voir calendrier' : 'Voir liste'}
+              </button>
+              <button
+                onClick={() => setViewMode('choice')}
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm md:text-base"
+              >
+                Retour
+              </button>
+              <button
+                onClick={handleLogout}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm md:text-base"
+              >
+                Déconnexion
+              </button>
+            </div>
           </div>
-          <button
-            onClick={handleLogout}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm md:text-base"
-          >
-            Déconnexion
-          </button>
-        </div>
 
-        {/* Onglets */}
-        <div className="flex border-b border-gray-200 mb-6">
-          <button
-            onClick={() => setActiveTab('dashboard')}
-            className={`px-4 py-2 font-medium text-sm md:text-base ${
-              activeTab === 'dashboard'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Dashboard ({eleves.length} élève(s))
-          </button>
-          <button
-            onClick={() => setActiveTab('selection')}
-            className={`px-4 py-2 font-medium text-sm md:text-base ${
-              activeTab === 'selection'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Sélection des élèves
-          </button>
-        </div>
-
-        {/* Contenu selon l'onglet */}
-        {activeTab === 'dashboard' ? (
-          <>
-            {eleves.length === 0 ? (
-              <div className="bg-white rounded-lg shadow p-8 text-center">
-                <div className="text-4xl mb-4">📋</div>
-                <h3 className="text-xl font-semibold text-gray-700 mb-2">Aucun élève assigné</h3>
-                <p className="text-gray-500">Aucun élève ne vous est actuellement assigné comme lecteur externe.</p>
-                <button
-                  onClick={() => setActiveTab('selection')}
-                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          {/* Filtres */}
+          <div className="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">Paramètres de la vue</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Filtre par catégorie */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Thématique
+                </label>
+                <select
+                  value={selectedCategorie}
+                  onChange={(e) => setSelectedCategorie(e.target.value)}
+                  className="w-full border rounded px-3 py-2 text-sm"
                 >
-                  Sélectionner des élèves
-                </button>
+                  <option value="toutes">Toutes les thématiques</option>
+                  {categories.map(categorie => (
+                    <option key={categorie} value={categorie}>
+                      {categorie}
+                    </option>
+                  ))}
+                </select>
               </div>
-            ) : (
-              <>
-                {/* Statistiques */}
-                <div className="flex gap-4 mb-6">
-                  <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-                    {eleves.length} élève{eleves.length > 1 ? 's' : ''} assigné{eleves.length > 1 ? 's' : ''}
-                  </span>
-                  <span className="text-sm text-green-600 bg-green-100 px-3 py-1 rounded-full">
-                    {elevesAvecDateDefense} avec date de défense
-                  </span>
-                  <span className="text-sm text-orange-600 bg-orange-100 px-3 py-1 rounded-full">
-                    {elevesSansDateDefense} sans date
-                  </span>
-                </div>
 
-                {/* Tableau des élèves assignés */}
-                <div className="bg-white rounded-lg shadow overflow-x-auto">
-                  <div className="min-w-[1200px] md:min-w-full">
-                    <table className="w-full">
-                      <thead className="bg-gray-100 border-b">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Défense</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Heure</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lieu</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Classe</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Élève</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Catégorie</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Guide</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur interne</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Médiateur</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Problématique</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {eleves.map((eleve) => (
-                          <tr key={eleve.id} className="border-b hover:bg-gray-50">
-                            <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
-                              {eleve.date_defense ? (
-                                <div className={`px-2 py-1 rounded ${new Date(eleve.date_defense) < new Date() ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
-                                  {formatDate(eleve.date_defense)}
-                                </div>
-                              ) : (
-                                <span className="text-gray-400">-</span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3 text-sm whitespace-nowrap">
-                              {formatHeure(eleve.heure_defense)}
-                            </td>
-                            <td className="px-4 py-3 text-sm">
-                              {eleve.localisation_defense || '-'}
-                            </td>
-                            <td className="px-4 py-3 text-sm whitespace-nowrap">{eleve.classe}</td>
-                            <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
-                              {eleve.nom} {eleve.prenom}
-                            </td>
-                            <td className="px-4 py-3 text-sm whitespace-nowrap">
-                              <span className="px-2 py-1 bg-gray-100 rounded text-xs">
-                                {eleve.categorie || '-'}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-sm whitespace-nowrap">
-                              {eleve.guide_nom} {eleve.guide_initiale}.
-                            </td>
-                            <td className="px-4 py-3 text-sm whitespace-nowrap">
-                              {eleve.lecteur_interne_nom} {eleve.lecteur_interne_initiale}.
-                            </td>
-                            <td className="px-4 py-3 text-sm whitespace-nowrap">
-                              {eleve.mediateur_prenom} {eleve.mediateur_nom}
-                            </td>
-                            <td className="px-4 py-3 text-sm max-w-xs">
-                              <div className="line-clamp-2">
-                                {eleve.problematique || '-'}
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </>
-            )}
-          </>
-        ) : (
-          /* Onglet Sélection des élèves */
-          <div className="space-y-6">
-            {/* En-tête avec filtres et bouton de sauvegarde */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div className="flex-1">
-                  <h2 className="text-xl font-semibold text-gray-800">Sélection des élèves comme lecteur externe</h2>
-                  <p className="text-gray-600 mt-1">
-                    Sélectionnez les élèves pour lesquels vous serez lecteur externe.
-                    Les élèves sélectionnés n'apparaîtront plus dans la liste des autres lecteurs externes.
-                    N'oubliez pas d'enregistrer si vous cochez des élèves dans la liste.
-                  </p>
-                </div>
-                <div className="flex flex-col md:items-end gap-3">
-                  {/* Filtre par catégorie */}
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
-                      Filtrer par catégorie:
-                    </label>
-                    <select
-                      value={selectedCategorie}
-                      onChange={(e) => setSelectedCategorie(e.target.value)}
-                      className="border rounded px-3 py-1 text-sm"
-                    >
-                      <option value="toutes">Toutes les catégories</option>
-                      {categories.map(categorie => (
-                        <option key={categorie} value={categorie}>
-                          {categorie}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm text-gray-600 whitespace-nowrap">
-                      {selectedEleves.length} élève(s) sélectionné(s)
-                    </span>
-                    <button
-                      onClick={handleSaveLecteurExterne}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
-                    >
-                      Enregistrer la sélection
-                    </button>
-                  </div>
-                </div>
+              {/* Filtre par date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Jour de défense
+                </label>
+                <select
+                  value="toutes"
+                  onChange={(e) => {
+                    if (e.target.value === 'toutes') {
+                      setSelectedDates(dates);
+                    } else {
+                      setSelectedDates(e.target.value ? [e.target.value] : []);
+                    }
+                  }}
+                  className="w-full border rounded px-3 py-2 text-sm"
+                >
+                  <option value="toutes">Tous les jours</option>
+                  {dates.map(date => (
+                    <option key={date} value={date}>
+                      {new Date(date).toLocaleDateString('fr-FR', { 
+                        weekday: 'long', 
+                        day: 'numeric', 
+                        month: 'long' 
+                      })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Filtre par local */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Local
+                </label>
+                <select
+                  value="toutes"
+                  onChange={(e) => {
+                    if (e.target.value === 'toutes') {
+                      setSelectedLocations(locations);
+                    } else {
+                      setSelectedLocations(e.target.value ? [e.target.value] : []);
+                    }
+                  }}
+                  className="w-full border rounded px-3 py-2 text-sm"
+                >
+                  <option value="toutes">Tous les locaux</option>
+                  {locations.map(location => (
+                    <option key={location} value={location}>
+                      {location}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
-            {/* Tableau des élèves disponibles */}
+            <div className="mt-4 flex items-center justify-between">
+              <div className="text-sm text-gray-600">
+                {selectedEleves.length} élève(s) sélectionné(s)
+                {selectedEleves.length > 0 && (
+                  <span className="ml-2 text-blue-600">
+                    • Créneaux occupés grisés
+                  </span>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSelectAll}
+                  className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50"
+                >
+                  Tout (dé)sélectionner
+                </button>
+                <button
+                  onClick={handleSaveLecteurExterne}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                >
+                  Enregistrer la sélection
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Vue liste */}
+          {viewMode === 'list' ? (
             <div className="bg-white rounded-lg shadow overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-100 border-b">
@@ -446,76 +581,244 @@ export default function LecteurExterneDashboard() {
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-12">
                       <input
                         type="checkbox"
-                        checked={selectedEleves.length === filteredElevesDisponibles.length && filteredElevesDisponibles.length > 0}
+                        checked={selectedEleves.length === filteredElevesDisponibles.filter(e => !isTimeSlotBusy(e)).length && filteredElevesDisponibles.length > 0}
                         onChange={handleSelectAll}
                         className="w-4 h-4 text-blue-600 rounded"
                       />
                     </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Date</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Heure</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Local</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Classe</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Catégorie</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Problématique</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Élève</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Thématique</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Guide</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur interne</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Problématique</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredElevesDisponibles.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
-                        {selectedCategorie === 'toutes' 
-                          ? "Aucun élève disponible pour le moment."
-                          : `Aucun élève trouvé dans la catégorie "${selectedCategorie}".`}
+                      <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
+                        Aucun élève trouvé avec ces filtres.
                       </td>
                     </tr>
                   ) : (
-                    filteredElevesDisponibles.map((eleve) => (
-                      <tr key={eleve.id} className="border-b hover:bg-gray-50">
-                        <td className="px-4 py-3">
-                          <input
-                            type="checkbox"
-                            checked={selectedEleves.includes(eleve.id)}
-                            onChange={() => handleToggleSelection(eleve.id)}
-                            className="w-4 h-4 text-blue-600 rounded"
-                          />
-                        </td>
-                        <td className="px-4 py-3 text-sm">{eleve.classe}</td>
-                        <td className="px-4 py-3 text-sm font-medium">{eleve.nom}</td>
-                        <td className="px-4 py-3 text-sm">{eleve.prenom}</td>
-                        <td className="px-4 py-3 text-sm">
-                          {eleve.categorie ? (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                              {eleve.categorie}
+                    filteredElevesDisponibles.map((eleve) => {
+                      const isBusy = isTimeSlotBusy(eleve);
+                      const isSelected = selectedEleves.includes(eleve.id);
+                      const isCurrentlyAssigned = eleve.lecteur_externe_id === userLecteurExterneId;
+                      
+                      return (
+                        <tr 
+                          key={eleve.id} 
+                          className={`border-b hover:bg-gray-50 ${isBusy && !isCurrentlyAssigned ? 'opacity-50' : ''}`}
+                        >
+                          <td className="px-4 py-3">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleToggleSelection(eleve.id)}
+                              disabled={isBusy && !isCurrentlyAssigned}
+                              className={`w-4 h-4 text-blue-600 rounded ${isBusy && !isCurrentlyAssigned ? 'cursor-not-allowed' : ''}`}
+                            />
+                          </td>
+                          <td className="px-4 py-3 text-sm whitespace-nowrap">
+                            {formatDate(eleve.date_defense)}
+                          </td>
+                          <td className="px-4 py-3 text-sm whitespace-nowrap">
+                            {formatHeure(eleve.heure_defense)}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {eleve.localisation_defense || '-'}
+                          </td>
+                          <td className="px-4 py-3 text-sm">{eleve.classe}</td>
+                          <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
+                            {eleve.nom} {eleve.prenom}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            <span className="px-2 py-1 bg-gray-100 rounded text-xs">
+                              {eleve.categorie || '-'}
                             </span>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          <div className="max-w-xs whitespace-pre-wrap break-words min-h-[40px]">
-                            {eleve.problematique || '-'}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          {eleve.guide_nom} {eleve.guide_initiale}.
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          {eleve.lecteur_interne_nom ? (
-                            <span>
-                              {eleve.lecteur_interne_nom} {eleve.lecteur_interne_initiale}.
-                            </span>
-                          ) : (
-                            '-'
-                          )}
-                        </td>
-                      </tr>
-                    ))
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {eleve.guide_prenom} {eleve.guide_nom}
+                          </td>
+                          <td className="px-4 py-3 text-sm max-w-xs">
+                            <div className="line-clamp-2">
+                              {eleve.problematique || '-'}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
             </div>
+          ) : (
+            /* Vue calendrier */
+            <div className="space-y-8">
+              {defenseEvents.filter(event => 
+                selectedDates.length === 0 || selectedDates.includes(event.date)
+              ).filter(event =>
+                selectedLocations.length === 0 || selectedLocations.includes(event.location)
+              ).filter(event =>
+                selectedCategorie === 'toutes' || event.categorie === selectedCategorie
+              ).length === 0 ? (
+                <div className="bg-white rounded-lg shadow p-8 text-center">
+                  <p className="text-gray-500">Aucune défense trouvée avec ces filtres.</p>
+                </div>
+              ) : (
+                <CalendarDisplay
+                  eleves={filteredElevesDisponibles}
+                  selectedCategory={selectedCategorie}
+                  selectedDates={selectedDates}
+                  selectedLocations={selectedLocations}
+                  onEventClick={handleCalendarEventClick}
+                  selectedEventIds={selectedEleves}
+                  busyEventIds={Array.from(busySlots).map(slot => {
+                    const [date, time] = slot.split('_');
+                    const eleve = elevesDisponibles.find(e => 
+                      e.date_defense === date && 
+                      e.heure_defense?.startsWith(time)
+                    );
+                    return eleve?.id || '';
+                  }).filter(id => id)}
+                  userLecteurExterneId={userLecteurExterneId}
+                />
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Vue planning (dashboard)
+  return (
+    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Planning ({eleves.length} élèves)</h1>
+            <p className="text-gray-600 mt-1">Connecté en tant que {userName}</p>
           </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setViewMode('choice')}
+              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm md:text-base"
+            >
+              Menu principal
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm md:text-base"
+            >
+              Choisir des TFH
+            </button>
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm md:text-base"
+            >
+              Déconnexion
+            </button>
+          </div>
+        </div>
+
+        {eleves.length === 0 ? (
+          <div className="bg-white rounded-lg shadow p-8 text-center">
+            <div className="text-4xl mb-4">📋</div>
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">Aucun élève assigné</h3>
+            <p className="text-gray-500 mb-6">Aucun TFH ne vous est actuellement assigné comme lecteur externe.</p>
+            <button
+              onClick={() => setViewMode('list')}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+            >
+              Sélectionner des TFH
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* Statistiques */}
+            <div className="flex gap-4 mb-6">
+              <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                {eleves.length} TFH assigné{eleves.length > 1 ? 's' : ''}
+              </span>
+              <span className="text-sm text-green-600 bg-green-100 px-3 py-1 rounded-full">
+                {eleves.filter(e => e.date_defense).length} avec date de défense
+              </span>
+              <span className="text-sm text-orange-600 bg-orange-100 px-3 py-1 rounded-full">
+                {eleves.filter(e => !e.date_defense).length} sans date
+              </span>
+            </div>
+
+            {/* Tableau des élèves assignés */}
+            <div className="bg-white rounded-lg shadow overflow-x-auto">
+              <div className="min-w-[1200px] md:min-w-full">
+                <table className="w-full">
+                  <thead className="bg-gray-100 border-b">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Date</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Heure</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lieu</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Classe</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Élève</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Thématique</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Guide</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur interne</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Médiateur</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Problématique</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {eleves.map((eleve) => (
+                      <tr key={eleve.id} className="border-b hover:bg-gray-50">
+                        <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
+                          {eleve.date_defense ? (
+                            <div className={`px-2 py-1 rounded ${new Date(eleve.date_defense) < new Date() ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
+                              {formatDate(eleve.date_defense)}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">
+                          {formatHeure(eleve.heure_defense)}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          {eleve.localisation_defense || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">{eleve.classe}</td>
+                        <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
+                          {eleve.nom} {eleve.prenom}
+                        </td>
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">
+                          <span className="px-2 py-1 bg-gray-100 rounded text-xs">
+                            {eleve.categorie || '-'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">
+                          {eleve.guide_prenom} {eleve.guide_nom}
+                        </td>
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">
+                          {eleve.lecteur_interne_prenom} {eleve.lecteur_interne_nom}
+                        </td>
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">
+                          {eleve.mediateur_prenom} {eleve.mediateur_nom}
+                        </td>
+                        <td className="px-4 py-3 text-sm max-w-xs">
+                          <div className="line-clamp-2">
+                            {eleve.problematique || '-'}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
         )}
 
         {/* Note informative */}
@@ -523,8 +826,8 @@ export default function LecteurExterneDashboard() {
           <p className="text-sm text-blue-700 flex items-start gap-2">
             <span className="text-lg">💡</span>
             <span>
-              {activeTab === 'dashboard' && 'Ce tableau affiche les élèves qui vous sont assignés comme lecteur externe, triés par date de défense.'}
-              {activeTab === 'selection' && 'Sélectionnez les élèves pour lesquels vous serez lecteur externe. Un élève ne peut avoir qu\'un seul lecteur externe.'}
+              Ce tableau affiche les TFH qui vous sont assignés comme lecteur externe, triés par date de défense.
+              Pour modifier votre sélection, utilisez le bouton "Choisir des TFH".
             </span>
           </p>
         </div>
