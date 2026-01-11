@@ -34,6 +34,7 @@ interface CalendarDisplayProps {
   selectedCategory: string;
   selectedDates: string[];
   selectedLocations: string[];
+  onEventClick?: (event: DefenseEvent) => void;
 }
 
 export default function CalendarDisplay({ 
