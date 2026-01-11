@@ -411,44 +411,75 @@ export default function CalendarDisplay({
                                 
                                 const color = getCategoryColor(defense.categorie);
                                 
+                                // Vérifier si l'événement est sélectionné
+                                const isSelected = selectedEventIds.includes(defense.eleveId);
+                                
+                                // Vérifier si le créneau est occupé (busy)
+                                const isBusy = busyEventIds.includes(defense.eleveId);
+                                
+                                // Vérifier si c'est déjà assigné à l'utilisateur actuel
+                                const eleve = eleves.find(e => e.id === defense.eleveId);
+                                const isAssignedToCurrentUser = eleve?.lecteur_externe_id === userLecteurExterneId;
+                                
+                                // Décider si l'événement est cliquable
+                                const isClickable = onEventClick && (!isBusy || isAssignedToCurrentUser);
+                                
                                 return (
                                   <div
                                     key={defense.id}
-                                    className="absolute left-1 right-1 rounded p-2 overflow-hidden border shadow-sm hover:shadow-md transition-shadow"
+                                    className={`absolute left-1 right-1 rounded p-2 overflow-hidden border shadow-sm transition-shadow ${
+                                      isClickable ? 'hover:shadow-md cursor-pointer' : ''
+                                    } ${isSelected ? 'ring-2 ring-blue-500 ring-offset-1' : ''} ${
+                                      isBusy && !isAssignedToCurrentUser ? 'opacity-50' : ''
+                                    }`}
                                     style={{
                                       top: `${top}px`,
                                       height: `${height}px`,
-                                      backgroundColor: color.bg,
-                                      borderColor: color.border,
-                                      color: color.text,
+                                      backgroundColor: isSelected ? '#E0F2FE' : color.bg,
+                                      borderColor: isSelected ? '#7DD3FC' : color.border,
+                                      color: isSelected ? '#0C4A6E' : color.text,
                                       zIndex: 10,
                                       fontSize: '13px'
                                     }}
+                                    onClick={() => {
+                                      if (isClickable) {
+                                        onEventClick!(defense);
+                                      }
+                                    }}
                                   >
-                                    <div className="font-bold mb-1">
-                                      {defense.startTime} - {defense.endTime}
+                                    <div className="font-bold mb-1 flex justify-between items-start">
+                                      <span>{defense.startTime} - {defense.endTime}</span>
+                                      {isSelected && (
+                                        <span className="text-xs bg-blue-500 text-white px-1 py-0.5 rounded">✓</span>
+                                      )}
+                                      {isBusy && !isAssignedToCurrentUser && (
+                                        <span className="text-xs bg-red-500 text-white px-1 py-0.5 rounded">Occupé</span>
+                                      )}
                                     </div>
                                     <div className="space-y-0.5">
                                       <div className="font-semibold">
                                         {defense.elevePrenom} {defense.eleveNom}
                                       </div>
+                                      <div className="text-xs opacity-75">
+                                        {defense.categorie}
+                                      </div>
                                       {defense.guideNom !== '-' && (
-                                        <div>
+                                        <div className="text-xs">
                                           Guide: {defense.guidePrenom} {defense.guideNom}
                                         </div>
                                       )}
                                       {defense.lecteurInterneNom !== '-' && (
-                                        <div>
+                                        <div className="text-xs">
                                           Lecteur interne: {defense.lecteurInternePrenom} {defense.lecteurInterneNom}
                                         </div>
                                       )}
                                       {defense.lecteurExterneNom !== '-' && (
-                                        <div>
+                                        <div className="text-xs">
                                           Lecteur externe: {defense.lecteurExternePrenom} {defense.lecteurExterneNom}
                                         </div>
                                       )}
                                       {defense.mediateurNom !== '-' && (
-                                        <div>
+                                        <div className="text-xs">
                                           Médiateur: {defense.mediateurPrenom} {defense.mediateurNom}
                                         </div>
                                       )}
