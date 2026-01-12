@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import CalendarDisplay from '@/app/components/CalendarDisplay';
+import CalendarDisplayLecteurExterne from '@/app/components/CalendarDisplayLecteurExterne';
 
 interface Eleve {
   id: string;
@@ -48,6 +48,7 @@ interface DefenseEvent {
   mediateurNom: string;
   mediateurPrenom: string;
   categorie: string;
+  problematique: string;
 }
 
 type ViewMode = 'choice' | 'planning' | 'list' | 'calendar' | 'question-view' | 'question-dates' | 'question-categories';
@@ -67,7 +68,7 @@ export default function LecteurExterneDashboard() {
   const [dates, setDates] = useState<string[]>([]);
   const [locations, setLocations] = useState<string[]>([]);
   const [defenseEvents, setDefenseEvents] = useState<DefenseEvent[]>([]);
-  const [busySlots, setBusySlots] = useState<Set<string>>(new Set());
+  const [busySlots, setBusySlots] = useState<Map<string, string[]>>(new Map());
   const [tempViewMode, setTempViewMode] = useState<'list' | 'calendar'>('list');
   const [tempSelectedDates, setTempSelectedDates] = useState<string[]>([]);
   const [tempSelectedCategories, setTempSelectedCategories] = useState<string[]>([]);
@@ -189,16 +190,18 @@ export default function LecteurExterneDashboard() {
   };
 
   const generateBusySlots = (assignedEleves: Eleve[], lecteurExterneId: string) => {
-    const slots = new Set<string>();
+    const slotsMap = new Map<string, string[]>();
     
     assignedEleves.forEach(eleve => {
       if (eleve.date_defense && eleve.heure_defense) {
         const slotKey = `${eleve.date_defense}_${eleve.heure_defense.substring(0, 5)}`;
-        slots.add(slotKey);
+        const currentIds = slotsMap.get(slotKey) || [];
+        slotsMap.set(slotKey, [...currentIds, eleve.id]);
       }
     });
 
-    setBusySlots(slots);
+    setBusySlots(slotsMap);
+    console.log('Créneaux occupés:', Array.from(slotsMap.entries()));
   };
 
   const add50Minutes = (time: string): string => {
@@ -240,7 +243,8 @@ export default function LecteurExterneDashboard() {
         lecteurExternePrenom: eleve.lecteur_externe_prenom || '-',
         mediateurNom: '-',
         mediateurPrenom: '-',
-        categorie: eleve.categorie || 'Non catégorisé'
+        categorie: eleve.categorie || 'Non catégorisé',
+        problematique: eleve.problematique || ''
       };
     });
 
@@ -257,13 +261,13 @@ export default function LecteurExterneDashboard() {
     if (!eleve.date_defense || !eleve.heure_defense) return false;
     
     const slotKey = `${eleve.date_defense}_${eleve.heure_defense.substring(0, 5)}`;
-    const isSlotBusy = busySlots.has(slotKey);
+    const busyElevesIds = busySlots.get(slotKey) || [];
     
-    if (isSlotBusy && eleve.lecteur_externe_id === userLecteurExterneId) {
+    if (busyElevesIds.includes(eleve.id)) {
       return false;
     }
     
-    return isSlotBusy;
+    return busyElevesIds.length > 0;
   };
 
   const sortEleves = (eleves: Eleve[]): Eleve[] => {
@@ -310,7 +314,12 @@ export default function LecteurExterneDashboard() {
   const handleToggleSelection = async (eleveId: string) => {
     const eleve = elevesDisponibles.find(e => e.id === eleveId);
     if (eleve && isTimeSlotBusy(eleve)) {
-      alert('Vous avez déjà une défense à ce créneau horaire !');
+      const busySlotKey = `${eleve.date_defense}_${eleve.heure_defense!.substring(0, 5)}`;
+      const busyElevesIds = busySlots.get(busySlotKey) || [];
+      const busyEleves = elevesDisponibles.filter(e => busyElevesIds.includes(e.id));
+      const busyNames = busyEleves.map(e => `${e.prenom} ${e.nom}`).join(', ');
+      
+      alert(`Vous avez déjà une défense à ce créneau horaire !\n\nCréneau occupé par: ${busyNames}`);
       return;
     }
 
@@ -742,6 +751,12 @@ export default function LecteurExterneDashboard() {
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <button
+                  onClick={() => setViewMode('planning')}
+                  className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 text-sm"
+                >
+                  Voir mon planning
+                </button>
+                <button
                   onClick={() => setShowFilters(!showFilters)}
                   className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm flex items-center gap-1"
                 >
@@ -888,8 +903,8 @@ export default function LecteurExterneDashboard() {
           </div>
         )}
 
-        {/* Contenu principal */}
-        <div className="max-w-7xl mx-auto px-4 md:px-8 py-4">
+        {/* Contenu principal avec padding en haut pour éviter la superposition */}
+        <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 pt-20">
           {/* Vue liste */}
           {viewMode === 'list' ? (
             <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -1010,21 +1025,14 @@ export default function LecteurExterneDashboard() {
             /* Vue calendrier */
             <div className="space-y-4">
               <div className="bg-white rounded-lg shadow p-4">
-                <CalendarDisplay
+                <CalendarDisplayLecteurExterne
                   eleves={sortedElevesDisponibles}
                   selectedCategory={selectedCategorie}
                   selectedDates={selectedDates}
                   selectedLocations={selectedLocations}
                   onEventClick={handleCalendarEventClick}
                   selectedEventIds={selectedEleves}
-                  busyEventIds={Array.from(busySlots).map(slot => {
-                    const [date, time] = slot.split('_');
-                    const eleve = elevesDisponibles.find(e => 
-                      e.date_defense === date && 
-                      e.heure_defense?.startsWith(time)
-                    );
-                    return eleve?.id || '';
-                  }).filter(id => id)}
+                  busyEventIds={Array.from(busySlots.values()).flat()}
                   userLecteurExterneId={userLecteurExterneId}
                 />
               </div>
