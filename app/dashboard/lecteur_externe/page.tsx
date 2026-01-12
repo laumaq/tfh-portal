@@ -50,7 +50,7 @@ interface DefenseEvent {
   categorie: string;
 }
 
-type ViewMode = 'choice' | 'planning' | 'list' | 'calendar';
+type ViewMode = 'choice' | 'planning' | 'list' | 'calendar' | 'question-view' | 'question-dates' | 'question-categories';
 type TabType = 'dashboard' | 'selection';
 
 export default function LecteurExterneDashboard() {
@@ -70,6 +70,10 @@ export default function LecteurExterneDashboard() {
   const [locations, setLocations] = useState<string[]>([]);
   const [defenseEvents, setDefenseEvents] = useState<DefenseEvent[]>([]);
   const [busySlots, setBusySlots] = useState<Set<string>>(new Set());
+  const [tempViewMode, setTempViewMode] = useState<'list' | 'calendar'>('list');
+  const [tempSelectedDates, setTempSelectedDates] = useState<string[]>([]);
+  const [tempSelectedCategories, setTempSelectedCategories] = useState<string[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -203,6 +207,7 @@ export default function LecteurExterneDashboard() {
     });
 
     setBusySlots(slots);
+    console.log('Créneaux occupés:', Array.from(slots));
   };
 
   const add50Minutes = (time: string): string => {
@@ -259,8 +264,20 @@ export default function LecteurExterneDashboard() {
 
   const isTimeSlotBusy = (eleve: Eleve): boolean => {
     if (!eleve.date_defense || !eleve.heure_defense) return false;
-    const slotKey = `${eleve.date_defense}_${eleve.heure_defense.substring(0, 5)}`;
-    return busySlots.has(slotKey) && eleve.lecteur_externe_id !== userLecteurExterneId;
+    
+    // Vérifier tous les créneaux occupés
+    for (const slot of busySlots) {
+      const [busyDate, busyTime] = slot.split('_');
+      
+      // Même date ET même heure (format HH:MM)
+      if (eleve.date_defense === busyDate && 
+          eleve.heure_defense.substring(0, 5) === busyTime) {
+        // Vérifier si ce n'est pas déjà assigné à l'utilisateur
+        return eleve.lecteur_externe_id !== userLecteurExterneId;
+      }
+    }
+    
+    return false;
   };
 
   const filteredElevesDisponibles = elevesDisponibles.filter(eleve => {
@@ -397,6 +414,7 @@ export default function LecteurExterneDashboard() {
   };
 
   // Écran de choix initial
+    // Écran de choix initial
   if (viewMode === 'choice') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-gray-50 flex items-center justify-center p-4">
@@ -428,7 +446,10 @@ export default function LecteurExterneDashboard() {
             </button>
 
             <button
-              onClick={() => setViewMode('list')}
+              onClick={() => {
+                setTempViewMode('list');
+                setViewMode('question-view');
+              }}
               className="w-full p-6 bg-white rounded-xl shadow-sm border border-gray-200 hover:border-green-300 hover:shadow-md transition-all text-left group"
             >
               <div className="flex items-center gap-4">
@@ -461,39 +482,436 @@ export default function LecteurExterneDashboard() {
     );
   }
 
+  // Question 1: Vue liste ou calendrier
+  if (viewMode === 'question-view') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-gray-50 flex items-center justify-center p-4">
+        <div className="max-w-2xl w-full">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Quelle vue préférez-vous ?</h1>
+            <p className="text-gray-600">Comment souhaitez-vous voir les TFH disponibles ?</p>
+          </div>
+
+          <div className="space-y-4">
+            <button
+              onClick={() => {
+                setTempViewMode('list');
+                setViewMode('question-dates');
+              }}
+              className="w-full p-6 bg-white rounded-xl shadow-sm border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all text-left group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                  <span className="text-2xl">📋</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800">Vue liste</h3>
+                  <p className="text-gray-600 text-sm mt-1">
+                    Liste tabulaire avec tous les détails
+                  </p>
+                </div>
+                <div className="ml-auto text-gray-400 group-hover:text-blue-600">
+                  →
+                </div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => {
+                setTempViewMode('calendar');
+                setViewMode('question-dates');
+              }}
+              className="w-full p-6 bg-white rounded-xl shadow-sm border border-gray-200 hover:border-green-300 hover:shadow-md transition-all text-left group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center group-hover:bg-green-200 transition-colors">
+                  <span className="text-2xl">📅</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800">Vue calendrier</h3>
+                  <p className="text-gray-600 text-sm mt-1">
+                    Représentation visuelle par jour et heure
+                  </p>
+                </div>
+                <div className="ml-auto text-gray-400 group-hover:text-green-600">
+                  →
+                </div>
+              </div>
+            </button>
+          </div>
+
+          <div className="mt-8 text-center">
+            <button
+              onClick={() => setViewMode('choice')}
+              className="text-gray-500 hover:text-gray-700 text-sm"
+            >
+              ← Retour
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Question 2: Quels jours ?
+  if (viewMode === 'question-dates') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-gray-50 flex items-center justify-center p-4">
+        <div className="max-w-2xl w-full">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Quels jours vous intéressent ?</h1>
+            <p className="text-gray-600">Sélectionnez un ou plusieurs jours</p>
+          </div>
+
+          <div className="space-y-3 mb-6">
+            <button
+              onClick={() => {
+                setTempSelectedDates(dates);
+                setViewMode('question-categories');
+              }}
+              className={`w-full p-4 rounded-lg border text-left ${
+                tempSelectedDates.length === dates.length
+                  ? 'bg-blue-100 border-blue-300 text-blue-800'
+                  : 'bg-white border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-6 h-6 rounded border flex items-center justify-center ${
+                    tempSelectedDates.length === dates.length 
+                      ? 'bg-blue-500 border-blue-500' 
+                      : 'border-gray-300'
+                  }`}>
+                    {tempSelectedDates.length === dates.length && (
+                      <span className="text-white text-sm">✓</span>
+                    )}
+                  </div>
+                  <span className="font-medium">Tous les jours</span>
+                </div>
+              </div>
+            </button>
+
+            {dates.map(date => {
+              const isSelected = tempSelectedDates.includes(date);
+              return (
+                <button
+                  key={date}
+                  onClick={() => {
+                    const newDates = isSelected
+                      ? tempSelectedDates.filter(d => d !== date)
+                      : [...tempSelectedDates, date];
+                    setTempSelectedDates(newDates);
+                  }}
+                  className={`w-full p-4 rounded-lg border text-left ${
+                    isSelected
+                      ? 'bg-blue-100 border-blue-300 text-blue-800'
+                      : 'bg-white border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-6 h-6 rounded border flex items-center justify-center ${
+                        isSelected ? 'bg-blue-500 border-blue-500' : 'border-gray-300'
+                      }`}>
+                        {isSelected && <span className="text-white text-sm">✓</span>}
+                      </div>
+                      <div>
+                        <div className="font-medium">
+                          {new Date(date).toLocaleDateString('fr-FR', { 
+                            weekday: 'long', 
+                            day: 'numeric', 
+                            month: 'long' 
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex gap-3 mt-8">
+            <button
+              onClick={() => setViewMode('question-view')}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+            >
+              ← Retour
+            </button>
+            <button
+              onClick={() => {
+                if (tempSelectedDates.length === 0) {
+                  setTempSelectedDates(dates);
+                }
+                setViewMode('question-categories');
+              }}
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              {tempSelectedDates.length === 0 ? 'Passer' : 'Continuer'} →
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Question 3: Quelles thématiques ?
+  if (viewMode === 'question-categories') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-gray-50 flex items-center justify-center p-4">
+        <div className="max-w-2xl w-full">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Quelles thématiques ?</h1>
+            <p className="text-gray-600">Sélectionnez une ou plusieurs thématiques</p>
+          </div>
+
+          <div className="space-y-3 mb-6 max-h-96 overflow-y-auto pr-2">
+            <button
+              onClick={() => {
+                setTempSelectedCategories(categories);
+                goToFinalView();
+              }}
+              className={`w-full p-4 rounded-lg border text-left ${
+                tempSelectedCategories.length === categories.length
+                  ? 'bg-blue-100 border-blue-300 text-blue-800'
+                  : 'bg-white border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-6 h-6 rounded border flex items-center justify-center ${
+                    tempSelectedCategories.length === categories.length 
+                      ? 'bg-blue-500 border-blue-500' 
+                      : 'border-gray-300'
+                  }`}>
+                    {tempSelectedCategories.length === categories.length && (
+                      <span className="text-white text-sm">✓</span>
+                    )}
+                  </div>
+                  <span className="font-medium">Toutes les thématiques</span>
+                </div>
+              </div>
+            </button>
+
+            {categories.map(categorie => {
+              const isSelected = tempSelectedCategories.includes(categorie);
+              return (
+                <button
+                  key={categorie}
+                  onClick={() => {
+                    const newCategories = isSelected
+                      ? tempSelectedCategories.filter(c => c !== categorie)
+                      : [...tempSelectedCategories, categorie];
+                    setTempSelectedCategories(newCategories);
+                  }}
+                  className={`w-full p-4 rounded-lg border text-left ${
+                    isSelected
+                      ? 'bg-blue-100 border-blue-300 text-blue-800'
+                      : 'bg-white border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-6 h-6 rounded border flex items-center justify-center ${
+                        isSelected ? 'bg-blue-500 border-blue-500' : 'border-gray-300'
+                      }`}>
+                        {isSelected && <span className="text-white text-sm">✓</span>}
+                      </div>
+                      <span className="font-medium">{categorie}</span>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex gap-3 mt-8">
+            <button
+              onClick={() => setViewMode('question-dates')}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+            >
+              ← Retour
+            </button>
+            <button
+              onClick={goToFinalView}
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Voir les TFH →
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Fonction pour aller à la vue finale
+  const goToFinalView = () => {
+    setSelectedDates(tempSelectedDates.length > 0 ? tempSelectedDates : dates);
+    setSelectedCategorie(tempSelectedCategories.length === 1 
+      ? tempSelectedCategories[0] 
+      : 'toutes');
+    setSelectedLocations(locations);
+    setViewMode(tempViewMode);
+  };
+
   // Écran de paramétrage pour la sélection
   if (viewMode === 'list' || viewMode === 'calendar') {
     return (
-      <div className="min-h-screen bg-gray-50 p-4 md:p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
-                {viewMode === 'list' ? 'Sélection en liste' : 'Sélection en calendrier'}
-              </h1>
-              <p className="text-gray-600 mt-1">Connecté en tant que {userName}</p>
+      <div className="min-h-screen bg-gray-50">
+        {/* Barre d'en-tête fixe */}
+        <div className="sticky top-0 z-10 bg-white border-b shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 md:px-8 py-3">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+              <div className="flex-1 min-w-0">
+                <h1 className="text-lg md:text-xl font-bold text-gray-800 truncate">
+                  {viewMode === 'list' ? 'Sélection en liste' : 'Sélection en calendrier'}
+                </h1>
+                <p className="text-xs md:text-sm text-gray-600 truncate">
+                  Connecté en tant que {userName}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm flex items-center gap-1"
+                >
+                  <span>{showFilters ? '▼' : '▲'}</span>
+                  <span>Filtres</span>
+                </button>
+                <button
+                  onClick={() => setViewMode(viewMode === 'list' ? 'calendar' : 'list')}
+                  className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm"
+                >
+                  {viewMode === 'list' ? '📅 Calendrier' : '📋 Liste'}
+                </button>
+                <button
+                  onClick={() => setViewMode('choice')}
+                  className="px-3 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm"
+                >
+                  Menu
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
+                >
+                  Déconnexion
+                </button>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setViewMode(viewMode === 'list' ? 'calendar' : 'list')}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm md:text-base"
-              >
-                {viewMode === 'list' ? 'Voir calendrier' : 'Voir liste'}
-              </button>
-              <button
-                onClick={() => setViewMode('choice')}
-                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm md:text-base"
-              >
-                Retour
-              </button>
-              <button
-                onClick={handleLogout}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm md:text-base"
-              >
-                Déconnexion
-              </button>
+            
+            {/* Résumé des filtres */}
+            <div className="mt-2 flex flex-wrap gap-2 text-xs">
+              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                {selectedDates.length} jour{selectedDates.length > 1 ? 's' : ''}
+              </span>
+              <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
+                {selectedCategorie === 'toutes' 
+                  ? `${categories.length} thématiques` 
+                  : `${selectedCategorie}`}
+              </span>
+              <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">
+                {selectedEleves.length} TFH sélectionné{selectedEleves.length > 1 ? 's' : ''}
+              </span>
             </div>
           </div>
+        </div>
+
+        {/* Filtres (affichage conditionnel) */}
+        {showFilters && (
+          <div className="bg-white border-b">
+            <div className="max-w-7xl mx-auto px-4 md:px-8 py-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Jours
+                  </label>
+                  <div className="flex flex-wrap gap-1">
+                    {dates.map(date => {
+                      const isSelected = selectedDates.includes(date);
+                      return (
+                        <button
+                          key={date}
+                          onClick={() => {
+                            const newDates = isSelected
+                              ? selectedDates.filter(d => d !== date)
+                              : [...selectedDates, date];
+                            setSelectedDates(newDates);
+                          }}
+                          className={`px-2 py-1 text-xs rounded ${
+                            isSelected
+                              ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          {new Date(date).toLocaleDateString('fr-FR', { 
+                            weekday: 'short', 
+                            day: 'numeric' 
+                          })}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Thématiques
+                  </label>
+                  <select
+                    value={selectedCategorie}
+                    onChange={(e) => setSelectedCategorie(e.target.value)}
+                    className="w-full border rounded px-2 py-1.5 text-xs"
+                  >
+                    <option value="toutes">Toutes les thématiques</option>
+                    {categories.map(categorie => (
+                      <option key={categorie} value={categorie}>
+                        {categorie}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Locaux
+                  </label>
+                  <select
+                    value="toutes"
+                    onChange={(e) => {
+                      if (e.target.value === 'toutes') {
+                        setSelectedLocations(locations);
+                      } else {
+                        setSelectedLocations(e.target.value ? [e.target.value] : []);
+                      }
+                    }}
+                    className="w-full border rounded px-2 py-1.5 text-xs"
+                  >
+                    <option value="toutes">Tous les locaux</option>
+                    {locations.map(location => (
+                      <option key={location} value={location}>
+                        {location}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              
+              <div className="mt-3 pt-3 border-t border-gray-100">
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={handleSelectAll}
+                    className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
+                  >
+                    Tout (dé)sélectionner
+                  </button>
+                  <div className="text-xs text-gray-500">
+                    Créneaux occupés: <span className="text-red-600">grisés</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
           {/* Questions pour les filtres */}
           <div className="bg-white rounded-lg shadow p-6 mb-6">
@@ -747,7 +1165,30 @@ export default function LecteurExterneDashboard() {
                       const isBusy = isTimeSlotBusy(eleve);
                       const isSelected = selectedEleves.includes(eleve.id);
                       const isCurrentlyAssigned = eleve.lecteur_externe_id === userLecteurExterneId;
-                      
+                      const sortedEleves = [...filteredElevesDisponibles].sort((a, b) => {
+                        // 1. Par date (les sans date en dernier)
+                        if (!a.date_defense && b.date_defense) return 1;
+                        if (a.date_defense && !b.date_defense) return -1;
+                        if (a.date_defense && b.date_defense) {
+                          const dateCompare = a.date_defense.localeCompare(b.date_defense);
+                          if (dateCompare !== 0) return dateCompare;
+                        }
+                        
+                        // 2. Par heure (les sans heure en dernier)
+                        if (!a.heure_defense && b.heure_defense) return 1;
+                        if (a.heure_defense && !b.heure_defense) return -1;
+                        if (a.heure_defense && b.heure_defense) {
+                          const timeCompare = a.heure_defense.localeCompare(b.heure_defense);
+                          if (timeCompare !== 0) return timeCompare;
+                        }
+                        
+                        // 3. Par classe
+                        const classCompare = a.classe.localeCompare(b.classe);
+                        if (classCompare !== 0) return classCompare;
+                        
+                        // 4. Par nom
+                        return a.nom.localeCompare(b.nom);
+                      });
                       return (
                         <tr 
                           key={eleve.id} 
