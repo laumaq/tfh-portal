@@ -21,6 +21,7 @@ interface DefenseEvent {
   mediateurNom: string;
   mediateurPrenom: string;
   categorie: string;
+  problematique: string;
 }
 
 interface DayDefenses {
@@ -53,6 +54,7 @@ export default function CalendarDisplayLecteurExterne({
 }: CalendarDisplayProps) {
   const [dayDefenses, setDayDefenses] = useState<DayDefenses[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
 
   const PIXELS_PER_HOUR = 200;
 
@@ -131,7 +133,8 @@ export default function CalendarDisplayLecteurExterne({
         lecteurExternePrenom: eleve.lecteur_externe_prenom || '-',
         mediateurNom: '-',
         mediateurPrenom: '-',
-        categorie: eleve.categorie || 'Non catégorisé'
+        categorie: eleve.categorie || 'Non catégorisé',
+        problematique: eleve.problematique || ''
       };
     });
     
@@ -149,7 +152,6 @@ export default function CalendarDisplayLecteurExterne({
       filteredDefenses = filteredDefenses.filter(d => selectedLocations.includes(d.location));
     }
     
-    // Grouper par date
     const uniqueDates = Array.from(new Set(filteredDefenses.map(d => d.date))).sort();
     
     const daysData: DayDefenses[] = uniqueDates.map(date => {
@@ -192,6 +194,28 @@ export default function CalendarDisplayLecteurExterne({
 
   const pluralize = (count: number, singular: string, plural: string) => {
     return count === 1 ? singular : plural;
+  };
+
+  const handleEventClick = (event: DefenseEvent, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (expandedEventId === event.id) {
+      setExpandedEventId(null);
+    } else {
+      setExpandedEventId(event.id);
+      
+      if (!isEventBusy(event.eleveId) || isEventAssignedToCurrentUser(event)) {
+        onEventClick(event);
+      }
+    }
+  };
+
+  const formatProblematique = (problematique: string, maxLength: number = 200) => {
+    if (!problematique || problematique.trim() === '') return '';
+    
+    if (problematique.length <= maxLength) return problematique;
+    
+    return problematique.substring(0, maxLength) + '...';
   };
 
   if (isProcessing) {
@@ -285,19 +309,24 @@ export default function CalendarDisplayLecteurExterne({
                                 const top = (hoursFrom8 + minutesFraction) * PIXELS_PER_HOUR;
                                 
                                 const DEFENSE_DURATION_MINUTES = 50;
-                                const height = (DEFENSE_DURATION_MINUTES / 60) * PIXELS_PER_HOUR;
+                                const baseHeight = (DEFENSE_DURATION_MINUTES / 60) * PIXELS_PER_HOUR;
+                                const isExpanded = expandedEventId === defense.id;
+                                const height = isExpanded ? Math.max(baseHeight * 1.5, 150) : baseHeight;
                                 
                                 const color = getCategoryColor(defense.categorie);
                                 const selected = isEventSelected(defense.eleveId);
                                 const busy = isEventBusy(defense.eleveId);
                                 const assignedToCurrentUser = isEventAssignedToCurrentUser(defense);
+                                const clickable = !busy || assignedToCurrentUser;
                                 
                                 return (
                                   <div
                                     key={defense.id}
-                                    className={`absolute left-1 right-1 rounded p-2 overflow-hidden border shadow-sm hover:shadow-md transition-all cursor-pointer ${
-                                      selected ? 'ring-2 ring-blue-500 ring-offset-1' : ''
-                                    } ${busy && !assignedToCurrentUser ? 'opacity-50 cursor-not-allowed' : 'hover:ring-1 hover:ring-blue-300'}`}
+                                    className={`absolute left-1 right-1 rounded p-2 overflow-hidden border shadow-sm hover:shadow-md transition-all ${
+                                      clickable ? 'cursor-pointer' : 'cursor-not-allowed'
+                                    } ${selected ? 'ring-2 ring-blue-500 ring-offset-1' : ''} ${
+                                      busy && !assignedToCurrentUser ? 'opacity-50' : ''
+                                    }`}
                                     style={{
                                       top: `${top}px`,
                                       height: `${height}px`,
@@ -307,22 +336,23 @@ export default function CalendarDisplayLecteurExterne({
                                       zIndex: 10,
                                       fontSize: '13px'
                                     }}
-                                    onClick={() => {
-                                      if (!busy || assignedToCurrentUser) {
-                                        onEventClick(defense);
-                                      }
-                                    }}
+                                    onClick={(e) => handleEventClick(defense, e)}
                                   >
                                     <div className="font-bold mb-1 flex justify-between items-start">
                                       <span>{defense.startTime} - {defense.endTime}</span>
-                                      {selected && (
-                                        <span className="text-xs bg-blue-500 text-white px-1 py-0.5 rounded">✓</span>
-                                      )}
-                                      {busy && !assignedToCurrentUser && (
-                                        <span className="text-xs bg-red-500 text-white px-1 py-0.5 rounded">Occupé</span>
-                                      )}
+                                      <div className="flex gap-1">
+                                        {selected && (
+                                          <span className="text-xs bg-blue-500 text-white px-1 py-0.5 rounded">✓</span>
+                                        )}
+                                        {busy && !assignedToCurrentUser && (
+                                          <span className="text-xs bg-red-500 text-white px-1 py-0.5 rounded">Occupé</span>
+                                        )}
+                                        {isExpanded && (
+                                          <span className="text-xs bg-gray-500 text-white px-1 py-0.5 rounded">▲</span>
+                                        )}
+                                      </div>
                                     </div>
-                                    <div className="space-y-0.5">
+                                    <div className="space-y-0.5 overflow-hidden">
                                       <div className="font-semibold">
                                         {defense.elevePrenom} {defense.eleveNom}
                                       </div>
@@ -332,6 +362,19 @@ export default function CalendarDisplayLecteurExterne({
                                       {defense.guideNom !== '-' && (
                                         <div className="text-xs">
                                           Guide: {defense.guidePrenom} {defense.guideNom}
+                                        </div>
+                                      )}
+                                      {isExpanded && defense.problematique && (
+                                        <div className="mt-1 pt-1 border-t border-gray-200 text-xs">
+                                          <div className="font-medium mb-1">Problématique:</div>
+                                          <div className="text-xs opacity-90 whitespace-pre-wrap max-h-20 overflow-y-auto">
+                                            {formatProblematique(defense.problematique)}
+                                          </div>
+                                        </div>
+                                      )}
+                                      {!isExpanded && defense.problematique && (
+                                        <div className="text-xs italic mt-1">
+                                          Cliquez pour voir la problématique
                                         </div>
                                       )}
                                     </div>
