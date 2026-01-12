@@ -199,14 +199,8 @@ export default function CalendarDisplayLecteurExterne({
   const handleEventClick = (event: DefenseEvent, e: React.MouseEvent) => {
     e.stopPropagation();
     
-    if (expandedEventId === event.id) {
-      setExpandedEventId(null);
-    } else {
-      setExpandedEventId(event.id);
-      
-      if (!isEventBusy(event.eleveId) || isEventAssignedToCurrentUser(event)) {
-        onEventClick(event);
-      }
+    if (!isEventBusy(event.eleveId) || isEventAssignedToCurrentUser(event)) {
+      onEventClick(event);
     }
   };
 
@@ -347,12 +341,9 @@ export default function CalendarDisplayLecteurExterne({
                                         {busy && !assignedToCurrentUser && (
                                           <span className="text-xs bg-red-500 text-white px-1 py-0.5 rounded">Occupé</span>
                                         )}
-                                        {isExpanded && (
-                                          <span className="text-xs bg-gray-500 text-white px-1 py-0.5 rounded">▲</span>
-                                        )}
                                       </div>
                                     </div>
-                                    <div className="space-y-0.5 overflow-hidden">
+                                    <div className="space-y-0.5 overflow-hidden h-full">
                                       <div className="font-semibold">
                                         {defense.elevePrenom} {defense.eleveNom}
                                       </div>
@@ -364,17 +355,12 @@ export default function CalendarDisplayLecteurExterne({
                                           Guide: {defense.guidePrenom} {defense.guideNom}
                                         </div>
                                       )}
-                                      {isExpanded && defense.problematique && (
-                                        <div className="mt-1 pt-1 border-t border-gray-200 text-xs">
-                                          <div className="font-medium mb-1">Problématique:</div>
-                                          <div className="text-xs opacity-90 whitespace-pre-wrap max-h-20 overflow-y-auto">
-                                            {formatProblematique(defense.problematique)}
+                                      {defense.problematique && defense.problematique.trim() !== '' && (
+                                        <div className="mt-1 pt-1 border-t border-gray-200">
+                                          <div className="text-xs font-medium mb-0.5">Problématique:</div>
+                                          <div className="text-[11px] opacity-90 whitespace-pre-wrap overflow-y-auto max-h-[60px]">
+                                            {formatProblematique(defense.problematique, 150)}
                                           </div>
-                                        </div>
-                                      )}
-                                      {!isExpanded && defense.problematique && (
-                                        <div className="text-xs italic mt-1">
-                                          Cliquez pour voir la problématique
                                         </div>
                                       )}
                                     </div>
