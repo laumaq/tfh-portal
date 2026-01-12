@@ -806,7 +806,7 @@ export default function LecteurExterneDashboard() {
 
         {/* Filtres simplifiés */}
         {showFilters && (
-          <div className="bg-white border-b">
+          <div className="sticky top-[120px] md:top-[100px] z-40 bg-white border-b shadow-sm">
             <div className="max-w-7xl mx-auto px-4 md:px-8 py-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
@@ -887,15 +887,7 @@ export default function LecteurExterneDashboard() {
               </div>
               
               <div className="mt-3 pt-3 border-t border-gray-100">
-                <div className="flex items-center justify-between">
-                  <button
-                    onClick={handleSelectAll}
-                    className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
-                  >
-                    {selectedEleves.length === sortedElevesDisponibles.filter(e => !isTimeSlotBusy(e)).length && sortedElevesDisponibles.length > 0
-                      ? 'Tout désélectionner'
-                      : 'Tout sélectionner'}
-                  </button>
+                <div className="flex items-center justify-end">
                   <div className="text-xs text-gray-500">
                     <span className="text-red-600 mr-2">● Créneaux occupés</span>
                     <span className="text-green-600">● Disponibles</span>
@@ -907,7 +899,7 @@ export default function LecteurExterneDashboard() {
         )}
 
         {/* Contenu principal avec padding en haut pour éviter la superposition */}
-        <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 mt-[120px] md:mt-[100px]">
+        <div className="max-w-7xl mx-auto px-4 md:px-8 py-4">
           {/* Vue liste */}
           {viewMode === 'list' ? (
             <div className="bg-white rounded-lg shadow overflow-hidden">
