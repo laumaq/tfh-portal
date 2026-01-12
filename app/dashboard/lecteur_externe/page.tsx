@@ -51,7 +51,6 @@ interface DefenseEvent {
 }
 
 type ViewMode = 'choice' | 'planning' | 'list' | 'calendar' | 'question-view' | 'question-dates' | 'question-categories';
-type TabType = 'dashboard' | 'selection';
 
 export default function LecteurExterneDashboard() {
   const [eleves, setEleves] = useState<Eleve[]>([]);
@@ -60,7 +59,6 @@ export default function LecteurExterneDashboard() {
   const [userName, setUserName] = useState('');
   const [userLecteurExterneId, setUserLecteurExterneId] = useState<string>('');
   const [viewMode, setViewMode] = useState<ViewMode>('choice');
-  const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [selectedEleves, setSelectedEleves] = useState<string[]>([]);
   const [selectedCategorie, setSelectedCategorie] = useState<string>('toutes');
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
@@ -95,7 +93,6 @@ export default function LecteurExterneDashboard() {
     try {
       setLoading(true);
       
-      // Charger les élèves assignés à ce lecteur externe
       const { data: elevesData, error: elevesError } = await supabase
         .from('eleves')
         .select(`
@@ -127,7 +124,6 @@ export default function LecteurExterneDashboard() {
 
       setEleves(elevesFormatted);
 
-      // Charger TOUS les élèves pour la sélection
       const { data: allElevesData, error: allElevesError } = await supabase
         .from('eleves')
         .select(`
@@ -157,13 +153,11 @@ export default function LecteurExterneDashboard() {
 
       setElevesDisponibles(allElevesFormatted);
 
-      // Extraire les catégories uniques
       const uniqueCategories = Array.from(
         new Set(allElevesFormatted.map(e => e.categorie).filter(Boolean))
       ).sort();
       setCategories(uniqueCategories);
 
-      // Extraire les dates uniques
       const uniqueDates = Array.from(
         new Set(allElevesFormatted
           .filter(e => e.date_defense)
@@ -172,7 +166,6 @@ export default function LecteurExterneDashboard() {
       setDates(uniqueDates);
       setSelectedDates(uniqueDates);
 
-      // Extraire les locaux uniques
       const uniqueLocations = Array.from(
         new Set(allElevesFormatted
           .filter(e => e.localisation_defense)
@@ -181,13 +174,11 @@ export default function LecteurExterneDashboard() {
       setLocations(uniqueLocations);
       setSelectedLocations(uniqueLocations);
 
-      // Pré-sélectionner les élèves où l'utilisateur est déjà lecteur externe
       const preSelected = allElevesFormatted
         .filter(e => e.lecteur_externe_id === lecteurExterneId)
         .map(e => e.id);
       setSelectedEleves(preSelected);
 
-      // Générer les créneaux occupés
       generateBusySlots(elevesFormatted, lecteurExterneId);
 
     } catch (err) {
@@ -200,7 +191,6 @@ export default function LecteurExterneDashboard() {
   const generateBusySlots = (assignedEleves: Eleve[], lecteurExterneId: string) => {
     const slots = new Set<string>();
     
-    // Ajouter les créneaux des élèves déjà assignés
     assignedEleves.forEach(eleve => {
       if (eleve.date_defense && eleve.heure_defense) {
         const slotKey = `${eleve.date_defense}_${eleve.heure_defense.substring(0, 5)}`;
@@ -209,7 +199,6 @@ export default function LecteurExterneDashboard() {
     });
 
     setBusySlots(slots);
-    console.log('Créneaux occupés:', Array.from(slots));
   };
 
   const add50Minutes = (time: string): string => {
@@ -267,44 +256,18 @@ export default function LecteurExterneDashboard() {
   const isTimeSlotBusy = (eleve: Eleve): boolean => {
     if (!eleve.date_defense || !eleve.heure_defense) return false;
     
-    // Créer la clé du créneau
     const slotKey = `${eleve.date_defense}_${eleve.heure_defense.substring(0, 5)}`;
-    
-    // Vérifier si le créneau est occupé
     const isSlotBusy = busySlots.has(slotKey);
     
-    // Si le créneau est occupé, vérifier si ce n'est pas déjà cet élève
     if (isSlotBusy && eleve.lecteur_externe_id === userLecteurExterneId) {
-      // L'utilisateur est déjà assigné à ce créneau
       return false;
     }
     
     return isSlotBusy;
   };
 
-  const filteredElevesDisponibles = elevesDisponibles.filter(eleve => {
-    // Filtre par catégorie
-    if (selectedCategorie !== 'toutes' && eleve.categorie !== selectedCategorie) {
-      return false;
-    }
-    
-    // Filtre par date
-    if (selectedDates.length > 0 && eleve.date_defense && !selectedDates.includes(eleve.date_defense)) {
-      return false;
-    }
-    
-    // Filtre par local
-    if (selectedLocations.length > 0 && eleve.localisation_defense && !selectedLocations.includes(eleve.localisation_defense)) {
-      return false;
-    }
-    
-    return true;
-  });
-
-  // Fonction pour trier les élèves par date, heure, classe, nom
   const sortEleves = (eleves: Eleve[]): Eleve[] => {
     return [...eleves].sort((a, b) => {
-      // 1. Par date (les sans date en dernier)
       if (!a.date_defense && b.date_defense) return 1;
       if (a.date_defense && !b.date_defense) return -1;
       if (a.date_defense && b.date_defense) {
@@ -312,7 +275,6 @@ export default function LecteurExterneDashboard() {
         if (dateCompare !== 0) return dateCompare;
       }
       
-      // 2. Par heure (les sans heure en dernier)
       if (!a.heure_defense && b.heure_defense) return 1;
       if (a.heure_defense && !b.heure_defense) return -1;
       if (a.heure_defense && b.heure_defense) {
@@ -320,14 +282,28 @@ export default function LecteurExterneDashboard() {
         if (timeCompare !== 0) return timeCompare;
       }
       
-      // 3. Par classe
       const classCompare = a.classe.localeCompare(b.classe);
       if (classCompare !== 0) return classCompare;
       
-      // 4. Par nom
       return a.nom.localeCompare(b.nom);
     });
   };
+
+  const filteredElevesDisponibles = elevesDisponibles.filter(eleve => {
+    if (selectedCategorie !== 'toutes' && eleve.categorie !== selectedCategorie) {
+      return false;
+    }
+    
+    if (selectedDates.length > 0 && eleve.date_defense && !selectedDates.includes(eleve.date_defense)) {
+      return false;
+    }
+    
+    if (selectedLocations.length > 0 && eleve.localisation_defense && !selectedLocations.includes(eleve.localisation_defense)) {
+      return false;
+    }
+    
+    return true;
+  });
 
   const sortedElevesDisponibles = sortEleves(filteredElevesDisponibles);
 
@@ -344,15 +320,12 @@ export default function LecteurExterneDashboard() {
     
     setSelectedEleves(newSelectedEleves);
 
-    // Enregistrement automatique
     try {
-      // D'abord, retirer ce lecteur externe de tous les élèves
       await supabase
         .from('eleves')
         .update({ lecteur_externe_id: null })
         .eq('lecteur_externe_id', userLecteurExterneId);
 
-      // Ensuite, ajouter ce lecteur externe aux élèves sélectionnés
       if (newSelectedEleves.length > 0) {
         await supabase
           .from('eleves')
@@ -360,16 +333,10 @@ export default function LecteurExterneDashboard() {
           .in('id', newSelectedEleves);
       }
 
-      // Recharger les données
       await loadData(userLecteurExterneId);
-      
-      // Feedback visuel (optionnel)
-      const eleveName = eleve ? `${eleve.prenom} ${eleve.nom}` : 'TFH';
-      console.log(`${eleveName} ${newSelectedEleves.includes(eleveId) ? 'sélectionné' : 'désélectionné'}`);
       
     } catch (err) {
       console.error('Erreur lors de la sauvegarde automatique:', err);
-      // Revenir à l'état précédent en cas d'erreur
       setSelectedEleves(selectedEleves);
       alert('Erreur lors de l\'enregistrement automatique');
     }
@@ -412,7 +379,6 @@ export default function LecteurExterneDashboard() {
     return heureString.substring(0, 5);
   };
 
-  // Fonction pour aller à la vue finale
   const goToFinalView = () => {
     setSelectedDates(tempSelectedDates.length > 0 ? tempSelectedDates : dates);
     setSelectedCategorie(tempSelectedCategories.length === 1 
@@ -490,11 +456,276 @@ export default function LecteurExterneDashboard() {
     );
   }
 
-  // Questions 1, 2, 3 restent identiques...
-  // (garder le code existant pour question-view, question-dates, question-categories)
+  // Question 1: Vue liste ou calendrier
+  if (viewMode === 'question-view') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-gray-50 flex items-center justify-center p-4">
+        <div className="max-w-2xl w-full">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Quelle vue préférez-vous ?</h1>
+            <p className="text-gray-600">Comment souhaitez-vous voir les TFH disponibles ?</p>
+          </div>
 
-  // Écran de paramétrage pour la sélection (simplifié)
+          <div className="space-y-4">
+            <button
+              onClick={() => {
+                setTempViewMode('list');
+                setViewMode('question-dates');
+              }}
+              className="w-full p-6 bg-white rounded-xl shadow-sm border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all text-left group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                  <span className="text-2xl">📋</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800">Vue liste</h3>
+                  <p className="text-gray-600 text-sm mt-1">
+                    Liste tabulaire avec tous les détails
+                  </p>
+                </div>
+                <div className="ml-auto text-gray-400 group-hover:text-blue-600">
+                  →
+                </div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => {
+                setTempViewMode('calendar');
+                setViewMode('question-dates');
+              }}
+              className="w-full p-6 bg-white rounded-xl shadow-sm border border-gray-200 hover:border-green-300 hover:shadow-md transition-all text-left group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center group-hover:bg-green-200 transition-colors">
+                  <span className="text-2xl">📅</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800">Vue calendrier</h3>
+                  <p className="text-gray-600 text-sm mt-1">
+                    Représentation visuelle par jour et heure
+                  </p>
+                </div>
+                <div className="ml-auto text-gray-400 group-hover:text-green-600">
+                  →
+                </div>
+              </div>
+            </button>
+          </div>
+
+          <div className="mt-8 text-center">
+            <button
+              onClick={() => setViewMode('choice')}
+              className="text-gray-500 hover:text-gray-700 text-sm"
+            >
+              ← Retour
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Question 2: Quels jours ?
+  if (viewMode === 'question-dates') {
+    const busyCount = sortedElevesDisponibles.filter(e => isTimeSlotBusy(e)).length;
+    
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-gray-50 flex items-center justify-center p-4">
+        <div className="max-w-2xl w-full">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Quels jours vous intéressent ?</h1>
+            <p className="text-gray-600">Sélectionnez un ou plusieurs jours</p>
+          </div>
+
+          <div className="space-y-3 mb-6">
+            <button
+              onClick={() => {
+                setTempSelectedDates(dates);
+                setViewMode('question-categories');
+              }}
+              className={`w-full p-4 rounded-lg border text-left ${
+                tempSelectedDates.length === dates.length
+                  ? 'bg-blue-100 border-blue-300 text-blue-800'
+                  : 'bg-white border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-6 h-6 rounded border flex items-center justify-center ${
+                    tempSelectedDates.length === dates.length 
+                      ? 'bg-blue-500 border-blue-500' 
+                      : 'border-gray-300'
+                  }`}>
+                    {tempSelectedDates.length === dates.length && (
+                      <span className="text-white text-sm">✓</span>
+                    )}
+                  </div>
+                  <span className="font-medium">Tous les jours</span>
+                </div>
+              </div>
+            </button>
+
+            {dates.map(date => {
+              const isSelected = tempSelectedDates.includes(date);
+              return (
+                <button
+                  key={date}
+                  onClick={() => {
+                    const newDates = isSelected
+                      ? tempSelectedDates.filter(d => d !== date)
+                      : [...tempSelectedDates, date];
+                    setTempSelectedDates(newDates);
+                  }}
+                  className={`w-full p-4 rounded-lg border text-left ${
+                    isSelected
+                      ? 'bg-blue-100 border-blue-300 text-blue-800'
+                      : 'bg-white border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-6 h-6 rounded border flex items-center justify-center ${
+                        isSelected ? 'bg-blue-500 border-blue-500' : 'border-gray-300'
+                      }`}>
+                        {isSelected && <span className="text-white text-sm">✓</span>}
+                      </div>
+                      <div>
+                        <div className="font-medium">
+                          {new Date(date).toLocaleDateString('fr-FR', { 
+                            weekday: 'long', 
+                            day: 'numeric', 
+                            month: 'long' 
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex gap-3 mt-8">
+            <button
+              onClick={() => setViewMode('question-view')}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+            >
+              ← Retour
+            </button>
+            <button
+              onClick={() => {
+                if (tempSelectedDates.length === 0) {
+                  setTempSelectedDates(dates);
+                }
+                setViewMode('question-categories');
+              }}
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              {tempSelectedDates.length === 0 ? 'Passer' : 'Continuer'} →
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Question 3: Quelles thématiques ?
+  if (viewMode === 'question-categories') {
+    const busyCount = sortedElevesDisponibles.filter(e => isTimeSlotBusy(e)).length;
+    
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-gray-50 flex items-center justify-center p-4">
+        <div className="max-w-2xl w-full">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Quelles thématiques ?</h1>
+            <p className="text-gray-600">Sélectionnez une ou plusieurs thématiques</p>
+          </div>
+
+          <div className="space-y-3 mb-6 max-h-96 overflow-y-auto pr-2">
+            <button
+              onClick={() => {
+                setTempSelectedCategories(categories);
+                goToFinalView();
+              }}
+              className={`w-full p-4 rounded-lg border text-left ${
+                tempSelectedCategories.length === categories.length
+                  ? 'bg-blue-100 border-blue-300 text-blue-800'
+                  : 'bg-white border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-6 h-6 rounded border flex items-center justify-center ${
+                    tempSelectedCategories.length === categories.length 
+                      ? 'bg-blue-500 border-blue-500' 
+                      : 'border-gray-300'
+                  }`}>
+                    {tempSelectedCategories.length === categories.length && (
+                      <span className="text-white text-sm">✓</span>
+                    )}
+                  </div>
+                  <span className="font-medium">Toutes les thématiques</span>
+                </div>
+              </div>
+            </button>
+
+            {categories.map(categorie => {
+              const isSelected = tempSelectedCategories.includes(categorie);
+              return (
+                <button
+                  key={categorie}
+                  onClick={() => {
+                    const newCategories = isSelected
+                      ? tempSelectedCategories.filter(c => c !== categorie)
+                      : [...tempSelectedCategories, categorie];
+                    setTempSelectedCategories(newCategories);
+                  }}
+                  className={`w-full p-4 rounded-lg border text-left ${
+                    isSelected
+                      ? 'bg-blue-100 border-blue-300 text-blue-800'
+                      : 'bg-white border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-6 h-6 rounded border flex items-center justify-center ${
+                        isSelected ? 'bg-blue-500 border-blue-500' : 'border-gray-300'
+                      }`}>
+                        {isSelected && <span className="text-white text-sm">✓</span>}
+                      </div>
+                      <span className="font-medium">{categorie}</span>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex gap-3 mt-8">
+            <button
+              onClick={() => setViewMode('question-dates')}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+            >
+              ← Retour
+            </button>
+            <button
+              onClick={goToFinalView}
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Voir les TFH →
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Écran de paramétrage pour la sélection
   if (viewMode === 'list' || viewMode === 'calendar') {
+    const busyCount = sortedElevesDisponibles.filter(e => isTimeSlotBusy(e)).length;
+    
     return (
       <div className="min-h-screen bg-gray-50">
         {/* Barre d'en-tête fixe */}
@@ -552,9 +783,11 @@ export default function LecteurExterneDashboard() {
                 {selectedEleves.length} sélectionné{selectedEleves.length > 1 ? 's' : ''}
               </span>
               <span className="bg-red-100 text-red-800 px-2 py-1 rounded">
-                {sortedElevesDisponibles.filter(e => isTimeSlotBusy(e)).length} créneau{sortedElevesDisponibles.filter(e => isTimeSlotBusy(e)).length > 1 ? 'x' : ''} occupé{sortedElevesDisponibles.filter(e => isTimeSlotBusy(e)).length > 1 ? 's' : ''}
+                {busyCount} créneau{busyCount > 1 ? 'x' : ''} occupé{busyCount > 1 ? 's' : ''}
               </span>
             </div>
+          </div>
+        </div>
 
         {/* Filtres simplifiés */}
         {showFilters && (
