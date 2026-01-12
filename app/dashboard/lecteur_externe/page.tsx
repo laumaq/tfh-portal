@@ -785,7 +785,7 @@ export default function LecteurExterneDashboard() {
             
             {/* Résumé des filtres */}
               <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">
-                {selectedEleves.length} sélectionné{selectedEleves.length > 1 ? 's' : ''}
+                {selectedEleves.length} élève{selectedEleves.length > 1 ? 's' : ''} sélectionné{selectedEleves.length > 1 ? 's' : ''}
               </span>
             </div>
           </div>
