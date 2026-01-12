@@ -814,7 +814,7 @@ export default function LecteurExterneDashboard() {
                     Jours
                   </label>
                   <select
-                    value="toutes"
+                    value={selectedDates.length === dates.length ? 'toutes' : selectedDates.length === 0 ? 'aucune' : selectedDates[0]}
                     onChange={(e) => {
                       if (e.target.value === 'toutes') {
                         setSelectedDates(dates);
@@ -863,16 +863,26 @@ export default function LecteurExterneDashboard() {
                     Locaux
                   </label>
                   <select
-                    value="toutes"
+                    value={selectedLocations.length === locations.length ? 'toutes' : selectedLocations[0] || ''}
                     onChange={(e) => {
                       if (e.target.value === 'toutes') {
                         setSelectedLocations(locations);
+                      } else if (e.target.value === '') {
+                        setSelectedLocations([]);
                       } else {
-                        setSelectedLocations(e.target.value ? [e.target.value] : []);
+                        setSelectedLocations([e.target.value]);
                       }
                     }}
                     className="w-full border rounded px-2 py-1.5 text-xs"
                   >
+                    <option value="toutes">Tous les locaux</option>
+                    <option value="">Aucun local spécifique</option>
+                    {locations.map(location => (
+                      <option key={location} value={location}>
+                        {location}
+                      </option>
+                    ))}
+                  </select>
                     <option value="toutes">Tous les locaux</option>
                     {locations.map(location => (
                       <option key={location} value={location}>
@@ -1032,7 +1042,19 @@ export default function LecteurExterneDashboard() {
                   selectedLocations={selectedLocations}
                   onEventClick={handleCalendarEventClick}
                   selectedEventIds={selectedEleves}
-                  busyEventIds={Array.from(busySlots.values()).flat()}
+                  busyEventIds={(() => {
+                    const allBusyIds = new Set<string>();
+                    busySlots.forEach((eleveIds, slotKey) => {
+                      // Inclure tous les élèves de ce créneau, SAUF celui assigné à l'utilisateur actuel
+                      eleveIds.forEach(id => {
+                        const eleve = elevesDisponibles.find(e => e.id === id);
+                        if (eleve && eleve.lecteur_externe_id !== userLecteurExterneId) {
+                          allBusyIds.add(id);
+                        }
+                      });
+                    });
+                    return Array.from(allBusyIds);
+                  })()}
                   userLecteurExterneId={userLecteurExterneId}
                 />
               </div>
