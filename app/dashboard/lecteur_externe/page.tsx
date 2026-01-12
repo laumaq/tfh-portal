@@ -883,13 +883,6 @@ export default function LecteurExterneDashboard() {
                       </option>
                     ))}
                   </select>
-                    <option value="toutes">Tous les locaux</option>
-                    {locations.map(location => (
-                      <option key={location} value={location}>
-                        {location}
-                      </option>
-                    ))}
-                  </select>
                 </div>
               </div>
               
