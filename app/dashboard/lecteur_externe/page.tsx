@@ -201,7 +201,6 @@ export default function LecteurExterneDashboard() {
     });
 
     setBusySlots(slotsMap);
-    console.log('Créneaux occupés:', Array.from(slotsMap.entries()));
   };
 
   const add50Minutes = (time: string): string => {
@@ -785,20 +784,8 @@ export default function LecteurExterneDashboard() {
             </div>
             
             {/* Résumé des filtres */}
-            <div className="mt-2 flex flex-wrap gap-2 text-xs">
-              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                {selectedDates.length} jour{selectedDates.length > 1 ? 's' : ''}
-              </span>
-              <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
-                {selectedCategorie === 'toutes' 
-                  ? `${categories.length} thématiques` 
-                  : selectedCategorie}
-              </span>
               <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">
                 {selectedEleves.length} sélectionné{selectedEleves.length > 1 ? 's' : ''}
-              </span>
-              <span className="bg-red-100 text-red-800 px-2 py-1 rounded">
-                {busyCount} créneau{busyCount > 1 ? 'x' : ''} occupé{busyCount > 1 ? 's' : ''}
               </span>
             </div>
           </div>
