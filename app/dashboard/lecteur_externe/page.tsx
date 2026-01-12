@@ -552,11 +552,9 @@ export default function LecteurExterneDashboard() {
                 {selectedEleves.length} sélectionné{selectedEleves.length > 1 ? 's' : ''}
               </span>
               <span className="bg-red-100 text-red-800 px-2 py-1 rounded">
-                {sortedElevesDisponibles.filter(e => isTimeSlotBusy(e)).length} créneau{x occupé}
+                {sortedElevesDisponibles.filter(e => isTimeSlotBusy(e)).length} créneau{sortedElevesDisponibles.filter(e => isTimeSlotBusy(e)).length > 1 ? 'x' : ''} occupé{sortedElevesDisponibles.filter(e => isTimeSlotBusy(e)).length > 1 ? 's' : ''}
               </span>
             </div>
-          </div>
-        </div>
 
         {/* Filtres simplifiés */}
         {showFilters && (
