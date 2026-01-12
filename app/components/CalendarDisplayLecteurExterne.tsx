@@ -56,7 +56,7 @@ export default function CalendarDisplayLecteurExterne({
   const [isProcessing, setIsProcessing] = useState(false);
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
 
-  const PIXELS_PER_HOUR = 250;
+  const PIXELS_PER_HOUR = 300;
 
   const add50Minutes = (time: string): string => {
     if (!time) return '';
@@ -305,7 +305,7 @@ export default function CalendarDisplayLecteurExterne({
                                 const DEFENSE_DURATION_MINUTES = 50;
                                 const baseHeight = (DEFENSE_DURATION_MINUTES / 60) * PIXELS_PER_HOUR;
                                 const isExpanded = expandedEventId === defense.id;
-                                const height = isExpanded ? Math.max(baseHeight * 1.5, 150) : baseHeight;
+                                const height = isExpanded ? Math.max(baseHeight * 2, 150) : baseHeight;
                                 
                                 const color = getCategoryColor(defense.categorie);
                                 const selected = isEventSelected(defense.eleveId);
@@ -343,26 +343,51 @@ export default function CalendarDisplayLecteurExterne({
                                         )}
                                       </div>
                                     </div>
-                                    <div className="space-y-0.5 overflow-hidden h-full">
+                                    <div className="space-y-1 overflow-hidden h-full">
+                                      {/* Heure - déjà affichée en haut, mais on peut ajouter ici aussi si besoin */}
+                                      <div className="text-xs font-medium text-gray-700">
+                                        {defense.startTime} - {defense.endTime}
+                                      </div>
+                                      
+                                      {/* Élève */}
                                       <div className="font-semibold">
                                         {defense.elevePrenom} {defense.eleveNom}
                                       </div>
-                                      <div className="text-xs opacity-75">
-                                        {defense.categorie}
-                                      </div>
-                                      {defense.guideNom !== '-' && (
-                                        <div className="text-xs">
-                                          Guide: {defense.guidePrenom} {defense.guideNom}
-                                        </div>
-                                      )}
+                                      
+                                      {/* Problématique */}
                                       {defense.problematique && defense.problematique.trim() !== '' && (
-                                        <div className="mt-1 pt-1 border-t border-gray-200">
-                                          <div className="text-xs font-medium mb-0.5">Problématique:</div>
-                                          <div className="text-[11px] opacity-90 whitespace-pre-wrap overflow-y-auto max-h-[60px]">
-                                            {formatProblematique(defense.problematique, 150)}
+                                        <div className="mt-1">
+                                          <div className="text-xs opacity-90 whitespace-pre-wrap overflow-y-auto max-h-[100px]">
+                                            {formatProblematique(defense.problematique, 200)}
                                           </div>
                                         </div>
                                       )}
+                                      
+                                      {/* Guide */}
+                                      {defense.guideNom !== '-' && (
+                                        <div className="text-xs mt-1">
+                                          <span className="font-medium">Guide:</span> {defense.guidePrenom} {defense.guideNom}
+                                        </div>
+                                      )}
+                                      
+                                      {/* Lecteur interne */}
+                                      {defense.lecteurInterneNom !== '-' && (
+                                        <div className="text-xs">
+                                          <span className="font-medium">Lecteur interne:</span> {defense.lecteurInternePrenom} {defense.lecteurInterneNom}
+                                        </div>
+                                      )}
+                                      
+                                      {/* Médiateur */}
+                                      {defense.mediateurNom !== '-' && (
+                                        <div className="text-xs">
+                                          <span className="font-medium">Médiateur:</span> {defense.mediateurPrenom} {defense.mediateurNom}
+                                        </div>
+                                      )}
+                                      
+                                      {/* Catégorie (en petit en bas) */}
+                                      <div className="text-xs opacity-75 mt-1">
+                                        {defense.categorie}
+                                      </div>
                                     </div>
                                   </div>
                                 );
