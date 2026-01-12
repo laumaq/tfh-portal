@@ -738,7 +738,7 @@ export default function LecteurExterneDashboard() {
     return (
       <div className="min-h-screen bg-gray-50">
         {/* Barre d'en-tête fixe */}
-        <div className="sticky top-0 z-10 bg-white border-b shadow-sm">
+        <div className="sticky top-0 z-50 bg-white border-b shadow-sm">
           <div className="max-w-7xl mx-auto px-4 md:px-8 py-3">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
               <div className="flex-1 min-w-0">
@@ -904,7 +904,7 @@ export default function LecteurExterneDashboard() {
         )}
 
         {/* Contenu principal avec padding en haut pour éviter la superposition */}
-        <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 pt-20">
+        <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 mt-[120px] md:mt-[100px]">
           {/* Vue liste */}
           {viewMode === 'list' ? (
             <div className="bg-white rounded-lg shadow overflow-hidden">
