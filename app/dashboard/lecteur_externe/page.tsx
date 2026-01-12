@@ -282,21 +282,49 @@ export default function LecteurExterneDashboard() {
     return true;
   });
 
-  const handleToggleSelection = (eleveId: string) => {
-    const eleve = elevesDisponibles.find(e => e.id === eleveId);
-    if (eleve && isTimeSlotBusy(eleve)) {
-      alert('Vous avez déjà une défense à ce créneau horaire !');
-      return;
-    }
-
-    setSelectedEleves(prev => {
-      if (prev.includes(eleveId)) {
-        return prev.filter(id => id !== eleveId);
-      } else {
-        return [...prev, eleveId];
+  const handleToggleSelection = async (eleveId: string) => {
+      const eleve = elevesDisponibles.find(e => e.id === eleveId);
+      if (eleve && isTimeSlotBusy(eleve)) {
+        alert('Vous avez déjà une défense à ce créneau horaire !');
+        return;
       }
-    });
-  };
+  
+      const newSelectedEleves = selectedEleves.includes(eleveId)
+        ? selectedEleves.filter(id => id !== eleveId)
+        : [...selectedEleves, eleveId];
+      
+      setSelectedEleves(newSelectedEleves);
+  
+      // Enregistrement automatique
+      try {
+        // D'abord, retirer ce lecteur externe de tous les élèves
+        await supabase
+          .from('eleves')
+          .update({ lecteur_externe_id: null })
+          .eq('lecteur_externe_id', userLecteurExterneId);
+  
+        // Ensuite, ajouter ce lecteur externe aux élèves sélectionnés
+        if (newSelectedEleves.length > 0) {
+          await supabase
+            .from('eleves')
+            .update({ lecteur_externe_id: userLecteurExterneId })
+            .in('id', newSelectedEleves);
+        }
+  
+        // Recharger les données
+        await loadData(userLecteurExterneId);
+        
+        // Feedback visuel (optionnel)
+        const eleveName = eleve ? `${eleve.prenom} ${eleve.nom}` : 'TFH';
+        console.log(`${eleveName} ${newSelectedEleves.includes(eleveId) ? 'sélectionné' : 'désélectionné'}`);
+        
+      } catch (err) {
+        console.error('Erreur lors de la sauvegarde automatique:', err);
+        // Revenir à l'état précédent en cas d'erreur
+        setSelectedEleves(selectedEleves);
+        alert('Erreur lors de l\'enregistrement automatique');
+      }
+    };
 
   const handleSelectAll = () => {
     const availableEleves = filteredElevesDisponibles.filter(eleve => !isTimeSlotBusy(eleve));
@@ -467,16 +495,71 @@ export default function LecteurExterneDashboard() {
             </div>
           </div>
 
-          {/* Filtres */}
+          {/* Questions pour les filtres */}
           <div className="bg-white rounded-lg shadow p-6 mb-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">Paramètres de la vue</h2>
+            <h2 className="text-lg font-semibold text-gray-800 mb-6">Comment souhaitez-vous afficher les TFH ?</h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Filtre par catégorie */}
+            <div className="space-y-6">
+              {/* Question 1 : Vue */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Thématique
-                </label>
+                <h3 className="text-sm font-medium text-gray-700 mb-3">Préférez-vous une vue en liste ou en calendrier ?</h3>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                      viewMode === 'list'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    📋 Vue liste
+                  </button>
+                  <button
+                    onClick={() => setViewMode('calendar')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                      viewMode === 'calendar'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    📅 Vue calendrier
+                  </button>
+                </div>
+              </div>
+              
+              {/* Question 2 : Thématique */}
+              <div>
+                <h3 className="text-sm font-medium text-gray-700 mb-3">Quelle thématique vous intéresse ?</h3>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  <button
+                    onClick={() => setSelectedCategorie('toutes')}
+                    className={`px-3 py-1.5 rounded-lg text-sm ${
+                      selectedCategorie === 'toutes'
+                        ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Toutes les thématiques
+                  </button>
+                  {categories.slice(0, 5).map(categorie => (
+                    <button
+                      key={categorie}
+                      onClick={() => setSelectedCategorie(categorie)}
+                      className={`px-3 py-1.5 rounded-lg text-sm ${
+                        selectedCategorie === categorie
+                          ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {categorie}
+                    </button>
+                  ))}
+                  {categories.length > 5 && (
+                    <span className="text-xs text-gray-500 self-center px-2">
+                      + {categories.length - 5} autres
+                    </span>
+                  )}
+                </div>
                 <select
                   value={selectedCategorie}
                   onChange={(e) => setSelectedCategorie(e.target.value)}
@@ -490,12 +573,42 @@ export default function LecteurExterneDashboard() {
                   ))}
                 </select>
               </div>
-
-              {/* Filtre par date */}
+              
+              {/* Question 3 : Jour */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Jour de défense
-                </label>
+                <h3 className="text-sm font-medium text-gray-700 mb-3">Quel jour de défense ?</h3>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  <button
+                    onClick={() => setSelectedDates(dates)}
+                    className={`px-3 py-1.5 rounded-lg text-sm ${
+                      selectedDates.length === dates.length
+                        ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Tous les jours
+                  </button>
+                  {dates.slice(0, 3).map(date => {
+                    const isSelected = selectedDates.includes(date);
+                    const allSelected = selectedDates.length === dates.length;
+                    return (
+                      <button
+                        key={date}
+                        onClick={() => setSelectedDates([date])}
+                        className={`px-3 py-1.5 rounded-lg text-sm ${
+                          isSelected && !allSelected
+                            ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {new Date(date).toLocaleDateString('fr-FR', { 
+                          weekday: 'short', 
+                          day: 'numeric' 
+                        })}
+                      </button>
+                    );
+                  })}
+                </div>
                 <select
                   value="toutes"
                   onChange={(e) => {
@@ -519,12 +632,39 @@ export default function LecteurExterneDashboard() {
                   ))}
                 </select>
               </div>
-
-              {/* Filtre par local */}
+              
+              {/* Question 4 : Local */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Local
-                </label>
+                <h3 className="text-sm font-medium text-gray-700 mb-3">Dans quel local ?</h3>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  <button
+                    onClick={() => setSelectedLocations(locations)}
+                    className={`px-3 py-1.5 rounded-lg text-sm ${
+                      selectedLocations.length === locations.length
+                        ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Tous les locaux
+                  </button>
+                  {locations.slice(0, 3).map(location => {
+                    const isSelected = selectedLocations.includes(location);
+                    const allSelected = selectedLocations.length === locations.length;
+                    return (
+                      <button
+                        key={location}
+                        onClick={() => setSelectedLocations([location])}
+                        className={`px-3 py-1.5 rounded-lg text-sm ${
+                          isSelected && !allSelected
+                            ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {location}
+                      </button>
+                    );
+                  })}
+                </div>
                 <select
                   value="toutes"
                   onChange={(e) => {
@@ -545,29 +685,28 @@ export default function LecteurExterneDashboard() {
                 </select>
               </div>
             </div>
-
-            <div className="mt-4 flex items-center justify-between">
-              <div className="text-sm text-gray-600">
-                {selectedEleves.length} élève(s) sélectionné(s)
-                {selectedEleves.length > 0 && (
-                  <span className="ml-2 text-blue-600">
-                    • Créneaux occupés grisés
-                  </span>
-                )}
+            
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-gray-600">
+                  {selectedEleves.length} TFH sélectionné(s)
+                  {selectedEleves.length > 0 && (
+                    <span className="ml-2 text-blue-600">
+                      • Créneaux occupés grisés
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSelectAll}
+                    className="px-3 py-1.5 border border-gray-300 rounded text-sm hover:bg-gray-50"
+                  >
+                    Tout (dé)sélectionner
+                  </button>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleSelectAll}
-                  className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50"
-                >
-                  Tout (dé)sélectionner
-                </button>
-                <button
-                  onClick={handleSaveLecteurExterne}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
-                >
-                  Enregistrer la sélection
-                </button>
+              <div className="mt-4 text-xs text-gray-500">
+                <p>💡 La sélection est enregistrée automatiquement lorsque vous cliquez sur un TFH.</p>
               </div>
             </div>
           </div>
@@ -644,8 +783,8 @@ export default function LecteurExterneDashboard() {
                           <td className="px-4 py-3 text-sm">
                             {eleve.guide_prenom} {eleve.guide_nom}
                           </td>
-                          <td className="px-4 py-3 text-sm max-w-xs">
-                            <div className="line-clamp-2">
+                          <td className="px-4 py-3 text-sm max-w-md">
+                            <div className="whitespace-pre-wrap max-h-32 overflow-y-auto pr-2">
                               {eleve.problematique || '-'}
                             </div>
                           </td>
@@ -807,8 +946,8 @@ export default function LecteurExterneDashboard() {
                         <td className="px-4 py-3 text-sm whitespace-nowrap">
                           {eleve.mediateur_prenom} {eleve.mediateur_nom}
                         </td>
-                        <td className="px-4 py-3 text-sm max-w-xs">
-                          <div className="line-clamp-2">
+                        <td className="px-4 py-3 text-sm max-w-md">
+                          <div className="whitespace-pre-wrap max-h-32 overflow-y-auto pr-2">
                             {eleve.problematique || '-'}
                           </div>
                         </td>
