@@ -344,14 +344,14 @@ export default function CalendarDisplayLecteurExterne({
                                       </div>
                                     </div>
                                     <div className="space-y-1 overflow-hidden h-full">
-                                      {/* Heure - déjà affichée en haut, mais on peut ajouter ici aussi si besoin */}
-                                      <div className="text-xs font-medium text-gray-700">
-                                        {defense.startTime} - {defense.endTime}
-                                      </div>
-                                      
                                       {/* Élève */}
                                       <div className="font-semibold">
                                         {defense.elevePrenom} {defense.eleveNom}
+                                      </div>
+                                      
+                                      {/* Catégorie (en petit en bas) */}
+                                      <div className="text-xs opacity-75 mt-1">
+                                        {defense.categorie}
                                       </div>
                                       
                                       {/* Problématique */}
@@ -384,10 +384,6 @@ export default function CalendarDisplayLecteurExterne({
                                         </div>
                                       )}
                                       
-                                      {/* Catégorie (en petit en bas) */}
-                                      <div className="text-xs opacity-75 mt-1">
-                                        {defense.categorie}
-                                      </div>
                                     </div>
                                   </div>
                                 );
