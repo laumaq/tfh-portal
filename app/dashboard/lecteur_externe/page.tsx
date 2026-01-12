@@ -727,12 +727,12 @@ export default function LecteurExterneDashboard() {
                     </th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Date</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Heure</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Local</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Classe</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Élève</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Thématique</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Guide</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Problématique</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Élève</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Classe</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Guide</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Thématique</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Local</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -768,12 +768,17 @@ export default function LecteurExterneDashboard() {
                           <td className="px-4 py-3 text-sm whitespace-nowrap">
                             {formatHeure(eleve.heure_defense)}
                           </td>
-                          <td className="px-4 py-3 text-sm">
-                            {eleve.localisation_defense || '-'}
+                          <td className="px-4 py-3 text-sm max-w-md">
+                            <div className="whitespace-pre-wrap max-h-32 overflow-y-auto pr-2">
+                              {eleve.problematique || '-'}
+                            </div>
                           </td>
-                          <td className="px-4 py-3 text-sm">{eleve.classe}</td>
                           <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
                             {eleve.nom} {eleve.prenom}
+                          </td>
+                          <td className="px-4 py-3 text-sm">{eleve.classe}</td>
+                          <td className="px-4 py-3 text-sm">
+                            {eleve.guide_prenom} {eleve.guide_nom}
                           </td>
                           <td className="px-4 py-3 text-sm">
                             <span className="px-2 py-1 bg-gray-100 rounded text-xs">
@@ -781,12 +786,7 @@ export default function LecteurExterneDashboard() {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-sm">
-                            {eleve.guide_prenom} {eleve.guide_nom}
-                          </td>
-                          <td className="px-4 py-3 text-sm max-w-md">
-                            <div className="whitespace-pre-wrap max-h-32 overflow-y-auto pr-2">
-                              {eleve.problematique || '-'}
-                            </div>
+                            {eleve.localisation_defense || '-'}
                           </td>
                         </tr>
                       );
