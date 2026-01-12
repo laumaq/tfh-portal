@@ -784,6 +784,7 @@ export default function LecteurExterneDashboard() {
             </div>
             
             {/* Résumé des filtres */}
+            <div className="mt-2 flex flex-wrap gap-2 text-xs">
               <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">
                 {selectedEleves.length} élève{selectedEleves.length > 1 ? 's' : ''} sélectionné{selectedEleves.length > 1 ? 's' : ''}
               </span>
