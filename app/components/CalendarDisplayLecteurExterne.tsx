@@ -56,7 +56,7 @@ export default function CalendarDisplayLecteurExterne({
   const [isProcessing, setIsProcessing] = useState(false);
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
 
-  const PIXELS_PER_HOUR = 200;
+  const PIXELS_PER_HOUR = 250;
 
   const add50Minutes = (time: string): string => {
     if (!time) return '';
