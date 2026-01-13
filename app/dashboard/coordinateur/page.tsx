@@ -604,22 +604,23 @@ export default function CoordinateurDashboard() {
 	    // Paramètres fonctionnels
 	    'guide_lecteur_interne_enabled': 'Autoriser les guides à sélectionner des TFH en tant que lecteur interne',
 	    
-	    // Vue Lecteur Externe - libellés
-	    'lecteur_externe_guide_libelle': 'Afficher le libellé "Guide :" dans la vue lecteur externe',
-	    'lecteur_externe_lecteur_interne_libelle': 'Afficher le libellé "Lecteur interne :" dans la vue lecteur externe',
-	    'lecteur_externe_mediateur_libelle': 'Afficher le libellé "Médiateur :" dans la vue lecteur externe',
+	    // Vue Lecteur Externe
+	    'lecteur_externe_voir_eleves': 'Les lecteurs externes voient-ils les noms/prénoms des élèves ?',
+	    'lecteur_externe_voir_guides': 'Les lecteurs externes voient-ils les noms/prénoms des guides ?',
+	    'lecteur_externe_voir_lecteurs_internes': 'Les lecteurs externes voient-ils les noms/prénoms des lecteurs internes ?',
+	    'lecteur_externe_voir_mediateurs': 'Les lecteurs externes voient-ils les noms/prénoms des médiateurs ?',
 	    
-	    // Vue Lecteur Interne - libellés
-	    'lecteur_interne_guide_libelle': 'Afficher le libellé "Guide :" dans la vue lecteur interne',
-	    'lecteur_interne_lecteur_externe_libelle': 'Afficher le libellé "Lecteur externe :" dans la vue lecteur interne',
-	    'lecteur_interne_mediateur_libelle': 'Afficher le libellé "Médiateur :" dans la vue lecteur interne',
+	    // Vue Lecteur Interne
+	    'lecteur_interne_voir_eleves': 'Les lecteurs internes voient-ils les noms/prénoms des élèves ?',
+	    'lecteur_interne_voir_guides': 'Les lecteurs internes voient-ils les noms/prénoms des guides ?',
+	    'lecteur_interne_voir_lecteurs_externes': 'Les lecteurs internes voient-ils les noms/prénoms des lecteurs externes ?',
+	    'lecteur_interne_voir_mediateurs': 'Les lecteurs internes voient-ils les noms/prénoms des médiateurs ?',
 	    
-	    // Vue Médiateur - libellés
-	    'mediateur_guide_libelle': 'Afficher le libellé "Guide :" dans la vue médiateur',
-	    'mediateur_lecteur_interne_libelle': 'Afficher le libellé "Lecteur interne :" dans la vue médiateur',
-	    'mediateur_lecteur_externe_libelle': 'Afficher le libellé "Lecteur externe :" dans la vue médiateur',
-	    
-	    // ... autres descriptions existantes
+	    // Vue Médiateur
+	    'mediateur_voir_eleves': 'Les médiateurs voient-ils les noms/prénoms des élèves ?',
+	    'mediateur_voir_guides': 'Les médiateurs voient-ils les noms/prénoms des guides ?',
+	    'mediateur_voir_lecteurs_internes': 'Les médiateurs voient-ils les noms/prénoms des lecteurs internes ?',
+	    'mediateur_voir_lecteurs_externes': 'Les médiateurs voient-ils les noms/prénoms des lecteurs externes ?',
 	  };
 	  
 	  return descriptions[key] || 'Paramètre d\'affichage';
@@ -2924,6 +2925,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
