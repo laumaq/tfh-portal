@@ -119,6 +119,7 @@ export default function LecteurExterneDashboard() {
         console.error('Erreur chargement paramètres:', err);
       }
     };
+      await loadDisplaySettings();  
       
       const { data: elevesData, error: elevesError } = await supabase
         .from('eleves')
@@ -943,23 +944,29 @@ export default function LecteurExterneDashboard() {
                         Heure
                       </th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">
-                        Élève
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">
-                        Classe
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">
-                        Guide
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">
-                        Thématique
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">
                         Local
                       </th>
+                      
+                      {displaySettings.lecteur_externe_voir_eleves && (
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">
+                          Élève
+                        </th>
+                      )}
+                      
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">
                         Problématique
                       </th>
+                      
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">
+                        Thématique
+                      </th>
+                      
+                      {displaySettings.lecteur_externe_voir_guides && (
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">
+                          Guide
+                        </th>
+                      )}
+                      
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -1009,26 +1016,34 @@ export default function LecteurExterneDashboard() {
                             <td className="px-4 py-3 text-sm whitespace-nowrap">
                               {formatHeure(eleve.heure_defense)}
                             </td>
-                            <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
-                              {eleve.nom} {eleve.prenom}
-                            </td>
-                            <td className="px-4 py-3 text-sm">{eleve.classe}</td>
-                            <td className="px-4 py-3 text-sm whitespace-nowrap">
-                              {eleve.guide_prenom} {eleve.guide_nom}
-                            </td>
-                            <td className="px-4 py-3 text-sm">
-                              <span className="px-2 py-1 bg-gray-100 rounded text-xs whitespace-nowrap">
-                                {eleve.categorie || '-'}
-                              </span>
-                            </td>
                             <td className="px-4 py-3 text-sm">
                               {eleve.localisation_defense || '-'}
                             </td>
+                            
+                            {displaySettings.lecteur_externe_voir_eleves && (
+                              <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
+                                {eleve.nom} {eleve.prenom}
+                              </td>
+                            )}
+                            
                             <td className="px-4 py-3 text-sm max-w-xs">
                               <div className="whitespace-pre-wrap max-h-24 overflow-y-auto pr-2 text-xs">
                                 {eleve.problematique || '-'}
                               </div>
                             </td>
+                            
+                            <td className="px-4 py-3 text-sm">
+                              <span className="px-2 py-1 bg-gray-100 rounded text-xs whitespace-nowrap">
+                                {eleve.categorie || '-'}
+                              </span>
+                            </td>
+                            
+                            {displaySettings.lecteur_externe_voir_guides && (
+                              <td className="px-4 py-3 text-sm whitespace-nowrap">
+                                {eleve.guide_prenom} {eleve.guide_nom}
+                              </td>
+                            )}
+                            
                           </tr>
                         );
                       })
