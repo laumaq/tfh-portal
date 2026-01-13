@@ -1084,6 +1084,7 @@ export default function LecteurExterneDashboard() {
                     return Array.from(allBusyIds);
                   })()}
                   userLecteurExterneId={userLecteurExterneId}
+                  displaySettings={displaySettings}
                 />
               </div>
             </div>
