@@ -169,30 +169,54 @@ export default function CoordinateurDashboard() {
   });
 	
 	const [displaySettings, setDisplaySettings] = useState({
+	  // Paramètres fonctionnels existants
+	  guide_lecteur_interne_enabled: false,
+	  
+	  // Vue Lecteur Externe
 	  lecteur_externe_eleves_nom: true,
 	  lecteur_externe_eleves_prenom: true,
+	  
+	  lecteur_externe_guide_libelle: true,
 	  lecteur_externe_guide_nom: true,
 	  lecteur_externe_guide_prenom: true,
+	  
+	  lecteur_externe_lecteur_interne_libelle: true,
 	  lecteur_externe_lecteur_interne_nom: true,
 	  lecteur_externe_lecteur_interne_prenom: true,
+	  
+	  lecteur_externe_mediateur_libelle: true,
 	  lecteur_externe_mediateur_nom: true,
 	  lecteur_externe_mediateur_prenom: true,
 	  
+	  // Vue Lecteur Interne
 	  lecteur_interne_eleves_nom: true,
 	  lecteur_interne_eleves_prenom: true,
+	  
+	  lecteur_interne_guide_libelle: true,
 	  lecteur_interne_guide_nom: true,
 	  lecteur_interne_guide_prenom: true,
+	  
+	  lecteur_interne_lecteur_externe_libelle: true,
 	  lecteur_interne_lecteur_externe_nom: true,
 	  lecteur_interne_lecteur_externe_prenom: true,
+	  
+	  lecteur_interne_mediateur_libelle: true,
 	  lecteur_interne_mediateur_nom: true,
 	  lecteur_interne_mediateur_prenom: true,
 	  
+	  // Vue Médiateur
 	  mediateur_eleves_nom: true,
 	  mediateur_eleves_prenom: true,
+	  
+	  mediateur_guide_libelle: true,
 	  mediateur_guide_nom: true,
 	  mediateur_guide_prenom: true,
+	  
+	  mediateur_lecteur_interne_libelle: true,
 	  mediateur_lecteur_interne_nom: true,
 	  mediateur_lecteur_interne_prenom: true,
+	  
+	  mediateur_lecteur_externe_libelle: true,
 	  mediateur_lecteur_externe_nom: true,
 	  mediateur_lecteur_externe_prenom: true,
 	});
@@ -609,36 +633,31 @@ export default function CoordinateurDashboard() {
 
 	const getSettingDescription = (key: string): string => {
 	  const descriptions: Record<string, string> = {
-	    'lecteur_externe_eleves_nom': 'Afficher le nom des élèves dans la vue lecteur externe',
-	    'lecteur_externe_eleves_prenom': 'Afficher le prénom des élèves dans la vue lecteur externe',
-	    'lecteur_externe_guide_nom': 'Afficher le nom du guide dans la vue lecteur externe',
-	    'lecteur_externe_guide_prenom': 'Afficher le prénom du guide dans la vue lecteur externe',
-	    'lecteur_externe_lecteur_interne_nom': 'Afficher le nom du lecteur interne dans la vue lecteur externe',
-	    'lecteur_externe_lecteur_interne_prenom': 'Afficher le prénom du lecteur interne dans la vue lecteur externe',
-	    'lecteur_externe_mediateur_nom': 'Afficher le nom du médiateur dans la vue lecteur externe',
-	    'lecteur_externe_mediateur_prenom': 'Afficher le prénom du médiateur dans la vue lecteur externe',
+	    // Paramètres fonctionnels
+	    'guide_lecteur_interne_enabled': 'Autoriser les guides à sélectionner des TFH en tant que lecteur interne',
 	    
-	    'lecteur_interne_eleves_nom': 'Afficher le nom des élèves dans la vue lecteur interne',
-	    'lecteur_interne_eleves_prenom': 'Afficher le prénom des élèves dans la vue lecteur interne',
-	    'lecteur_interne_guide_nom': 'Afficher le nom du guide dans la vue lecteur interne',
-	    'lecteur_interne_guide_prenom': 'Afficher le prénom du guide dans la vue lecteur interne',
-	    'lecteur_interne_lecteur_externe_nom': 'Afficher le nom du lecteur externe dans la vue lecteur interne',
-	    'lecteur_interne_lecteur_externe_prenom': 'Afficher le prénom du lecteur externe dans la vue lecteur interne',
-	    'lecteur_interne_mediateur_nom': 'Afficher le nom du médiateur dans la vue lecteur interne',
-	    'lecteur_interne_mediateur_prenom': 'Afficher le prénom du médiateur dans la vue lecteur interne',
+	    // Vue Lecteur Externe - libellés
+	    'lecteur_externe_guide_libelle': 'Afficher le libellé "Guide :" dans la vue lecteur externe',
+	    'lecteur_externe_lecteur_interne_libelle': 'Afficher le libellé "Lecteur interne :" dans la vue lecteur externe',
+	    'lecteur_externe_mediateur_libelle': 'Afficher le libellé "Médiateur :" dans la vue lecteur externe',
 	    
-	    'mediateur_eleves_nom': 'Afficher le nom des élèves dans la vue médiateur',
-	    'mediateur_eleves_prenom': 'Afficher le prénom des élèves dans la vue médiateur',
-	    'mediateur_guide_nom': 'Afficher le nom du guide dans la vue médiateur',
-	    'mediateur_guide_prenom': 'Afficher le prénom du guide dans la vue médiateur',
-	    'mediateur_lecteur_interne_nom': 'Afficher le nom du lecteur interne dans la vue médiateur',
-	    'mediateur_lecteur_interne_prenom': 'Afficher le prénom du lecteur interne dans la vue médiateur',
-	    'mediateur_lecteur_externe_nom': 'Afficher le nom du lecteur externe dans la vue médiateur',
-	    'mediateur_lecteur_externe_prenom': 'Afficher le prénom du lecteur externe dans la vue médiateur',
+	    // Vue Lecteur Interne - libellés
+	    'lecteur_interne_guide_libelle': 'Afficher le libellé "Guide :" dans la vue lecteur interne',
+	    'lecteur_interne_lecteur_externe_libelle': 'Afficher le libellé "Lecteur externe :" dans la vue lecteur interne',
+	    'lecteur_interne_mediateur_libelle': 'Afficher le libellé "Médiateur :" dans la vue lecteur interne',
+	    
+	    // Vue Médiateur - libellés
+	    'mediateur_guide_libelle': 'Afficher le libellé "Guide :" dans la vue médiateur',
+	    'mediateur_lecteur_interne_libelle': 'Afficher le libellé "Lecteur interne :" dans la vue médiateur',
+	    'mediateur_lecteur_externe_libelle': 'Afficher le libellé "Lecteur externe :" dans la vue médiateur',
+	    
+	    // ... autres descriptions existantes
 	  };
 	  
 	  return descriptions[key] || 'Paramètre d\'affichage';
 	};
+
+	
 	// Fonction pour mettre à jour le paramètre
 	const toggleLecteurInterne = async (enabled: boolean) => {
 	  try {
@@ -2650,9 +2669,53 @@ export default function CoordinateurDashboard() {
 		  <div className="space-y-6">
 		    <div className="bg-white rounded-lg shadow p-6">
 		      <h2 className="text-xl font-semibold text-gray-800 mb-6">
-		        Paramètres d'affichage pour les différents utilisateurs
+		        Paramètres d'affichage et fonctionnalités
 		      </h2>
 		      
+		      {/* Section 1 : Paramètres fonctionnels */}
+		      <div className="border border-blue-200 rounded-lg p-6 mb-8">
+		        <h3 className="text-lg font-medium text-gray-700 mb-4 flex items-center gap-2">
+		          <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">⚙️</span>
+		          Paramètres fonctionnels
+		        </h3>
+		        
+		        <div className="space-y-4">
+		          {/* Paramètre existant */}
+		          <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+		            <div>
+		              <h4 className="font-medium text-gray-700">Onglet "Lecteur interne" pour les guides</h4>
+		              <p className="text-sm text-gray-600 mt-1">
+		                Autorise les guides à sélectionner des TFH en tant que lecteur interne
+		              </p>
+		            </div>
+		            <label className="flex items-center cursor-pointer">
+		              <div className="relative">
+		                <input
+		                  type="checkbox"
+		                  className="sr-only"
+		                  checked={lecteurInterneEnabled}
+		                  onChange={(e) => toggleLecteurInterne(e.target.checked)}
+		                  disabled={loadingSettings}
+		                />
+		                <div className={`block w-14 h-8 rounded-full ${lecteurInterneEnabled ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
+		                <div className={`absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${lecteurInterneEnabled ? 'transform translate-x-6' : ''}`}></div>
+		              </div>
+		              <span className="ml-3 text-sm font-medium text-gray-700">
+		                {lecteurInterneEnabled ? 'Activé' : 'Désactivé'}
+		              </span>
+		            </label>
+		          </div>
+		          
+		          {/* Exemple d'autres paramètres futurs */}
+		          <div className="p-4 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+		            <p className="text-sm text-gray-500 italic">
+		              D'autres paramètres fonctionnels peuvent être ajoutés ici...
+		            </p>
+		          </div>
+		        </div>
+		      </div>
+		      
+		      {/* Section 2 : Paramètres d'affichage */}
 		      <div className="space-y-8">
 		        {/* Section Lecteur Externe */}
 		        <div className="border rounded-lg p-6">
@@ -2660,47 +2723,114 @@ export default function CoordinateurDashboard() {
 		            <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">👁️</span>
 		            Vue Lecteur Externe
 		          </h3>
-		          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-		            <ToggleSetting
-		              label="Afficher nom des élèves"
-		              checked={displaySettings.lecteur_externe_eleves_nom}
-		              onChange={(checked) => saveDisplaySetting('lecteur_externe_eleves_nom', checked)}
-		            />
-		            <ToggleSetting
-		              label="Afficher prénom des élèves"
-		              checked={displaySettings.lecteur_externe_eleves_prenom}
-		              onChange={(checked) => saveDisplaySetting('lecteur_externe_eleves_prenom', checked)}
-		            />
-		            <ToggleSetting
-		              label="Afficher nom du guide"
-		              checked={displaySettings.lecteur_externe_guide_nom}
-		              onChange={(checked) => saveDisplaySetting('lecteur_externe_guide_nom', checked)}
-		            />
-		            <ToggleSetting
-		              label="Afficher prénom du guide"
-		              checked={displaySettings.lecteur_externe_guide_prenom}
-		              onChange={(checked) => saveDisplaySetting('lecteur_externe_guide_prenom', checked)}
-		            />
-		            <ToggleSetting
-		              label="Afficher nom du lecteur interne"
-		              checked={displaySettings.lecteur_externe_lecteur_interne_nom}
-		              onChange={(checked) => saveDisplaySetting('lecteur_externe_lecteur_interne_nom', checked)}
-		            />
-		            <ToggleSetting
-		              label="Afficher prénom du lecteur interne"
-		              checked={displaySettings.lecteur_externe_lecteur_interne_prenom}
-		              onChange={(checked) => saveDisplaySetting('lecteur_externe_lecteur_interne_prenom', checked)}
-		            />
-		            <ToggleSetting
-		              label="Afficher nom du médiateur"
-		              checked={displaySettings.lecteur_externe_mediateur_nom}
-		              onChange={(checked) => saveDisplaySetting('lecteur_externe_mediateur_nom', checked)}
-		            />
-		            <ToggleSetting
-		              label="Afficher prénom du médiateur"
-		              checked={displaySettings.lecteur_externe_mediateur_prenom}
-		              onChange={(checked) => saveDisplaySetting('lecteur_externe_mediateur_prenom', checked)}
-		            />
+		          
+		          <div className="space-y-6">
+		            {/* Section Élèves */}
+		            <div className="pl-4 border-l-4 border-blue-200">
+		              <h4 className="font-medium text-gray-700 mb-3">Informations des élèves</h4>
+		              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+		                <ToggleSetting
+		                  label="Afficher les noms"
+		                  checked={displaySettings.lecteur_externe_eleves_nom}
+		                  onChange={(checked) => saveDisplaySetting('lecteur_externe_eleves_nom', checked)}
+		                />
+		                <ToggleSetting
+		                  label="Afficher les prénoms"
+		                  checked={displaySettings.lecteur_externe_eleves_prenom}
+		                  onChange={(checked) => saveDisplaySetting('lecteur_externe_eleves_prenom', checked)}
+		                />
+		                <div className="col-span-1 md:col-span-2 p-3 bg-blue-50 rounded text-sm">
+		                  <p className="font-medium text-blue-800">Affichage dans l'interface :</p>
+		                  <p className="text-gray-600 mt-1">
+		                    {displaySettings.lecteur_externe_eleves_nom && displaySettings.lecteur_externe_eleves_prenom 
+		                      ? "Prénom Nom" 
+		                      : displaySettings.lecteur_externe_eleves_nom 
+		                        ? "Nom (sans prénom)" 
+		                        : displaySettings.lecteur_externe_eleves_prenom 
+		                          ? "Prénom (sans nom)" 
+		                          : "⚠️ Aucune information affichée"}
+		                  </p>
+		                </div>
+		              </div>
+		            </div>
+		            
+		            {/* Section Guide */}
+		            <div className="pl-4 border-l-4 border-green-200">
+		              <h4 className="font-medium text-gray-700 mb-3">Informations du guide</h4>
+		              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+		                <ToggleSetting
+		                  label="Afficher le libellé 'Guide :'"
+		                  checked={displaySettings.lecteur_externe_guide_libelle || false}
+		                  onChange={(checked) => saveDisplaySetting('lecteur_externe_guide_libelle', checked)}
+		                />
+		                <ToggleSetting
+		                  label="Afficher le nom"
+		                  checked={displaySettings.lecteur_externe_guide_nom}
+		                  onChange={(checked) => saveDisplaySetting('lecteur_externe_guide_nom', checked)}
+		                />
+		                <ToggleSetting
+		                  label="Afficher le prénom"
+		                  checked={displaySettings.lecteur_externe_guide_prenom}
+		                  onChange={(checked) => saveDisplaySetting('lecteur_externe_guide_prenom', checked)}
+		                />
+		                <div className="col-span-1 md:col-span-2 p-3 bg-green-50 rounded text-sm">
+		                  <p className="font-medium text-green-800">Exemple d'affichage :</p>
+		                  <p className="text-gray-600 mt-1">
+		                    {(() => {
+		                      const parts = [];
+		                      if (displaySettings.lecteur_externe_guide_libelle || false) parts.push("Guide :");
+		                      if (displaySettings.lecteur_externe_guide_prenom) parts.push("Jean");
+		                      if (displaySettings.lecteur_externe_guide_nom) parts.push("Robert");
+		                      return parts.length > 0 ? parts.join(" ") : "⚠️ Rien n'est affiché";
+		                    })()}
+		                  </p>
+		                </div>
+		              </div>
+		            </div>
+		            
+		            {/* Section Lecteur Interne */}
+		            <div className="pl-4 border-l-4 border-purple-200">
+		              <h4 className="font-medium text-gray-700 mb-3">Informations du lecteur interne</h4>
+		              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+		                <ToggleSetting
+		                  label="Afficher le libellé 'Lecteur interne :'"
+		                  checked={displaySettings.lecteur_externe_lecteur_interne_libelle || false}
+		                  onChange={(checked) => saveDisplaySetting('lecteur_externe_lecteur_interne_libelle', checked)}
+		                />
+		                <ToggleSetting
+		                  label="Afficher le nom"
+		                  checked={displaySettings.lecteur_externe_lecteur_interne_nom}
+		                  onChange={(checked) => saveDisplaySetting('lecteur_externe_lecteur_interne_nom', checked)}
+		                />
+		                <ToggleSetting
+		                  label="Afficher le prénom"
+		                  checked={displaySettings.lecteur_externe_lecteur_interne_prenom}
+		                  onChange={(checked) => saveDisplaySetting('lecteur_externe_lecteur_interne_prenom', checked)}
+		                />
+		              </div>
+		            </div>
+		            
+		            {/* Section Médiateur */}
+		            <div className="pl-4 border-l-4 border-yellow-200">
+		              <h4 className="font-medium text-gray-700 mb-3">Informations du médiateur</h4>
+		              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+		                <ToggleSetting
+		                  label="Afficher le libellé 'Médiateur :'"
+		                  checked={displaySettings.lecteur_externe_mediateur_libelle || false}
+		                  onChange={(checked) => saveDisplaySetting('lecteur_externe_mediateur_libelle', checked)}
+		                />
+		                <ToggleSetting
+		                  label="Afficher le nom"
+		                  checked={displaySettings.lecteur_externe_mediateur_nom}
+		                  onChange={(checked) => saveDisplaySetting('lecteur_externe_mediateur_nom', checked)}
+		                />
+		                <ToggleSetting
+		                  label="Afficher le prénom"
+		                  checked={displaySettings.lecteur_externe_mediateur_prenom}
+		                  onChange={(checked) => saveDisplaySetting('lecteur_externe_mediateur_prenom', checked)}
+		                />
+		              </div>
+		            </div>
 		          </div>
 		        </div>
 		        
@@ -2710,47 +2840,90 @@ export default function CoordinateurDashboard() {
 		            <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">📖</span>
 		            Vue Lecteur Interne
 		          </h3>
-		          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-		            <ToggleSetting
-		              label="Afficher nom des élèves"
-		              checked={displaySettings.lecteur_interne_eleves_nom}
-		              onChange={(checked) => saveDisplaySetting('lecteur_interne_eleves_nom', checked)}
-		            />
-		            <ToggleSetting
-		              label="Afficher prénom des élèves"
-		              checked={displaySettings.lecteur_interne_eleves_prenom}
-		              onChange={(checked) => saveDisplaySetting('lecteur_interne_eleves_prenom', checked)}
-		            />
-		            <ToggleSetting
-		              label="Afficher nom du guide"
-		              checked={displaySettings.lecteur_interne_guide_nom}
-		              onChange={(checked) => saveDisplaySetting('lecteur_interne_guide_nom', checked)}
-		            />
-		            <ToggleSetting
-		              label="Afficher prénom du guide"
-		              checked={displaySettings.lecteur_interne_guide_prenom}
-		              onChange={(checked) => saveDisplaySetting('lecteur_interne_guide_prenom', checked)}
-		            />
-		            <ToggleSetting
-		              label="Afficher nom du lecteur externe"
-		              checked={displaySettings.lecteur_interne_lecteur_externe_nom}
-		              onChange={(checked) => saveDisplaySetting('lecteur_interne_lecteur_externe_nom', checked)}
-		            />
-		            <ToggleSetting
-		              label="Afficher prénom du lecteur externe"
-		              checked={displaySettings.lecteur_interne_lecteur_externe_prenom}
-		              onChange={(checked) => saveDisplaySetting('lecteur_interne_lecteur_externe_prenom', checked)}
-		            />
-		            <ToggleSetting
-		              label="Afficher nom du médiateur"
-		              checked={displaySettings.lecteur_interne_mediateur_nom}
-		              onChange={(checked) => saveDisplaySetting('lecteur_interne_mediateur_nom', checked)}
-		            />
-		            <ToggleSetting
-		              label="Afficher prénom du médiateur"
-		              checked={displaySettings.lecteur_interne_mediateur_prenom}
-		              onChange={(checked) => saveDisplaySetting('lecteur_interne_mediateur_prenom', checked)}
-		            />
+		          
+		          <div className="space-y-6">
+		            {/* Section Élèves */}
+		            <div className="pl-4 border-l-4 border-blue-200">
+		              <h4 className="font-medium text-gray-700 mb-3">Informations des élèves</h4>
+		              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+		                <ToggleSetting
+		                  label="Afficher les noms"
+		                  checked={displaySettings.lecteur_interne_eleves_nom}
+		                  onChange={(checked) => saveDisplaySetting('lecteur_interne_eleves_nom', checked)}
+		                />
+		                <ToggleSetting
+		                  label="Afficher les prénoms"
+		                  checked={displaySettings.lecteur_interne_eleves_prenom}
+		                  onChange={(checked) => saveDisplaySetting('lecteur_interne_eleves_prenom', checked)}
+		                />
+		              </div>
+		            </div>
+		            
+		            {/* Section Guide */}
+		            <div className="pl-4 border-l-4 border-green-200">
+		              <h4 className="font-medium text-gray-700 mb-3">Informations du guide</h4>
+		              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+		                <ToggleSetting
+		                  label="Afficher le libellé 'Guide :'"
+		                  checked={displaySettings.lecteur_interne_guide_libelle || false}
+		                  onChange={(checked) => saveDisplaySetting('lecteur_interne_guide_libelle', checked)}
+		                />
+		                <ToggleSetting
+		                  label="Afficher le nom"
+		                  checked={displaySettings.lecteur_interne_guide_nom}
+		                  onChange={(checked) => saveDisplaySetting('lecteur_interne_guide_nom', checked)}
+		                />
+		                <ToggleSetting
+		                  label="Afficher le prénom"
+		                  checked={displaySettings.lecteur_interne_guide_prenom}
+		                  onChange={(checked) => saveDisplaySetting('lecteur_interne_guide_prenom', checked)}
+		                />
+		              </div>
+		            </div>
+		            
+		            {/* Section Lecteur Externe */}
+		            <div className="pl-4 border-l-4 border-purple-200">
+		              <h4 className="font-medium text-gray-700 mb-3">Informations du lecteur externe</h4>
+		              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+		                <ToggleSetting
+		                  label="Afficher le libellé 'Lecteur externe :'"
+		                  checked={displaySettings.lecteur_interne_lecteur_externe_libelle || false}
+		                  onChange={(checked) => saveDisplaySetting('lecteur_interne_lecteur_externe_libelle', checked)}
+		                />
+		                <ToggleSetting
+		                  label="Afficher le nom"
+		                  checked={displaySettings.lecteur_interne_lecteur_externe_nom}
+		                  onChange={(checked) => saveDisplaySetting('lecteur_interne_lecteur_externe_nom', checked)}
+		                />
+		                <ToggleSetting
+		                  label="Afficher le prénom"
+		                  checked={displaySettings.lecteur_interne_lecteur_externe_prenom}
+		                  onChange={(checked) => saveDisplaySetting('lecteur_interne_lecteur_externe_prenom', checked)}
+		                />
+		              </div>
+		            </div>
+		            
+		            {/* Section Médiateur */}
+		            <div className="pl-4 border-l-4 border-yellow-200">
+		              <h4 className="font-medium text-gray-700 mb-3">Informations du médiateur</h4>
+		              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+		                <ToggleSetting
+		                  label="Afficher le libellé 'Médiateur :'"
+		                  checked={displaySettings.lecteur_interne_mediateur_libelle || false}
+		                  onChange={(checked) => saveDisplaySetting('lecteur_interne_mediateur_libelle', checked)}
+		                />
+		                <ToggleSetting
+		                  label="Afficher le nom"
+		                  checked={displaySettings.lecteur_interne_mediateur_nom}
+		                  onChange={(checked) => saveDisplaySetting('lecteur_interne_mediateur_nom', checked)}
+		                />
+		                <ToggleSetting
+		                  label="Afficher le prénom"
+		                  checked={displaySettings.lecteur_interne_mediateur_prenom}
+		                  onChange={(checked) => saveDisplaySetting('lecteur_interne_mediateur_prenom', checked)}
+		                />
+		              </div>
+		            </div>
 		          </div>
 		        </div>
 		        
@@ -2760,47 +2933,90 @@ export default function CoordinateurDashboard() {
 		            <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">⚖️</span>
 		            Vue Médiateur
 		          </h3>
-		          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-		            <ToggleSetting
-		              label="Afficher nom des élèves"
-		              checked={displaySettings.mediateur_eleves_nom}
-		              onChange={(checked) => saveDisplaySetting('mediateur_eleves_nom', checked)}
-		            />
-		            <ToggleSetting
-		              label="Afficher prénom des élèves"
-		              checked={displaySettings.mediateur_eleves_prenom}
-		              onChange={(checked) => saveDisplaySetting('mediateur_eleves_prenom', checked)}
-		            />
-		            <ToggleSetting
-		              label="Afficher nom du guide"
-		              checked={displaySettings.mediateur_guide_nom}
-		              onChange={(checked) => saveDisplaySetting('mediateur_guide_nom', checked)}
-		            />
-		            <ToggleSetting
-		              label="Afficher prénom du guide"
-		              checked={displaySettings.mediateur_guide_prenom}
-		              onChange={(checked) => saveDisplaySetting('mediateur_guide_prenom', checked)}
-		            />
-		            <ToggleSetting
-		              label="Afficher nom du lecteur interne"
-		              checked={displaySettings.mediateur_lecteur_interne_nom}
-		              onChange={(checked) => saveDisplaySetting('mediateur_lecteur_interne_nom', checked)}
-		            />
-		            <ToggleSetting
-		              label="Afficher prénom du lecteur interne"
-		              checked={displaySettings.mediateur_lecteur_interne_prenom}
-		              onChange={(checked) => saveDisplaySetting('mediateur_lecteur_interne_prenom', checked)}
-		            />
-		            <ToggleSetting
-		              label="Afficher nom du lecteur externe"
-		              checked={displaySettings.mediateur_lecteur_externe_nom}
-		              onChange={(checked) => saveDisplaySetting('mediateur_lecteur_externe_nom', checked)}
-		            />
-		            <ToggleSetting
-		              label="Afficher prénom du lecteur externe"
-		              checked={displaySettings.mediateur_lecteur_externe_prenom}
-		              onChange={(checked) => saveDisplaySetting('mediateur_lecteur_externe_prenom', checked)}
-		            />
+		          
+		          <div className="space-y-6">
+		            {/* Section Élèves */}
+		            <div className="pl-4 border-l-4 border-blue-200">
+		              <h4 className="font-medium text-gray-700 mb-3">Informations des élèves</h4>
+		              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+		                <ToggleSetting
+		                  label="Afficher les noms"
+		                  checked={displaySettings.mediateur_eleves_nom}
+		                  onChange={(checked) => saveDisplaySetting('mediateur_eleves_nom', checked)}
+		                />
+		                <ToggleSetting
+		                  label="Afficher les prénoms"
+		                  checked={displaySettings.mediateur_eleves_prenom}
+		                  onChange={(checked) => saveDisplaySetting('mediateur_eleves_prenom', checked)}
+		                />
+		              </div>
+		            </div>
+		            
+		            {/* Section Guide */}
+		            <div className="pl-4 border-l-4 border-green-200">
+		              <h4 className="font-medium text-gray-700 mb-3">Informations du guide</h4>
+		              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+		                <ToggleSetting
+		                  label="Afficher le libellé 'Guide :'"
+		                  checked={displaySettings.mediateur_guide_libelle || false}
+		                  onChange={(checked) => saveDisplaySetting('mediateur_guide_libelle', checked)}
+		                />
+		                <ToggleSetting
+		                  label="Afficher le nom"
+		                  checked={displaySettings.mediateur_guide_nom}
+		                  onChange={(checked) => saveDisplaySetting('mediateur_guide_nom', checked)}
+		                />
+		                <ToggleSetting
+		                  label="Afficher le prénom"
+		                  checked={displaySettings.mediateur_guide_prenom}
+		                  onChange={(checked) => saveDisplaySetting('mediateur_guide_prenom', checked)}
+		                />
+		              </div>
+		            </div>
+		            
+		            {/* Section Lecteur Interne */}
+		            <div className="pl-4 border-l-4 border-purple-200">
+		              <h4 className="font-medium text-gray-700 mb-3">Informations du lecteur interne</h4>
+		              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+		                <ToggleSetting
+		                  label="Afficher le libellé 'Lecteur interne :'"
+		                  checked={displaySettings.mediateur_lecteur_interne_libelle || false}
+		                  onChange={(checked) => saveDisplaySetting('mediateur_lecteur_interne_libelle', checked)}
+		                />
+		                <ToggleSetting
+		                  label="Afficher le nom"
+		                  checked={displaySettings.mediateur_lecteur_interne_nom}
+		                  onChange={(checked) => saveDisplaySetting('mediateur_lecteur_interne_nom', checked)}
+		                />
+		                <ToggleSetting
+		                  label="Afficher le prénom"
+		                  checked={displaySettings.mediateur_lecteur_interne_prenom}
+		                  onChange={(checked) => saveDisplaySetting('mediateur_lecteur_interne_prenom', checked)}
+		                />
+		              </div>
+		            </div>
+		            
+		            {/* Section Lecteur Externe */}
+		            <div className="pl-4 border-l-4 border-yellow-200">
+		              <h4 className="font-medium text-gray-700 mb-3">Informations du lecteur externe</h4>
+		              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+		                <ToggleSetting
+		                  label="Afficher le libellé 'Lecteur externe :'"
+		                  checked={displaySettings.mediateur_lecteur_externe_libelle || false}
+		                  onChange={(checked) => saveDisplaySetting('mediateur_lecteur_externe_libelle', checked)}
+		                />
+		                <ToggleSetting
+		                  label="Afficher le nom"
+		                  checked={displaySettings.mediateur_lecteur_externe_nom}
+		                  onChange={(checked) => saveDisplaySetting('mediateur_lecteur_externe_nom', checked)}
+		                />
+		                <ToggleSetting
+		                  label="Afficher le prénom"
+		                  checked={displaySettings.mediateur_lecteur_externe_prenom}
+		                  onChange={(checked) => saveDisplaySetting('mediateur_lecteur_externe_prenom', checked)}
+		                />
+		              </div>
+		            </div>
 		          </div>
 		        </div>
 		      </div>
@@ -2944,6 +3160,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
