@@ -972,7 +972,14 @@ export default function LecteurExterneDashboard() {
                   <tbody className="divide-y divide-gray-200">
                     {sortedElevesDisponibles.length === 0 ? (
                       <tr>
-                        <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
+                        <td colSpan={
+                            1 + // checkbox
+                            2 + // Date, Heure
+                            1 + // Classe
+                            3 + // Thématique, Local, Problématique
+                            (displaySettings.lecteur_externe_voir_eleves ? 1 : 0) +
+                            (displaySettings.lecteur_externe_voir_guides ? 1 : 0)
+                          }  className="px-4 py-8 text-center text-gray-500">
                           Aucun élève trouvé avec ces filtres.
                         </td>
                       </tr>
