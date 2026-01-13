@@ -1402,7 +1402,7 @@ export default function CoordinateurDashboard() {
     );
   }
 
-  return (
+    return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
       {/* Message pour le mode paysage sur mobile */}
       <div 
@@ -1495,23 +1495,23 @@ export default function CoordinateurDashboard() {
           >
             Gestion des Utilisateurs
           </button>
-					<button
-					  onClick={() => {
-					    setActiveTab('parametres-affichage');
-					    setShowConvoques(false);
-					  }}
-					  className={`px-4 py-2 font-medium text-sm md:text-base whitespace-nowrap ${
-					    activeTab === 'parametres-affichage'
-					      ? 'text-blue-600 border-b-2 border-blue-600'
-					      : 'text-gray-500 hover:text-gray-700'
-					  }`}
-					>
-					  Paramètres d'affichage
-					</button>
+          <button
+            onClick={() => {
+              setActiveTab('parametres-affichage');
+              setShowConvoques(false);
+            }}
+            className={`px-4 py-2 font-medium text-sm md:text-base whitespace-nowrap ${
+              activeTab === 'parametres-affichage'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Paramètres d'affichage
+          </button>
         </div>
 
         {/* Contenu selon l'onglet */}
-        {activeTab === 'convocations' ? (
+        {activeTab === 'convocations' && (
           <>
             <div className="bg-white rounded-lg shadow p-4 md:p-6 mb-6">
               <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-4">
@@ -1823,50 +1823,49 @@ export default function CoordinateurDashboard() {
               </div>
             </div>
           </>
-        ) : activeTab === 'defenses' ? (
-		
-          /* Onglet Gestion des Défenses */
+        )}
+
+        {activeTab === 'defenses' && (
           <div className="space-y-6">
-					  <div className="bg-white rounded-lg shadow p-6">
-					    <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-4">
-					      <div className="flex items-center gap-4">
-					        <label className="flex items-center gap-2 cursor-pointer">
-					          <input
-					            type="checkbox"
-					            checked={editingModeDefenses}
-					            onChange={(e) => setEditingModeDefenses(e.target.checked)}
-					            className="w-5 h-5 text-blue-600 rounded"
-					          />
-					          <span className="text-sm font-medium">
-					            Mode édition défenses
-					          </span>
-					        </label>
-					        
-					        {/* NOUVEAU : Contrôle de l'onglet Lecteur interne */}
-					        <div className="flex items-center gap-2 border-l pl-4">
-					          <label className="flex items-center gap-2 cursor-pointer">
-					            <input
-					              type="checkbox"
-					              checked={lecteurInterneEnabled}
-					              onChange={(e) => toggleLecteurInterne(e.target.checked)}
-					              className="w-5 h-5 text-purple-600 rounded"
-					              disabled={loadingSettings}
-					            />
-					            <span className="text-sm font-medium">
-					              Autoriser sélection lecteur interne par les guides
-					            </span>
-					          </label>
-					          <div className="text-xs text-gray-500">
-					            {lecteurInterneEnabled ? '🟢 Activé' : '🔴 Désactivé'}
-					          </div>
-					        </div>
-					      </div>
-					      
-					      <span className="text-sm text-gray-500">
-					        ({filteredEleves.length} élève{filteredEleves.length > 1 ? 's' : ''})
-					      </span>
-					    </div>
-					  </div>
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-4">
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editingModeDefenses}
+                      onChange={(e) => setEditingModeDefenses(e.target.checked)}
+                      className="w-5 h-5 text-blue-600 rounded"
+                    />
+                    <span className="text-sm font-medium">
+                      Mode édition défenses
+                    </span>
+                  </label>
+                  
+                  <div className="flex items-center gap-2 border-l pl-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={lecteurInterneEnabled}
+                        onChange={(e) => toggleLecteurInterne(e.target.checked)}
+                        className="w-5 h-5 text-purple-600 rounded"
+                        disabled={loadingSettings}
+                      />
+                      <span className="text-sm font-medium">
+                        Autoriser sélection lecteur interne par les guides
+                      </span>
+                    </label>
+                    <div className="text-xs text-gray-500">
+                      {lecteurInterneEnabled ? '🟢 Activé' : '🔴 Désactivé'}
+                    </div>
+                  </div>
+                </div>
+                
+                <span className="text-sm text-gray-500">
+                  ({filteredEleves.length} élève{filteredEleves.length > 1 ? 's' : ''})
+                </span>
+              </div>
+            </div>
 
             <div className="bg-white rounded-lg shadow overflow-x-auto">
               <div className="min-w-[1400px] md:min-w-full">
@@ -1907,7 +1906,6 @@ export default function CoordinateurDashboard() {
                           {eleve.guide_nom} {eleve.guide_prenom}.
                         </td>  
                         
-                        {/* Lecteur Interne */}
                         <td className="px-3 py-3">
                           <select
                             value={eleve.lecteur_interne_id || ''}
@@ -1924,7 +1922,6 @@ export default function CoordinateurDashboard() {
                           </select>
                         </td>
                         
-                        {/* Lecteur Externe */}
                         <td className="px-3 py-3">
                           <select
                             value={eleve.lecteur_externe_id || ''}
@@ -1941,7 +1938,6 @@ export default function CoordinateurDashboard() {
                           </select>
                         </td>
                         
-                        {/* Médiateur */}
                         <td className="px-3 py-3">
                           <select
                             value={eleve.mediateur_id || ''}
@@ -1958,7 +1954,6 @@ export default function CoordinateurDashboard() {
                           </select>
                         </td>   
                                               
-                        {/* Date de défense */}
                         <td className="px-3 py-3">
                           <div className="flex items-center gap-1">
                             <input
@@ -1983,7 +1978,6 @@ export default function CoordinateurDashboard() {
                           </div>
                         </td>
                                               
-                        {/* Heure de défense */}
                         <td className="px-3 py-3">
                           <div className="flex items-center gap-1">
                             <input
@@ -2008,7 +2002,6 @@ export default function CoordinateurDashboard() {
                           </div>
                         </td>
                                               
-                        {/* Localisation */}
                         <td className="px-3 py-3">
                           <div className="flex items-center gap-1">
                             <input
@@ -2040,47 +2033,48 @@ export default function CoordinateurDashboard() {
               </div>
             </div>
           </div>
-        ) : activeTab === 'calendrier' ? (
-  <div className="space-y-6">
-    {/* En-tête avec boutons */}
-    <div className="bg-white rounded-lg shadow p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold text-gray-800">Calendrier des Défenses</h2>
-        <div className="flex gap-2">
-          <button
-            onClick={() => {
-              setCalendarRefreshTrigger(prev => prev + 1);
-              loadData();
-            }}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center gap-2"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            Rafraîchir
-          </button>
-          
-          <button
-            onClick={() => {
-              console.log('=== DEBUG CALENDRIER ===');
-              console.log('Élèves reçus:', eleves.length);
-              console.log('Élèves modifiés récemment:');
-              eleves.slice(0, 3).forEach(e => {
-                console.log(`${e.prenom} ${e.nom}:`, {
-                  date: e.date_defense,
-                  heure: e.heure_defense,
-                  local: e.localisation_defense
-                });
-              });
-            }}
-            className="px-4 py-2 bg-purple-600 text-white rounded"
-          >
-            Debug
-          </button>
-        </div>
-      </div>
-    </div>
-            {/* Section des conflits */}
+        )}
+
+        {activeTab === 'calendrier' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-gray-800">Calendrier des Défenses</h2>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setCalendarRefreshTrigger(prev => prev + 1);
+                      loadData();
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Rafraîchir
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      console.log('=== DEBUG CALENDRIER ===');
+                      console.log('Élèves reçus:', eleves.length);
+                      console.log('Élèves modifiés récemment:');
+                      eleves.slice(0, 3).forEach(e => {
+                        console.log(`${e.prenom} ${e.nom}:`, {
+                          date: e.date_defense,
+                          heure: e.heure_defense,
+                          local: e.localisation_defense
+                        });
+                      });
+                    }}
+                    className="px-4 py-2 bg-purple-600 text-white rounded"
+                  >
+                    Debug
+                  </button>
+                </div>
+              </div>
+            </div>
+            
             {(conflicts.guides.length > 0 || conflicts.lecteursInternes.length > 0 || 
               conflicts.lecteursExternes.length > 0 || conflicts.mediateurs.length > 0) && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
@@ -2122,12 +2116,10 @@ export default function CoordinateurDashboard() {
               </div>
             )}
             
-            {/* Section des filtres - CORRECTION #1 appliquée */}
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-xl font-semibold text-gray-800 mb-4">Filtres du Calendrier</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                {/* Filtre par dates */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Sélectionner les jours
@@ -2180,7 +2172,6 @@ export default function CoordinateurDashboard() {
                   </button>
                 </div>
                 
-                {/* Filtre par catégorie - ✅ CORRECTION #1 : max-h-40 */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Catégories
@@ -2243,7 +2234,6 @@ export default function CoordinateurDashboard() {
                   </div>
                 </div>
                 
-                {/* Filtre par locaux */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Sélectionner les locaux
@@ -2293,7 +2283,6 @@ export default function CoordinateurDashboard() {
                 </div>
               </div>
               
-              {/* Résumé des filtres */}
               <div className="text-sm text-gray-600">
                 <p>
                   Affichage de {dayDefenses.length} {pluralize(dayDefenses.length, 'jour', 'jours')}
@@ -2307,487 +2296,468 @@ export default function CoordinateurDashboard() {
               </div>
             </div>
             
-            {/* TABLEAUX PAR JOUR - ✅ CORRECTIONS #2 et #3 appliquées */}
             <CalendarDisplay
-							key={`calendar-${calendarRefreshTrigger}`} // ← AJOUTEZ CETTE LIGNE
-				      eleves={eleves}
-				      selectedCategory={selectedCategory}
-				      selectedDates={selectedDates}
-				      selectedLocations={selectedLocations}
-				    />
+              key={`calendar-${calendarRefreshTrigger}`}
+              eleves={eleves}
+              selectedCategory={selectedCategory}
+              selectedDates={selectedDates}
+              selectedLocations={selectedLocations}
+            />
           </div>
-        ) : activeTab === 'gestion-utilisateurs' ? (
-		  /* Onglet Gestion des Utilisateurs */
-		  <div className="space-y-6">
-		    {/* Menu de sélection du type d'utilisateur */}
-		    <div className="bg-white rounded-lg shadow p-6">
-		      <h2 className="text-xl font-semibold text-gray-800 mb-4">Gestion des Utilisateurs</h2>
-		      
-		      <div className="flex flex-wrap gap-2 mb-6">
-		        <button
-		          onClick={() => setSelectedUserType('eleves')}
-		          className={`px-4 py-2 rounded-lg text-sm font-medium ${
-		            selectedUserType === 'eleves'
-		              ? 'bg-blue-600 text-white'
-		              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-		          }`}
-		        >
-		          Élèves ({eleves.length})
-		        </button>
-		        <button
-		          onClick={() => setSelectedUserType('guides')}
-		          className={`px-4 py-2 rounded-lg text-sm font-medium ${
-		            selectedUserType === 'guides'
-		              ? 'bg-blue-600 text-white'
-		              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-		          }`}
-		        >
-		          Guides ({guides.length})
-		        </button>
-		        <button
-		          onClick={() => setSelectedUserType('lecteurs-externes')}
-		          className={`px-4 py-2 rounded-lg text-sm font-medium ${
-		            selectedUserType === 'lecteurs-externes'
-		              ? 'bg-blue-600 text-white'
-		              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-		          }`}
-		        >
-		          Lecteurs externes ({lecteursExternes.length})
-		        </button>
-		        <button
-		          onClick={() => setSelectedUserType('mediateurs')}
-		          className={`px-4 py-2 rounded-lg text-sm font-medium ${
-		            selectedUserType === 'mediateurs'
-		              ? 'bg-blue-600 text-white'
-		              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-		          }`}
-		        >
-		          Médiateurs ({mediateurs.length})
-		        </button>
-		        <button
-		          onClick={() => setSelectedUserType('coordinateurs')}
-		          className={`px-4 py-2 rounded-lg text-sm font-medium ${
-		            selectedUserType === 'coordinateurs'
-		              ? 'bg-blue-600 text-white'
-		              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-		          }`}
-		        >
-		          Coordinateurs ({coordinateurs.length})
-		        </button>
-		      </div>
-		
-		      {/* Actions spéciales */}
-		      <div className="flex flex-wrap gap-3 mt-4">
-		        <button
-		          onClick={() => setShowMassImport(true)}
-		          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
-		        >
-		          Import CSV/Excel
-		        </button>
-		        
-		        {(selectedUserType === 'eleves' || selectedUserType === 'guides') && (
-		          <button
-		            onClick={() => setShowClearConfirmations(true)}
-		            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
-		          >
-		            Vider tous les {selectedUserType === 'eleves' ? 'élèves' : 'guides'}
-		          </button>
-		        )}
-		      </div>
-		    </div>
-		
-		    {/* Formulaire d'ajout d'utilisateur */}
-		    <div className="bg-white rounded-lg shadow p-6">
-		      <h3 className="text-lg font-medium text-gray-700 mb-4">
-		        Ajouter un {selectedUserType === 'eleves' ? 'élève' : 
-		                  selectedUserType === 'guides' ? 'guide' :
-		                  selectedUserType === 'lecteurs-externes' ? 'lecteur externe' :
-		                  selectedUserType === 'mediateurs' ? 'médiateur' : 'coordinateur'}
-		      </h3>
-		      
-		      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-		        {selectedUserType === 'eleves' && (
-		          <>
-		            <input
-		              type="text"
-		              placeholder="Nom"
-		              value={newUser.nom}
-		              onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
-		              className="border rounded px-3 py-2 text-sm"
-		            />
-		            <input
-		              type="text"
-		              placeholder="Prénom"
-		              value={newUser.prenom}
-		              onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
-		              className="border rounded px-3 py-2 text-sm"
-		            />
-		            <input
-		              type="text"
-		              placeholder="Classe"
-		              value={newUser.classe}
-		              onChange={(e) => setNewUser({...newUser, classe: e.target.value})}
-		              className="border rounded px-3 py-2 text-sm"
-		            />
-		            <input
-		              type="text"
-		              placeholder="Catégorie"
-		              value={newUser.categorie}
-		              onChange={(e) => setNewUser({...newUser, categorie: e.target.value})}
-		              className="border rounded px-3 py-2 text-sm"
-		            />
-		          </>
-		        )}
-		
-		        {selectedUserType === 'guides' && (
-		          <>
-		            <input
-		              type="text"
-		              placeholder="Nom"
-		              value={newUser.nom}
-		              onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
-		              className="border rounded px-3 py-2 text-sm"
-		            />
-		            <input
-		              type="text"
-		              placeholder="Prénom"
-		              value={newUser.prenom}
-		              onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
-		              className="border rounded px-3 py-2 text-sm"
-		            />
-		          </>
-		        )}
-		
-		        {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && (
-		          <>
-		            <input
-		              type="text"
-		              placeholder="Nom"
-		              value={newUser.nom}
-		              onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
-		              className="border rounded px-3 py-2 text-sm"
-		            />
-		            <input
-		              type="text"
-		              placeholder="Prénom"
-		              value={newUser.prenom}
-		              onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
-		              className="border rounded px-3 py-2 text-sm"
-		            />
-		            <input
-		              type="email"
-		              placeholder="Email"
-		              value={newUser.email}
-		              onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-		              className="border rounded px-3 py-2 text-sm"
-		            />
-		          </>
-		        )}
-		
-		        {selectedUserType === 'coordinateurs' && (
-		          <>
-		            <input
-		              type="text"
-		              placeholder="Nom"
-		              value={newUser.nom}
-		              onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
-		              className="border rounded px-3 py-2 text-sm"
-		            />
-		            <input
-		              type="text"
-		              placeholder="Prénom"
-		              value={newUser.prenom}
-		              onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
-		              className="border rounded px-3 py-2 text-sm"
-		            />
-		          </>
-		        )}
-		      </div>
-		
-		      <div className="mt-4">
-		        <button
-		          onClick={handleAddUser}
-		          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center gap-2"
-		        >
-		          <span>+</span>
-		          <span>Ajouter</span>
-		        </button>
-		      </div>
-		    </div>
-		
-		    {/* Liste des utilisateurs */}
-		    <div className="bg-white rounded-lg shadow overflow-hidden">
-		      <div className="px-6 py-4 border-b">
-		        <h3 className="text-lg font-medium text-gray-700">
-		          Liste des {selectedUserType} ({getCurrentUserCount()})
-		        </h3>
-		      </div>
-		      
-		      <div className="overflow-x-auto">
-		        <table className="w-full">
-		          <thead className="bg-gray-100 border-b">
-		            <tr>
-		              {selectedUserType === 'eleves' && (
-		                <>
-		                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Classe</th>
-		                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
-		                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
-		                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Catégorie</th>
-		                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
-		                </>
-		              )}
-		              {selectedUserType === 'guides' && (
-		                <>
-		                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
-		                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
-		                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
-		                </>
-		              )}
-		              {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && (
-		                <>
-		                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
-		                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
-		                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
-		                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
-		                </>
-		              )}
-		              {selectedUserType === 'coordinateurs' && (
-		                <>
-		                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
-		                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
-		                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
-		                </>
-		              )}
-		            </tr>
-		          </thead>
-		          <tbody>
-		            {getCurrentUsers().map((user: any) => (
-		              <tr key={user.id} className="border-b hover:bg-gray-50">
-		                {selectedUserType === 'eleves' && (
-		                  <>
-		                    <td className="px-4 py-3 text-sm">{user.classe}</td>
-		                    <td className="px-4 py-3 text-sm">{user.nom}</td>
-		                    <td className="px-4 py-3 text-sm">{user.prenom}</td>
-		                    <td className="px-4 py-3 text-sm">{user.categorie || '-'}</td>
-		                    <td className="px-4 py-3">
-		                      <button
-		                        onClick={() => handleDeleteUser(user.id, user.nom, user.prenom)}
-		                        className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 flex items-center gap-1"
-		                      >
-		                        <span>✕</span>
-		                        <span>Supprimer</span>
-		                      </button>
-		                    </td>
-		                  </>
-		                )}
-		                {selectedUserType === 'guides' && (
-		                  <>
-		                    <td className="px-4 py-3 text-sm">{user.nom}</td>
-		                    <td className="px-4 py-3 text-sm">{user.prenom}</td>
-		                    <td className="px-4 py-3">
-		                      <button
-		                        onClick={() => handleDeleteUser(user.id, user.nom)}
-		                        className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 flex items-center gap-1"
-		                      >
-		                        <span>✕</span>
-		                        <span>Supprimer</span>
-		                      </button>
-		                    </td>
-		                  </>
-		                )}
-		                {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && (
-		                  <>
-		                    <td className="px-4 py-3 text-sm">{user.nom}</td>
-		                    <td className="px-4 py-3 text-sm">{user.prenom}</td>
-		                    <td className="px-4 py-3 text-sm">{user.email}</td>
-		                    <td className="px-4 py-3">
-		                      <button
-		                        onClick={() => handleDeleteUser(user.id, user.nom, user.prenom)}
-		                        className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 flex items-center gap-1"
-		                      >
-		                        <span>✕</span>
-		                        <span>Supprimer</span>
-		                      </button>
-		                    </td>
-		                  </>
-		                )}
-		                {selectedUserType === 'coordinateurs' && (
-		                  <>
-		                    <td className="px-4 py-3 text-sm">{user.nom}</td>
-		                    <td className="px-4 py-3 text-sm">{user.prenom}</td>
-		                    <td className="px-4 py-3">
-		                      <button
-		                        onClick={() => handleDeleteUser(user.id, user.nom, user.prenom)}
-		                        className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 flex items-center gap-1"
-		                      >
-		                        <span>✕</span>
-		                        <span>Supprimer</span>
-		                      </button>
-		                    </td>
-		                  </>
-		                )}
-		              </tr>
-		            ))}
-		          </tbody>
-		        </table>
-		      </div>
-		    </div>
-		  </div>
-		)	
-			) : activeTab === 'parametres-affichage' ? (
-			  /* Onglet Paramètres d'affichage */
-			  <div className="space-y-6">
-			    <div className="bg-white rounded-lg shadow p-6">
-			      <h2 className="text-xl font-semibold text-gray-800 mb-6">
-			        Paramètres d'affichage (anonymisation)
-			      </h2>
-			      
-			      {/* Section 1 : Paramètres fonctionnels */}
-			      <div className="border border-blue-200 rounded-lg p-6 mb-8">
-			        <h3 className="text-lg font-medium text-gray-700 mb-4 flex items-center gap-2">
-			          <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">⚙️</span>
-			          Paramètres fonctionnels
-			        </h3>
-			        
-			        <div className="space-y-4">
-			          <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
-			            <div>
-			              <h4 className="font-medium text-gray-700">Onglet "Lecteur interne" pour les guides</h4>
-			              <p className="text-sm text-gray-600 mt-1">
-			                Autorise les guides à sélectionner des TFH en tant que lecteur interne
-			              </p>
-			            </div>
-			            <label className="flex items-center cursor-pointer">
-			              <div className="relative">
-			                <input
-			                  type="checkbox"
-			                  className="sr-only"
-			                  checked={lecteurInterneEnabled}
-			                  onChange={(e) => toggleLecteurInterne(e.target.checked)}
-			                  disabled={loadingSettings}
-			                />
-			                <div className={`block w-14 h-8 rounded-full ${lecteurInterneEnabled ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
-			                <div className={`absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${lecteurInterneEnabled ? 'transform translate-x-6' : ''}`}></div>
-			              </div>
-			              <span className="ml-3 text-sm font-medium text-gray-700">
-			                {lecteurInterneEnabled ? 'Activé' : 'Désactivé'}
-			              </span>
-			            </label>
-			          </div>
-			        </div>
-			      </div>
-			      
-			      {/* Section 2 : Paramètres d'anonymisation */}
-			      <div className="space-y-8">
-			        {/* Vue Lecteur Externe */}
-			        <div className="border rounded-lg p-6">
-			          <h3 className="text-lg font-medium text-gray-700 mb-4 flex items-center gap-2">
-			            <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">👁️</span>
-			            Vue Lecteur Externe
-			            <span className="text-sm font-normal text-gray-500">(que voient les lecteurs externes ?)</span>
-			          </h3>
-			          
-			          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-			            <ToggleSetting
-			              label="Voir les élèves (noms & prénoms)"
-			              checked={displaySettings.lecteur_externe_voir_eleves}
-			              onChange={(checked) => saveDisplaySetting('lecteur_externe_voir_eleves', checked)}
-			            />
-			            <ToggleSetting
-			              label="Voir les guides (noms & prénoms)"
-			              checked={displaySettings.lecteur_externe_voir_guides}
-			              onChange={(checked) => saveDisplaySetting('lecteur_externe_voir_guides', checked)}
-			            />
-			            <ToggleSetting
-			              label="Voir les lecteurs internes (noms & prénoms)"
-			              checked={displaySettings.lecteur_externe_voir_lecteurs_internes}
-			              onChange={(checked) => saveDisplaySetting('lecteur_externe_voir_lecteurs_internes', checked)}
-			            />
-			            <ToggleSetting
-			              label="Voir les médiateurs (noms & prénoms)"
-			              checked={displaySettings.lecteur_externe_voir_mediateurs}
-			              onChange={(checked) => saveDisplaySetting('lecteur_externe_voir_mediateurs', checked)}
-			            />
-			          </div>
-			          
-			          <div className="mt-4 p-3 bg-gray-50 rounded text-sm">
-			            <p className="font-medium text-gray-700">Résumé :</p>
-			            <p className="text-gray-600 mt-1">
-			              Les lecteurs externes {displaySettings.lecteur_externe_voir_eleves ? 'voient' : '<strong>NE voient PAS</strong>'} les élèves • 
-			              {displaySettings.lecteur_externe_voir_guides ? ' voient' : ' <strong>NE voient PAS</strong>'} les guides • 
-			              {displaySettings.lecteur_externe_voir_lecteurs_internes ? ' voient' : ' <strong>NE voient PAS</strong>'} les lecteurs internes • 
-			              {displaySettings.lecteur_externe_voir_mediateurs ? ' voient' : ' <strong>NE voient PAS</strong>'} les médiateurs
-			            </p>
-			          </div>
-			        </div>
-			        
-			        {/* Vue Lecteur Interne */}
-			        <div className="border rounded-lg p-6">
-			          <h3 className="text-lg font-medium text-gray-700 mb-4 flex items-center gap-2">
-			            <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">📖</span>
-			            Vue Lecteur Interne
-			            <span className="text-sm font-normal text-gray-500">(que voient les lecteurs internes ?)</span>
-			          </h3>
-			          
-			          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-			            <ToggleSetting
-			              label="Voir les élèves (noms & prénoms)"
-			              checked={displaySettings.lecteur_interne_voir_eleves}
-			              onChange={(checked) => saveDisplaySetting('lecteur_interne_voir_eleves', checked)}
-			            />
-			            <ToggleSetting
-			              label="Voir les guides (noms & prénoms)"
-			              checked={displaySettings.lecteur_interne_voir_guides}
-			              onChange={(checked) => saveDisplaySetting('lecteur_interne_voir_guides', checked)}
-			            />
-			            <ToggleSetting
-			              label="Voir les lecteurs externes (noms & prénoms)"
-			              checked={displaySettings.lecteur_interne_voir_lecteurs_externes}
-			              onChange={(checked) => saveDisplaySetting('lecteur_interne_voir_lecteurs_externes', checked)}
-			            />
-			            <ToggleSetting
-			              label="Voir les médiateurs (noms & prénoms)"
-			              checked={displaySettings.lecteur_interne_voir_mediateurs}
-			              onChange={(checked) => saveDisplaySetting('lecteur_interne_voir_mediateurs', checked)}
-			            />
-			          </div>
-			        </div>
-			        
-			        {/* Vue Médiateur */}
-			        <div className="border rounded-lg p-6">
-			          <h3 className="text-lg font-medium text-gray-700 mb-4 flex items-center gap-2">
-			            <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">⚖️</span>
-			            Vue Médiateur
-			            <span className="text-sm font-normal text-gray-500">(que voient les médiateurs ?)</span>
-			          </h3>
-			          
-			          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-			            <ToggleSetting
-			              label="Voir les élèves (noms & prénoms)"
-			              checked={displaySettings.mediateur_voir_eleves}
-			              onChange={(checked) => saveDisplaySetting('mediateur_voir_eleves', checked)}
-			            />
-			            <ToggleSetting
-			              label="Voir les guides (noms & prénoms)"
-			              checked={displaySettings.mediateur_voir_guides}
-			              onChange={(checked) => saveDisplaySetting('mediateur_voir_guides', checked)}
-			            />
-			            <ToggleSetting
-			              label="Voir les lecteurs internes (noms & prénoms)"
-			              checked={displaySettings.mediateur_voir_lecteurs_internes}
-			              onChange={(checked) => saveDisplaySetting('mediateur_voir_lecteurs_internes', checked)}
-			            />
-			            <ToggleSetting
-			              label="Voir les lecteurs externes (noms & prénoms)"
-			              checked={displaySettings.mediateur_voir_lecteurs_externes}
-			              onChange={(checked) => saveDisplaySetting('mediateur_voir_lecteurs_externes', checked)}
-			            />
-			          </div>
-			        </div>
-			      </div>
-			    </div>
-			  </div>
-			) : null
+        )}
+
+        {activeTab === 'gestion-utilisateurs' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">Gestion des Utilisateurs</h2>
+              
+              <div className="flex flex-wrap gap-2 mb-6">
+                <button
+                  onClick={() => setSelectedUserType('eleves')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                    selectedUserType === 'eleves'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Élèves ({eleves.length})
+                </button>
+                <button
+                  onClick={() => setSelectedUserType('guides')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                    selectedUserType === 'guides'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Guides ({guides.length})
+                </button>
+                <button
+                  onClick={() => setSelectedUserType('lecteurs-externes')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                    selectedUserType === 'lecteurs-externes'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Lecteurs externes ({lecteursExternes.length})
+                </button>
+                <button
+                  onClick={() => setSelectedUserType('mediateurs')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                    selectedUserType === 'mediateurs'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Médiateurs ({mediateurs.length})
+                </button>
+                <button
+                  onClick={() => setSelectedUserType('coordinateurs')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                    selectedUserType === 'coordinateurs'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Coordinateurs ({coordinateurs.length})
+                </button>
+              </div>
+
+              <div className="flex flex-wrap gap-3 mt-4">
+                <button
+                  onClick={() => setShowMassImport(true)}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                >
+                  Import CSV/Excel
+                </button>
+                
+                {(selectedUserType === 'eleves' || selectedUserType === 'guides') && (
+                  <button
+                    onClick={() => setShowClearConfirmations(true)}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
+                  >
+                    Vider tous les {selectedUserType === 'eleves' ? 'élèves' : 'guides'}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-lg font-medium text-gray-700 mb-4">
+                Ajouter un {selectedUserType === 'eleves' ? 'élève' : 
+                          selectedUserType === 'guides' ? 'guide' :
+                          selectedUserType === 'lecteurs-externes' ? 'lecteur externe' :
+                          selectedUserType === 'mediateurs' ? 'médiateur' : 'coordinateur'}
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {selectedUserType === 'eleves' && (
+                  <>
+                    <input
+                      type="text"
+                      placeholder="Nom"
+                      value={newUser.nom}
+                      onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
+                      className="border rounded px-3 py-2 text-sm"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Prénom"
+                      value={newUser.prenom}
+                      onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
+                      className="border rounded px-3 py-2 text-sm"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Classe"
+                      value={newUser.classe}
+                      onChange={(e) => setNewUser({...newUser, classe: e.target.value})}
+                      className="border rounded px-3 py-2 text-sm"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Catégorie"
+                      value={newUser.categorie}
+                      onChange={(e) => setNewUser({...newUser, categorie: e.target.value})}
+                      className="border rounded px-3 py-2 text-sm"
+                    />
+                  </>
+                )}
+
+                {selectedUserType === 'guides' && (
+                  <>
+                    <input
+                      type="text"
+                      placeholder="Nom"
+                      value={newUser.nom}
+                      onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
+                      className="border rounded px-3 py-2 text-sm"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Prénom"
+                      value={newUser.prenom}
+                      onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
+                      className="border rounded px-3 py-2 text-sm"
+                    />
+                  </>
+                )}
+
+                {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && (
+                  <>
+                    <input
+                      type="text"
+                      placeholder="Nom"
+                      value={newUser.nom}
+                      onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
+                      className="border rounded px-3 py-2 text-sm"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Prénom"
+                      value={newUser.prenom}
+                      onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
+                      className="border rounded px-3 py-2 text-sm"
+                    />
+                    <input
+                      type="email"
+                      placeholder="Email"
+                      value={newUser.email}
+                      onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                      className="border rounded px-3 py-2 text-sm"
+                    />
+                  </>
+                )}
+
+                {selectedUserType === 'coordinateurs' && (
+                  <>
+                    <input
+                      type="text"
+                      placeholder="Nom"
+                      value={newUser.nom}
+                      onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
+                      className="border rounded px-3 py-2 text-sm"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Prénom"
+                      value={newUser.prenom}
+                      onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
+                      className="border rounded px-3 py-2 text-sm"
+                    />
+                  </>
+                )}
+              </div>
+
+              <div className="mt-4">
+                <button
+                  onClick={handleAddUser}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center gap-2"
+                >
+                  <span>+</span>
+                  <span>Ajouter</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              <div className="px-6 py-4 border-b">
+                <h3 className="text-lg font-medium text-gray-700">
+                  Liste des {selectedUserType} ({getCurrentUserCount()})
+                </h3>
+              </div>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-100 border-b">
+                    <tr>
+                      {selectedUserType === 'eleves' && (
+                        <>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Classe</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Catégorie</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+                        </>
+                      )}
+                      {selectedUserType === 'guides' && (
+                        <>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+                        </>
+                      )}
+                      {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && (
+                        <>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+                        </>
+                      )}
+                      {selectedUserType === 'coordinateurs' && (
+                        <>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+                        </>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {getCurrentUsers().map((user: any) => (
+                      <tr key={user.id} className="border-b hover:bg-gray-50">
+                        {selectedUserType === 'eleves' && (
+                          <>
+                            <td className="px-4 py-3 text-sm">{user.classe}</td>
+                            <td className="px-4 py-3 text-sm">{user.nom}</td>
+                            <td className="px-4 py-3 text-sm">{user.prenom}</td>
+                            <td className="px-4 py-3 text-sm">{user.categorie || '-'}</td>
+                            <td className="px-4 py-3">
+                              <button
+                                onClick={() => handleDeleteUser(user.id, user.nom, user.prenom)}
+                                className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 flex items-center gap-1"
+                              >
+                                <span>✕</span>
+                                <span>Supprimer</span>
+                              </button>
+                            </td>
+                          </>
+                        )}
+                        {selectedUserType === 'guides' && (
+                          <>
+                            <td className="px-4 py-3 text-sm">{user.nom}</td>
+                            <td className="px-4 py-3 text-sm">{user.prenom}</td>
+                            <td className="px-4 py-3">
+                              <button
+                                onClick={() => handleDeleteUser(user.id, user.nom)}
+                                className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 flex items-center gap-1"
+                              >
+                                <span>✕</span>
+                                <span>Supprimer</span>
+                              </button>
+                            </td>
+                          </>
+                        )}
+                        {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && (
+                          <>
+                            <td className="px-4 py-3 text-sm">{user.nom}</td>
+                            <td className="px-4 py-3 text-sm">{user.prenom}</td>
+                            <td className="px-4 py-3 text-sm">{user.email}</td>
+                            <td className="px-4 py-3">
+                              <button
+                                onClick={() => handleDeleteUser(user.id, user.nom, user.prenom)}
+                                className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 flex items-center gap-1"
+                              >
+                                <span>✕</span>
+                                <span>Supprimer</span>
+                              </button>
+                            </td>
+                          </>
+                        )}
+                        {selectedUserType === 'coordinateurs' && (
+                          <>
+                            <td className="px-4 py-3 text-sm">{user.nom}</td>
+                            <td className="px-4 py-3 text-sm">{user.prenom}</td>
+                            <td className="px-4 py-3">
+                              <button
+                                onClick={() => handleDeleteUser(user.id, user.nom, user.prenom)}
+                                className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 flex items-center gap-1"
+                              >
+                                <span>✕</span>
+                                <span>Supprimer</span>
+                              </button>
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'parametres-affichage' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-xl font-semibold text-gray-800 mb-6">
+                Paramètres d'affichage (anonymisation)
+              </h2>
+              
+              <div className="border border-blue-200 rounded-lg p-6 mb-8">
+                <h3 className="text-lg font-medium text-gray-700 mb-4 flex items-center gap-2">
+                  <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">⚙️</span>
+                  Paramètres fonctionnels
+                </h3>
+                
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+                    <div>
+                      <h4 className="font-medium text-gray-700">Onglet "Lecteur interne" pour les guides</h4>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Autorise les guides à sélectionner des TFH en tant que lecteur interne
+                      </p>
+                    </div>
+                    <label className="flex items-center cursor-pointer">
+                      <div className="relative">
+                        <input
+                          type="checkbox"
+                          className="sr-only"
+                          checked={lecteurInterneEnabled}
+                          onChange={(e) => toggleLecteurInterne(e.target.checked)}
+                          disabled={loadingSettings}
+                        />
+                        <div className={`block w-14 h-8 rounded-full ${lecteurInterneEnabled ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
+                        <div className={`absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${lecteurInterneEnabled ? 'transform translate-x-6' : ''}`}></div>
+                      </div>
+                      <span className="ml-3 text-sm font-medium text-gray-700">
+                        {lecteurInterneEnabled ? 'Activé' : 'Désactivé'}
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-8">
+                <div className="border rounded-lg p-6">
+                  <h3 className="text-lg font-medium text-gray-700 mb-4 flex items-center gap-2">
+                    <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">👁️</span>
+                    Vue Lecteur Externe
+                    <span className="text-sm font-normal text-gray-500">(que voient les lecteurs externes ?)</span>
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <ToggleSetting
+                      label="Voir les élèves (noms & prénoms)"
+                      checked={displaySettings.lecteur_externe_voir_eleves}
+                      onChange={(checked) => saveDisplaySetting('lecteur_externe_voir_eleves', checked)}
+                    />
+                    <ToggleSetting
+                      label="Voir les guides (noms & prénoms)"
+                      checked={displaySettings.lecteur_externe_voir_guides}
+                      onChange={(checked) => saveDisplaySetting('lecteur_externe_voir_guides', checked)}
+                    />
+                    <ToggleSetting
+                      label="Voir les lecteurs internes (noms & prénoms)"
+                      checked={displaySettings.lecteur_externe_voir_lecteurs_internes}
+                      onChange={(checked) => saveDisplaySetting('lecteur_externe_voir_lecteurs_internes', checked)}
+                    />
+                    <ToggleSetting
+                      label="Voir les médiateurs (noms & prénoms)"
+                      checked={displaySettings.lecteur_externe_voir_mediateurs}
+                      onChange={(checked) => saveDisplaySetting('lecteur_externe_voir_mediateurs', checked)}
+                    />
+                  </div>
+                </div>
+                
+                <div className="border rounded-lg p-6">
+                  <h3 className="text-lg font-medium text-gray-700 mb-4 flex items-center gap-2">
+                    <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">📖</span>
+                    Vue Lecteur Interne
+                    <span className="text-sm font-normal text-gray-500">(que voient les lecteurs internes ?)</span>
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <ToggleSetting
+                      label="Voir les élèves (noms & prénoms)"
+                      checked={displaySettings.lecteur_interne_voir_eleves}
+                      onChange={(checked) => saveDisplaySetting('lecteur_interne_voir_eleves', checked)}
+                    />
+                    <ToggleSetting
+                      label="Voir les guides (noms & prénoms)"
+                      checked={displaySettings.lecteur_interne_voir_guides}
+                      onChange={(checked) => saveDisplaySetting('lecteur_interne_voir_guides', checked)}
+                    />
+                    <ToggleSetting
+                      label="Voir les lecteurs externes (noms & prénoms)"
+                      checked={displaySettings.lecteur_interne_voir_lecteurs_externes}
+                      onChange={(checked) => saveDisplaySetting('lecteur_interne_voir_lecteurs_externes', checked)}
+                    />
+                    <ToggleSetting
+                      label="Voir les médiateurs (noms & prénoms)"
+                      checked={displaySettings.lecteur_interne_voir_mediateurs}
+                      onChange={(checked) => saveDisplaySetting('lecteur_interne_voir_mediateurs', checked)}
+                    />
+                  </div>
+                </div>
+                
+                <div className="border rounded-lg p-6">
+                  <h3 className="text-lg font-medium text-gray-700 mb-4 flex items-center gap-2">
+                    <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">⚖️</span>
+                    Vue Médiateur
+                    <span className="text-sm font-normal text-gray-500">(que voient les médiateurs ?)</span>
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <ToggleSetting
+                      label="Voir les élèves (noms & prénoms)"
+                      checked={displaySettings.mediateur_voir_eleves}
+                      onChange={(checked) => saveDisplaySetting('mediateur_voir_eleves', checked)}
+                    />
+                    <ToggleSetting
+                      label="Voir les guides (noms & prénoms)"
+                      checked={displaySettings.mediateur_voir_guides}
+                      onChange={(checked) => saveDisplaySetting('mediateur_voir_guides', checked)}
+                    />
+                    <ToggleSetting
+                      label="Voir les lecteurs internes (noms & prénoms)"
+                      checked={displaySettings.mediateur_voir_lecteurs_internes}
+                      onChange={(checked) => saveDisplaySetting('mediateur_voir_lecteurs_internes', checked)}
+                    />
+                    <ToggleSetting
+                      label="Voir les lecteurs externes (noms & prénoms)"
+                      checked={displaySettings.mediateur_voir_lecteurs_externes}
+                      onChange={(checked) => saveDisplaySetting('mediateur_voir_lecteurs_externes', checked)}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Modals */}
         {showMassImport && (
@@ -2843,17 +2813,17 @@ export default function CoordinateurDashboard() {
                   Annuler
                 </button>
                 <button
-                onClick={() => {
-                  console.log('Données brutes:', massImportData);
-                  const testRows = massImportData.split('\n').filter(row => row.trim());
-                  console.log('Lignes détectées:', testRows);
-                  handleMassImport();
-                }}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
-                disabled={!massImportData.trim()}
-              >
-                Importer
-              </button>
+                  onClick={() => {
+                    console.log('Données brutes:', massImportData);
+                    const testRows = massImportData.split('\n').filter(row => row.trim());
+                    console.log('Lignes détectées:', testRows);
+                    handleMassImport();
+                  }}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                  disabled={!massImportData.trim()}
+                >
+                  Importer
+                </button>
               </div>
             </div>
           </div>
@@ -2913,7 +2883,6 @@ export default function CoordinateurDashboard() {
           </div>
         )}
 
-        {/* Note pour les utilisateurs mobiles */}
         <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200 md:hidden">
           <p className="text-sm text-blue-700 flex items-center gap-2">
             <span className="text-lg">💡</span>
@@ -2925,27 +2894,3 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
