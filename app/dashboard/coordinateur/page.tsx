@@ -2328,487 +2328,485 @@ export default function CoordinateurDashboard() {
 				      selectedLocations={selectedLocations}
 				    />
           </div>
-        ) : (
-          /* Onglet Gestion des Utilisateurs */
-          <div className="space-y-6">
-            {/* Menu de sélection du type d'utilisateur */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Gestion des Utilisateurs</h2>
-              
-              <div className="flex flex-wrap gap-2 mb-6">
-                <button
-                  onClick={() => setSelectedUserType('eleves')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                    selectedUserType === 'eleves'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Élèves ({eleves.length})
-                </button>
-                <button
-                  onClick={() => setSelectedUserType('guides')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                    selectedUserType === 'guides'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Guides ({guides.length})
-                </button>
-                <button
-                  onClick={() => setSelectedUserType('lecteurs-externes')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                    selectedUserType === 'lecteurs-externes'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Lecteurs externes ({lecteursExternes.length})
-                </button>
-                <button
-                  onClick={() => setSelectedUserType('mediateurs')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                    selectedUserType === 'mediateurs'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Médiateurs ({mediateurs.length})
-                </button>
-                <button
-                  onClick={() => setSelectedUserType('coordinateurs')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                    selectedUserType === 'coordinateurs'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Coordinateurs ({coordinateurs.length})
-                </button>
-              </div>
-
-              {/* Actions spéciales */}
-              <div className="flex flex-wrap gap-3 mt-4">
-                <button
-                  onClick={() => setShowMassImport(true)}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
-                >
-                  Import CSV/Excel
-                </button>
-                
-                {(selectedUserType === 'eleves' || selectedUserType === 'guides') && (
-                  <button
-                    onClick={() => setShowClearConfirmations(true)}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
-                  >
-                    Vider tous les {selectedUserType === 'eleves' ? 'élèves' : 'guides'}
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Formulaire d'ajout d'utilisateur */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-lg font-medium text-gray-700 mb-4">
-                Ajouter un {selectedUserType === 'eleves' ? 'élève' : 
-                          selectedUserType === 'guides' ? 'guide' :
-                          selectedUserType === 'lecteurs-externes' ? 'lecteur externe' :
-                          selectedUserType === 'mediateurs' ? 'médiateur' : 'coordinateur'}
-              </h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {selectedUserType === 'eleves' && (
-                  <>
-                    <input
-                      type="text"
-                      placeholder="Nom"
-                      value={newUser.nom}
-                      onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
-                      className="border rounded px-3 py-2 text-sm"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Prénom"
-                      value={newUser.prenom}
-                      onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
-                      className="border rounded px-3 py-2 text-sm"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Classe"
-                      value={newUser.classe}
-                      onChange={(e) => setNewUser({...newUser, classe: e.target.value})}
-                      className="border rounded px-3 py-2 text-sm"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Catégorie"
-                      value={newUser.categorie}
-                      onChange={(e) => setNewUser({...newUser, categorie: e.target.value})}
-                      className="border rounded px-3 py-2 text-sm"
-                    />
-                  </>
-                )}
-
-                {selectedUserType === 'guides' && (
-                  <>
-                    <input
-                      type="text"
-                      placeholder="Nom"
-                      value={newUser.nom}
-                      onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
-                      className="border rounded px-3 py-2 text-sm"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Prénom"
-                      value={newUser.prenom}
-                      onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
-                      className="border rounded px-3 py-2 text-sm"
-                    />
-                  </>
-                )}
-
-                {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && (
-                  <>
-                    <input
-                      type="text"
-                      placeholder="Nom"
-                      value={newUser.nom}
-                      onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
-                      className="border rounded px-3 py-2 text-sm"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Prénom"
-                      value={newUser.prenom}
-                      onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
-                      className="border rounded px-3 py-2 text-sm"
-                    />
-                    <input
-                      type="email"
-                      placeholder="Email"
-                      value={newUser.email}
-                      onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                      className="border rounded px-3 py-2 text-sm"
-                    />
-                  </>
-                )}
-
-                {selectedUserType === 'coordinateurs' && (
-                  <>
-                    <input
-                      type="text"
-                      placeholder="Nom"
-                      value={newUser.nom}
-                      onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
-                      className="border rounded px-3 py-2 text-sm"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Prénom"
-                      value={newUser.prenom}
-                      onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
-                      className="border rounded px-3 py-2 text-sm"
-                    />
-                  </>
-                )}
-              </div>
-
-              <div className="mt-4">
-                <button
-                  onClick={handleAddUser}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center gap-2"
-                >
-                  <span>+</span>
-                  <span>Ajouter</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Liste des utilisateurs */}
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <div className="px-6 py-4 border-b">
-                <h3 className="text-lg font-medium text-gray-700">
-                  Liste des {selectedUserType} ({getCurrentUserCount()})
-                </h3>
-              </div>
-              
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-100 border-b">
-                    <tr>
-                      {selectedUserType === 'eleves' && (
-                        <>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Classe</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Catégorie</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
-                        </>
-                      )}
-                      {selectedUserType === 'guides' && (
-                        <>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
-                        </>
-                      )}
-                      {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && (
-                        <>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
-                        </>
-                      )}
-                      {selectedUserType === 'coordinateurs' && (
-                        <>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
-                        </>
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {getCurrentUsers().map((user: any) => (
-                      <tr key={user.id} className="border-b hover:bg-gray-50">
-                        {selectedUserType === 'eleves' && (
-                          <>
-                            <td className="px-4 py-3 text-sm">{user.classe}</td>
-                            <td className="px-4 py-3 text-sm">{user.nom}</td>
-                            <td className="px-4 py-3 text-sm">{user.prenom}</td>
-                            <td className="px-4 py-3 text-sm">{user.categorie || '-'}</td>
-                            <td className="px-4 py-3">
-                              <button
-                                onClick={() => handleDeleteUser(user.id, user.nom, user.prenom)}
-                                className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 flex items-center gap-1"
-                              >
-                                <span>✕</span>
-                                <span>Supprimer</span>
-                              </button>
-                            </td>
-                          </>
-                        )}
-                        {selectedUserType === 'guides' && (
-                          <>
-                            <td className="px-4 py-3 text-sm">{user.nom}</td>
-                            <td className="px-4 py-3 text-sm">{user.prenom}</td>
-                            <td className="px-4 py-3">
-                              <button
-                                onClick={() => handleDeleteUser(user.id, user.nom)}
-                                className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 flex items-center gap-1"
-                              >
-                                <span>✕</span>
-                                <span>Supprimer</span>
-                              </button>
-                            </td>
-                          </>
-                        )}
-                        {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && (
-                          <>
-                            <td className="px-4 py-3 text-sm">{user.nom}</td>
-                            <td className="px-4 py-3 text-sm">{user.prenom}</td>
-                            <td className="px-4 py-3 text-sm">{user.email}</td>
-                            <td className="px-4 py-3">
-                              <button
-                                onClick={() => handleDeleteUser(user.id, user.nom, user.prenom)}
-                                className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 flex items-center gap-1"
-                              >
-                                <span>✕</span>
-                                <span>Supprimer</span>
-                              </button>
-                            </td>
-                          </>
-                        )}
-                        {selectedUserType === 'coordinateurs' && (
-                          <>
-                            <td className="px-4 py-3 text-sm">{user.nom}</td>
-                            <td className="px-4 py-3 text-sm">{user.prenom}</td>
-                            <td className="px-4 py-3">
-                              <button
-                                onClick={() => handleDeleteUser(user.id, user.nom, user.prenom)}
-                                className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 flex items-center gap-1"
-                              >
-                                <span>✕</span>
-                                <span>Supprimer</span>
-                              </button>
-                            </td>
-                          </>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-				) : activeTab === 'parametres-affichage' ? (
-				  /* Onglet Paramètres d'affichage */
-				  <div className="space-y-6">
-				    <div className="bg-white rounded-lg shadow p-6">
-				      <h2 className="text-xl font-semibold text-gray-800 mb-6">
-				        Paramètres d'affichage pour les différents utilisateurs
-				      </h2>
-				      
-				      <div className="space-y-8">
-				        {/* Section Lecteur Externe */}
-				        <div className="border rounded-lg p-6">
-				          <h3 className="text-lg font-medium text-gray-700 mb-4 flex items-center gap-2">
-				            <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">👁️</span>
-				            Vue Lecteur Externe
-				          </h3>
-				          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-				            <ToggleSetting
-				              label="Afficher nom des élèves"
-				              checked={displaySettings.lecteur_externe_eleves_nom}
-				              onChange={(checked) => saveDisplaySetting('lecteur_externe_eleves_nom', checked)}
-				            />
-				            <ToggleSetting
-				              label="Afficher prénom des élèves"
-				              checked={displaySettings.lecteur_externe_eleves_prenom}
-				              onChange={(checked) => saveDisplaySetting('lecteur_externe_eleves_prenom', checked)}
-				            />
-				            <ToggleSetting
-				              label="Afficher nom du guide"
-				              checked={displaySettings.lecteur_externe_guide_nom}
-				              onChange={(checked) => saveDisplaySetting('lecteur_externe_guide_nom', checked)}
-				            />
-				            <ToggleSetting
-				              label="Afficher prénom du guide"
-				              checked={displaySettings.lecteur_externe_guide_prenom}
-				              onChange={(checked) => saveDisplaySetting('lecteur_externe_guide_prenom', checked)}
-				            />
-				            <ToggleSetting
-				              label="Afficher nom du lecteur interne"
-				              checked={displaySettings.lecteur_externe_lecteur_interne_nom}
-				              onChange={(checked) => saveDisplaySetting('lecteur_externe_lecteur_interne_nom', checked)}
-				            />
-				            <ToggleSetting
-				              label="Afficher prénom du lecteur interne"
-				              checked={displaySettings.lecteur_externe_lecteur_interne_prenom}
-				              onChange={(checked) => saveDisplaySetting('lecteur_externe_lecteur_interne_prenom', checked)}
-				            />
-				            <ToggleSetting
-				              label="Afficher nom du médiateur"
-				              checked={displaySettings.lecteur_externe_mediateur_nom}
-				              onChange={(checked) => saveDisplaySetting('lecteur_externe_mediateur_nom', checked)}
-				            />
-				            <ToggleSetting
-				              label="Afficher prénom du médiateur"
-				              checked={displaySettings.lecteur_externe_mediateur_prenom}
-				              onChange={(checked) => saveDisplaySetting('lecteur_externe_mediateur_prenom', checked)}
-				            />
-				          </div>
-				        </div>
-				        
-				        {/* Section Lecteur Interne */}
-				        <div className="border rounded-lg p-6">
-				          <h3 className="text-lg font-medium text-gray-700 mb-4 flex items-center gap-2">
-				            <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">📖</span>
-				            Vue Lecteur Interne
-				          </h3>
-				          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-				            <ToggleSetting
-				              label="Afficher nom des élèves"
-				              checked={displaySettings.lecteur_interne_eleves_nom}
-				              onChange={(checked) => saveDisplaySetting('lecteur_interne_eleves_nom', checked)}
-				            />
-				            <ToggleSetting
-				              label="Afficher prénom des élèves"
-				              checked={displaySettings.lecteur_interne_eleves_prenom}
-				              onChange={(checked) => saveDisplaySetting('lecteur_interne_eleves_prenom', checked)}
-				            />
-				            <ToggleSetting
-				              label="Afficher nom du guide"
-				              checked={displaySettings.lecteur_interne_guide_nom}
-				              onChange={(checked) => saveDisplaySetting('lecteur_interne_guide_nom', checked)}
-				            />
-				            <ToggleSetting
-				              label="Afficher prénom du guide"
-				              checked={displaySettings.lecteur_interne_guide_prenom}
-				              onChange={(checked) => saveDisplaySetting('lecteur_interne_guide_prenom', checked)}
-				            />
-				            <ToggleSetting
-				              label="Afficher nom du lecteur externe"
-				              checked={displaySettings.lecteur_interne_lecteur_externe_nom}
-				              onChange={(checked) => saveDisplaySetting('lecteur_interne_lecteur_externe_nom', checked)}
-				            />
-				            <ToggleSetting
-				              label="Afficher prénom du lecteur externe"
-				              checked={displaySettings.lecteur_interne_lecteur_externe_prenom}
-				              onChange={(checked) => saveDisplaySetting('lecteur_interne_lecteur_externe_prenom', checked)}
-				            />
-				            <ToggleSetting
-				              label="Afficher nom du médiateur"
-				              checked={displaySettings.lecteur_interne_mediateur_nom}
-				              onChange={(checked) => saveDisplaySetting('lecteur_interne_mediateur_nom', checked)}
-				            />
-				            <ToggleSetting
-				              label="Afficher prénom du médiateur"
-				              checked={displaySettings.lecteur_interne_mediateur_prenom}
-				              onChange={(checked) => saveDisplaySetting('lecteur_interne_mediateur_prenom', checked)}
-				            />
-				          </div>
-				        </div>
-				        
-				        {/* Section Médiateur */}
-				        <div className="border rounded-lg p-6">
-				          <h3 className="text-lg font-medium text-gray-700 mb-4 flex items-center gap-2">
-				            <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">⚖️</span>
-				            Vue Médiateur
-				          </h3>
-				          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-				            <ToggleSetting
-				              label="Afficher nom des élèves"
-				              checked={displaySettings.mediateur_eleves_nom}
-				              onChange={(checked) => saveDisplaySetting('mediateur_eleves_nom', checked)}
-				            />
-				            <ToggleSetting
-				              label="Afficher prénom des élèves"
-				              checked={displaySettings.mediateur_eleves_prenom}
-				              onChange={(checked) => saveDisplaySetting('mediateur_eleves_prenom', checked)}
-				            />
-				            <ToggleSetting
-				              label="Afficher nom du guide"
-				              checked={displaySettings.mediateur_guide_nom}
-				              onChange={(checked) => saveDisplaySetting('mediateur_guide_nom', checked)}
-				            />
-				            <ToggleSetting
-				              label="Afficher prénom du guide"
-				              checked={displaySettings.mediateur_guide_prenom}
-				              onChange={(checked) => saveDisplaySetting('mediateur_guide_prenom', checked)}
-				            />
-				            <ToggleSetting
-				              label="Afficher nom du lecteur interne"
-				              checked={displaySettings.mediateur_lecteur_interne_nom}
-				              onChange={(checked) => saveDisplaySetting('mediateur_lecteur_interne_nom', checked)}
-				            />
-				            <ToggleSetting
-				              label="Afficher prénom du lecteur interne"
-				              checked={displaySettings.mediateur_lecteur_interne_prenom}
-				              onChange={(checked) => saveDisplaySetting('mediateur_lecteur_interne_prenom', checked)}
-				            />
-				            <ToggleSetting
-				              label="Afficher nom du lecteur externe"
-				              checked={displaySettings.mediateur_lecteur_externe_nom}
-				              onChange={(checked) => saveDisplaySetting('mediateur_lecteur_externe_nom', checked)}
-				            />
-				            <ToggleSetting
-				              label="Afficher prénom du lecteur externe"
-				              checked={displaySettings.mediateur_lecteur_externe_prenom}
-				              onChange={(checked) => saveDisplaySetting('mediateur_lecteur_externe_prenom', checked)}
-				            />
-				          </div>
-				        </div>
-				      </div>
-				    </div>
-				  </div>
-			
-        )}
+        ) : activeTab === 'gestion-utilisateurs' ? (
+		  /* Onglet Gestion des Utilisateurs */
+		  <div className="space-y-6">
+		    {/* Menu de sélection du type d'utilisateur */}
+		    <div className="bg-white rounded-lg shadow p-6">
+		      <h2 className="text-xl font-semibold text-gray-800 mb-4">Gestion des Utilisateurs</h2>
+		      
+		      <div className="flex flex-wrap gap-2 mb-6">
+		        <button
+		          onClick={() => setSelectedUserType('eleves')}
+		          className={`px-4 py-2 rounded-lg text-sm font-medium ${
+		            selectedUserType === 'eleves'
+		              ? 'bg-blue-600 text-white'
+		              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+		          }`}
+		        >
+		          Élèves ({eleves.length})
+		        </button>
+		        <button
+		          onClick={() => setSelectedUserType('guides')}
+		          className={`px-4 py-2 rounded-lg text-sm font-medium ${
+		            selectedUserType === 'guides'
+		              ? 'bg-blue-600 text-white'
+		              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+		          }`}
+		        >
+		          Guides ({guides.length})
+		        </button>
+		        <button
+		          onClick={() => setSelectedUserType('lecteurs-externes')}
+		          className={`px-4 py-2 rounded-lg text-sm font-medium ${
+		            selectedUserType === 'lecteurs-externes'
+		              ? 'bg-blue-600 text-white'
+		              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+		          }`}
+		        >
+		          Lecteurs externes ({lecteursExternes.length})
+		        </button>
+		        <button
+		          onClick={() => setSelectedUserType('mediateurs')}
+		          className={`px-4 py-2 rounded-lg text-sm font-medium ${
+		            selectedUserType === 'mediateurs'
+		              ? 'bg-blue-600 text-white'
+		              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+		          }`}
+		        >
+		          Médiateurs ({mediateurs.length})
+		        </button>
+		        <button
+		          onClick={() => setSelectedUserType('coordinateurs')}
+		          className={`px-4 py-2 rounded-lg text-sm font-medium ${
+		            selectedUserType === 'coordinateurs'
+		              ? 'bg-blue-600 text-white'
+		              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+		          }`}
+		        >
+		          Coordinateurs ({coordinateurs.length})
+		        </button>
+		      </div>
+		
+		      {/* Actions spéciales */}
+		      <div className="flex flex-wrap gap-3 mt-4">
+		        <button
+		          onClick={() => setShowMassImport(true)}
+		          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+		        >
+		          Import CSV/Excel
+		        </button>
+		        
+		        {(selectedUserType === 'eleves' || selectedUserType === 'guides') && (
+		          <button
+		            onClick={() => setShowClearConfirmations(true)}
+		            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
+		          >
+		            Vider tous les {selectedUserType === 'eleves' ? 'élèves' : 'guides'}
+		          </button>
+		        )}
+		      </div>
+		    </div>
+		
+		    {/* Formulaire d'ajout d'utilisateur */}
+		    <div className="bg-white rounded-lg shadow p-6">
+		      <h3 className="text-lg font-medium text-gray-700 mb-4">
+		        Ajouter un {selectedUserType === 'eleves' ? 'élève' : 
+		                  selectedUserType === 'guides' ? 'guide' :
+		                  selectedUserType === 'lecteurs-externes' ? 'lecteur externe' :
+		                  selectedUserType === 'mediateurs' ? 'médiateur' : 'coordinateur'}
+		      </h3>
+		      
+		      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+		        {selectedUserType === 'eleves' && (
+		          <>
+		            <input
+		              type="text"
+		              placeholder="Nom"
+		              value={newUser.nom}
+		              onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
+		              className="border rounded px-3 py-2 text-sm"
+		            />
+		            <input
+		              type="text"
+		              placeholder="Prénom"
+		              value={newUser.prenom}
+		              onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
+		              className="border rounded px-3 py-2 text-sm"
+		            />
+		            <input
+		              type="text"
+		              placeholder="Classe"
+		              value={newUser.classe}
+		              onChange={(e) => setNewUser({...newUser, classe: e.target.value})}
+		              className="border rounded px-3 py-2 text-sm"
+		            />
+		            <input
+		              type="text"
+		              placeholder="Catégorie"
+		              value={newUser.categorie}
+		              onChange={(e) => setNewUser({...newUser, categorie: e.target.value})}
+		              className="border rounded px-3 py-2 text-sm"
+		            />
+		          </>
+		        )}
+		
+		        {selectedUserType === 'guides' && (
+		          <>
+		            <input
+		              type="text"
+		              placeholder="Nom"
+		              value={newUser.nom}
+		              onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
+		              className="border rounded px-3 py-2 text-sm"
+		            />
+		            <input
+		              type="text"
+		              placeholder="Prénom"
+		              value={newUser.prenom}
+		              onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
+		              className="border rounded px-3 py-2 text-sm"
+		            />
+		          </>
+		        )}
+		
+		        {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && (
+		          <>
+		            <input
+		              type="text"
+		              placeholder="Nom"
+		              value={newUser.nom}
+		              onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
+		              className="border rounded px-3 py-2 text-sm"
+		            />
+		            <input
+		              type="text"
+		              placeholder="Prénom"
+		              value={newUser.prenom}
+		              onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
+		              className="border rounded px-3 py-2 text-sm"
+		            />
+		            <input
+		              type="email"
+		              placeholder="Email"
+		              value={newUser.email}
+		              onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+		              className="border rounded px-3 py-2 text-sm"
+		            />
+		          </>
+		        )}
+		
+		        {selectedUserType === 'coordinateurs' && (
+		          <>
+		            <input
+		              type="text"
+		              placeholder="Nom"
+		              value={newUser.nom}
+		              onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
+		              className="border rounded px-3 py-2 text-sm"
+		            />
+		            <input
+		              type="text"
+		              placeholder="Prénom"
+		              value={newUser.prenom}
+		              onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
+		              className="border rounded px-3 py-2 text-sm"
+		            />
+		          </>
+		        )}
+		      </div>
+		
+		      <div className="mt-4">
+		        <button
+		          onClick={handleAddUser}
+		          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center gap-2"
+		        >
+		          <span>+</span>
+		          <span>Ajouter</span>
+		        </button>
+		      </div>
+		    </div>
+		
+		    {/* Liste des utilisateurs */}
+		    <div className="bg-white rounded-lg shadow overflow-hidden">
+		      <div className="px-6 py-4 border-b">
+		        <h3 className="text-lg font-medium text-gray-700">
+		          Liste des {selectedUserType} ({getCurrentUserCount()})
+		        </h3>
+		      </div>
+		      
+		      <div className="overflow-x-auto">
+		        <table className="w-full">
+		          <thead className="bg-gray-100 border-b">
+		            <tr>
+		              {selectedUserType === 'eleves' && (
+		                <>
+		                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Classe</th>
+		                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
+		                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
+		                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Catégorie</th>
+		                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+		                </>
+		              )}
+		              {selectedUserType === 'guides' && (
+		                <>
+		                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
+		                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
+		                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+		                </>
+		              )}
+		              {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && (
+		                <>
+		                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
+		                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
+		                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
+		                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+		                </>
+		              )}
+		              {selectedUserType === 'coordinateurs' && (
+		                <>
+		                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
+		                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
+		                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+		                </>
+		              )}
+		            </tr>
+		          </thead>
+		          <tbody>
+		            {getCurrentUsers().map((user: any) => (
+		              <tr key={user.id} className="border-b hover:bg-gray-50">
+		                {selectedUserType === 'eleves' && (
+		                  <>
+		                    <td className="px-4 py-3 text-sm">{user.classe}</td>
+		                    <td className="px-4 py-3 text-sm">{user.nom}</td>
+		                    <td className="px-4 py-3 text-sm">{user.prenom}</td>
+		                    <td className="px-4 py-3 text-sm">{user.categorie || '-'}</td>
+		                    <td className="px-4 py-3">
+		                      <button
+		                        onClick={() => handleDeleteUser(user.id, user.nom, user.prenom)}
+		                        className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 flex items-center gap-1"
+		                      >
+		                        <span>✕</span>
+		                        <span>Supprimer</span>
+		                      </button>
+		                    </td>
+		                  </>
+		                )}
+		                {selectedUserType === 'guides' && (
+		                  <>
+		                    <td className="px-4 py-3 text-sm">{user.nom}</td>
+		                    <td className="px-4 py-3 text-sm">{user.prenom}</td>
+		                    <td className="px-4 py-3">
+		                      <button
+		                        onClick={() => handleDeleteUser(user.id, user.nom)}
+		                        className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 flex items-center gap-1"
+		                      >
+		                        <span>✕</span>
+		                        <span>Supprimer</span>
+		                      </button>
+		                    </td>
+		                  </>
+		                )}
+		                {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && (
+		                  <>
+		                    <td className="px-4 py-3 text-sm">{user.nom}</td>
+		                    <td className="px-4 py-3 text-sm">{user.prenom}</td>
+		                    <td className="px-4 py-3 text-sm">{user.email}</td>
+		                    <td className="px-4 py-3">
+		                      <button
+		                        onClick={() => handleDeleteUser(user.id, user.nom, user.prenom)}
+		                        className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 flex items-center gap-1"
+		                      >
+		                        <span>✕</span>
+		                        <span>Supprimer</span>
+		                      </button>
+		                    </td>
+		                  </>
+		                )}
+		                {selectedUserType === 'coordinateurs' && (
+		                  <>
+		                    <td className="px-4 py-3 text-sm">{user.nom}</td>
+		                    <td className="px-4 py-3 text-sm">{user.prenom}</td>
+		                    <td className="px-4 py-3">
+		                      <button
+		                        onClick={() => handleDeleteUser(user.id, user.nom, user.prenom)}
+		                        className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 flex items-center gap-1"
+		                      >
+		                        <span>✕</span>
+		                        <span>Supprimer</span>
+		                      </button>
+		                    </td>
+		                  </>
+		                )}
+		              </tr>
+		            ))}
+		          </tbody>
+		        </table>
+		      </div>
+		    </div>
+		  </div>
+		) : activeTab === 'parametres-affichage' ? (
+		  /* Onglet Paramètres d'affichage */
+		  <div className="space-y-6">
+		    <div className="bg-white rounded-lg shadow p-6">
+		      <h2 className="text-xl font-semibold text-gray-800 mb-6">
+		        Paramètres d'affichage pour les différents utilisateurs
+		      </h2>
+		      
+		      <div className="space-y-8">
+		        {/* Section Lecteur Externe */}
+		        <div className="border rounded-lg p-6">
+		          <h3 className="text-lg font-medium text-gray-700 mb-4 flex items-center gap-2">
+		            <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">👁️</span>
+		            Vue Lecteur Externe
+		          </h3>
+		          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+		            <ToggleSetting
+		              label="Afficher nom des élèves"
+		              checked={displaySettings.lecteur_externe_eleves_nom}
+		              onChange={(checked) => saveDisplaySetting('lecteur_externe_eleves_nom', checked)}
+		            />
+		            <ToggleSetting
+		              label="Afficher prénom des élèves"
+		              checked={displaySettings.lecteur_externe_eleves_prenom}
+		              onChange={(checked) => saveDisplaySetting('lecteur_externe_eleves_prenom', checked)}
+		            />
+		            <ToggleSetting
+		              label="Afficher nom du guide"
+		              checked={displaySettings.lecteur_externe_guide_nom}
+		              onChange={(checked) => saveDisplaySetting('lecteur_externe_guide_nom', checked)}
+		            />
+		            <ToggleSetting
+		              label="Afficher prénom du guide"
+		              checked={displaySettings.lecteur_externe_guide_prenom}
+		              onChange={(checked) => saveDisplaySetting('lecteur_externe_guide_prenom', checked)}
+		            />
+		            <ToggleSetting
+		              label="Afficher nom du lecteur interne"
+		              checked={displaySettings.lecteur_externe_lecteur_interne_nom}
+		              onChange={(checked) => saveDisplaySetting('lecteur_externe_lecteur_interne_nom', checked)}
+		            />
+		            <ToggleSetting
+		              label="Afficher prénom du lecteur interne"
+		              checked={displaySettings.lecteur_externe_lecteur_interne_prenom}
+		              onChange={(checked) => saveDisplaySetting('lecteur_externe_lecteur_interne_prenom', checked)}
+		            />
+		            <ToggleSetting
+		              label="Afficher nom du médiateur"
+		              checked={displaySettings.lecteur_externe_mediateur_nom}
+		              onChange={(checked) => saveDisplaySetting('lecteur_externe_mediateur_nom', checked)}
+		            />
+		            <ToggleSetting
+		              label="Afficher prénom du médiateur"
+		              checked={displaySettings.lecteur_externe_mediateur_prenom}
+		              onChange={(checked) => saveDisplaySetting('lecteur_externe_mediateur_prenom', checked)}
+		            />
+		          </div>
+		        </div>
+		        
+		        {/* Section Lecteur Interne */}
+		        <div className="border rounded-lg p-6">
+		          <h3 className="text-lg font-medium text-gray-700 mb-4 flex items-center gap-2">
+		            <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">📖</span>
+		            Vue Lecteur Interne
+		          </h3>
+		          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+		            <ToggleSetting
+		              label="Afficher nom des élèves"
+		              checked={displaySettings.lecteur_interne_eleves_nom}
+		              onChange={(checked) => saveDisplaySetting('lecteur_interne_eleves_nom', checked)}
+		            />
+		            <ToggleSetting
+		              label="Afficher prénom des élèves"
+		              checked={displaySettings.lecteur_interne_eleves_prenom}
+		              onChange={(checked) => saveDisplaySetting('lecteur_interne_eleves_prenom', checked)}
+		            />
+		            <ToggleSetting
+		              label="Afficher nom du guide"
+		              checked={displaySettings.lecteur_interne_guide_nom}
+		              onChange={(checked) => saveDisplaySetting('lecteur_interne_guide_nom', checked)}
+		            />
+		            <ToggleSetting
+		              label="Afficher prénom du guide"
+		              checked={displaySettings.lecteur_interne_guide_prenom}
+		              onChange={(checked) => saveDisplaySetting('lecteur_interne_guide_prenom', checked)}
+		            />
+		            <ToggleSetting
+		              label="Afficher nom du lecteur externe"
+		              checked={displaySettings.lecteur_interne_lecteur_externe_nom}
+		              onChange={(checked) => saveDisplaySetting('lecteur_interne_lecteur_externe_nom', checked)}
+		            />
+		            <ToggleSetting
+		              label="Afficher prénom du lecteur externe"
+		              checked={displaySettings.lecteur_interne_lecteur_externe_prenom}
+		              onChange={(checked) => saveDisplaySetting('lecteur_interne_lecteur_externe_prenom', checked)}
+		            />
+		            <ToggleSetting
+		              label="Afficher nom du médiateur"
+		              checked={displaySettings.lecteur_interne_mediateur_nom}
+		              onChange={(checked) => saveDisplaySetting('lecteur_interne_mediateur_nom', checked)}
+		            />
+		            <ToggleSetting
+		              label="Afficher prénom du médiateur"
+		              checked={displaySettings.lecteur_interne_mediateur_prenom}
+		              onChange={(checked) => saveDisplaySetting('lecteur_interne_mediateur_prenom', checked)}
+		            />
+		          </div>
+		        </div>
+		        
+		        {/* Section Médiateur */}
+		        <div className="border rounded-lg p-6">
+		          <h3 className="text-lg font-medium text-gray-700 mb-4 flex items-center gap-2">
+		            <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">⚖️</span>
+		            Vue Médiateur
+		          </h3>
+		          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+		            <ToggleSetting
+		              label="Afficher nom des élèves"
+		              checked={displaySettings.mediateur_eleves_nom}
+		              onChange={(checked) => saveDisplaySetting('mediateur_eleves_nom', checked)}
+		            />
+		            <ToggleSetting
+		              label="Afficher prénom des élèves"
+		              checked={displaySettings.mediateur_eleves_prenom}
+		              onChange={(checked) => saveDisplaySetting('mediateur_eleves_prenom', checked)}
+		            />
+		            <ToggleSetting
+		              label="Afficher nom du guide"
+		              checked={displaySettings.mediateur_guide_nom}
+		              onChange={(checked) => saveDisplaySetting('mediateur_guide_nom', checked)}
+		            />
+		            <ToggleSetting
+		              label="Afficher prénom du guide"
+		              checked={displaySettings.mediateur_guide_prenom}
+		              onChange={(checked) => saveDisplaySetting('mediateur_guide_prenom', checked)}
+		            />
+		            <ToggleSetting
+		              label="Afficher nom du lecteur interne"
+		              checked={displaySettings.mediateur_lecteur_interne_nom}
+		              onChange={(checked) => saveDisplaySetting('mediateur_lecteur_interne_nom', checked)}
+		            />
+		            <ToggleSetting
+		              label="Afficher prénom du lecteur interne"
+		              checked={displaySettings.mediateur_lecteur_interne_prenom}
+		              onChange={(checked) => saveDisplaySetting('mediateur_lecteur_interne_prenom', checked)}
+		            />
+		            <ToggleSetting
+		              label="Afficher nom du lecteur externe"
+		              checked={displaySettings.mediateur_lecteur_externe_nom}
+		              onChange={(checked) => saveDisplaySetting('mediateur_lecteur_externe_nom', checked)}
+		            />
+		            <ToggleSetting
+		              label="Afficher prénom du lecteur externe"
+		              checked={displaySettings.mediateur_lecteur_externe_prenom}
+		              onChange={(checked) => saveDisplaySetting('mediateur_lecteur_externe_prenom', checked)}
+		            />
+		          </div>
+		        </div>
+		      </div>
+		    </div>
+		  </div>
+		) : null}
 
         {/* Modals */}
         {showMassImport && (
@@ -2946,6 +2944,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
