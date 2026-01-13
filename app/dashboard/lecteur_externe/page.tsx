@@ -93,6 +93,32 @@ export default function LecteurExterneDashboard() {
   const loadData = async (lecteurExterneId: string) => {
     try {
       setLoading(true);
+
+      const loadDisplaySettings = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('system_settings')
+          .select('setting_key, setting_value')
+          .in('setting_key', [
+            'lecteur_externe_voir_eleves',
+            'lecteur_externe_voir_guides',
+            'lecteur_externe_voir_lecteurs_internes',
+            'lecteur_externe_voir_mediateurs'
+          ]);
+    
+        if (error) throw error;
+    
+        if (data) {
+          const settings: any = {};
+          data.forEach(setting => {
+            settings[setting.setting_key] = setting.setting_value === 'true';
+          });
+          setDisplaySettings(prev => ({ ...prev, ...settings }));
+        }
+      } catch (err) {
+        console.error('Erreur chargement paramètres:', err);
+      }
+    };
       
       const { data: elevesData, error: elevesError } = await supabase
         .from('eleves')
@@ -216,6 +242,13 @@ export default function LecteurExterneDashboard() {
     
     return `${newHours.toString().padStart(2, '0')}:${newMinutes.toString().padStart(2, '0')}`;
   };
+  
+  const [displaySettings, setDisplaySettings] = useState({
+    lecteur_externe_voir_eleves: true,
+    lecteur_externe_voir_guides: true,
+    lecteur_externe_voir_lecteurs_internes: true,
+    lecteur_externe_voir_mediateurs: true,
+  });
 
   const prepareCalendarData = () => {
     const defensesWithSchedule = elevesDisponibles.filter(e => 
@@ -1105,13 +1138,25 @@ export default function LecteurExterneDashboard() {
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Date</th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Heure</th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lieu</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Classe</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Élève</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Thématique</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Guide</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur interne</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Médiateur</th>
+                      {displaySettings.lecteur_externe_voir_eleves && (
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Élève</th>
+                      )}
+
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Problématique</th>
+                      
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Thématique</th>
+                      {displaySettings.lecteur_externe_voir_guides && (
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Guide</th>
+                      )}
+                      
+                      {displaySettings.lecteur_externe_voir_lecteurs_internes && (
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur interne</th>
+                      )}
+                      
+                      {displaySettings.lecteur_externe_voir_mediateurs && (
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Médiateur</th>
+                      )}
+                      
                     </tr>
                   </thead>
                   <tbody>
@@ -1132,29 +1177,43 @@ export default function LecteurExterneDashboard() {
                         <td className="px-4 py-3 text-sm">
                           {eleve.localisation_defense || '-'}
                         </td>
-                        <td className="px-4 py-3 text-sm whitespace-nowrap">{eleve.classe}</td>
-                        <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
-                          {eleve.nom} {eleve.prenom}
-                        </td>
-                        <td className="px-4 py-3 text-sm whitespace-nowrap">
-                          <span className="px-2 py-1 bg-gray-100 rounded text-xs">
-                            {eleve.categorie || '-'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm whitespace-nowrap">
-                          {eleve.guide_prenom} {eleve.guide_nom}
-                        </td>
-                        <td className="px-4 py-3 text-sm whitespace-nowrap">
-                          {eleve.lecteur_interne_prenom} {eleve.lecteur_interne_nom}
-                        </td>
-                        <td className="px-4 py-3 text-sm whitespace-nowrap">
-                          {eleve.mediateur_prenom} {eleve.mediateur_nom}
-                        </td>
+                        
+                        {displaySettings.lecteur_externe_voir_eleves && (
+                          <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
+                            {eleve.nom} {eleve.prenom}
+                          </td>
+                        )}
+                        
                         <td className="px-4 py-3 text-sm max-w-md">
                           <div className="whitespace-pre-wrap max-h-32 overflow-y-auto pr-2">
                             {eleve.problematique || '-'}
                           </div>
                         </td>
+                        
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">
+                          <span className="px-2 py-1 bg-gray-100 rounded text-xs">
+                            {eleve.categorie || '-'}
+                          </span>
+                        </td>
+                        
+                        {displaySettings.lecteur_externe_voir_guides && (
+                          <td className="px-4 py-3 text-sm whitespace-nowrap">
+                            {eleve.guide_prenom} {eleve.guide_nom}
+                          </td>
+                        )}
+                        
+                        {displaySettings.lecteur_externe_voir_lecteurs_internes && (
+                          <td className="px-4 py-3 text-sm whitespace-nowrap">
+                            {eleve.lecteur_interne_prenom} {eleve.lecteur_interne_nom}
+                          </td>
+                        )}
+                                              
+                        {displaySettings.lecteur_externe_voir_mediateurs && (
+                          <td className="px-4 py-3 text-sm whitespace-nowrap">
+                            {eleve.mediateur_prenom} {eleve.mediateur_nom}
+                          </td>
+                        )}
+                        
                       </tr>
                     ))}
                   </tbody>
