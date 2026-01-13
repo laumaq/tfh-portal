@@ -2633,7 +2633,7 @@ export default function CoordinateurDashboard() {
 		      </div>
 		    </div>
 		  </div>
-			
+		)	
 			) : activeTab === 'parametres-affichage' ? (
 			  /* Onglet Paramètres d'affichage */
 			  <div className="space-y-6">
@@ -2925,6 +2925,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
