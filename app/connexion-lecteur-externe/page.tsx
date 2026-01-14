@@ -329,7 +329,7 @@ export default function LoginLecteurExternePage() {
                 <h3 className="text-xl font-bold text-gray-800 mb-2">Compte créé avec succès !</h3>
                 <p className="text-gray-600 mb-4 whitespace-pre-line">{welcomeMessage}</p>
                 <p className="text-sm text-gray-500 mb-6">
-                  Redirection automatique vers votre dashboard dans 3 secondes...
+                  Redirection automatique vers votre dashboard dans 6 secondes...
                 </p>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div className="bg-blue-600 h-2 rounded-full animate-progress"></div>
