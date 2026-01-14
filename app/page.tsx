@@ -350,35 +350,12 @@ export default function LoginPage() {
             {loading ? 'Connexion en cours...' : 'Se connecter'}
           </button>
         </form>
-
-        {/* Section debug - À retirer en production */}
-        <div className="mt-8 pt-6 border-t border-gray-200">
-          <details className="text-sm">
-            <summary className="cursor-pointer text-gray-500 font-medium">Informations de débogage</summary>
-            <div className="mt-2 p-3 bg-gray-50 rounded text-xs text-gray-600 space-y-1">
-              <p>Valeurs testées:</p>
-              <p>Nom: {nom || '(vide)'} → Normalisé: {nom.toUpperCase() || '(vide)'}</p>
-              <p>Initiale: {initiale || '(vide)'} → Normalisé: {initiale.toUpperCase() || '(vide)'}</p>
-              <p className="text-xs text-gray-500">
-                Nouveaux types: Médiateur, Lecteur externe
-              </p>
-              <button 
-                onClick={() => { 
-                  setNom('TEST'); 
-                  setInitiale('T'); 
-                  setPassword('test123'); 
-                }}
-                className="mt-2 text-blue-600 hover:text-blue-800 underline text-xs"
-              >
-                Remplir avec des données de test
-              </button>
-            </div>
-          </details>
-        </div>
+        
       </div>
     </div>
   );
 }
+
 
 
 
