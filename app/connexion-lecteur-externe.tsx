@@ -133,7 +133,8 @@ export default function LoginLecteurExternePage() {
             prenom: prenomNormalized,
             email: email.trim(),
             telephone: telephone.trim() || null,
-            mot_de_passe: password || null // Peut être vide pour première connexion
+            mot_de_passe: password || null, // Peut être vide pour première connexion
+            created_at: new Date().toISOString()  
           }
         ])
         .select()
