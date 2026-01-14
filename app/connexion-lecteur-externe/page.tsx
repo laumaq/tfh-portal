@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import WelcomeMessage from '@/components/WelcomeMessage';
 
 export default function LoginLecteurExternePage() {
   const [nom, setNom] = useState('');
@@ -14,6 +15,8 @@ export default function LoginLecteurExternePage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [isNewUser, setIsNewUser] = useState<boolean | null>(null);
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [welcomeMessage, setWelcomeMessage] = useState('');
   const router = useRouter();
 
   // Vérifier si l'utilisateur existe déjà
@@ -148,8 +151,15 @@ export default function LoginLecteurExternePage() {
       localStorage.setItem('userName', `${prenomNormalized} ${nomNormalized}`);
       
       // Redirection avec message de bienvenue
-      sessionStorage.setItem('welcomeMessage', 'Bienvenue ! Votre compte a été créé avec succès.');
-      router.push('/dashboard/lecteur_externe');
+      setWelcomeMessage('Bienvenue ! Votre compte a été créé avec succès \n \n Merci de prendre du temps pour nos rhétos !');
+      setShowWelcome(true);
+
+      setTimeout(() => {
+        localStorage.setItem('userType', 'lecteur_externe');
+        localStorage.setItem('userId', newLecteur.id);
+        localStorage.setItem('userName', `${prenomNormalized} ${nomNormalized}`);
+        router.push('/dashboard/lecteur_externe');
+      }, 3000);
 
     } catch (err: any) {
       console.error('Erreur:', err);
