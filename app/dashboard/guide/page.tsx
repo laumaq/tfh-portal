@@ -257,21 +257,23 @@ const loadSystemSettings = async () => {
   };
   
   const calculateColspan = (isProgrammed: boolean) => {
-    let count = 3; // Date, Heure, Localisation (ou Classe pour non programmées)
+    let count = 0;
     
-    if (!isProgrammed) {
-      count = 1; // Seulement Classe
+    // Colonnes toujours visibles
+    count += 1; // Checkbox
+    if (isProgrammed) {
+      count += 3; // Date, Heure, Localisation pour les programmées
     }
     
-    // Ajouter les colonnes conditionnelles
+    // Colonnes conditionnelles
     if (displaySettings.lecteur_interne_voir_eleves) {
-      count += isProgrammed ? 2 : 2; // Classe + Élève (2 colonnes dans tous les cas)
+      count += isProgrammed ? 2 : 2; // Classe + Élève (2 colonnes)
     }
     
     count += 2; // Catégorie + Problématique (toujours visibles)
     
     if (displaySettings.lecteur_interne_voir_guides) count += 1;
-    count += 1; // Lecteur interne (toujours visible)
+    if (displaySettings.lecteur_interne_voir_lecteurs_internes) count += 1;
     if (displaySettings.lecteur_interne_voir_lecteurs_externes) count += 1;
     if (displaySettings.lecteur_interne_voir_mediateurs) count += 1;
     
@@ -692,9 +694,11 @@ const loadSystemSettings = async () => {
                         className="w-4 h-4 text-blue-600 rounded"
                       />
                     </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Classe</th>
-                    {displaySettings.lecteur_interne_voir_eleves && ( 
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Élève</th>
+                    {displaySettings.lecteur_interne_voir_eleves && (
+                      <>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Classe</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Élève</th>
+                      </>
                     )}
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Catégorie</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Problématique</th>
@@ -723,15 +727,17 @@ const loadSystemSettings = async () => {
                             className="w-4 h-4 text-blue-600 rounded"
                           />
                         </td>
-                        <td className="px-4 py-3 text-sm">{eleve.classe}</td>
                         
                         {displaySettings.lecteur_interne_voir_eleves && ( 
-                          <td className="px-4 py-3 text-sm">
-                            <div className="flex flex-col">
-                              <span className="font-medium">{eleve.nom}</span>
-                              <span>{eleve.prenom}</span>
-                            </div>
-                          </td>
+                          <>
+                            <td className="px-4 py-3 text-sm">{eleve.classe}</td>
+                            <td className="px-4 py-3 text-sm">
+                              <div className="flex flex-col">
+                                <span className="font-medium">{eleve.nom}</span>
+                                <span>{eleve.prenom}</span>
+                              </div>
+                            </td>
+                          </>
                         )}
                         
                         <td className="px-4 py-3 text-sm">
@@ -1076,6 +1082,7 @@ const loadSystemSettings = async () => {
     </div>
   );
 }
+
 
 
 
