@@ -790,8 +790,10 @@ const loadSystemSettings = async () => {
                             <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Heure</th>
                             <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Localisation</th>
                             {displaySettings.lecteur_interne_voir_eleves && (
-                              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-32">Élève</th>
-                              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Classe</th>
+                              <>
+                                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-32">Élève</th>
+                                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Classe</th>
+                              </>
                             )}                            
                             
                             <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Catégorie</th>
@@ -831,13 +833,15 @@ const loadSystemSettings = async () => {
                                 </td>
 
                                 {displaySettings.lecteur_interne_voir_eleves && (
-                                  <td className="px-4 py-3 text-sm">
-                                    <div className="flex flex-col min-w-0">
-                                      <span className="font-medium truncate">{eleve.nom}</span>
-                                      <span className="truncate">{eleve.prenom}</span>
-                                    </div>
-                                  </td>
-                                  <td className="px-4 py-3 text-sm">{eleve.classe}</td>
+                                  <>
+                                    <td className="px-4 py-3 text-sm">
+                                      <div className="flex flex-col min-w-0">
+                                        <span className="font-medium truncate">{eleve.nom}</span>
+                                        <span className="truncate">{eleve.prenom}</span>
+                                      </div>
+                                    </td>
+                                    <td className="px-4 py-3 text-sm">{eleve.classe}</td>
+                                  </>
                                 )}
                                                    
                                 <td className="px-4 py-3 text-sm">
@@ -1026,4 +1030,5 @@ const loadSystemSettings = async () => {
     </div>
   );
 }
+
 
