@@ -4,6 +4,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import Image from 'next/image';
+import logo from '@/app/components/Logotypebaseline_NB.png'; // Chemin vers votre logo
 
 export default function LoginPage() {
   const [nom, setNom] = useState('');
@@ -272,6 +274,14 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
+          <div className="mb-4 flex justify-center">
+            <Image
+              src={logo}
+              alt="Logo de l'école"
+              className="h-auto max-w-[200px] object-contain"
+              priority // Important pour le LCP (Largest Contentful Paint)
+            />
+          </div>
         <h1 className="text-3xl font-bold text-center mb-8 text-gray-800">
           Portail TFH
         </h1>
@@ -366,6 +376,7 @@ export default function LoginPage() {
     </div>
   );
 }
+
 
 
 
