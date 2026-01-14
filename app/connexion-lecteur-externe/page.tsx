@@ -357,8 +357,7 @@ export default function LoginLecteurExternePage() {
             <ul className="text-sm text-gray-600 space-y-1">
               <li>• Les lecteurs externes peuvent créer leur compte eux-mêmes</li>
               <li>• L'email est obligatoire pour la création de compte</li>
-              <li>• Votre initiale sera calculée automatiquement à partir de votre prénom</li>
-              <li>• Vous pourrez modifier votre mot de passe ultérieurement</li>
+              <li>• Si vous avez oublié votre mot de passe, contactez un coordinateur</li>
             </ul>
           </div>
         </div>
