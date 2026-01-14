@@ -891,7 +891,7 @@ const loadSystemSettings = async () => {
                                   <td className="px-4 py-3 text-sm whitespace-nowrap">
                                     {eleve.lecteur_interne_nom ? (
                                       <span>
-                                        {eleve.lecteur_interne_nom} {eleve.lecteur_interne_initiale}.
+                                        {eleve.lecteur_interne_nom} {eleve.lecteur_interne_initiale}
                                         {isLecteurInterne && (
                                           <span className="ml-1 text-xs text-blue-600">(vous)</span>
                                         )}
@@ -952,14 +952,26 @@ const loadSystemSettings = async () => {
                       <table className="w-full">
                         <thead className="bg-gray-100 border-b">
                           <tr>
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Classe</th>
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-32">Élève</th>
+                            {displaySettings.lecteur_interne_voir_eleves && (
+                              <>
+                                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Classe</th>
+                                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-32">Élève</th>
+                              </>
+                            )}
                             <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Catégorie</th>
                             <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-96">Problématique</th>
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Guide</th>
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur interne</th>
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur externe</th>
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Médiateur</th>
+                            {displaySettings.lecteur_interne_voir_guides && (
+                              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Guide</th>
+                            )}
+                            {displaySettings.lecteur_interne_voir_lecteurs_internes && (
+                              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur interne</th>
+                            )}
+                            {displaySettings.lecteur_interne_voir_lecteurs_externes && (
+                              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur externe</th>
+                            )}
+                            {displaySettings.lecteur_interne_voir_mediateurs && (
+                              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Médiateur</th>
+                            )}
                           </tr>
                         </thead>
                         <tbody>
@@ -969,13 +981,17 @@ const loadSystemSettings = async () => {
                             
                             return (
                               <tr key={eleve.id} className="border-b hover:bg-gray-50">
-                                <td className="px-4 py-3 text-sm">{eleve.classe}</td>
-                                <td className="px-4 py-3 text-sm">
-                                  <div className="flex flex-col min-w-0">
-                                    <span className="font-medium truncate">{eleve.nom}</span>
-                                    <span className="truncate">{eleve.prenom}</span>
-                                  </div>
-                                </td>
+                                {displaySettings.lecteur_interne_voir_eleves && (
+                                  <>
+                                    <td className="px-4 py-3 text-sm">{eleve.classe}</td>
+                                    <td className="px-4 py-3 text-sm">
+                                      <div className="flex flex-col min-w-0">
+                                        <span className="font-medium truncate">{eleve.nom}</span>
+                                        <span className="truncate">{eleve.prenom}</span>
+                                      </div>
+                                    </td>
+                                  </>
+                                )}
                                 <td className="px-4 py-3 text-sm">
                                   {eleve.categorie ? (
                                     <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 whitespace-nowrap">
@@ -988,42 +1004,50 @@ const loadSystemSettings = async () => {
                                     {eleve.problematique || '-'}
                                   </div>
                                 </td>
-                                <td className="px-4 py-3 text-sm whitespace-nowrap">
-                                  {eleve.guide_nom} {eleve.guide_initiale}.
-                                  {isGuide && (
-                                    <span className="ml-1 text-xs text-blue-600">(vous)</span>
-                                  )}
-                                </td>
-                                <td className="px-4 py-3 text-sm whitespace-nowrap">
-                                  {eleve.lecteur_interne_nom ? (
-                                    <span>
-                                      {eleve.lecteur_interne_nom} {eleve.lecteur_interne_initiale}.
-                                      {isLecteurInterne && (
-                                        <span className="ml-1 text-xs text-blue-600">(vous)</span>
-                                      )}
-                                    </span>
-                                  ) : (
-                                    '-'
-                                  )}
-                                </td>
-                                <td className="px-4 py-3 text-sm whitespace-nowrap">
-                                  {eleve.lecteur_externe_nom ? (
-                                    <span>
-                                      {eleve.lecteur_externe_prenom} {eleve.lecteur_externe_nom}
-                                    </span>
-                                  ) : (
-                                    '-'
-                                  )}
-                                </td>
-                                <td className="px-4 py-3 text-sm whitespace-nowrap">
-                                  {eleve.mediateur_nom ? (
-                                    <span>
-                                      {eleve.mediateur_prenom} {eleve.mediateur_nom}
-                                    </span>
-                                  ) : (
-                                    '-'
-                                  )}
-                                </td>
+                                {displaySettings.lecteur_interne_voir_guides && (
+                                  <td className="px-4 py-3 text-sm whitespace-nowrap">
+                                    {eleve.guide_nom} {eleve.guide_initiale}.
+                                    {isGuide && (
+                                      <span className="ml-1 text-xs text-blue-600">(vous)</span>
+                                    )}
+                                  </td>
+                                )}
+                                {displaySettings.lecteur_interne_voir_lecteurs_internes && (
+                                  <td className="px-4 py-3 text-sm whitespace-nowrap">
+                                    {eleve.lecteur_interne_nom ? (
+                                      <span>
+                                        {eleve.lecteur_interne_nom} {eleve.lecteur_interne_initiale}.
+                                        {isLecteurInterne && (
+                                          <span className="ml-1 text-xs text-blue-600">(vous)</span>
+                                        )}
+                                      </span>
+                                    ) : (
+                                      '-'
+                                    )}
+                                  </td>
+                                )}
+                                {displaySettings.lecteur_interne_voir_lecteurs_externes && (
+                                  <td className="px-4 py-3 text-sm whitespace-nowrap">
+                                    {eleve.lecteur_externe_nom ? (
+                                      <span>
+                                        {eleve.lecteur_externe_prenom} {eleve.lecteur_externe_nom}
+                                      </span>
+                                    ) : (
+                                      '-'
+                                    )}
+                                  </td>
+                                )}
+                                {displaySettings.lecteur_interne_voir_mediateurs && (
+                                  <td className="px-4 py-3 text-sm whitespace-nowrap">
+                                    {eleve.mediateur_nom ? (
+                                      <span>
+                                        {eleve.mediateur_prenom} {eleve.mediateur_nom}
+                                      </span>
+                                    ) : (
+                                      '-'
+                                    )}
+                                  </td>
+                                )}
                               </tr>
                             );
                           })}
@@ -1052,6 +1076,7 @@ const loadSystemSettings = async () => {
     </div>
   );
 }
+
 
 
 
