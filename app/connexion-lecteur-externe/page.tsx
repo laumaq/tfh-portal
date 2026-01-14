@@ -188,7 +188,7 @@ export default function LoginLecteurExternePage() {
               <Image
                 src={logo}
                 alt="Logo de l'école"
-                className="h-auto max-w-[200px] object-contain"
+                className="h-auto max-w-[400px] object-contain"
                 priority // Important pour le LCP (Largest Contentful Paint)
               />
             </div>
