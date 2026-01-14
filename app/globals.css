@@ -10,3 +10,13 @@
   z-index: 10;
   box-shadow: 2px 0 5px rgba(0,0,0,0.1);
 }
+
+/* Animation de progression */
+@keyframes progress {
+  0% { width: 0%; }
+  100% { width: 100%; }
+}
+
+.animate-progress {
+  animation: progress 3s linear forwards;
+}
