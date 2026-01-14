@@ -18,5 +18,6 @@
 }
 
 .animate-progress {
-  animation: progress 3s linear forwards;
+  animation: progress 6s linear forwards;
 }
+
