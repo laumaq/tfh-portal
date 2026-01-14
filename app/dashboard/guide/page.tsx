@@ -181,6 +181,7 @@ export default function GuideDashboard() {
           guide:guides!guide_id (nom, initiale)
         `)
         .or(`lecteur_interne_id.is.null,lecteur_interne_id.eq.${guideId}`)
+        .neq('guide_id', guideId)
         // Filtrer les élèves qui ont une catégorie
         .not('categorie', 'is', null)
         .not('categorie', 'eq', '')
@@ -1079,9 +1080,3 @@ const loadSystemSettings = async () => {
     </div>
   );
 }
-
-
-
-
-
-
