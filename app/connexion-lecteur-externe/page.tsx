@@ -4,7 +4,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import WelcomeMessage from '@/components/WelcomeMessage';
 
 export default function LoginLecteurExternePage() {
   const [nom, setNom] = useState('');
