@@ -75,7 +75,6 @@ export default function GuideDashboard() {
     lecteur_interne_voir_guides: true,
     lecteur_interne_voir_lecteurs_externes: true,
     lecteur_interne_voir_mediateurs: true,
-    lecteur_interne_voir_lecteurs_internes: true, 
   });
   
   const router = useRouter();
@@ -238,8 +237,7 @@ const loadSystemSettings = async () => {
           'lecteur_interne_voir_eleves',
           'lecteur_interne_voir_guides',
           'lecteur_interne_voir_lecteurs_externes',
-          'lecteur_interne_voir_mediateurs',
-          'lecteur_interne_voir_lecteurs_internes'
+          'lecteur_interne_voir_mediateurs'
         ]);
   
       if (!displayError && displayData) {
@@ -273,7 +271,6 @@ const loadSystemSettings = async () => {
     count += 2; // Catégorie + Problématique (toujours visibles)
     
     if (displaySettings.lecteur_interne_voir_guides) count += 1;
-    if (displaySettings.lecteur_interne_voir_lecteurs_internes) count += 1;
     if (displaySettings.lecteur_interne_voir_lecteurs_externes) count += 1;
     if (displaySettings.lecteur_interne_voir_mediateurs) count += 1;
     
@@ -827,7 +824,7 @@ const loadSystemSettings = async () => {
                               <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Guide</th>
                             )}
                             
-                            {displaySettings.lecteur_interne_voir_lecteurs_internes && (
+                            {displaySettings.lecteur_interne_voir_guides && (
                               <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur interne</th>
                             )}
                             
@@ -893,7 +890,7 @@ const loadSystemSettings = async () => {
                                   </td>
                                 )}
                         
-                                {displaySettings.lecteur_interne_voir_lecteurs_internes && ( 
+                                {displaySettings.lecteur_interne_voir_guides && ( 
                                   <td className="px-4 py-3 text-sm whitespace-nowrap">
                                     {eleve.lecteur_interne_nom ? (
                                       <span>
@@ -969,7 +966,7 @@ const loadSystemSettings = async () => {
                             {displaySettings.lecteur_interne_voir_guides && (
                               <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Guide</th>
                             )}
-                            {displaySettings.lecteur_interne_voir_lecteurs_internes && (
+                            {displaySettings.lecteur_interne_voir_guides && (
                               <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur interne</th>
                             )}
                             {displaySettings.lecteur_interne_voir_lecteurs_externes && (
@@ -1018,7 +1015,7 @@ const loadSystemSettings = async () => {
                                     )}
                                   </td>
                                 )}
-                                {displaySettings.lecteur_interne_voir_lecteurs_internes && (
+                                {displaySettings.lecteur_interne_voir_guides && (
                                   <td className="px-4 py-3 text-sm whitespace-nowrap">
                                     {eleve.lecteur_interne_nom ? (
                                       <span>
@@ -1082,6 +1079,7 @@ const loadSystemSettings = async () => {
     </div>
   );
 }
+
 
 
 
