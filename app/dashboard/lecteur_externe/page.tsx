@@ -1101,6 +1101,19 @@ export default function LecteurExterneDashboard() {
             </div>
           )}
         </div>
+        {/* PROFIL EDITOR - Ajoute à la fin, avant le dernier </div> */}
+        {showProfileEditor && (
+          <ProfileEditor
+            userId={userLecteurExterneId}
+            userType="lecteur_externe"
+            onClose={() => setShowProfileEditor(false)}
+            onUpdate={() => {
+              // Recharger les données si nécessaire
+              const name = localStorage.getItem('userName');
+              if (name) setUserName(name);
+            }}
+          />
+        )}
       </div>
     );
   }
@@ -1276,21 +1289,21 @@ export default function LecteurExterneDashboard() {
             </span>
           </p>
         </div>
+        
+        {/* PROFIL EDITOR  */}
+        {showProfileEditor && (
+          <ProfileEditor
+            userId={userLecteurExterneId}
+            userType="lecteur_externe"
+            onClose={() => setShowProfileEditor(false)}
+            onUpdate={() => {
+              // Recharger les données si nécessaire
+              const name = localStorage.getItem('userName');
+              if (name) setUserName(name);
+            }}
+          />
+        )}
       </div>
-
-      {/* PROFIL EDITOR - Ajoute à la fin, avant le dernier </div> */}
-      {showProfileEditor && (
-        <ProfileEditor
-          userId={userLecteurExterneId}
-          userType="lecteur_externe"
-          onClose={() => setShowProfileEditor(false)}
-          onUpdate={() => {
-            // Recharger les données si nécessaire
-            const name = localStorage.getItem('userName');
-            if (name) setUserName(name);
-          }}
-        />
-      )}
     </div>
   );
 }
