@@ -8,7 +8,7 @@ interface ProfileEditorProps {
   userId: string;
   userType: 'lecteur_externe' | 'guide' | 'coordinateur' | 'mediateur' | 'eleve';
   onClose: () => void;
-  onUpdate?: () => void; // Callback après mise à jour
+  onUpdate?: () => void;
 }
 
 export default function ProfileEditor({ userId, userType, onClose, onUpdate }: ProfileEditorProps) {
@@ -21,7 +21,6 @@ export default function ProfileEditor({ userId, userType, onClose, onUpdate }: P
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Charger les données de l'utilisateur
   useEffect(() => {
     loadUserData();
   }, [userId, userType]);
@@ -113,19 +112,16 @@ export default function ProfileEditor({ userId, userType, onClose, onUpdate }: P
 
       setSuccess('Vos informations ont été mises à jour avec succès !');
       
-      // Mettre à jour le localStorage si le nom a changé
       const currentUserName = localStorage.getItem('userName');
       const newUserName = `${prenom} ${nom}`;
       if (currentUserName !== newUserName) {
         localStorage.setItem('userName', newUserName);
       }
 
-      // Appeler le callback si défini
       if (onUpdate) {
         onUpdate();
       }
 
-      // Fermer après 2 secondes
       setTimeout(() => {
         onClose();
       }, 2000);
@@ -165,7 +161,6 @@ export default function ProfileEditor({ userId, userType, onClose, onUpdate }: P
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Nom (lecture seule) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Nom
@@ -179,7 +174,6 @@ export default function ProfileEditor({ userId, userType, onClose, onUpdate }: P
             <p className="text-xs text-gray-400 mt-1">Le nom ne peut pas être modifié</p>
           </div>
 
-          {/* Prénom (lecture seule) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Prénom
@@ -193,7 +187,6 @@ export default function ProfileEditor({ userId, userType, onClose, onUpdate }: P
             <p className="text-xs text-gray-400 mt-1">Le prénom ne peut pas être modifié</p>
           </div>
 
-          {/* Email */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Email *
@@ -210,7 +203,6 @@ export default function ProfileEditor({ userId, userType, onClose, onUpdate }: P
             </p>
           </div>
 
-          {/* Téléphone */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Téléphone
@@ -227,7 +219,6 @@ export default function ProfileEditor({ userId, userType, onClose, onUpdate }: P
             </p>
           </div>
 
-          {/* Messages d'erreur/succès */}
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm">
               {error}
@@ -240,7 +231,6 @@ export default function ProfileEditor({ userId, userType, onClose, onUpdate }: P
             </div>
           )}
 
-          {/* Boutons */}
           <div className="flex gap-3 pt-4">
             <button
               type="button"
@@ -263,7 +253,7 @@ export default function ProfileEditor({ userId, userType, onClose, onUpdate }: P
         <div className="mt-6 pt-6 border-t border-gray-100">
           <p className="text-xs text-gray-500 text-center">
             Seules certaines informations peuvent être modifiées.
-            Pour d'autres modifications, contactez les coordinateurs des TFH.
+            Pour d'autres modifications, contactez les coordinateurs TFH.
           </p>
         </div>
       </div>
