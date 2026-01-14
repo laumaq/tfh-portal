@@ -158,7 +158,7 @@ export default function LoginLecteurExternePage() {
         localStorage.setItem('userId', newLecteur.id);
         localStorage.setItem('userName', `${prenomNormalized} ${nomNormalized}`);
         router.push('/dashboard/lecteur_externe');
-      }, 3000);
+      }, 6000);
 
     } catch (err: any) {
       console.error('Erreur:', err);
