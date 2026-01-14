@@ -282,6 +282,8 @@ export default function LoginPage() {
               priority // Important pour le LCP (Largest Contentful Paint)
             />
           </div>
+
+        <h1 className="text-xl font-bold text-gray-800 mb-2">        </h1>
         
         <h1 className="text-3xl font-bold text-center mb-8 text-gray-800">
           Portail TFH
@@ -377,6 +379,7 @@ export default function LoginPage() {
     </div>
   );
 }
+
 
 
 
