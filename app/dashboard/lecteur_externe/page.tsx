@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import CalendarDisplayLecteurExterne from '@/app/components/CalendarDisplayLecteurExterne';
+import ProfileEditor from '@/components/ProfileEditor';
 
 interface Eleve {
   id: string;
@@ -73,6 +74,7 @@ export default function LecteurExterneDashboard() {
   const [tempSelectedDates, setTempSelectedDates] = useState<string[]>([]);
   const [tempSelectedCategories, setTempSelectedCategories] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
+  const [showProfileEditor, setShowProfileEditor] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -778,9 +780,18 @@ export default function LecteurExterneDashboard() {
                 <h1 className="text-lg md:text-xl font-bold text-gray-800 truncate">
                   {viewMode === 'list' ? 'Sélection en liste' : 'Sélection en calendrier'}
                 </h1>
-                <p className="text-xs md:text-sm text-gray-600 truncate">
-                  Connecté en tant que {userName} • {sortedElevesDisponibles.length} TFH disponible{sortedElevesDisponibles.length !== 1 ? 's' : ''}
-                </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs md:text-sm text-gray-600 truncate">
+                      Connecté en tant que {userName}
+                    </p>
+                    <button
+                      onClick={() => setShowProfileEditor(true)}
+                      className="ml-2 px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200"
+                      title="Modifier mon profil"
+                    >
+                      ✎
+                    </button>
+                  </div>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <button
@@ -1101,7 +1112,16 @@ export default function LecteurExterneDashboard() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Planning ({eleves.length} élèves)</h1>
-            <p className="text-gray-600 mt-1">Connecté en tant que {userName}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-gray-600 mt-1">Connecté en tant que {userName}</p>
+              <button
+                onClick={() => setShowProfileEditor(true)}
+                className="ml-2 px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200"
+                title="Modifier mon profil"
+              >
+                ✎
+              </button>
+            </div>
           </div>
           <div className="flex gap-2">
             <button
@@ -1257,6 +1277,20 @@ export default function LecteurExterneDashboard() {
           </p>
         </div>
       </div>
+
+      {/* PROFIL EDITOR - Ajoute à la fin, avant le dernier </div> */}
+      {showProfileEditor && (
+        <ProfileEditor
+          userId={userLecteurExterneId}
+          userType="lecteur_externe"
+          onClose={() => setShowProfileEditor(false)}
+          onUpdate={() => {
+            // Recharger les données si nécessaire
+            const name = localStorage.getItem('userName');
+            if (name) setUserName(name);
+          }}
+        />
+      )}
     </div>
   );
 }
