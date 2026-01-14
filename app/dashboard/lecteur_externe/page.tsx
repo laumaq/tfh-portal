@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import CalendarDisplayLecteurExterne from '@/app/components/CalendarDisplayLecteurExterne';
-import ProfileEditor from '../../../components/ProfileEditor';
+import ProfileEditor from '../../components/ProfileEditor';
 
 interface Eleve {
   id: string;
