@@ -70,6 +70,13 @@ export default function GuideDashboard() {
   const [categories, setCategories] = useState<string[]>([]);
   const [lecteurInterneEnabled, setLecteurInterneEnabled] = useState(false);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const [displaySettings, setDisplaySettings] = useState({
+    lecteur_interne_voir_eleves: true,
+    lecteur_interne_voir_guides: true,
+    lecteur_interne_voir_lecteurs_externes: true,
+    lecteur_interne_voir_mediateurs: true,
+  });
+  
   const router = useRouter();
 
   // Options de convocation identiques à celles du coordinateur
@@ -209,22 +216,64 @@ export default function GuideDashboard() {
     }
   };
 
-  const loadSystemSettings = async () => {
-    try {
-      const { data, error } = await supabase
+const loadSystemSettings = async () => {
+  try {
+    // Charger le paramètre d'activation de l'onglet
+    const { data: enabledData, error: enabledError } = await supabase
+      .from('system_settings')
+      .select('setting_value')
+      .eq('setting_key', 'guide_lecteur_interne_enabled')
+      .single();
+    
+    if (!enabledError && enabledData) {
+      setLecteurInterneEnabled(enabledData.setting_value === 'true');
+    }
+
+    // Charger les paramètres d'affichage pour les guides
+    const { data: displayData, error: displayError } = await supabase
         .from('system_settings')
-        .select('setting_value')
-        .eq('setting_key', 'guide_lecteur_interne_enabled')
-        .single();
-      
-      if (!error && data) {
-        setLecteurInterneEnabled(data.setting_value === 'true');
+        .select('setting_key, setting_value')
+        .in('setting_key', [
+          'lecteur_interne_voir_eleves',
+          'lecteur_interne_voir_guides',
+          'lecteur_interne_voir_lecteurs_externes',
+          'lecteur_interne_voir_mediateurs'
+        ]);
+  
+      if (!displayError && displayData) {
+        const settings: any = {};
+        displayData.forEach(setting => {
+          settings[setting.setting_key] = setting.setting_value === 'true';
+        });
+        setDisplaySettings(prev => ({ ...prev, ...settings }));
       }
     } catch (err) {
       console.error('Erreur chargement paramètres:', err);
     } finally {
       setSettingsLoaded(true);
     }
+  };
+  
+  const calculateColspan = (isProgrammed: boolean) => {
+    let count = 3; // Date, Heure, Localisation (ou Classe pour non programmées)
+    
+    if (!isProgrammed) {
+      count = 1; // Seulement Classe
+    }
+    
+    // Ajouter les colonnes conditionnelles
+    if (displaySettings.lecteur_interne_voir_eleves) {
+      count += isProgrammed ? 2 : 2; // Classe + Élève (2 colonnes dans tous les cas)
+    }
+    
+    count += 2; // Catégorie + Problématique (toujours visibles)
+    
+    if (displaySettings.lecteur_interne_voir_guides) count += 1;
+    count += 1; // Lecteur interne (toujours visible)
+    if (displaySettings.lecteur_interne_voir_lecteurs_externes) count += 1;
+    if (displaySettings.lecteur_interne_voir_mediateurs) count += 1;
+    
+    return count;
   };
 
   const loadDefenses = async (guideId: string) => {
@@ -652,7 +701,7 @@ export default function GuideDashboard() {
                 <tbody>
                   {filteredElevesDisponibles.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                      <td colSpan={calculateColspan(true)} className="px-4 py-8 text-center text-gray-500">
                         {selectedCategorie === 'toutes' 
                           ? "Aucun élève disponible pour le moment."
                           : `Aucun élève trouvé dans la catégorie "${selectedCategorie}".`}
@@ -740,14 +789,28 @@ export default function GuideDashboard() {
                             <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Date</th>
                             <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Heure</th>
                             <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Localisation</th>
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Classe</th>
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-32">Élève</th>
+                            {displaySettings.lecteur_interne_voir_eleves && (
+                              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-32">Élève</th>
+                              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Classe</th>
+                            )}                            
+                            
                             <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Catégorie</th>
                             <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-96">Problématique</th>
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Guide</th>
+                            
+                            {displaySettings.lecteur_interne_voir_guides && (
+                              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Guide</th>
+                            )}
+                            
                             <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur interne</th>
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur externe</th>
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Médiateur</th>
+                            
+                            {displaySettings.lecteur_interne_voir_lecteurs_externes && (
+                              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur externe</th>
+                            )}
+                            
+                            {displaySettings.lecteur_interne_voir_mediateurs && (
+                              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Médiateur</th>
+                            )}
+                            
                           </tr>
                         </thead>
                         <tbody>
@@ -766,13 +829,17 @@ export default function GuideDashboard() {
                                 <td className="px-4 py-3 text-sm">
                                   {eleve.localisation_defense || '-'}
                                 </td>
-                                <td className="px-4 py-3 text-sm">{eleve.classe}</td>
-                                <td className="px-4 py-3 text-sm">
-                                  <div className="flex flex-col min-w-0">
-                                    <span className="font-medium truncate">{eleve.nom}</span>
-                                    <span className="truncate">{eleve.prenom}</span>
-                                  </div>
-                                </td>
+
+                                {displaySettings.lecteur_interne_voir_eleves && (
+                                  <td className="px-4 py-3 text-sm">
+                                    <div className="flex flex-col min-w-0">
+                                      <span className="font-medium truncate">{eleve.nom}</span>
+                                      <span className="truncate">{eleve.prenom}</span>
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3 text-sm">{eleve.classe}</td>
+                                )}
+                                                   
                                 <td className="px-4 py-3 text-sm">
                                   {eleve.categorie ? (
                                     <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 whitespace-nowrap">
@@ -780,17 +847,22 @@ export default function GuideDashboard() {
                                     </span>
                                   ) : '-'}
                                 </td>
+                        
                                 <td className="px-4 py-3 text-sm">
                                   <div className="whitespace-pre-wrap break-words min-h-[40px] max-w-96">
                                     {eleve.problematique || '-'}
                                   </div>
                                 </td>
-                                <td className="px-4 py-3 text-sm whitespace-nowrap">
-                                  {eleve.guide_nom} {eleve.guide_initiale}.
-                                  {isGuide && (
-                                    <span className="ml-1 text-xs text-blue-600">(vous)</span>
-                                  )}
-                                </td>
+                        
+                                {displaySettings.lecteur_interne_voir_guides && (
+                                  <td className="px-4 py-3 text-sm whitespace-nowrap">
+                                    {eleve.guide_nom} {eleve.guide_initiale}.
+                                    {isGuide && (
+                                      <span className="ml-1 text-xs text-blue-600">(vous)</span>
+                                    )}
+                                  </td>
+                                )}
+                        
                                 <td className="px-4 py-3 text-sm whitespace-nowrap">
                                   {eleve.lecteur_interne_nom ? (
                                     <span>
@@ -803,24 +875,31 @@ export default function GuideDashboard() {
                                     '-'
                                   )}
                                 </td>
-                                <td className="px-4 py-3 text-sm whitespace-nowrap">
-                                  {eleve.lecteur_externe_nom ? (
-                                    <span>
-                                      {eleve.lecteur_externe_prenom} {eleve.lecteur_externe_nom}
-                                    </span>
-                                  ) : (
-                                    '-'
-                                  )}
-                                </td>
-                                <td className="px-4 py-3 text-sm whitespace-nowrap">
-                                  {eleve.mediateur_nom ? (
-                                    <span>
-                                      {eleve.mediateur_prenom} {eleve.mediateur_nom}
-                                    </span>
-                                  ) : (
-                                    '-'
-                                  )}
-                                </td>
+                        
+                                {displaySettings.lecteur_interne_voir_lecteurs_externes && (
+                                  <td className="px-4 py-3 text-sm whitespace-nowrap">
+                                    {eleve.lecteur_externe_nom ? (
+                                      <span>
+                                        {eleve.lecteur_externe_prenom} {eleve.lecteur_externe_nom}
+                                      </span>
+                                    ) : (
+                                      '-'
+                                    )}
+                                  </td>
+                                )}
+                        
+                                {displaySettings.lecteur_interne_voir_mediateurs && (
+                                  <td className="px-4 py-3 text-sm whitespace-nowrap">
+                                    {eleve.mediateur_nom ? (
+                                      <span>
+                                        {eleve.mediateur_prenom} {eleve.mediateur_nom}
+                                      </span>
+                                    ) : (
+                                      '-'
+                                    )}
+                                  </td>
+                                )}
+                        
                               </tr>
                             );
                           })}
@@ -947,3 +1026,4 @@ export default function GuideDashboard() {
     </div>
   );
 }
+
