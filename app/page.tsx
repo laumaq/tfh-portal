@@ -278,10 +278,11 @@ export default function LoginPage() {
             <Image
               src={logo}
               alt="Logo de l'école"
-              className="h-auto max-w-[400px] object-contain"
+              className="h-auto max-w-[600px] object-contain"
               priority // Important pour le LCP (Largest Contentful Paint)
             />
           </div>
+        
         <h1 className="text-3xl font-bold text-center mb-8 text-gray-800">
           Portail TFH
         </h1>
@@ -376,6 +377,7 @@ export default function LoginPage() {
     </div>
   );
 }
+
 
 
 
