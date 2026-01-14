@@ -40,6 +40,12 @@ interface CalendarDisplayProps {
   selectedEventIds: string[];
   busyEventIds: string[];
   userLecteurExterneId: string;
+  displaySettings?: {
+    lecteur_externe_voir_eleves: boolean;
+    lecteur_externe_voir_guides: boolean;
+    lecteur_externe_voir_lecteurs_internes: boolean;
+    lecteur_externe_voir_mediateurs: boolean;
+  };
 }
 
 export default function CalendarDisplayLecteurExterne({ 
@@ -50,7 +56,13 @@ export default function CalendarDisplayLecteurExterne({
   onEventClick,
   selectedEventIds,
   busyEventIds,
-  userLecteurExterneId
+  userLecteurExterneId,
+  displaySettings = {  // ← Ajoutez ce paramètre avec valeur par défaut
+    lecteur_externe_voir_eleves: true,
+    lecteur_externe_voir_guides: true,
+    lecteur_externe_voir_lecteurs_internes: true,
+    lecteur_externe_voir_mediateurs: true,
+  }
 }: CalendarDisplayProps) {
   const [dayDefenses, setDayDefenses] = useState<DayDefenses[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -345,9 +357,11 @@ export default function CalendarDisplayLecteurExterne({
                                     </div>
                                     <div className="space-y-1 overflow-hidden h-full">
                                       {/* Élève */}
-                                      <div className="font-semibold">
-                                        {defense.elevePrenom} {defense.eleveNom}
-                                      </div>
+                                      {displaySettings.lecteur_externe_voir_eleves && (
+                                        <div className="font-semibold">
+                                          {defense.elevePrenom} {defense.eleveNom}
+                                        </div>
+                                      )}
                                       
                                       {/* Catégorie (en petit en bas) */}
                                       <div className="text-xs opacity-75 mt-1">
@@ -363,22 +377,21 @@ export default function CalendarDisplayLecteurExterne({
                                         </div>
                                       )}
                                       
-                                      {/* Guide */}
-                                      {defense.guideNom !== '-' && (
+                                      {displaySettings.lecteur_externe_voir_guides && defense.guideNom !== '-' && (
                                         <div className="text-xs mt-1">
                                           <span className="font-medium">Guide:</span> {defense.guidePrenom} {defense.guideNom}
                                         </div>
                                       )}
                                       
                                       {/* Lecteur interne */}
-                                      {defense.lecteurInterneNom !== '-' && (
+                                      {displaySettings.lecteur_externe_voir_lecteurs_internes && defense.lecteurInterneNom !== '-' && (
                                         <div className="text-xs">
                                           <span className="font-medium">Lecteur interne:</span> {defense.lecteurInternePrenom} {defense.lecteurInterneNom}
                                         </div>
                                       )}
-                                      
-                                      {/* Médiateur */}
-                                      {defense.mediateurNom !== '-' && (
+                                                                            
+                                      {/* Médiateur - conditionnel */}
+                                      {displaySettings.lecteur_externe_voir_mediateurs && defense.mediateurNom !== '-' && (
                                         <div className="text-xs">
                                           <span className="font-medium">Médiateur:</span> {defense.mediateurPrenom} {defense.mediateurNom}
                                         </div>
