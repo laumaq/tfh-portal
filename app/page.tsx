@@ -278,7 +278,7 @@ export default function LoginPage() {
             <Image
               src={logo}
               alt="Logo de l'école"
-              className="h-auto max-w-[600px] object-contain"
+              className="h-auto max-w-[400px] object-contain"
               priority // Important pour le LCP (Largest Contentful Paint)
             />
           </div>
@@ -377,6 +377,7 @@ export default function LoginPage() {
     </div>
   );
 }
+
 
 
 
