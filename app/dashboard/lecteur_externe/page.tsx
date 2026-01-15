@@ -977,8 +977,8 @@ export default function LecteurExterneDashboard() {
                       <tr>
                         <td colSpan={
                             2 + // Date, Heure
-                            1 + // Classe
-                            3 + // Thématique, Local, Problématique
+                            1 + // Local
+                            3 + // Thématique, Problématique
                             (displaySettings.lecteur_externe_voir_eleves ? 1 : 0) +
                             (displaySettings.lecteur_externe_voir_guides ? 1 : 0)
                           }  className="px-4 py-8 text-center text-gray-500">
