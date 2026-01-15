@@ -75,6 +75,9 @@ export default function LecteurExterneDashboard() {
   const [tempSelectedCategories, setTempSelectedCategories] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [showProfileEditor, setShowProfileEditor] = useState(false);
+  const [selectedMultipleDates, setSelectedMultipleDates] = useState<string[]>([]);
+  const [selectedMultipleCategories, setSelectedMultipleCategories] = useState<string[]>([]);
+  const [selectedMultipleLocations, setSelectedMultipleLocations] = useState<string[]>([]);
   const router = useRouter();
 
   useEffect(() => {
@@ -196,6 +199,10 @@ export default function LecteurExterneDashboard() {
       setDates(uniqueDates);
       setSelectedDates(uniqueDates);
 
+      setSelectedMultipleDates(dates);
+      setSelectedMultipleCategories(categories);
+      setSelectedMultipleLocations(locations);
+      
       const uniqueLocations = Array.from(
         new Set(allElevesFormatted
           .filter(e => e.localisation_defense)
@@ -329,15 +336,18 @@ export default function LecteurExterneDashboard() {
   };
 
   const filteredElevesDisponibles = elevesDisponibles.filter(eleve => {
-    if (selectedCategorie !== 'toutes' && eleve.categorie !== selectedCategorie) {
+    // Filtre par catégories (multiple)
+    if (selectedMultipleCategories.length > 0 && !selectedMultipleCategories.includes(eleve.categorie)) {
       return false;
     }
     
-    if (selectedDates.length > 0 && eleve.date_defense && !selectedDates.includes(eleve.date_defense)) {
+    // Filtre par dates (multiple)
+    if (selectedMultipleDates.length > 0 && eleve.date_defense && !selectedMultipleDates.includes(eleve.date_defense)) {
       return false;
     }
     
-    if (selectedLocations.length > 0 && eleve.localisation_defense && !selectedLocations.includes(eleve.localisation_defense)) {
+    // Filtre par localisations (multiple)
+    if (selectedMultipleLocations.length > 0 && eleve.localisation_defense && !selectedMultipleLocations.includes(eleve.localisation_defense)) {
       return false;
     }
     
@@ -345,7 +355,7 @@ export default function LecteurExterneDashboard() {
   });
 
   const sortedElevesDisponibles = sortEleves(filteredElevesDisponibles);
-
+  
   const handleToggleSelection = async (eleveId: string) => {
     const eleve = elevesDisponibles.find(e => e.id === eleveId);
     if (eleve && isTimeSlotBusy(eleve)) {
@@ -424,11 +434,14 @@ export default function LecteurExterneDashboard() {
   };
 
   const goToFinalView = () => {
-    setSelectedDates(tempSelectedDates.length > 0 ? tempSelectedDates : dates);
-    setSelectedCategorie(tempSelectedCategories.length === 1 
-      ? tempSelectedCategories[0] 
-      : 'toutes');
-    setSelectedLocations(locations);
+    // Convertir les filtres initiaux vers le nouveau système
+    const finalDates = tempSelectedDates.length > 0 ? tempSelectedDates : dates;
+    const finalCategories = tempSelectedCategories.length > 0 ? tempSelectedCategories : categories;
+    
+    setSelectedMultipleDates(finalDates);
+    setSelectedMultipleCategories(finalCategories);
+    setSelectedMultipleLocations(locations); // Toujours tous les locaux par défaut
+    
     setViewMode(tempViewMode);
   };
 
@@ -833,6 +846,21 @@ export default function LecteurExterneDashboard() {
               <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">
                 {selectedEleves.length} élève{selectedEleves.length > 1 ? 's' : ''} sélectionné{selectedEleves.length > 1 ? 's' : ''}
               </span>
+              {selectedMultipleDates.length < dates.length && (
+                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                  {selectedMultipleDates.length} jour{selectedMultipleDates.length > 1 ? 's' : ''}
+                </span>
+              )}
+              {selectedMultipleCategories.length < categories.length && (
+                <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
+                  {selectedMultipleCategories.length} thématique{selectedMultipleCategories.length > 1 ? 's' : ''}
+                </span>
+              )}
+              {selectedMultipleLocations.length < locations.length && (
+                <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+                  {selectedMultipleLocations.length} local{selectedMultipleLocations.length > 1 ? 's' : ''}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -842,89 +870,94 @@ export default function LecteurExterneDashboard() {
           <div className="sticky top-[120px] md:top-[100px] z-40 bg-white border-b shadow-sm">
             <div className="max-w-7xl mx-auto px-4 md:px-8 py-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Jours
-                  </label>
-                  <select
-                    value={selectedDates.length === dates.length ? 'toutes' : selectedDates.length === 0 ? 'aucune' : selectedDates[0]}
-                    onChange={(e) => {
-                      if (e.target.value === 'toutes') {
-                        setSelectedDates(dates);
-                      } else if (e.target.value === 'aucune') {
-                        setSelectedDates([]);
+                {/* Filtre Jours - multiple */}
+                {renderMultiSelectFilter(
+                  "Jours",
+                  dates,
+                  selectedMultipleDates,
+                  (newDates) => {
+                    // Gérer la sélection "tout"
+                    if (newDates.includes("__all__")) {
+                      if (selectedMultipleDates.length === dates.length) {
+                        setSelectedMultipleDates([]);
                       } else {
-                        setSelectedDates([e.target.value]);
+                        setSelectedMultipleDates(dates);
                       }
-                    }}
-                    className="w-full border rounded px-2 py-1.5 text-xs"
-                  >
-                    <option value="toutes">Tous les jours</option>
-                    <option value="aucune">Aucun jour spécifique</option>
-                    {dates.map(date => (
-                      <option key={date} value={date}>
-                        {new Date(date).toLocaleDateString('fr-FR', { 
-                          weekday: 'long', 
-                          day: 'numeric', 
-                          month: 'long' 
-                        })}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Thématiques
-                  </label>
-                  <select
-                    value={selectedCategorie}
-                    onChange={(e) => setSelectedCategorie(e.target.value)}
-                    className="w-full border rounded px-2 py-1.5 text-xs"
-                  >
-                    <option value="toutes">Toutes les thématiques</option>
-                    {categories.map(categorie => (
-                      <option key={categorie} value={categorie}>
-                        {categorie}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Locaux
-                  </label>
-                  <select
-                    value={selectedLocations.length === locations.length ? 'toutes' : selectedLocations[0] || ''}
-                    onChange={(e) => {
-                      if (e.target.value === 'toutes') {
-                        setSelectedLocations(locations);
-                      } else if (e.target.value === '') {
-                        setSelectedLocations([]);
+                    } else {
+                      setSelectedMultipleDates(newDates.filter(d => d !== "__all__"));
+                    }
+                  },
+                  (date) => new Date(date).toLocaleDateString('fr-FR', { 
+                    weekday: 'short', 
+                    day: 'numeric', 
+                    month: 'short' 
+                  })
+                )}
+        
+                {/* Filtre Thématiques - multiple */}
+                {renderMultiSelectFilter(
+                  "Thématiques",
+                  categories,
+                  selectedMultipleCategories,
+                  (newCategories) => {
+                    if (newCategories.includes("__all__")) {
+                      if (selectedMultipleCategories.length === categories.length) {
+                        setSelectedMultipleCategories([]);
                       } else {
-                        setSelectedLocations([e.target.value]);
+                        setSelectedMultipleCategories(categories);
                       }
-                    }}
-                    className="w-full border rounded px-2 py-1.5 text-xs"
-                  >
-                    <option value="toutes">Tous les locaux</option>
-                    <option value="">Aucun local spécifique</option>
-                    {locations.map(location => (
-                      <option key={location} value={location}>
-                        {location}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                    } else {
+                      setSelectedMultipleCategories(newCategories.filter(c => c !== "__all__"));
+                    }
+                  }
+                )}
+        
+                {/* Filtre Locaux - multiple */}
+                {renderMultiSelectFilter(
+                  "Locaux",
+                  locations,
+                  selectedMultipleLocations,
+                  (newLocations) => {
+                    if (newLocations.includes("__all__")) {
+                      if (selectedMultipleLocations.length === locations.length) {
+                        setSelectedMultipleLocations([]);
+                      } else {
+                        setSelectedMultipleLocations(locations);
+                      }
+                    } else {
+                      setSelectedMultipleLocations(newLocations.filter(l => l !== "__all__"));
+                    }
+                  }
+                )}
               </div>
               
-              <div className="mt-3 pt-3 border-t border-gray-100">
-                <div className="flex items-center justify-end">
-                  <div className="text-xs text-gray-500">
-                    <span className="text-red-600 mr-2">● Créneaux occupés</span>
-                    <span className="text-green-600">● Disponibles</span>
-                  </div>
+              {/* Boutons d'action */}
+              <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
+                <div className="text-xs text-gray-500">
+                  <span className="text-red-600 mr-2">● Créneaux occupés</span>
+                  <span className="text-green-600">● Disponibles</span>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setSelectedMultipleDates(dates);
+                      setSelectedMultipleCategories(categories);
+                      setSelectedMultipleLocations(locations);
+                    }}
+                    className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                  >
+                    Tout sélectionner
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedMultipleDates([]);
+                      setSelectedMultipleCategories([]);
+                      setSelectedMultipleLocations([]);
+                    }}
+                    className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                  >
+                    Tout effacer
+                  </button>
                 </div>
               </div>
             </div>
