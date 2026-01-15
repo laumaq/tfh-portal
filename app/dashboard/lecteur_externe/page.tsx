@@ -940,14 +940,6 @@ export default function LecteurExterneDashboard() {
                 <table className="w-full min-w-[1000px]">
                   <thead className="bg-gray-100 border-b">
                     <tr>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-12">
-                        <input
-                          type="checkbox"
-                          checked={selectedEleves.length === sortedElevesDisponibles.filter(e => !isTimeSlotBusy(e)).length && sortedElevesDisponibles.length > 0}
-                          onChange={handleSelectAll}
-                          className="w-4 h-4 text-blue-600 rounded"
-                        />
-                      </th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">
                         Date
                       </th>
