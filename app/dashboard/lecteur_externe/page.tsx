@@ -976,7 +976,6 @@ export default function LecteurExterneDashboard() {
                     {sortedElevesDisponibles.length === 0 ? (
                       <tr>
                         <td colSpan={
-                            1 + // checkbox
                             2 + // Date, Heure
                             1 + // Classe
                             3 + // Thématique, Local, Problématique
