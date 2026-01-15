@@ -405,7 +405,7 @@ export default function LecteurExterneDashboard() {
 
   const handleLogout = () => {
     localStorage.clear();
-    router.push('/');
+    router.push('/connexion-lecteur-externe/');
   };
 
   const formatDate = (dateString: string | null) => {
