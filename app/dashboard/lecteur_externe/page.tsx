@@ -972,7 +972,9 @@ export default function LecteurExterneDashboard() {
                 <span>
                   {selectedMultipleLocations.length === 0 || selectedMultipleLocations.length === locations.length 
                     ? "Tous les locaux" 
-                    : `${selectedMultipleLocations.length} local${selectedMultipleLocations.length > 1 ? 'aux' : ''}`}
+                    : {selectedMultipleLocations.length === 1 
+                      ? "1 local"
+                      : `${selectedMultipleLocations.length} locaux`}
                 </span>
               </span>
             </div>
