@@ -230,6 +230,9 @@ export default function CalendarDisplay({
           categorie: edouard.categorie
         });
       }
+    console.log('=== CALENDAR DISPLAY ===');
+    console.log('Élève Edouard dans eleves?', 
+    eleves.find(e => e.id === '34f64a57-2087-47a6-ae9c-487acb8c3fa3') ? 'OUI' : 'NON');
     
     const defensesWithSchedule = eleves.filter(e => 
       e.date_defense && e.heure_defense
