@@ -390,6 +390,12 @@ export default function CalendarDisplayLecteurExterne({
                                       clickable ? 'cursor-pointer' : 'cursor-not-allowed'
                                     } ${selected ? 'ring-2 ring-blue-500 ring-offset-1' : ''} ${
                                       busy && !assignedToCurrentUser ? 'opacity-50' : ''
+                                    } ${
+                                      // === AJOUTE CE STYLE POUR EDOUARD ===
+                                      defense.eleveId === '34f64a57-2087-47a6-ae9c-487acb8c3fa3' 
+                                        ? '!border-4 !border-red-500 !bg-yellow-200 !z-50' 
+                                        : ''
+                                      // === FIN DE L'AJOUT ===
                                     }`}
                                     style={{
                                       top: `${top}px`,
