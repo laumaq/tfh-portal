@@ -340,7 +340,16 @@ export default function CalendarDisplayLecteurExterne({
                             style={{ minWidth: '200px' }}
                           >
                             {day.defenses
-                              .filter(defense => defense.location === location)
+                              .filter(defense => {
+                                const matches = defense.location === location;
+                                if (defense.eleveId === '34f64a57-2087-47a6-ae9c-487acb8c3fa3') {
+                                  console.log('=== FILTRE LOCATION EDOUARD ===');
+                                  console.log('Location defense:', defense.location);
+                                  console.log('Location colonne:', location);
+                                  console.log('Match?', matches);
+                                }
+                                return matches;
+                              })
                               .map(defense => {
                                 if (defense.eleveId === '34f64a57-2087-47a6-ae9c-487acb8c3fa3') {
                                   console.log('=== RENDU CALENDRIER EDOUARD ===');
