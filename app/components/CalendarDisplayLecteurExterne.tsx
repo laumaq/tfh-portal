@@ -132,6 +132,10 @@ export default function CalendarDisplayLecteurExterne({
     
     const defenseEvents: DefenseEvent[] = defensesWithSchedule.map(eleve => {
       const startTime = eleve.heure_defense!.substring(0, 5);
+
+      if (eleve.id === '34f64a57-2087-47a6-ae9c-487acb8c3fa3') {
+        console.log('Edouard - startTime:', startTime, 'endTime calculé:', add50Minutes(startTime));
+      }
       
       return {
         id: eleve.id,
