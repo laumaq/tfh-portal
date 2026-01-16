@@ -172,6 +172,32 @@ export default function CalendarDisplayLecteurExterne({
     if (selectedLocations.length > 0) {
       filteredDefenses = filteredDefenses.filter(d => selectedLocations.includes(d.location));
     }
+
+    let filteredDefenses = defenseEvents;
+    
+    if (selectedCategory !== 'toutes') {
+      filteredDefenses = filteredDefenses.filter(d => d.categorie === selectedCategory);
+    }
+    
+    if (selectedDates.length > 0) {
+      filteredDefenses = filteredDefenses.filter(d => selectedDates.includes(d.date));
+    }
+    
+    if (selectedLocations.length > 0) {
+      filteredDefenses = filteredDefenses.filter(d => selectedLocations.includes(d.location));
+    }
+    
+    console.log('=== APRÈS FILTRES CALENDRIER ===');
+    console.log('filteredDefenses count:', filteredDefenses.length);
+    console.log('Edouard dans filteredDefenses?', 
+      filteredDefenses.find(d => d.eleveId === '34f64a57-2087-47a6-ae9c-487acb8c3fa3') ? 'OUI' : 'NON');
+    
+    // Ajoute aussi les valeurs des filtres
+    console.log('Filtres appliqués:', {
+      selectedCategory,
+      selectedDates,
+      selectedLocations
+    });
     
     const uniqueDates = Array.from(new Set(filteredDefenses.map(d => d.date))).sort();
     
