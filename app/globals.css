@@ -21,3 +21,19 @@
   animation: progress 6s linear forwards;
 }
 
+/* Améliorations pour les checkboxes sur mobile */
+@media (max-width: 768px) {
+  .filter-checkbox-label {
+    padding: 12px 8px; /* Plus grand pour le tactile */
+  }
+  
+  .filter-checkbox-input {
+    transform: scale(1.2); /* Plus grand sur mobile */
+    margin-right: 10px;
+  }
+  
+  .filter-tag {
+    padding: 6px 8px; /* Plus grand pour le tactile */
+    font-size: 11px;
+  }
+}
