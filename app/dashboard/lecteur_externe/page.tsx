@@ -467,6 +467,19 @@ export default function LecteurExterneDashboard() {
   };
 
   const filteredElevesDisponibles = elevesDisponibles.filter(eleve => {
+    if (eleve.id === '34f64a57-2087-47a6-ae9c-487acb8c3fa3') {
+      console.log('=== FILTRAGE ÉLÈVE EDOUARD ===');
+      console.log('Élève:', `${eleve.prenom} ${eleve.nom}`);
+      console.log('Catégorie:', eleve.categorie);
+      console.log('Date:', eleve.date_defense);
+      console.log('Localisation:', eleve.localisation_defense);
+      console.log('selectedMultipleCategories:', selectedMultipleCategories);
+      console.log('selectedMultipleDates:', selectedMultipleDates);
+      console.log('selectedMultipleLocations:', selectedMultipleLocations);
+      console.log('Catégorie dans selectedMultipleCategories?', selectedMultipleCategories.includes(eleve.categorie));
+      console.log('Date dans selectedMultipleDates?', eleve.date_defense && selectedMultipleDates.includes(eleve.date_defense));
+      console.log('Localisation dans selectedMultipleLocations?', eleve.localisation_defense && selectedMultipleLocations.includes(eleve.localisation_defense));
+    }
     if (selectedMultipleCategories.length > 0 && !selectedMultipleCategories.includes(eleve.categorie)) {
       return false;
     }
