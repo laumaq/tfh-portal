@@ -239,6 +239,67 @@ export default function LecteurExterneDashboard() {
     setBusySlots(slotsMap);
   };
 
+  const renderMultiSelectFilter = (
+    title: string,          // Titre du filtre ("Jours", "Thématiques"...)
+    items: string[],        // Liste des options disponibles
+    selectedItems: string[], // Éléments actuellement sélectionnés
+    onSelectChange: (items: string[]) => void, // Fonction appelée quand la sélection change
+    getDisplayName?: (item: string) => string // Fonction optionnelle pour formater l'affichage
+  ) => {
+    const allSelected = selectedItems.length === items.length;
+    
+    return (
+      <div className="relative">
+        {/* Titre avec compteur */}
+        <label className="block text-xs font-medium text-gray-700 mb-1">
+          {title} ({selectedItems.length}/{items.length})
+        </label>
+        
+        <div className="relative">
+          {/* SELECT MULTIPLE - élément clé */}
+          <select
+            multiple  // ← CECI permet la sélection multiple !
+            value={selectedItems} // Quels éléments sont sélectionnés
+            onChange={(e) => {
+              // Récupère TOUTES les options sélectionnées
+              const selected = Array.from(e.target.selectedOptions, option => option.value);
+              onSelectChange(selected); // Met à jour l'état
+            }}
+            className="w-full border rounded px-2 py-1.5 text-xs min-h-[80px] max-h-40"
+            size={Math.min(items.length, 6)} // Hauteur visible (6 lignes max)
+          >
+            {/* Option spéciale "Sélectionner tout" */}
+            <option value="__all__" className="font-semibold border-b border-gray-200">
+              {allSelected ? "✗ Désélectionner tout" : "✓ Sélectionner tout"}
+            </option>
+            
+            {/* Génère une option pour chaque item */}
+            {items.map(item => (
+              <option key={item} value={item}>
+                {getDisplayName ? getDisplayName(item) : item}
+              </option>
+            ))}
+          </select>
+        </div>
+        
+        {/* Aperçu des éléments sélectionnés (tags) */}
+        <div className="mt-1 flex flex-wrap gap-1 max-h-16 overflow-y-auto">
+          {selectedItems.slice(0, 3).map(item => (
+            <span key={item} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800">
+              {getDisplayName ? getDisplayName(item).substring(0, 15) : item.substring(0, 15)}
+              {item.length > 15 ? '...' : ''}
+            </span>
+          ))}
+          {selectedItems.length > 3 && (
+            <span className="text-xs text-gray-500">
+              +{selectedItems.length - 3} autres
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  };
+  
   const add50Minutes = (time: string): string => {
     if (!time) return '';
     const [hours, minutes] = time.split(':').map(Number);
@@ -879,11 +940,14 @@ export default function LecteurExterneDashboard() {
                     // Gérer la sélection "tout"
                     if (newDates.includes("__all__")) {
                       if (selectedMultipleDates.length === dates.length) {
+                        // Si tout était déjà sélectionné → on désélectionne tout
                         setSelectedMultipleDates([]);
                       } else {
+                        // Sinon → on sélectionne tout
                         setSelectedMultipleDates(dates);
                       }
                     } else {
+                      // Filtre l'option "__all__" et garde les vraies sélections
                       setSelectedMultipleDates(newDates.filter(d => d !== "__all__"));
                     }
                   },
@@ -973,6 +1037,9 @@ export default function LecteurExterneDashboard() {
                 <table className="w-full min-w-[1000px]">
                   <thead className="bg-gray-100 border-b">
                     <tr>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-12">
+                        {/* Laissé vide - c'est la colonne pour les checkboxes individuelles */}
+                      </th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">
                         Date
                       </th>
