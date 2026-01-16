@@ -1191,6 +1191,10 @@ export default function LecteurExterneDashboard() {
                               isBusy && !isCurrentlyAssigned 
                                 ? 'bg-gray-100 opacity-60' 
                                 : ''
+                            } ${
+                              // === AJOUTEZ CE CODE POUR EDOUARD ===
+                              eleve.id === '34f64a57-2087-47a6-ae9c-487acb8c3fa3' ? 'border-2 border-red-500' : ''
+                              // === FIN DU CODE AJOUTÉ ===
                             }`}
                           >
                             <td className="px-4 py-3">
