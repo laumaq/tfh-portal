@@ -1019,29 +1019,36 @@ export default function LecteurExterneDashboard() {
                 {selectedEleves.length} TFH sélectionné{selectedEleves.length > 1 ? 's' : ''}
               </span>
               
-              {selectedMultipleDates.length < dates.length ? (
-                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded flex items-center gap-1">
-                  <span>📅</span>
-                  <span>{selectedMultipleDates.length} jour{selectedMultipleDates.length > 1 ? 's' : ''}</span>
+              {/* TOUJOURS afficher le nombre de jours */}
+              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded flex items-center gap-1">
+                <span>📅</span>
+                <span>
+                  {selectedMultipleDates.length === 0 ? "Aucun jour" : 
+                   selectedMultipleDates.length === dates.length ? "Tous les jours" : 
+                   `${selectedMultipleDates.length} jour${selectedMultipleDates.length > 1 ? 's' : ''}`}
                 </span>
-              ) : null}
+              </span>
               
-              {selectedMultipleCategories.length < categories.length ? (
-                <span className="bg-green-100 text-green-800 px-2 py-1 rounded flex items-center gap-1">
-                  <span>🏷️</span>
-                  <span>{selectedMultipleCategories.length} thème{selectedMultipleCategories.length > 1 ? 's' : ''}</span>
+              {/* TOUJOURS afficher le nombre de thématiques */}
+              <span className="bg-green-100 text-green-800 px-2 py-1 rounded flex items-center gap-1">
+                <span>🏷️</span>
+                <span>
+                  {selectedMultipleCategories.length === 0 ? "Aucune thématique" : 
+                   selectedMultipleCategories.length === categories.length ? "Toutes les thématiques" : 
+                   `${selectedMultipleCategories.length} thème${selectedMultipleCategories.length > 1 ? 's' : ''}`}
                 </span>
-              ) : null}
+              </span>
               
-              {selectedMultipleLocations.length < locations.length ? (
-                <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded flex items-center gap-1">
-                  <span>🏢</span>
-                  <span>{selectedMultipleLocations.length} local{selectedMultipleLocations.length > 1 ? 's' : ''}</span>
+              {/* TOUJOURS afficher le nombre de locaux */}
+              <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded flex items-center gap-1">
+                <span>🏢</span>
+                <span>
+                  {selectedMultipleLocations.length === 0 ? "Aucun local" : 
+                   selectedMultipleLocations.length === locations.length ? "Tous les locaux" : 
+                   `${selectedMultipleLocations.length} local${selectedMultipleLocations.length > 1 ? 's' : ''}`}
                 </span>
-              ) : null}
+              </span>
             </div>
-          </div>
-        </div>
 
         {/* Filtres */}
         {showFilters && (
