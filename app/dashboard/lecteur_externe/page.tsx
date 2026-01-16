@@ -496,6 +496,22 @@ export default function LecteurExterneDashboard() {
   });
 
   const sortedElevesDisponibles = sortEleves(filteredElevesDisponibles);
+  // Après const sortedElevesDisponibles = sortEleves(filteredElevesDisponibles);
+  console.log('=== APRÈS TRI ===');
+  console.log('filteredElevesDisponibles count:', filteredElevesDisponibles.length);
+  console.log('sortedElevesDisponibles count:', sortedElevesDisponibles.length);
+  
+  const edouardInFiltered = filteredElevesDisponibles.find(e => e.id === '34f64a57-2087-47a6-ae9c-487acb8c3fa3');
+  const edouardInSorted = sortedElevesDisponibles.find(e => e.id === '34f64a57-2087-47a6-ae9c-487acb8c3fa3');
+  
+  console.log('Edouard dans filteredElevesDisponibles?', !!edouardInFiltered);
+  console.log('Edouard dans sortedElevesDisponibles?', !!edouardInSorted);
+  console.log('Position d\'Edouard dans sortedElevesDisponibles:', 
+    edouardInSorted ? sortedElevesDisponibles.indexOf(edouardInSorted) : -1);
+  
+  // Vérifiez quelques élèves autour pour le debugging
+  console.log('Quelques élèves dans sortedElevesDisponibles (premiers 5):', 
+    sortedElevesDisponibles.slice(0, 5).map(e => `${e.prenom} ${e.nom} - ${e.date_defense} ${e.heure_defense}`));
   
   const handleToggleSelection = async (eleveId: string) => {
     const eleve = elevesDisponibles.find(e => e.id === eleveId);
