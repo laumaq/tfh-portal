@@ -347,11 +347,14 @@ export default function CalendarDisplayLecteurExterne({
                                   console.log('Location:', defense.location);
                                   console.log('startTime:', defense.startTime);
                                   console.log('endTime:', defense.endTime);
+                                  
+                                  // Calcule les heures/minutes pour le log
+                                  const [logStartHours, logStartMinutes] = defense.startTime.split(':').map(Number);
                                   console.log('Position calculée:', {
                                     location,
-                                    startHours: parseInt(defense.startTime.split(':')[0]),
-                                    startMinutes: parseInt(defense.startTime.split(':')[1]),
-                                    top: `${(startHours - 8 + startMinutes/60) * PIXELS_PER_HOUR}px`
+                                    startHours: logStartHours,
+                                    startMinutes: logStartMinutes,
+                                    top: `${(logStartHours - 8 + logStartMinutes/60) * PIXELS_PER_HOUR}px`
                                   });
                                 }
                                 const [startHours, startMinutes] = defense.startTime.split(':').map(Number);
