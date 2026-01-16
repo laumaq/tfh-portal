@@ -172,20 +172,6 @@ export default function CalendarDisplayLecteurExterne({
     if (selectedLocations.length > 0) {
       filteredDefenses = filteredDefenses.filter(d => selectedLocations.includes(d.location));
     }
-
-    let filteredDefenses = defenseEvents;
-    
-    if (selectedCategory !== 'toutes') {
-      filteredDefenses = filteredDefenses.filter(d => d.categorie === selectedCategory);
-    }
-    
-    if (selectedDates.length > 0) {
-      filteredDefenses = filteredDefenses.filter(d => selectedDates.includes(d.date));
-    }
-    
-    if (selectedLocations.length > 0) {
-      filteredDefenses = filteredDefenses.filter(d => selectedLocations.includes(d.location));
-    }
     
     console.log('=== APRÈS FILTRES CALENDRIER ===');
     console.log('filteredDefenses count:', filteredDefenses.length);
