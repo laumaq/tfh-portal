@@ -952,27 +952,27 @@ export default function LecteurExterneDashboard() {
               <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded flex items-center gap-1">
                 <span>📅</span>
                 <span>
-                  {selectedMultipleDates.length === 0 ? "Aucun jour" : 
-                   selectedMultipleDates.length === dates.length ? "Tous les jours" : 
-                   `${selectedMultipleDates.length} jour${selectedMultipleDates.length > 1 ? 's' : ''}`}
+                  {selectedMultipleDates.length === 0 || selectedMultipleDates.length === dates.length 
+                    ? "Tous les jours" 
+                    : `${selectedMultipleDates.length} jour${selectedMultipleDates.length > 1 ? 's' : ''}`}
                 </span>
               </span>
               
               <span className="bg-green-100 text-green-800 px-2 py-1 rounded flex items-center gap-1">
                 <span>🏷️</span>
                 <span>
-                  {selectedMultipleCategories.length === 0 ? "Aucune thématique" : 
-                   selectedMultipleCategories.length === categories.length ? "Toutes les thématiques" : 
-                   `${selectedMultipleCategories.length} thème${selectedMultipleCategories.length > 1 ? 's' : ''}`}
+                  {selectedMultipleCategories.length === 0 || selectedMultipleCategories.length === categories.length 
+                    ? "Toutes les thématiques" 
+                    : `${selectedMultipleCategories.length} thème${selectedMultipleCategories.length > 1 ? 's' : ''}`}
                 </span>
               </span>
               
               <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded flex items-center gap-1">
                 <span>🏢</span>
                 <span>
-                  {selectedMultipleLocations.length === 0 ? "Aucun local" : 
-                   selectedMultipleLocations.length === locations.length ? "Tous les locaux" : 
-                   `${selectedMultipleLocations.length} local${selectedMultipleLocations.length > 1 ? 's' : ''}`}
+                  {selectedMultipleLocations.length === 0 || selectedMultipleLocations.length === locations.length 
+                    ? "Tous les locaux" 
+                    : `${selectedMultipleLocations.length} local${selectedMultipleLocations.length > 1 ? 'aux' : ''}`}
                 </span>
               </span>
             </div>
@@ -1056,7 +1056,7 @@ export default function LecteurExterneDashboard() {
               </div>
             </div>
           )}
-        </div> {/* CORRECTION: Ici se ferme la div principale de l'en-tête */}
+        </div> 
 
         {/* Contenu principal */}
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-4">
