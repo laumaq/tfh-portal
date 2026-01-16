@@ -1171,6 +1171,18 @@ export default function LecteurExterneDashboard() {
                         const isBusy = isTimeSlotBusy(eleve);
                         const isSelected = selectedEleves.includes(eleve.id);
                         const isCurrentlyAssigned = eleve.lecteur_externe_id === userLecteurExterneId;
+
+                        if (eleve.id === '34f64a57-2087-47a6-ae9c-487acb8c3fa3') {
+                          console.log('=== RENDU LIGNE EDOUARD ===');
+                          console.log('Nom:', `${eleve.prenom} ${eleve.nom}`);
+                          console.log('isBusy:', isBusy);
+                          console.log('isSelected:', isSelected);
+                          console.log('isCurrentlyAssigned:', isCurrentlyAssigned);
+                          console.log('lecteur_externe_id:', eleve.lecteur_externe_id);
+                          console.log('userLecteurExterneId:', userLecteurExterneId);
+                          console.log('classe CSS appliquée:', 
+                            isBusy && !isCurrentlyAssigned ? 'bg-gray-100 opacity-60' : 'normal');
+                        }
                         
                         return (
                           <tr 
