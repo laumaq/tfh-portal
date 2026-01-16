@@ -227,6 +227,27 @@ export default function LecteurExterneDashboard() {
 
       generateBusySlots(elevesFormatted, lecteurExterneId);
 
+      // Après avoir fait setElevesDisponibles(allElevesFormatted);
+      console.log('=== DIAGNOSTIC ÉLÈVE EDOUARD ===');
+      console.log('Nombre total d\'élèves chargés:', allElevesFormatted.length);
+      
+      const edouard = allElevesFormatted.find(e => e.id === '34f64a57-2087-47a6-ae9c-487acb8c3fa3');
+      console.log('Élève Edouard dans allElevesFormatted:', edouard);
+      console.log('Catégorie d\'Edouard:', edouard?.categorie);
+      console.log('Type de catégorie:', typeof edouard?.categorie);
+      console.log('Date défense d\'Edouard:', edouard?.date_defense);
+      console.log('Localisation d\'Edouard:', edouard?.localisation_defense);
+      
+      // Vérifier si la catégorie est dans la liste des catégories uniques
+      console.log('Catégories uniques:', uniqueCategories);
+      console.log('La catégorie d\'Edouard est-elle dans uniqueCategories?', 
+        uniqueCategories.includes(edouard?.categorie || ''));
+      
+      // Vérifier si la date est dans la liste des dates uniques  
+      console.log('Dates uniques:', uniqueDates);
+      console.log('La date d\'Edouard est-elle dans uniqueDates?',
+        uniqueDates.includes(edouard?.date_defense || ''));
+
     } catch (err) {
       console.error('Erreur chargement des données:', err);
     } finally {
