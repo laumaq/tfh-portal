@@ -219,14 +219,24 @@ export default function CalendarDisplay({
 
   const prepareCalendarData = useCallback(() => {
     setIsProcessing(true);
-    console.log('=== PRÉPARATION CALENDRIER (COMPOSANT SÉPARÉ) ===');
-    console.log('Nombre d\'élèves reçus:', eleves.length);
+      const edouard = eleves.find(e => e.id === '34f64a57-2087-47a6-ae9c-487acb8c3fa3');
+      console.log('Edouard FONTAINE COLSON dans eleves?:', edouard ? 'OUI' : 'NON');
+      if (edouard) {
+        console.log('Détails Edouard:', {
+          nom: `${edouard.prenom} ${edouard.nom}`,
+          date_defense: edouard.date_defense,
+          heure_defense: edouard.heure_defense,
+          localisation_defense: edouard.localisation_defense,
+          categorie: edouard.categorie
+        });
+      }
     
     const defensesWithSchedule = eleves.filter(e => 
       e.date_defense && e.heure_defense
     );
     
-    console.log('Élèves avec défense programmée:', defensesWithSchedule.length);
+    const edouardWithSchedule = defensesWithSchedule.find(e => e.id === '34f64a57-2087-47a6-ae9c-487acb8c3fa3');
+    console.log('Edouard dans defensesWithSchedule?:', edouardWithSchedule ? 'OUI' : 'NON');    
     
     // Afficher les détails pour debug
     defensesWithSchedule.slice(0, 3).forEach((eleve, i) => {
@@ -235,6 +245,12 @@ export default function CalendarDisplay({
     
     const defenseEvents: DefenseEvent[] = defensesWithSchedule.map(eleve => {
       const startTime = eleve.heure_defense!.substring(0, 5);
+
+      if (eleve.id === '34f64a57-2087-47a6-ae9c-487acb8c3fa3') {
+        console.log('=== CRÉATION ÉVÉNEMENT EDOUARD ===');
+        console.log('startTime:', startTime);
+        console.log('endTime calculé:', add50Minutes(startTime));
+      }
       
       return {
         id: eleve.id,
@@ -271,7 +287,18 @@ export default function CalendarDisplay({
       filteredDefenses = filteredDefenses.filter(d => selectedLocations.includes(d.location));
     }
     
-    console.log('Défenses après filtrage:', filteredDefenses.length);
+    const edouardInFiltered = filteredDefenses.find(d => d.eleveId === '34f64a57-2087-47a6-ae9c-487acb8c3fa3');
+    console.log('Edouard dans filteredDefenses?:', edouardInFiltered ? 'OUI' : 'NON');
+    if (edouardInFiltered) {
+      console.log('Détails filtres:', {
+        selectedCategory,
+        selectedDates,
+        selectedLocations,
+        categorie: edouardInFiltered.categorie,
+        date: edouardInFiltered.date,
+        location: edouardInFiltered.location
+      });
+    }    
     
     // Détecter les conflits
     const detectedConflicts = detectConflicts(filteredDefenses);
