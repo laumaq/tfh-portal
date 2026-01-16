@@ -225,6 +225,117 @@ export default function LecteurExterneDashboard() {
     }
   };
 
+  const renderCheckboxFilter = (
+    title: string,
+    items: string[],
+    selectedItems: string[],
+    onSelectChange: (items: string[]) => void,
+    getDisplayName?: (item: string) => string
+  ) => {
+    const allSelected = selectedItems.length === items.length;
+    const noneSelected = selectedItems.length === 0;
+  
+    const handleToggleAll = () => {
+      if (allSelected) {
+        onSelectChange([]); // Tout désélectionner
+      } else {
+        onSelectChange([...items]); // Tout sélectionner
+      }
+    };
+  
+    const handleToggleItem = (item: string) => {
+      if (selectedItems.includes(item)) {
+        onSelectChange(selectedItems.filter(i => i !== item));
+      } else {
+        onSelectChange([...selectedItems, item]);
+      }
+    };
+  
+    return (
+      <div className="relative">
+        {/* En-tête avec bouton Tout/Aucun */}
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-xs font-medium text-gray-700">
+            {title} ({selectedItems.length}/{items.length})
+          </label>
+          <button
+            onClick={handleToggleAll}
+            className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+          >
+            {allSelected ? "Aucun" : "Tout"}
+          </button>
+        </div>
+  
+        {/* Conteneur scrollable pour les checkboxes */}
+        <div className="border border-gray-300 rounded-lg p-2 max-h-60 overflow-y-auto bg-white">
+          {items.map(item => {
+            const isSelected = selectedItems.includes(item);
+            const displayName = getDisplayName ? getDisplayName(item) : item;
+            
+            return (
+              <div
+                key={item}
+                className="flex items-center py-1.5 px-1 hover:bg-gray-50 rounded cursor-pointer"
+                onClick={() => handleToggleItem(item)}
+              >
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => handleToggleItem(item)}
+                  className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+                  id={`filter-${title}-${item}`}
+                  onClick={(e) => e.stopPropagation()} // Empêche le double déclenchement
+                />
+                <label
+                  htmlFor={`filter-${title}-${item}`}
+                  className="ml-2 text-xs text-gray-700 cursor-pointer flex-1 truncate"
+                  title={displayName}
+                >
+                  {displayName}
+                </label>
+              </div>
+            );
+          })}
+        </div>
+  
+        {/* Aperçu des sélections */}
+        {selectedItems.length > 0 && (
+          <div className="mt-2">
+            <div className="text-xs text-gray-500 mb-1">Sélectionné(s) :</div>
+            <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
+              {selectedItems.slice(0, 5).map(item => {
+                const displayName = getDisplayName ? getDisplayName(item) : item;
+                return (
+                  <span
+                    key={item}
+                    className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800"
+                    title={displayName}
+                  >
+                    {displayName.length > 15 ? displayName.substring(0, 15) + '...' : displayName}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleItem(item);
+                      }}
+                      className="ml-1 text-blue-600 hover:text-blue-800"
+                    >
+                      ×
+                    </button>
+                  </span>
+                );
+              })}
+              {selectedItems.length > 5 && (
+                <span className="text-xs text-gray-500">
+                  +{selectedItems.length - 5} autre{selectedItems.length - 5 > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const generateBusySlots = (assignedEleves: Eleve[], lecteurExterneId: string) => {
     const slotsMap = new Map<string, string[]>();
     
@@ -926,31 +1037,17 @@ export default function LecteurExterneDashboard() {
           </div>
         </div>
 
-        {/* Filtres simplifiés */}
+        {/* Filtres */}
         {showFilters && (
           <div className="sticky top-[120px] md:top-[100px] z-40 bg-white border-b shadow-sm">
             <div className="max-w-7xl mx-auto px-4 md:px-8 py-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Filtre Jours - multiple */}
-                {renderMultiSelectFilter(
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Filtre Jours - avec checkboxes */}
+                {renderCheckboxFilter(
                   "Jours",
                   dates,
                   selectedMultipleDates,
-                  (newDates) => {
-                    // Gérer la sélection "tout"
-                    if (newDates.includes("__all__")) {
-                      if (selectedMultipleDates.length === dates.length) {
-                        // Si tout était déjà sélectionné → on désélectionne tout
-                        setSelectedMultipleDates([]);
-                      } else {
-                        // Sinon → on sélectionne tout
-                        setSelectedMultipleDates(dates);
-                      }
-                    } else {
-                      // Filtre l'option "__all__" et garde les vraies sélections
-                      setSelectedMultipleDates(newDates.filter(d => d !== "__all__"));
-                    }
-                  },
+                  setSelectedMultipleDates,
                   (date) => new Date(date).toLocaleDateString('fr-FR', { 
                     weekday: 'short', 
                     day: 'numeric', 
@@ -958,69 +1055,62 @@ export default function LecteurExterneDashboard() {
                   })
                 )}
         
-                {/* Filtre Thématiques - multiple */}
-                {renderMultiSelectFilter(
+                {/* Filtre Thématiques - avec checkboxes */}
+                {renderCheckboxFilter(
                   "Thématiques",
                   categories,
                   selectedMultipleCategories,
-                  (newCategories) => {
-                    if (newCategories.includes("__all__")) {
-                      if (selectedMultipleCategories.length === categories.length) {
-                        setSelectedMultipleCategories([]);
-                      } else {
-                        setSelectedMultipleCategories(categories);
-                      }
-                    } else {
-                      setSelectedMultipleCategories(newCategories.filter(c => c !== "__all__"));
-                    }
-                  }
+                  setSelectedMultipleCategories
                 )}
         
-                {/* Filtre Locaux - multiple */}
-                {renderMultiSelectFilter(
+                {/* Filtre Locaux - avec checkboxes */}
+                {renderCheckboxFilter(
                   "Locaux",
                   locations,
                   selectedMultipleLocations,
-                  (newLocations) => {
-                    if (newLocations.includes("__all__")) {
-                      if (selectedMultipleLocations.length === locations.length) {
-                        setSelectedMultipleLocations([]);
-                      } else {
-                        setSelectedMultipleLocations(locations);
-                      }
-                    } else {
-                      setSelectedMultipleLocations(newLocations.filter(l => l !== "__all__"));
-                    }
-                  }
+                  setSelectedMultipleLocations
                 )}
               </div>
               
-              {/* Boutons d'action */}
-              <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
-                <div className="text-xs text-gray-500">
-                  <span className="text-red-600 mr-2">● Créneaux occupés</span>
-                  <span className="text-green-600">● Disponibles</span>
+              {/* Boutons d'action rapide */}
+              <div className="mt-6 pt-4 border-t border-gray-100 flex flex-wrap justify-between items-center gap-3">
+                <div className="text-xs text-gray-600">
+                  <span className="text-red-600 mr-3">● Créneaux occupés</span>
+                  <span className="text-green-600 mr-3">● Disponibles</span>
+                  <span className="text-blue-600">✓ Sélectionnés par vous</span>
                 </div>
-                <div className="flex gap-2">
+                
+                <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => {
                       setSelectedMultipleDates(dates);
                       setSelectedMultipleCategories(categories);
                       setSelectedMultipleLocations(locations);
                     }}
-                    className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                    className="px-3 py-1.5 text-xs bg-blue-50 text-blue-700 rounded-lg border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors flex items-center gap-1"
                   >
-                    Tout sélectionner
+                    <span>✓</span>
+                    <span>Tout sélectionner</span>
                   </button>
+                  
                   <button
                     onClick={() => {
                       setSelectedMultipleDates([]);
                       setSelectedMultipleCategories([]);
                       setSelectedMultipleLocations([]);
                     }}
-                    className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                    className="px-3 py-1.5 text-xs bg-gray-50 text-gray-700 rounded-lg border border-gray-200 hover:bg-gray-100 hover:border-gray-300 transition-colors flex items-center gap-1"
                   >
-                    Tout effacer
+                    <span>✗</span>
+                    <span>Tout effacer</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => setShowFilters(false)}
+                    className="px-3 py-1.5 text-xs bg-green-50 text-green-700 rounded-lg border border-green-200 hover:bg-green-100 hover:border-green-300 transition-colors flex items-center gap-1"
+                  >
+                    <span>▼</span>
+                    <span>Fermer filtres</span>
                   </button>
                 </div>
               </div>
