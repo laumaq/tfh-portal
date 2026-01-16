@@ -342,6 +342,18 @@ export default function CalendarDisplayLecteurExterne({
                             {day.defenses
                               .filter(defense => defense.location === location)
                               .map(defense => {
+                                if (defense.eleveId === '34f64a57-2087-47a6-ae9c-487acb8c3fa3') {
+                                  console.log('=== RENDU CALENDRIER EDOUARD ===');
+                                  console.log('Location:', defense.location);
+                                  console.log('startTime:', defense.startTime);
+                                  console.log('endTime:', defense.endTime);
+                                  console.log('Position calculée:', {
+                                    location,
+                                    startHours: parseInt(defense.startTime.split(':')[0]),
+                                    startMinutes: parseInt(defense.startTime.split(':')[1]),
+                                    top: `${(startHours - 8 + startMinutes/60) * PIXELS_PER_HOUR}px`
+                                  });
+                                }
                                 const [startHours, startMinutes] = defense.startTime.split(':').map(Number);
                                 
                                 const hoursFrom8 = startHours - 8;
