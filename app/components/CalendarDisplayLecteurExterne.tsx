@@ -186,11 +186,23 @@ export default function CalendarDisplayLecteurExterne({
     });
     
     const uniqueDates = Array.from(new Set(filteredDefenses.map(d => d.date))).sort();
+
+    console.log('Dates uniques dans filteredDefenses:', uniqueDates);
+    console.log('Date d\'Edouard (2026-05-13) dans uniqueDates?', uniqueDates.includes('2026-05-13'));
     
     const daysData: DayDefenses[] = uniqueDates.map(date => {
-      const dateDefenses = filteredDefenses.filter(d => d.date === date);
-      const uniqueLocations = Array.from(new Set(dateDefenses.map(d => d.location)))
-        .sort((a, b) => a.charAt(0).localeCompare(b.charAt(0)));
+    const dateDefenses = filteredDefenses.filter(d => d.date === date);
+
+    if (date === '2026-05-13') {
+      console.log('=== JOUR 2026-05-13 ===');
+      console.log('Nombre de défenses ce jour:', dateDefenses.length);
+      console.log('Edouard dans dateDefenses?', 
+        dateDefenses.find(d => d.eleveId === '34f64a57-2087-47a6-ae9c-487acb8c3fa3') ? 'OUI' : 'NON');
+      console.log('Locations ce jour:', Array.from(new Set(dateDefenses.map(d => d.location))).sort());
+    }
+      
+    const uniqueLocations = Array.from(new Set(dateDefenses.map(d => d.location)))
+      .sort((a, b) => a.charAt(0).localeCompare(b.charAt(0)));
       
       return {
         date,
@@ -203,6 +215,7 @@ export default function CalendarDisplayLecteurExterne({
         defenses: dateDefenses.sort((a, b) => a.startTime.localeCompare(b.startTime))
       };
     });
+    console.log('Nombre total de jours dans daysData:', daysData.length);
     
     setDayDefenses(daysData);
     setIsProcessing(false);
