@@ -119,6 +119,14 @@ export default function CalendarDisplayLecteurExterne({
   };
 
   const prepareCalendarData = () => {
+    const defensesWithSchedule = eleves.filter(e => 
+      e.date_defense && e.heure_defense
+    );
+    
+    console.log('Élèves avec date/heure:', defensesWithSchedule.length);
+    console.log('Edouard dans defensesWithSchedule?', 
+      defensesWithSchedule.find(e => e.id === '34f64a57-2087-47a6-ae9c-487acb8c3fa3') ? 'OUI' : 'NON');
+    
     setIsProcessing(true);
     const defensesWithSchedule = eleves.filter(e => 
       e.date_defense && e.heure_defense
