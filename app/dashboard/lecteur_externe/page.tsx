@@ -1293,6 +1293,7 @@ export default function LecteurExterneDashboard() {
             </div>
           )}
         </div>
+      </div>
         {/* PROFIL EDITOR - Ajoute à la fin, avant le dernier </div> */}
         {showProfileEditor && (
           <ProfileEditor
