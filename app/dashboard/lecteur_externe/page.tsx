@@ -1016,23 +1016,29 @@ export default function LecteurExterneDashboard() {
             {/* Résumé des filtres */}
             <div className="mt-2 flex flex-wrap gap-2 text-xs">
               <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">
-                {selectedEleves.length} élève{selectedEleves.length > 1 ? 's' : ''} sélectionné{selectedEleves.length > 1 ? 's' : ''}
+                {selectedEleves.length} TFH sélectionné{selectedEleves.length > 1 ? 's' : ''}
               </span>
-              {selectedMultipleDates.length < dates.length && (
-                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                  {selectedMultipleDates.length} jour{selectedMultipleDates.length > 1 ? 's' : ''}
+              
+              {selectedMultipleDates.length < dates.length ? (
+                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded flex items-center gap-1">
+                  <span>📅</span>
+                  <span>{selectedMultipleDates.length} jour{selectedMultipleDates.length > 1 ? 's' : ''}</span>
                 </span>
-              )}
-              {selectedMultipleCategories.length < categories.length && (
-                <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
-                  {selectedMultipleCategories.length} thématique{selectedMultipleCategories.length > 1 ? 's' : ''}
+              ) : null}
+              
+              {selectedMultipleCategories.length < categories.length ? (
+                <span className="bg-green-100 text-green-800 px-2 py-1 rounded flex items-center gap-1">
+                  <span>🏷️</span>
+                  <span>{selectedMultipleCategories.length} thème{selectedMultipleCategories.length > 1 ? 's' : ''}</span>
                 </span>
-              )}
-              {selectedMultipleLocations.length < locations.length && (
-                <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
-                  {selectedMultipleLocations.length} local{selectedMultipleLocations.length > 1 ? 's' : ''}
+              ) : null}
+              
+              {selectedMultipleLocations.length < locations.length ? (
+                <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded flex items-center gap-1">
+                  <span>🏢</span>
+                  <span>{selectedMultipleLocations.length} local{selectedMultipleLocations.length > 1 ? 's' : ''}</span>
                 </span>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
