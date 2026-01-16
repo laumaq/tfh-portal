@@ -1081,8 +1081,6 @@ export default function LecteurExterneDashboard() {
               {/* Boutons d'action rapide */}
               <div className="mt-6 pt-4 border-t border-gray-100 flex flex-wrap justify-between items-center gap-3">
                 <div className="text-xs text-gray-600">
-                  <span className="text-red-600 mr-3">● Créneaux occupés</span>
-                  <span className="text-green-600 mr-3">● Disponibles</span>
                   <span className="text-blue-600">✓ Sélectionnés par vous</span>
                 </div>
                 
