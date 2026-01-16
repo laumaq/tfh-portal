@@ -212,53 +212,6 @@ export default function LoginPage() {
         }
       }
 
-      // 5. VÉRIFIER LES LECTEURS EXTERNES (NOUVEAU)
-      const { data: lecteurData, error: lecteurError } = await supabase
-        .from('lecteurs_externes')
-        .select('*')
-        .ilike('nom', nomNormalized)
-        .ilike('prenom', initialeNormalized + '%') // Cherche par prénom commençant par l'initiale
-        .maybeSingle();
-
-      if (!lecteurError && lecteurData) {
-        const storedPassword = lecteurData.mot_de_passe;
-        
-        console.log("DEBUG - Lecteur externe trouvé:", {
-          nom: lecteurData.nom,
-          prenom: lecteurData.prenom,
-          storedPassword
-        });
-
-        // CAS 1: PREMIÈRE CONNEXION (NULL ou chaîne vide)
-        if (!storedPassword || storedPassword === '') {
-          console.log("Première connexion lecteur externe - enregistrement du mot de passe");
-          
-          await supabase
-            .from('lecteurs_externes')
-            .update({ mot_de_passe: password })
-            .eq('id', lecteurData.id);
-          
-          localStorage.setItem('userType', 'lecteur_externe');
-          localStorage.setItem('userId', lecteurData.id);
-          localStorage.setItem('userName', `${lecteurData.prenom} ${lecteurData.nom}`);
-          router.push('/dashboard/lecteur_externe');
-          return;
-        }
-
-        // CAS 2: MOT DE PASSE EXISTANT
-        if (lecteurData.mot_de_passe === password) {
-          localStorage.setItem('userType', 'lecteur_externe');
-          localStorage.setItem('userId', lecteurData.id);
-          localStorage.setItem('userName', `${lecteurData.prenom} ${lecteurData.nom}`);
-          router.push('/dashboard/lecteur_externe');
-          return;
-        } else {
-          setError('Mot de passe incorrect');
-          setLoading(false);
-          return;
-        }
-      }
-
       // Si aucune correspondance trouvée dans aucune table
       setError('Utilisateur non trouvé. Vérifiez votre nom et votre initiale.');
       setLoading(false);
@@ -355,6 +308,7 @@ export default function LoginPage() {
     </div>
   );
 }
+
 
 
 
