@@ -80,6 +80,14 @@ export default function LecteurExterneDashboard() {
   const [selectedMultipleLocations, setSelectedMultipleLocations] = useState<string[]>([]);
   const router = useRouter();
 
+  // CORRECTION: Déplacer displaySettings AVANT les useEffect
+  const [displaySettings, setDisplaySettings] = useState({
+    lecteur_externe_voir_eleves: true,
+    lecteur_externe_voir_guides: true,
+    lecteur_externe_voir_lecteurs_internes: true,
+    lecteur_externe_voir_mediateurs: true,
+  });
+
   useEffect(() => {
     const userType = localStorage.getItem('userType');
     const userId = localStorage.getItem('userId');
@@ -100,30 +108,31 @@ export default function LecteurExterneDashboard() {
       setLoading(true);
 
       const loadDisplaySettings = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('system_settings')
-          .select('setting_key, setting_value')
-          .in('setting_key', [
-            'lecteur_externe_voir_eleves',
-            'lecteur_externe_voir_guides',
-            'lecteur_externe_voir_lecteurs_internes',
-            'lecteur_externe_voir_mediateurs'
-          ]);
-    
-        if (error) throw error;
-    
-        if (data) {
-          const settings: any = {};
-          data.forEach(setting => {
-            settings[setting.setting_key] = setting.setting_value === 'true';
-          });
-          setDisplaySettings(prev => ({ ...prev, ...settings }));
+        try {
+          const { data, error } = await supabase
+            .from('system_settings')
+            .select('setting_key, setting_value')
+            .in('setting_key', [
+              'lecteur_externe_voir_eleves',
+              'lecteur_externe_voir_guides',
+              'lecteur_externe_voir_lecteurs_internes',
+              'lecteur_externe_voir_mediateurs'
+            ]);
+      
+          if (error) throw error;
+      
+          if (data) {
+            const settings: any = {};
+            data.forEach(setting => {
+              settings[setting.setting_key] = setting.setting_value === 'true';
+            });
+            setDisplaySettings(prev => ({ ...prev, ...settings }));
+          }
+        } catch (err) {
+          console.error('Erreur chargement paramètres:', err);
         }
-      } catch (err) {
-        console.error('Erreur chargement paramètres:', err);
-      }
-    };
+      };
+      
       await loadDisplaySettings();  
       
       const { data: elevesData, error: elevesError } = await supabase
@@ -199,10 +208,6 @@ export default function LecteurExterneDashboard() {
       setDates(uniqueDates);
       setSelectedDates(uniqueDates);
 
-      setSelectedMultipleDates(dates);
-      setSelectedMultipleCategories(categories);
-      setSelectedMultipleLocations(locations);
-      
       const uniqueLocations = Array.from(
         new Set(allElevesFormatted
           .filter(e => e.localisation_defense)
@@ -211,6 +216,10 @@ export default function LecteurExterneDashboard() {
       setLocations(uniqueLocations);
       setSelectedLocations(uniqueLocations);
 
+      setSelectedMultipleDates(uniqueDates);
+      setSelectedMultipleCategories(uniqueCategories);
+      setSelectedMultipleLocations(uniqueLocations);
+      
       const preSelected = allElevesFormatted
         .filter(e => e.lecteur_externe_id === lecteurExterneId)
         .map(e => e.id);
@@ -237,9 +246,9 @@ export default function LecteurExterneDashboard() {
   
     const handleToggleAll = () => {
       if (allSelected) {
-        onSelectChange([]); // Tout désélectionner
+        onSelectChange([]);
       } else {
-        onSelectChange([...items]); // Tout sélectionner
+        onSelectChange([...items]);
       }
     };
   
@@ -253,7 +262,6 @@ export default function LecteurExterneDashboard() {
   
     return (
       <div className="relative">
-        {/* En-tête avec bouton Tout/Aucun */}
         <div className="flex items-center justify-between mb-2">
           <label className="block text-xs font-medium text-gray-700">
             {title} ({selectedItems.length}/{items.length})
@@ -266,7 +274,6 @@ export default function LecteurExterneDashboard() {
           </button>
         </div>
   
-        {/* Conteneur scrollable pour les checkboxes */}
         <div className="border border-gray-300 rounded-lg p-2 max-h-60 overflow-y-auto bg-white">
           {items.map(item => {
             const isSelected = selectedItems.includes(item);
@@ -284,7 +291,7 @@ export default function LecteurExterneDashboard() {
                   onChange={() => handleToggleItem(item)}
                   className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
                   id={`filter-${title}-${item}`}
-                  onClick={(e) => e.stopPropagation()} // Empêche le double déclenchement
+                  onClick={(e) => e.stopPropagation()}
                 />
                 <label
                   htmlFor={`filter-${title}-${item}`}
@@ -298,7 +305,6 @@ export default function LecteurExterneDashboard() {
           })}
         </div>
   
-        {/* Aperçu des sélections */}
         {selectedItems.length > 0 && (
           <div className="mt-2">
             <div className="text-xs text-gray-500 mb-1">Sélectionné(s) :</div>
@@ -350,67 +356,6 @@ export default function LecteurExterneDashboard() {
     setBusySlots(slotsMap);
   };
 
-  const renderMultiSelectFilter = (
-    title: string,          // Titre du filtre ("Jours", "Thématiques"...)
-    items: string[],        // Liste des options disponibles
-    selectedItems: string[], // Éléments actuellement sélectionnés
-    onSelectChange: (items: string[]) => void, // Fonction appelée quand la sélection change
-    getDisplayName?: (item: string) => string // Fonction optionnelle pour formater l'affichage
-  ) => {
-    const allSelected = selectedItems.length === items.length;
-    
-    return (
-      <div className="relative">
-        {/* Titre avec compteur */}
-        <label className="block text-xs font-medium text-gray-700 mb-1">
-          {title} ({selectedItems.length}/{items.length})
-        </label>
-        
-        <div className="relative">
-          {/* SELECT MULTIPLE - élément clé */}
-          <select
-            multiple  // ← CECI permet la sélection multiple !
-            value={selectedItems} // Quels éléments sont sélectionnés
-            onChange={(e) => {
-              // Récupère TOUTES les options sélectionnées
-              const selected = Array.from(e.target.selectedOptions, option => option.value);
-              onSelectChange(selected); // Met à jour l'état
-            }}
-            className="w-full border rounded px-2 py-1.5 text-xs min-h-[80px] max-h-40"
-            size={Math.min(items.length, 6)} // Hauteur visible (6 lignes max)
-          >
-            {/* Option spéciale "Sélectionner tout" */}
-            <option value="__all__" className="font-semibold border-b border-gray-200">
-              {allSelected ? "✗ Désélectionner tout" : "✓ Sélectionner tout"}
-            </option>
-            
-            {/* Génère une option pour chaque item */}
-            {items.map(item => (
-              <option key={item} value={item}>
-                {getDisplayName ? getDisplayName(item) : item}
-              </option>
-            ))}
-          </select>
-        </div>
-        
-        {/* Aperçu des éléments sélectionnés (tags) */}
-        <div className="mt-1 flex flex-wrap gap-1 max-h-16 overflow-y-auto">
-          {selectedItems.slice(0, 3).map(item => (
-            <span key={item} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800">
-              {getDisplayName ? getDisplayName(item).substring(0, 15) : item.substring(0, 15)}
-              {item.length > 15 ? '...' : ''}
-            </span>
-          ))}
-          {selectedItems.length > 3 && (
-            <span className="text-xs text-gray-500">
-              +{selectedItems.length - 3} autres
-            </span>
-          )}
-        </div>
-      </div>
-    );
-  };
-  
   const add50Minutes = (time: string): string => {
     if (!time) return '';
     const [hours, minutes] = time.split(':').map(Number);
@@ -424,13 +369,6 @@ export default function LecteurExterneDashboard() {
     
     return `${newHours.toString().padStart(2, '0')}:${newMinutes.toString().padStart(2, '0')}`;
   };
-  
-  const [displaySettings, setDisplaySettings] = useState({
-    lecteur_externe_voir_eleves: true,
-    lecteur_externe_voir_guides: true,
-    lecteur_externe_voir_lecteurs_internes: true,
-    lecteur_externe_voir_mediateurs: true,
-  });
 
   const prepareCalendarData = () => {
     const defensesWithSchedule = elevesDisponibles.filter(e => 
@@ -508,17 +446,14 @@ export default function LecteurExterneDashboard() {
   };
 
   const filteredElevesDisponibles = elevesDisponibles.filter(eleve => {
-    // Filtre par catégories (multiple)
     if (selectedMultipleCategories.length > 0 && !selectedMultipleCategories.includes(eleve.categorie)) {
       return false;
     }
     
-    // Filtre par dates (multiple)
     if (selectedMultipleDates.length > 0 && eleve.date_defense && !selectedMultipleDates.includes(eleve.date_defense)) {
       return false;
     }
     
-    // Filtre par localisations (multiple)
     if (selectedMultipleLocations.length > 0 && eleve.localisation_defense && !selectedMultipleLocations.includes(eleve.localisation_defense)) {
       return false;
     }
@@ -606,13 +541,12 @@ export default function LecteurExterneDashboard() {
   };
 
   const goToFinalView = () => {
-    // Convertir les filtres initiaux vers le nouveau système
     const finalDates = tempSelectedDates.length > 0 ? tempSelectedDates : dates;
     const finalCategories = tempSelectedCategories.length > 0 ? tempSelectedCategories : categories;
     
     setSelectedMultipleDates(finalDates);
     setSelectedMultipleCategories(finalCategories);
-    setSelectedMultipleLocations(locations); // Toujours tous les locaux par défaut
+    setSelectedMultipleLocations(locations);
     
     setViewMode(tempViewMode);
   };
@@ -758,8 +692,6 @@ export default function LecteurExterneDashboard() {
 
   // Question 2: Quels jours ?
   if (viewMode === 'question-dates') {
-    const busyCount = sortedElevesDisponibles.filter(e => isTimeSlotBusy(e)).length;
-    
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-gray-50 flex items-center justify-center p-4">
         <div className="max-w-2xl w-full">
@@ -862,8 +794,6 @@ export default function LecteurExterneDashboard() {
 
   // Question 3: Quelles thématiques ?
   if (viewMode === 'question-categories') {
-    const busyCount = sortedElevesDisponibles.filter(e => isTimeSlotBusy(e)).length;
-    
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-gray-50 flex items-center justify-center p-4">
         <div className="max-w-2xl w-full">
@@ -951,7 +881,7 @@ export default function LecteurExterneDashboard() {
     );
   }
 
-  // Écran de paramétrage pour la sélection
+  // CORRECTION: Vue list/calendar - JSX corrigé
   if (viewMode === 'list' || viewMode === 'calendar') {
     const busyCount = sortedElevesDisponibles.filter(e => isTimeSlotBusy(e)).length;
     
@@ -965,18 +895,18 @@ export default function LecteurExterneDashboard() {
                 <h1 className="text-lg md:text-xl font-bold text-gray-800 truncate">
                   {viewMode === 'list' ? 'Sélection en liste' : 'Sélection en calendrier'}
                 </h1>
-                  <div className="flex items-center gap-2">
-                    <p className="text-xs md:text-sm text-gray-600 truncate">
-                      Connecté en tant que {userName}
-                    </p>
-                    <button
-                      onClick={() => setShowProfileEditor(true)}
-                      className="ml-2 px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200"
-                      title="Modifier mon profil"
-                    >
-                      ✎
-                    </button>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs md:text-sm text-gray-600 truncate">
+                    Connecté en tant que {userName}
+                  </p>
+                  <button
+                    onClick={() => setShowProfileEditor(true)}
+                    className="ml-2 px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200"
+                    title="Modifier mon profil"
+                  >
+                    ✎
+                  </button>
+                </div>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <button
@@ -1019,7 +949,6 @@ export default function LecteurExterneDashboard() {
                 {selectedEleves.length} TFH sélectionné{selectedEleves.length > 1 ? 's' : ''}
               </span>
               
-              {/* TOUJOURS afficher le nombre de jours */}
               <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded flex items-center gap-1">
                 <span>📅</span>
                 <span>
@@ -1029,7 +958,6 @@ export default function LecteurExterneDashboard() {
                 </span>
               </span>
               
-              {/* TOUJOURS afficher le nombre de thématiques */}
               <span className="bg-green-100 text-green-800 px-2 py-1 rounded flex items-center gap-1">
                 <span>🏷️</span>
                 <span>
@@ -1039,7 +967,6 @@ export default function LecteurExterneDashboard() {
                 </span>
               </span>
               
-              {/* TOUJOURS afficher le nombre de locaux */}
               <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded flex items-center gap-1">
                 <span>🏢</span>
                 <span>
@@ -1049,87 +976,89 @@ export default function LecteurExterneDashboard() {
                 </span>
               </span>
             </div>
+          </div>
 
-        {/* Filtres */}
-        {showFilters && (
-          <div className="sticky top-[120px] md:top-[100px] z-40 bg-white border-b shadow-sm">
-            <div className="max-w-7xl mx-auto px-4 md:px-8 py-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Filtre Jours - avec checkboxes */}
-                {renderCheckboxFilter(
-                  "Jours",
-                  dates,
-                  selectedMultipleDates,
-                  setSelectedMultipleDates,
-                  (date) => new Date(date).toLocaleDateString('fr-FR', { 
-                    weekday: 'short', 
-                    day: 'numeric', 
-                    month: 'short' 
-                  })
-                )}
-        
-                {/* Filtre Thématiques - avec checkboxes */}
-                {renderCheckboxFilter(
-                  "Thématiques",
-                  categories,
-                  selectedMultipleCategories,
-                  setSelectedMultipleCategories
-                )}
-        
-                {/* Filtre Locaux - avec checkboxes */}
-                {renderCheckboxFilter(
-                  "Locaux",
-                  locations,
-                  selectedMultipleLocations,
-                  setSelectedMultipleLocations
-                )}
-              </div>
-              
-              {/* Boutons d'action rapide */}
-              <div className="mt-6 pt-4 border-t border-gray-100 flex flex-wrap justify-between items-center gap-3">
-                <div className="text-xs text-gray-600">
-                  <span className="text-blue-600">✓ Sélectionnés par vous</span>
+          {/* CORRECTION: Section filtres déplacée ICI (dans la même div parente) */}
+          {showFilters && (
+            <div className="border-t border-gray-200 bg-white">
+              <div className="max-w-7xl mx-auto px-4 md:px-8 py-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Filtre Jours */}
+                  {renderCheckboxFilter(
+                    "Jours",
+                    dates,
+                    selectedMultipleDates,
+                    setSelectedMultipleDates,
+                    (date) => new Date(date).toLocaleDateString('fr-FR', { 
+                      weekday: 'short', 
+                      day: 'numeric', 
+                      month: 'short' 
+                    })
+                  )}
+          
+                  {/* Filtre Thématiques */}
+                  {renderCheckboxFilter(
+                    "Thématiques",
+                    categories,
+                    selectedMultipleCategories,
+                    setSelectedMultipleCategories
+                  )}
+          
+                  {/* Filtre Locaux */}
+                  {renderCheckboxFilter(
+                    "Locaux",
+                    locations,
+                    selectedMultipleLocations,
+                    setSelectedMultipleLocations
+                  )}
                 </div>
                 
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => {
-                      setSelectedMultipleDates(dates);
-                      setSelectedMultipleCategories(categories);
-                      setSelectedMultipleLocations(locations);
-                    }}
-                    className="px-3 py-1.5 text-xs bg-blue-50 text-blue-700 rounded-lg border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors flex items-center gap-1"
-                  >
-                    <span>✓</span>
-                    <span>Tout sélectionner</span>
-                  </button>
+                {/* Boutons d'action rapide */}
+                <div className="mt-6 pt-4 border-t border-gray-100 flex flex-wrap justify-between items-center gap-3">
+                  <div className="text-xs text-gray-600">
+                    <span className="text-blue-600">✓ Sélectionnés par vous</span>
+                  </div>
                   
-                  <button
-                    onClick={() => {
-                      setSelectedMultipleDates([]);
-                      setSelectedMultipleCategories([]);
-                      setSelectedMultipleLocations([]);
-                    }}
-                    className="px-3 py-1.5 text-xs bg-gray-50 text-gray-700 rounded-lg border border-gray-200 hover:bg-gray-100 hover:border-gray-300 transition-colors flex items-center gap-1"
-                  >
-                    <span>✗</span>
-                    <span>Tout effacer</span>
-                  </button>
-                  
-                  <button
-                    onClick={() => setShowFilters(false)}
-                    className="px-3 py-1.5 text-xs bg-green-50 text-green-700 rounded-lg border border-green-200 hover:bg-green-100 hover:border-green-300 transition-colors flex items-center gap-1"
-                  >
-                    <span>▼</span>
-                    <span>Fermer filtres</span>
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => {
+                        setSelectedMultipleDates(dates);
+                        setSelectedMultipleCategories(categories);
+                        setSelectedMultipleLocations(locations);
+                      }}
+                      className="px-3 py-1.5 text-xs bg-blue-50 text-blue-700 rounded-lg border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors flex items-center gap-1"
+                    >
+                      <span>✓</span>
+                      <span>Tout sélectionner</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        setSelectedMultipleDates([]);
+                        setSelectedMultipleCategories([]);
+                        setSelectedMultipleLocations([]);
+                      }}
+                      className="px-3 py-1.5 text-xs bg-gray-50 text-gray-700 rounded-lg border border-gray-200 hover:bg-gray-100 hover:border-gray-300 transition-colors flex items-center gap-1"
+                    >
+                      <span>✗</span>
+                      <span>Tout effacer</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => setShowFilters(false)}
+                      className="px-3 py-1.5 text-xs bg-green-50 text-green-700 rounded-lg border border-green-200 hover:bg-green-100 hover:border-green-300 transition-colors flex items-center gap-1"
+                    >
+                      <span>▼</span>
+                      <span>Fermer filtres</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div> {/* CORRECTION: Ici se ferme la div principale de l'en-tête */}
 
-        {/* Contenu principal avec padding en haut pour éviter la superposition */}
+        {/* Contenu principal */}
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-4">
           {/* Vue liste */}
           {viewMode === 'list' ? (
@@ -1139,7 +1068,7 @@ export default function LecteurExterneDashboard() {
                   <thead className="bg-gray-100 border-b">
                     <tr>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-12">
-                        {/* Laissé vide - c'est la colonne pour les checkboxes individuelles */}
+                        {/* Checkbox */}
                       </th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">
                         Date
@@ -1170,7 +1099,6 @@ export default function LecteurExterneDashboard() {
                           Guide
                         </th>
                       )}
-                      
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -1253,7 +1181,6 @@ export default function LecteurExterneDashboard() {
                                 {eleve.guide_prenom} {eleve.guide_nom}
                               </td>
                             )}
-                            
                           </tr>
                         );
                       })
@@ -1276,7 +1203,6 @@ export default function LecteurExterneDashboard() {
                   busyEventIds={(() => {
                     const allBusyIds = new Set<string>();
                     busySlots.forEach((eleveIds, slotKey) => {
-                      // Inclure tous les élèves de ce créneau, SAUF celui assigné à l'utilisateur actuel
                       eleveIds.forEach(id => {
                         const eleve = elevesDisponibles.find(e => e.id === id);
                         if (eleve && eleve.lecteur_externe_id !== userLecteurExterneId) {
@@ -1293,14 +1219,14 @@ export default function LecteurExterneDashboard() {
             </div>
           )}
         </div>
-        {/* PROFIL EDITOR - Ajoute à la fin, avant le dernier </div> */}
+
+        {/* PROFIL EDITOR */}
         {showProfileEditor && (
           <ProfileEditor
             userId={userLecteurExterneId}
             userType="lecteur_externe"
             onClose={() => setShowProfileEditor(false)}
             onUpdate={() => {
-              // Recharger les données si nécessaire
               const name = localStorage.getItem('userName');
               if (name) setUserName(name);
             }}
@@ -1404,7 +1330,6 @@ export default function LecteurExterneDashboard() {
                       {displaySettings.lecteur_externe_voir_mediateurs && (
                         <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Médiateur</th>
                       )}
-                      
                     </tr>
                   </thead>
                   <tbody>
@@ -1461,7 +1386,6 @@ export default function LecteurExterneDashboard() {
                             {eleve.mediateur_prenom} {eleve.mediateur_nom}
                           </td>
                         )}
-                        
                       </tr>
                     ))}
                   </tbody>
@@ -1482,14 +1406,13 @@ export default function LecteurExterneDashboard() {
           </p>
         </div>
         
-        {/* PROFIL EDITOR  */}
+        {/* PROFIL EDITOR */}
         {showProfileEditor && (
           <ProfileEditor
             userId={userLecteurExterneId}
             userType="lecteur_externe"
             onClose={() => setShowProfileEditor(false)}
             onUpdate={() => {
-              // Recharger les données si nécessaire
               const name = localStorage.getItem('userName');
               if (name) setUserName(name);
             }}
