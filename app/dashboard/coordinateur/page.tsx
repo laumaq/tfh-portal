@@ -1199,95 +1199,109 @@ export default function CoordinateurDashboard() {
 	    return (start1 < end2 && start2 < end1);
 	  };
 	  
-	  // 3. Détecter les conflits pour chaque rôle
-	  const roles = ['guide', 'lecteur_interne', 'lecteur_externe', 'mediateur'] as const;
+	  // 3. Détecter les conflits pour chaque PERSONNE (peu importe son rôle)
+	  const personDefensesMap = new Map<string, DefenseEvent[]>();
 	  
-	  roles.forEach(role => {
-	    const roleDefensesMap = new Map<string, DefenseEvent[]>();
-	    
-	    // Grouper par personne pour ce rôle
-	    defenses.forEach(defense => {
-	      let personKey = '';
-	      
-	      switch(role) {
-	        case 'guide':
-	          personKey = `${defense.guidePrenom} ${defense.guideNom}`;
-	          break;
-	        case 'lecteur_interne':
-	          personKey = `${defense.lecteurInternePrenom} ${defense.lecteurInterneNom}`;
-	          break;
-	        case 'lecteur_externe':
-	          personKey = `${defense.lecteurExternePrenom} ${defense.lecteurExterneNom}`;
-	          break;
-	        case 'mediateur':
-	          personKey = `${defense.mediateurPrenom} ${defense.mediateurNom}`;
-	          break;
+	  // Grouper par personne (guide OU lecteur interne)
+	  defenses.forEach(defense => {
+	    // 1. Ajouter le guide
+	    const guideKey = `${defense.guidePrenom} ${defense.guideNom}`;
+	    if (guideKey.trim() !== '- -' && guideKey.trim()) {
+	      if (!personDefensesMap.has(guideKey)) {
+	        personDefensesMap.set(guideKey, []);
 	      }
-	      
-	      // Ignorer les valeurs par défaut
-	      if (personKey.trim() === '- -' || !personKey.trim()) return;
-	      
-	      if (!roleDefensesMap.has(personKey)) {
-	        roleDefensesMap.set(personKey, []);
-	      }
-	      roleDefensesMap.get(personKey)!.push(defense);
-	    });
-	    
-	    // Vérifier les chevauchements pour chaque personne
-	    roleDefensesMap.forEach((personDefenses, person) => {
-	      if (personDefenses.length < 2) return;
-	      
-	      // Trier par date et heure
-	      personDefenses.sort((a, b) => {
-	        if (a.date !== b.date) return a.date.localeCompare(b.date);
-	        return a.startTime.localeCompare(b.startTime);
+	      personDefensesMap.get(guideKey)!.push({
+	        ...defense,
+	        role: 'guide' as const
 	      });
-	      
-	      // Vérifier les chevauchements consécutifs
-	      for (let i = 0; i < personDefenses.length; i++) {
-	        const current = personDefenses[i];
-	        const overlapping: DefenseEvent[] = [current];
-	        
-	        for (let j = i + 1; j < personDefenses.length; j++) {
-	          const next = personDefenses[j];
-	          
-	          if (hasOverlap(current, next)) {
-	            overlapping.push(next);
-	          } else {
-	            // Pas de chevauchement, on arrête
-	            break;
-	          }
-	        }
-	        
-	        if (overlapping.length >= 2) {
-	          // Éviter les doublons
-	          const existingConflict = conflicts.find(c => 
-	            c.type === role && 
-	            c.personOrLocation === person &&
-	            c.conflictingDefenses.length === overlapping.length &&
-	            c.conflictingDefenses.every(d => overlapping.includes(d))
-	          );
-	          
-	          if (!existingConflict) {
-	            conflicts.push({
-	              type: role as Conflict['type'],
-	              personOrLocation: person,
-	              conflictingDefenses: [...overlapping], // Copie
-	              message: `${role === 'guide' ? '🧑‍🏫 Guide' : 
-	                       role === 'lecteur_interne' ? '📖 Lecteur interne' : 
-	                       role === 'lecteur_externe' ? '👨‍💼 Lecteur externe' : '⚖️ Médiateur'} 
-	                       "${person}" a ${overlapping.length} TFH qui se chevauchent`
-	            });
-	            
-	            // Avancer l'index i pour éviter les conflits redondants
-	            i += overlapping.length - 1;
-	          }
-	        }
+	    }
+	    
+	    // 2. Ajouter le lecteur interne (si différent du guide)
+	    const lecteurInterneKey = `${defense.lecteurInternePrenom} ${defense.lecteurInterneNom}`;
+	    if (lecteurInterneKey.trim() !== '- -' && lecteurInterneKey.trim() && lecteurInterneKey !== guideKey) {
+	      if (!personDefensesMap.has(lecteurInterneKey)) {
+	        personDefensesMap.set(lecteurInterneKey, []);
 	      }
-	    });
+	      personDefensesMap.get(lecteurInterneKey)!.push({
+	        ...defense,
+	        role: 'lecteur_interne' as const
+	      });
+	    }
 	  });
 	  
-	  // 4. Détecter les conflits de locaux
+	  // Vérifier les chevauchements pour chaque personne
+	  personDefensesMap.forEach((personDefenses, person) => {
+	    if (personDefenses.length < 2) return;
+	    
+	    // Trier par date et heure
+	    personDefenses.sort((a, b) => {
+	      if (a.date !== b.date) return a.date.localeCompare(b.date);
+	      return a.startTime.localeCompare(b.startTime);
+	    });
+	    
+	    // Vérifier les chevauchements consécutifs
+	    for (let i = 0; i < personDefenses.length; i++) {
+	      const current = personDefenses[i];
+	      const overlapping: DefenseEvent[] = [current];
+	      
+	      for (let j = i + 1; j < personDefenses.length; j++) {
+	        const next = personDefenses[j];
+	        
+	        if (hasOverlap(current, next)) {
+	          overlapping.push(next);
+	        } else {
+	          // Pas de chevauchement, on arrête
+	          break;
+	        }
+	      }
+	      
+	      if (overlapping.length >= 2) {
+	        // Déterminer le type de conflit
+	        const types = overlapping.map(d => {
+	          const isGuide = `${d.guidePrenom} ${d.guideNom}` === person;
+	          const isLecteurInterne = `${d.lecteurInternePrenom} ${d.lecteurInterneNom}` === person;
+	          
+	          if (isGuide && isLecteurInterne) return 'guide_et_lecteur_interne';
+	          if (isGuide) return 'guide';
+	          if (isLecteurInterne) return 'lecteur_interne';
+	          return 'autre';
+	        });
+	        
+	        // Créer un message adapté
+	        let message = '';
+	        if (types.includes('guide') && types.includes('lecteur_interne')) {
+	          message = `🧑‍🏫📖 ${person} (guide & lecteur interne) a ${overlapping.length} TFH qui se chevauchent`;
+	        } else if (types.includes('guide')) {
+	          message = `🧑‍🏫 Guide ${person} a ${overlapping.length} TFH qui se chevauchent`;
+	        } else if (types.includes('lecteur_interne')) {
+	          message = `📖 Lecteur interne ${person} a ${overlapping.length} TFH qui se chevauchent`;
+	        } else {
+	          message = `${person} a ${overlapping.length} TFH qui se chevauchent`;
+	        }
+	        
+	        // Éviter les doublons
+	        const existingConflict = conflicts.find(c => 
+	          c.personOrLocation === person &&
+	          c.conflictingDefenses.length === overlapping.length &&
+	          c.conflictingDefenses.every(d => overlapping.includes(d))
+	        );
+	        
+	        if (!existingConflict) {
+	          conflicts.push({
+	            type: 'guide', // On utilise 'guide' comme type générique pour les personnes
+	            personOrLocation: person,
+	            conflictingDefenses: [...overlapping],
+	            message
+	          });
+	          
+	          // Avancer l'index i pour éviter les conflits redondants
+	          i += overlapping.length - 1;
+	        }
+	      }
+	    }
+	  });
+	  
+	  // 4. Détecter les conflits de locaux (garder cette partie inchangée)
 	  const localDefensesMap = new Map<string, DefenseEvent[]>();
 	  
 	  defenses.forEach(defense => {
@@ -1346,87 +1360,6 @@ export default function CoordinateurDashboard() {
 	  
 	  // 5. Trier les conflits par gravité (nombre de défenses en conflit)
 	  return conflicts.sort((a, b) => b.conflictingDefenses.length - a.conflictingDefenses.length);
-	};
-	
-	// Composant d'affichage des conflits
-	const ConflictDisplay = ({ conflicts }: { conflicts: Conflict[] }) => {
-	  if (conflicts.length === 0) return null;
-	  
-	  return (
-	    <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-	      <h3 className="text-lg font-medium text-red-800 mb-3 flex items-center gap-2">
-	        ⚠️ {conflicts.length} conflit{conflicts.length > 1 ? 's' : ''} détecté{conflicts.length > 1 ? 's' : ''}
-	      </h3>
-	      
-	      <div className="space-y-4">
-	        {conflicts.map((conflict, index) => (
-	          <div key={index} className="text-sm border-l-4 border-red-400 pl-3">
-	            <div className="font-medium text-red-700 mb-2">
-	              {conflict.message}
-	            </div>
-	            
-	            <div className="pl-2 space-y-1">
-	              {conflict.conflictingDefenses.map(defense => {
-	                const duration = `${defense.startTime.substring(0, 5)}-${defense.endTime.substring(0, 5)}`;
-	                const date = new Date(defense.date).toLocaleDateString('fr-FR', {
-	                  weekday: 'short',
-	                  day: 'numeric',
-	                  month: 'short'
-	                });
-	                
-	                return (
-	                  <div key={defense.id} className="flex flex-wrap items-start gap-2 text-gray-700">
-	                    <span className="font-medium min-w-[120px]">
-	                      {defense.elevePrenom} {defense.eleveNom}
-	                    </span>
-	                    <span className="text-gray-500 text-xs">
-	                      {date} {duration} • {defense.location}
-	                    </span>
-	                    
-	                    {/* Afficher les rôles concernés */}
-	                    <div className="flex flex-wrap gap-1 mt-1 text-xs">
-	                      {conflict.type === 'guide' && (
-	                        <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
-	                          Guide
-	                        </span>
-	                      )}
-	                      {conflict.type === 'lecteur_interne' && (
-	                        <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded">
-	                          Lecteur interne
-	                        </span>
-	                      )}
-	                      {conflict.type === 'lecteur_externe' && (
-	                        <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded">
-	                          Lecteur externe
-	                        </span>
-	                      )}
-	                      {conflict.type === 'mediateur' && (
-	                        <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">
-	                          Médiateur
-	                        </span>
-	                      )}
-	                      {conflict.type === 'local' && (
-	                        <span className="bg-gray-100 text-gray-800 px-2 py-0.5 rounded">
-	                          Local
-	                        </span>
-	                      )}
-	                    </div>
-	                  </div>
-	                );
-	              })}
-	            </div>
-	          </div>
-	        ))}
-	      </div>
-	      
-	      <div className="mt-4 pt-3 border-t border-red-200">
-	        <p className="text-xs text-red-600">
-	          ℹ️ Un conflit survient quand une même personne ou local est assigné à plusieurs TFH
-	          se déroulant au même moment.
-	        </p>
-	      </div>
-	    </div>
-	  );
 	};
   
 
@@ -2977,6 +2910,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
