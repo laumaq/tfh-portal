@@ -1170,119 +1170,154 @@ export default function CoordinateurDashboard() {
     
     return `${newHours.toString().padStart(2, '0')}:${newMinutes.toString().padStart(2, '0')}`;
   };
-   
-  // Fonction pour détecter les conflits
+
+	
 	const detectConflicts = (defenses: DefenseEvent[]) => {
-	  console.log('🔍 Détection des conflits sur', defenses.length, 'défenses');
+	  console.log('🔍 DÉTECTION DES CONFLITS - NOUVELLE VERSION');
 	  
-	  const guideConflicts = new Map<string, DefenseEvent[]>();
-	  const lecteurInterneConflicts = new Map<string, DefenseEvent[]>();
-	  const lecteurExterneConflicts = new Map<string, DefenseEvent[]>();
-	  const mediateurConflicts = new Map<string, DefenseEvent[]>();
-	  
-	  // Fonction pour convertir une heure "HH:MM" en minutes
-	  const timeToMinutes = (time: string) => {
+	  const allConflicts = {
+	    guides: [] as Array<{person: string, conflicts: DefenseEvent[]}>,
+	    lecteursInternes: [] as Array<{person: string, conflicts: DefenseEvent[]}>,
+	    lecteursExternes: [] as Array<{person: string, conflicts: DefenseEvent[]}>,
+	    mediateurs: [] as Array<{person: string, conflicts: DefenseEvent[]}>,
+	    locaux: [] as Array<{local: string, conflicts: DefenseEvent[]}>,
+	    chevauchements: [] as Array<{description: string, conflicts: DefenseEvent[]}>
+	  };
+	
+	  // Fonction pour convertir HH:MM en minutes
+	  const timeToMinutes = (time: string): number => {
 	    if (!time) return 0;
-	    const [hours, minutes] = time.split(':').map(Number);
+	    // Gérer le format HH:MM:SS ou HH:MM
+	    const parts = time.split(':');
+	    const hours = parseInt(parts[0]) || 0;
+	    const minutes = parseInt(parts[1]) || 0;
 	    return hours * 60 + minutes;
 	  };
-	  
+	
 	  // Fonction pour vérifier le chevauchement
-	  const hasTimeConflict = (d1: DefenseEvent, d2: DefenseEvent) => {
+	  const hasTimeOverlap = (d1: DefenseEvent, d2: DefenseEvent): boolean => {
 	    if (d1.date !== d2.date) return false;
 	    
-	    const s1 = timeToMinutes(d1.startTime);
-	    const e1 = timeToMinutes(d1.endTime);
-	    const s2 = timeToMinutes(d2.startTime);
-	    const e2 = timeToMinutes(d2.endTime);
+	    const start1 = timeToMinutes(d1.startTime);
+	    const end1 = timeToMinutes(d1.endTime);
+	    const start2 = timeToMinutes(d2.startTime);
+	    const end2 = timeToMinutes(d2.endTime);
 	    
-	    // Vérifie si les créneaux se chevauchent
-	    return (s1 < e2 && s2 < e1);
+	    // Vérifier si les créneaux se chevauchent
+	    return (start1 < end2 && start2 < end1);
 	  };
-	  
-	  // Vérifier toutes les paires de défenses
-	  for (let i = 0; i < defenses.length; i++) {
-	    const defense1 = defenses[i];
+	
+	  // 1. Détecter les conflits de personnes
+	  const personRoles = [
+	    { type: 'guides', getName: (d: DefenseEvent) => d.guideNom !== '-' ? `${d.guidePrenom} ${d.guideNom}` : null },
+	    { type: 'lecteursInternes', getName: (d: DefenseEvent) => d.lecteurInterneNom !== '-' ? `${d.lecteurInternePrenom} ${d.lecteurInterneNom}` : null },
+	    { type: 'lecteursExternes', getName: (d: DefenseEvent) => d.lecteurExterneNom !== '-' ? `${d.lecteurExternePrenom} ${d.lecteurExterneNom}` : null },
+	    { type: 'mediateurs', getName: (d: DefenseEvent) => d.mediateurNom !== '-' ? `${d.mediateurPrenom} ${d.mediateurNom}` : null }
+	  ];
+	
+	  // Pour chaque rôle, détecter les conflits
+	  personRoles.forEach(role => {
+	    const conflictsMap = new Map<string, DefenseEvent[]>();
 	    
+	    // Pour chaque paire de défenses
+	    for (let i = 0; i < defenses.length; i++) {
+	      for (let j = i + 1; j < defenses.length; j++) {
+	        const d1 = defenses[i];
+	        const d2 = defenses[j];
+	        
+	        const name1 = role.getName(d1);
+	        const name2 = role.getName(d2);
+	        
+	        // Si c'est la même personne ET il y a chevauchement
+	        if (name1 && name2 && name1 === name2 && hasTimeOverlap(d1, d2)) {
+	          const existing = conflictsMap.get(name1) || [];
+	          if (!existing.find(d => d.id === d1.id)) existing.push(d1);
+	          if (!existing.find(d => d.id === d2.id)) existing.push(d2);
+	          conflictsMap.set(name1, existing);
+	        }
+	      }
+	    }
+	    
+	    // Ajouter au résultat
+	    conflictsMap.forEach((conflicts, person) => {
+	      if (conflicts.length >= 2) {
+	        allConflicts[role.type as keyof typeof allConflicts].push({
+	          person,
+	          conflicts: conflicts.sort((a, b) => a.startTime.localeCompare(b.startTime))
+	        });
+	      }
+	    });
+	  });
+	
+	  // 2. Détecter les conflits de locaux (même local, même heure)
+	  const localConflicts = new Map<string, DefenseEvent[]>();
+	  
+	  for (let i = 0; i < defenses.length; i++) {
 	    for (let j = i + 1; j < defenses.length; j++) {
-	      const defense2 = defenses[j];
+	      const d1 = defenses[i];
+	      const d2 = defenses[j];
 	      
-	      // Vérifier s'il y a un conflit de temps
-	      if (!hasTimeConflict(defense1, defense2)) {
-	        continue;
-	      }
-	      
-	      // Guide
-	      if (defense1.guideNom && defense1.guideNom !== '-' && 
-	          defense1.guideNom === defense2.guideNom && 
-	          defense1.guidePrenom === defense2.guidePrenom) {
-	        const guideKey = `${defense1.guidePrenom} ${defense1.guideNom}`;
-	        const existing = guideConflicts.get(guideKey) || [];
-	        if (!existing.some(d => d.id === defense1.id)) existing.push(defense1);
-	        if (!existing.some(d => d.id === defense2.id)) existing.push(defense2);
-	        guideConflicts.set(guideKey, existing);
-	      }
-	      
-	      // Lecteur interne
-	      if (defense1.lecteurInterneNom && defense1.lecteurInterneNom !== '-' && 
-	          defense1.lecteurInterneNom === defense2.lecteurInterneNom && 
-	          defense1.lecteurInternePrenom === defense2.lecteurInternePrenom) {
-	        const lecteurKey = `${defense1.lecteurInternePrenom} ${defense1.lecteurInterneNom}`;
-	        const existing = lecteurInterneConflicts.get(lecteurKey) || [];
-	        if (!existing.some(d => d.id === defense1.id)) existing.push(defense1);
-	        if (!existing.some(d => d.id === defense2.id)) existing.push(defense2);
-	        lecteurInterneConflicts.set(lecteurKey, existing);
-	      }
-	      
-	      // Lecteur externe
-	      if (defense1.lecteurExterneNom && defense1.lecteurExterneNom !== '-' && 
-	          defense1.lecteurExterneNom === defense2.lecteurExterneNom && 
-	          defense1.lecteurExternePrenom === defense2.lecteurExternePrenom) {
-	        const lecteurKey = `${defense1.lecteurExternePrenom} ${defense1.lecteurExterneNom}`;
-	        const existing = lecteurExterneConflicts.get(lecteurKey) || [];
-	        if (!existing.some(d => d.id === defense1.id)) existing.push(defense1);
-	        if (!existing.some(d => d.id === defense2.id)) existing.push(defense2);
-	        lecteurExterneConflicts.set(lecteurKey, existing);
-	      }
-	      
-	      // Médiateur
-	      if (defense1.mediateurNom && defense1.mediateurNom !== '-' && 
-	          defense1.mediateurNom === defense2.mediateurNom && 
-	          defense1.mediateurPrenom === defense2.mediateurPrenom) {
-	        const mediateurKey = `${defense1.mediateurPrenom} ${defense1.mediateurNom}`;
-	        const existing = mediateurConflicts.get(mediateurKey) || [];
-	        if (!existing.some(d => d.id === defense1.id)) existing.push(defense1);
-	        if (!existing.some(d => d.id === defense2.id)) existing.push(defense2);
-	        mediateurConflicts.set(mediateurKey, existing);
+	      if (d1.location && d1.location !== 'Non défini' && 
+	          d1.location === d2.location && 
+	          hasTimeOverlap(d1, d2)) {
+	        const existing = localConflicts.get(d1.location) || [];
+	        if (!existing.find(d => d.id === d1.id)) existing.push(d1);
+	        if (!existing.find(d => d.id === d2.id)) existing.push(d2);
+	        localConflicts.set(d1.location, existing);
 	      }
 	    }
 	  }
 	  
-	  console.log('📊 Résultats détection:');
-	  console.log('- Guides:', Array.from(guideConflicts.entries()).length, 'conflits');
-	  console.log('- Lecteurs internes:', Array.from(lecteurInterneConflicts.entries()).length, 'conflits');
-	  console.log('- Lecteurs externes:', Array.from(lecteurExterneConflicts.entries()).length, 'conflits');
-	  console.log('- Médiateurs:', Array.from(mediateurConflicts.entries()).length, 'conflits');
+	  localConflicts.forEach((conflicts, local) => {
+	    if (conflicts.length >= 2) {
+	      allConflicts.locaux.push({
+	        local,
+	        conflicts: conflicts.sort((a, b) => a.startTime.localeCompare(b.startTime))
+	      });
+	    }
+	  });
+	
+	  // 3. Détecter les conflits de chevauchement spécifiques
+	  // Exemple : TFH qui commence avant la fin d'un autre
+	  const overlapConflicts = new Map<string, DefenseEvent[]>();
 	  
-	  // Trier les conflits par heure
-	  const sortConflicts = (conflictMap: Map<string, DefenseEvent[]>) => {
-	    return Array.from(conflictMap.entries())
-	      .map(([person, conflicts]) => ({
-	        person,
-	        conflicts: conflicts.sort((a, b) => {
-	          if (a.date !== b.date) return a.date.localeCompare(b.date);
-	          return a.startTime.localeCompare(b.startTime);
-	        })
-	      }))
-	      .filter(({ conflicts }) => conflicts.length >= 2);
-	  };
+	  for (let i = 0; i < defenses.length; i++) {
+	    for (let j = i + 1; j < defenses.length; j++) {
+	      const d1 = defenses[i];
+	      const d2 = defenses[j];
+	      
+	      if (d1.date === d2.date && hasTimeOverlap(d1, d2)) {
+	        const key = `${d1.date} ${Math.min(timeToMinutes(d1.startTime), timeToMinutes(d2.startTime))}`;
+	        const existing = overlapConflicts.get(key) || [];
+	        if (!existing.find(d => d.id === d1.id)) existing.push(d1);
+	        if (!existing.find(d => d.id === d2.id)) existing.push(d2);
+	        overlapConflicts.set(key, existing);
+	      }
+	    }
+	  }
 	  
-	  return {
-	    guides: sortConflicts(guideConflicts),
-	    lecteursInternes: sortConflicts(lecteurInterneConflicts),
-	    lecteursExternes: sortConflicts(lecteurExterneConflicts),
-	    mediateurs: sortConflicts(mediateurConflicts)
-	  };
+	  overlapConflicts.forEach((conflicts) => {
+	    if (conflicts.length >= 2) {
+	      const first = conflicts[0];
+	      allConflicts.chevauchements.push({
+	        description: `Chevauchement le ${first.date} ${first.startTime}`,
+	        conflicts: conflicts.sort((a, b) => a.startTime.localeCompare(b.startTime))
+	      });
+	    }
+	  });
+	
+	  // 4. Log pour le debug
+	  console.log('📊 RÉSULTATS DE LA DÉTECTION :');
+	  console.log('- Guides en conflit:', allConflicts.guides.length);
+	  console.log('- Lecteurs internes en conflit:', allConflicts.lecteursInternes.length);
+	  console.log('- Conflits de locaux:', allConflicts.locaux.length);
+	  console.log('- Chevauchements détectés:', allConflicts.chevauchements.length);
+	  
+	  if (allConflicts.lecteursInternes.length > 0) {
+	    console.log('Exemple de lecteur interne en conflit:', allConflicts.lecteursInternes[0]);
+	  }
+	
+	  return allConflicts;
 	};
   
 
@@ -2052,50 +2087,27 @@ export default function CoordinateurDashboard() {
         )}
 
         {activeTab === 'calendrier' && (
-          <div className="space-y-6">
-
-						<div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-				      <button
-				        onClick={() => {
-				          console.log('=== DEBUG CONFLITS ===');
-				          console.log('Élèves:', eleves.length);
-				          const defensesWithSchedule = eleves.filter(e => e.date_defense && e.heure_defense);
-				          console.log('Défenses programmées:', defensesWithSchedule.length);
-				          
-				          // Afficher les défenses du 12 mai
-				          const defenses12Mai = defensesWithSchedule.filter(e => 
-				            e.date_defense && e.date_defense.includes('2026-05-12')
-				          );
-				          console.log('Défenses du 12 mai:', defenses12Mai.length);
-				          defenses12Mai.forEach(e => {
-				            console.log(`${e.prenom} ${e.nom}: ${e.heure_defense}`, {
-				              guide: e.guide_prenom + ' ' + e.guide_nom,
-				              lecteur_interne: e.lecteur_interne_prenom + ' ' + e.lecteur_interne_nom,
-				              local: e.localisation_defense
-				            });
-				          });
-				        }}
-				        className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 text-sm"
-				      >
-				        Debug Conflits
-				      </button>
-				    </div>
-						
+          <div className="space-y-6">						
 						{(conflicts.guides.length > 0 || conflicts.lecteursInternes.length > 0 || 
-						  conflicts.lecteursExternes.length > 0 || conflicts.mediateurs.length > 0) && (
+						  conflicts.lecteursExternes.length > 0 || conflicts.mediateurs.length > 0 ||
+						  conflicts.locaux.length > 0 || conflicts.chevauchements.length > 0) && (
 						  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
 						    <h3 className="text-lg font-medium text-red-800 mb-3 flex items-center gap-2">
 						      ⚠️ Conflits d'emploi du temps détectés
 						    </h3>
 						    <div className="space-y-4">
+						      
+						      {/* Conflits de guides */}
 						      {conflicts.guides.map(({person, conflicts}) => (
 						        <div key={`guide-${person}`} className="text-sm">
-						          <div className="font-medium text-red-700 mb-1">Guide {person} :</div>
+						          <div className="font-medium text-red-700 mb-1">
+						            🧑‍🏫 Guide {person} a {conflicts.length} TFH qui se chevauchent :
+						          </div>
 						          <div className="pl-4 space-y-1">
 						            {conflicts.map(c => (
 						              <div key={c.id} className="flex items-center gap-2">
 						                <span className="text-red-600">•</span>
-						                <span>{c.elevePrenom} {c.eleveNom}</span>
+						                <span className="font-medium">{c.elevePrenom} {c.eleveNom}</span>
 						                <span className="text-gray-500">
 						                  ({c.date} {c.startTime}-{c.endTime}, {c.location})
 						                </span>
@@ -2105,14 +2117,17 @@ export default function CoordinateurDashboard() {
 						        </div>
 						      ))}
 						      
+						      {/* Conflits de lecteurs internes */}
 						      {conflicts.lecteursInternes.map(({person, conflicts}) => (
 						        <div key={`lecteur-int-${person}`} className="text-sm">
-						          <div className="font-medium text-red-700 mb-1">Lecteur interne {person} :</div>
+						          <div className="font-medium text-red-700 mb-1">
+						            📖 Lecteur interne {person} a {conflicts.length} TFH qui se chevauchent :
+						          </div>
 						          <div className="pl-4 space-y-1">
 						            {conflicts.map(c => (
 						              <div key={c.id} className="flex items-center gap-2">
 						                <span className="text-red-600">•</span>
-						                <span>{c.elevePrenom} {c.eleveNom}</span>
+						                <span className="font-medium">{c.elevePrenom} {c.eleveNom}</span>
 						                <span className="text-gray-500">
 						                  ({c.date} {c.startTime}-{c.endTime}, {c.location})
 						                </span>
@@ -2122,16 +2137,19 @@ export default function CoordinateurDashboard() {
 						        </div>
 						      ))}
 						      
-						      {conflicts.lecteursExternes.map(({person, conflicts}) => (
-						        <div key={`lecteur-ext-${person}`} className="text-sm">
-						          <div className="font-medium text-red-700 mb-1">Lecteur externe {person} :</div>
+						      {/* Conflits de locaux */}
+						      {conflicts.locaux.map(({local, conflicts}) => (
+						        <div key={`local-${local}`} className="text-sm">
+						          <div className="font-medium text-red-700 mb-1">
+						            🏫 Local {local} a {conflicts.length} TFH qui se chevauchent :
+						          </div>
 						          <div className="pl-4 space-y-1">
 						            {conflicts.map(c => (
 						              <div key={c.id} className="flex items-center gap-2">
 						                <span className="text-red-600">•</span>
-						                <span>{c.elevePrenom} {c.eleveNom}</span>
+						                <span className="font-medium">{c.elevePrenom} {c.eleveNom}</span>
 						                <span className="text-gray-500">
-						                  ({c.date} {c.startTime}-{c.endTime}, {c.location})
+						                  ({c.date} {c.startTime}-{c.endTime}, Guide: {c.guidePrenom} {c.guideNom})
 						                </span>
 						              </div>
 						            ))}
@@ -2139,22 +2157,26 @@ export default function CoordinateurDashboard() {
 						        </div>
 						      ))}
 						      
-						      {conflicts.mediateurs.map(({person, conflicts}) => (
-						        <div key={`mediateur-${person}`} className="text-sm">
-						          <div className="font-medium text-red-700 mb-1">Médiateur {person} :</div>
+						      {/* Chevauchements généraux */}
+						      {conflicts.chevauchements.map(({description, conflicts}, index) => (
+						        <div key={`overlap-${index}`} className="text-sm">
+						          <div className="font-medium text-red-700 mb-1">
+						            ⏰ {description} :
+						          </div>
 						          <div className="pl-4 space-y-1">
 						            {conflicts.map(c => (
 						              <div key={c.id} className="flex items-center gap-2">
 						                <span className="text-red-600">•</span>
-						                <span>{c.elevePrenom} {c.eleveNom}</span>
+						                <span className="font-medium">{c.elevePrenom} {c.eleveNom}</span>
 						                <span className="text-gray-500">
-						                  ({c.date} {c.startTime}-{c.endTime}, {c.location})
+						                  ({c.startTime}-{c.endTime}, {c.location}, Guide: {c.guidePrenom} {c.guideNom})
 						                </span>
 						              </div>
 						            ))}
 						          </div>
 						        </div>
 						      ))}
+						      
 						    </div>
 						  </div>
 						)}
@@ -2937,6 +2959,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
