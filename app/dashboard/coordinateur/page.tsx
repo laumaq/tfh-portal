@@ -156,7 +156,7 @@ export default function CoordinateurDashboard() {
   const [selectedCategory, setSelectedCategory] = useState<string>('toutes');
   const [dayDefenses, setDayDefenses] = useState<DayDefenses[]>([]);
 	const [calendarRefreshTrigger, setCalendarRefreshTrigger] = useState(0);
-	const [conflicts, setConflicts] = useState<any>({
+	const [conflicts, setConflicts] = useState({
 	  guides: [],
 	  lecteursInternes: [],
 	  lecteursExternes: [],
@@ -2920,6 +2920,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
