@@ -156,14 +156,14 @@ export default function CoordinateurDashboard() {
   const [selectedCategory, setSelectedCategory] = useState<string>('toutes');
   const [dayDefenses, setDayDefenses] = useState<DayDefenses[]>([]);
 	const [calendarRefreshTrigger, setCalendarRefreshTrigger] = useState(0);
-	const [conflicts, setConflicts] = useState<{
-	  guides: Array<{person: string, conflicts: DefenseEvent[]}>;
-	  lecteursInternes: Array<{person: string, conflicts: DefenseEvent[]}>;
-	  lecteursExternes: Array<{person: string, conflicts: DefenseEvent[]}>;
-	  mediateurs: Array<{person: string, conflicts: DefenseEvent[]}>;
-	  locaux?: Array<{local: string, conflicts: DefenseEvent[]}>; // ← AJOUTER
-	  chevauchements?: Array<{description: string, conflicts: DefenseEvent[]}>; // ← AJOUTER
-	}>({
+	const [conflicts, setConflicts] = useState<any>({
+	  guides: [],
+	  lecteursInternes: [],
+	  lecteursExternes: [],
+	  mediateurs: [],
+	  locaux: [],
+	  chevauchements: []
+	});>({
 	  guides: [],
 	  lecteursInternes: [],
 	  lecteursExternes: [],
@@ -2920,6 +2920,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
