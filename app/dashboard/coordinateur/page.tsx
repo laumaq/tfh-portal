@@ -2064,7 +2064,7 @@ export default function CoordinateurDashboard() {
 				          
 				          // Afficher les défenses du 12 mai
 				          const defenses12Mai = defensesWithSchedule.filter(e => 
-				            e.date_defense && e.date_defense.includes('2024-05-12')
+				            e.date_defense && e.date_defense.includes('2026-05-12')
 				          );
 				          console.log('Défenses du 12 mai:', defenses12Mai.length);
 				          defenses12Mai.forEach(e => {
@@ -2937,6 +2937,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
