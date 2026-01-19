@@ -1236,15 +1236,23 @@ export default function CoordinateurDashboard() {
 	    }
 	    
 	    // Ajouter au résultat
-	    conflictsMap.forEach((conflicts, person) => {
-	      if (conflicts.length >= 2) {
-	        allConflicts[role.type as keyof typeof allConflicts].push({
-	          person,
-	          conflicts: conflicts.sort((a, b) => a.startTime.localeCompare(b.startTime))
-	        });
-	      }
-	    });
-	  });
+			conflictsMap.forEach((conflicts, person) => {
+			  if (conflicts.length >= 2) {
+			    // Type guard pour TypeScript
+			    const typedConflicts = conflicts.sort((a, b) => a.startTime.localeCompare(b.startTime));
+			    
+			    // Gérer chaque type de conflit séparément
+			    if (role.type === 'guides') {
+			      allConflicts.guides.push({ person, conflicts: typedConflicts });
+			    } else if (role.type === 'lecteursInternes') {
+			      allConflicts.lecteursInternes.push({ person, conflicts: typedConflicts });
+			    } else if (role.type === 'lecteursExternes') {
+			      allConflicts.lecteursExternes.push({ person, conflicts: typedConflicts });
+			    } else if (role.type === 'mediateurs') {
+			      allConflicts.mediateurs.push({ person, conflicts: typedConflicts });
+			    }
+			  }
+			});
 	
 	  // 2. Détecter les conflits de locaux (même local, même heure)
 	  const localConflicts = new Map<string, DefenseEvent[]>();
@@ -2915,6 +2923,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
