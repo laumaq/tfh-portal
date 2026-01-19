@@ -156,17 +156,19 @@ export default function CoordinateurDashboard() {
   const [selectedCategory, setSelectedCategory] = useState<string>('toutes');
   const [dayDefenses, setDayDefenses] = useState<DayDefenses[]>([]);
 	const [calendarRefreshTrigger, setCalendarRefreshTrigger] = useState(0);
-  const [conflicts, setConflicts] = useState<{
-    guides: Array<{person: string, conflicts: DefenseEvent[]}>;
-    lecteursInternes: Array<{person: string, conflicts: DefenseEvent[]}>;
-    lecteursExternes: Array<{person: string, conflicts: DefenseEvent[]}>;
-    mediateurs: Array<{person: string, conflicts: DefenseEvent[]}>;
-  }>({
-    guides: [],
-    lecteursInternes: [],
-    lecteursExternes: [],
-    mediateurs: []
-  });
+	const [conflicts, setConflicts] = useState<{
+	  guides: Array<{person: string, conflicts: DefenseEvent[]}>;
+	  lecteursInternes: Array<{person: string, conflicts: DefenseEvent[]}>;
+	  lecteursExternes: Array<{person: string, conflicts: DefenseEvent[]}>;
+	  mediateurs: Array<{person: string, conflicts: DefenseEvent[]}>;
+	  locaux?: Array<{local: string, conflicts: DefenseEvent[]}>; // ← AJOUTER
+	  chevauchements?: Array<{description: string, conflicts: DefenseEvent[]}>; // ← AJOUTER
+	}>({
+	  guides: [],
+	  lecteursInternes: [],
+	  lecteursExternes: [],
+	  mediateurs: []
+	});
 	
 	const [displaySettings, setDisplaySettings] = useState({
 	  // Vue Lecteur Externe
@@ -2959,6 +2961,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
