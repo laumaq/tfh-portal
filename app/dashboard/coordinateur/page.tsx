@@ -1170,21 +1170,11 @@ export default function CoordinateurDashboard() {
 
 	
 	const detectConflicts = (defenses: DefenseEvent[]) => {
-	  console.log('🔍 DÉTECTION DES CONFLITS - NOUVELLE VERSION');
+	  console.log('🔍 DÉTECTION DES CONFLITS - VERSION SIMPLIFIÉE');
 	  
-	  const allConflicts = {
-	    guides: [] as Array<{person: string, conflicts: DefenseEvent[]}>,
-	    lecteursInternes: [] as Array<{person: string, conflicts: DefenseEvent[]}>,
-	    lecteursExternes: [] as Array<{person: string, conflicts: DefenseEvent[]}>,
-	    mediateurs: [] as Array<{person: string, conflicts: DefenseEvent[]}>,
-	    locaux: [] as Array<{local: string, conflicts: DefenseEvent[]}>,
-	    chevauchements: [] as Array<{description: string, conflicts: DefenseEvent[]}>
-	  };
-	
 	  // Fonction pour convertir HH:MM en minutes
 	  const timeToMinutes = (time: string): number => {
 	    if (!time) return 0;
-	    // Gérer le format HH:MM:SS ou HH:MM
 	    const parts = time.split(':');
 	    const hours = parseInt(parts[0]) || 0;
 	    const minutes = parseInt(parts[1]) || 0;
@@ -1200,32 +1190,31 @@ export default function CoordinateurDashboard() {
 	    const start2 = timeToMinutes(d2.startTime);
 	    const end2 = timeToMinutes(d2.endTime);
 	    
-	    // Vérifier si les créneaux se chevauchent
 	    return (start1 < end2 && start2 < end1);
 	  };
 	
-	  // 1. Détecter les conflits de personnes
-	  const personRoles = [
-	    { type: 'guides', getName: (d: DefenseEvent) => d.guideNom !== '-' ? `${d.guidePrenom} ${d.guideNom}` : null },
-	    { type: 'lecteursInternes', getName: (d: DefenseEvent) => d.lecteurInterneNom !== '-' ? `${d.lecteurInternePrenom} ${d.lecteurInterneNom}` : null },
-	    { type: 'lecteursExternes', getName: (d: DefenseEvent) => d.lecteurExterneNom !== '-' ? `${d.lecteurExternePrenom} ${d.lecteurExterneNom}` : null },
-	    { type: 'mediateurs', getName: (d: DefenseEvent) => d.mediateurNom !== '-' ? `${d.mediateurPrenom} ${d.mediateurNom}` : null }
-	  ];
+	  // Initialiser les résultats
+	  const allConflicts = {
+	    guides: [] as Array<{person: string, conflicts: DefenseEvent[]}>,
+	    lecteursInternes: [] as Array<{person: string, conflicts: DefenseEvent[]}>,
+	    lecteursExternes: [] as Array<{person: string, conflicts: DefenseEvent[]}>,
+	    mediateurs: [] as Array<{person: string, conflicts: DefenseEvent[]}>,
+	    locaux: [] as Array<{local: string, conflicts: DefenseEvent[]}>,
+	    chevauchements: [] as Array<{description: string, conflicts: DefenseEvent[]}>
+	  };
 	
-	  // Pour chaque rôle, détecter les conflits
-	  personRoles.forEach(role => {
+	  // 1. Détecter les conflits de personnes (guides, lecteurs internes, etc.)
+	  const detectPersonConflicts = (type: string, getName: (d: DefenseEvent) => string | null) => {
 	    const conflictsMap = new Map<string, DefenseEvent[]>();
 	    
-	    // Pour chaque paire de défenses
 	    for (let i = 0; i < defenses.length; i++) {
 	      for (let j = i + 1; j < defenses.length; j++) {
 	        const d1 = defenses[i];
 	        const d2 = defenses[j];
 	        
-	        const name1 = role.getName(d1);
-	        const name2 = role.getName(d2);
+	        const name1 = getName(d1);
+	        const name2 = getName(d2);
 	        
-	        // Si c'est la même personne ET il y a chevauchement
 	        if (name1 && name2 && name1 === name2 && hasTimeOverlap(d1, d2)) {
 	          const existing = conflictsMap.get(name1) || [];
 	          if (!existing.find(d => d.id === d1.id)) existing.push(d1);
@@ -1235,26 +1224,42 @@ export default function CoordinateurDashboard() {
 	      }
 	    }
 	    
-	    // Ajouter au résultat
-			conflictsMap.forEach((conflicts, person) => {
-			  if (conflicts.length >= 2) {
-			    // Type guard pour TypeScript
-			    const typedConflicts = conflicts.sort((a, b) => a.startTime.localeCompare(b.startTime));
-			    
-			    // Gérer chaque type de conflit séparément
-			    if (role.type === 'guides') {
-			      allConflicts.guides.push({ person, conflicts: typedConflicts });
-			    } else if (role.type === 'lecteursInternes') {
-			      allConflicts.lecteursInternes.push({ person, conflicts: typedConflicts });
-			    } else if (role.type === 'lecteursExternes') {
-			      allConflicts.lecteursExternes.push({ person, conflicts: typedConflicts });
-			    } else if (role.type === 'mediateurs') {
-			      allConflicts.mediateurs.push({ person, conflicts: typedConflicts });
-			    }
-			  }
-			});
+	    // Ajouter au résultat selon le type
+	    conflictsMap.forEach((conflicts, person) => {
+	      if (conflicts.length >= 2) {
+	        const typedConflicts = conflicts.sort((a, b) => a.startTime.localeCompare(b.startTime));
+	        
+	        if (type === 'guides') {
+	          allConflicts.guides.push({ person, conflicts: typedConflicts });
+	        } else if (type === 'lecteursInternes') {
+	          allConflicts.lecteursInternes.push({ person, conflicts: typedConflicts });
+	        } else if (type === 'lecteursExternes') {
+	          allConflicts.lecteursExternes.push({ person, conflicts: typedConflicts });
+	        } else if (type === 'mediateurs') {
+	          allConflicts.mediateurs.push({ person, conflicts: typedConflicts });
+	        }
+	      }
+	    });
+	  };
 	
-	  // 2. Détecter les conflits de locaux (même local, même heure)
+	  // Détecter pour chaque rôle
+	  detectPersonConflicts('guides', (d) => 
+	    d.guideNom !== '-' ? `${d.guidePrenom} ${d.guideNom}` : null
+	  );
+	  
+	  detectPersonConflicts('lecteursInternes', (d) => 
+	    d.lecteurInterneNom !== '-' ? `${d.lecteurInternePrenom} ${d.lecteurInterneNom}` : null
+	  );
+	  
+	  detectPersonConflicts('lecteursExternes', (d) => 
+	    d.lecteurExterneNom !== '-' ? `${d.lecteurExternePrenom} ${d.lecteurExterneNom}` : null
+	  );
+	  
+	  detectPersonConflicts('mediateurs', (d) => 
+	    d.mediateurNom !== '-' ? `${d.mediateurPrenom} ${d.mediateurNom}` : null
+	  );
+	
+	  // 2. Détecter les conflits de locaux
 	  const localConflicts = new Map<string, DefenseEvent[]>();
 	  
 	  for (let i = 0; i < defenses.length; i++) {
@@ -1282,8 +1287,7 @@ export default function CoordinateurDashboard() {
 	    }
 	  });
 	
-	  // 3. Détecter les conflits de chevauchement spécifiques
-	  // Exemple : TFH qui commence avant la fin d'un autre
+	  // 3. Détecter les chevauchements généraux (pour debug)
 	  const overlapConflicts = new Map<string, DefenseEvent[]>();
 	  
 	  for (let i = 0; i < defenses.length; i++) {
@@ -1311,17 +1315,12 @@ export default function CoordinateurDashboard() {
 	    }
 	  });
 	
-	  // 4. Log pour le debug
+	  // Log pour debug
 	  console.log('📊 RÉSULTATS DE LA DÉTECTION :');
 	  console.log('- Guides en conflit:', allConflicts.guides.length);
 	  console.log('- Lecteurs internes en conflit:', allConflicts.lecteursInternes.length);
 	  console.log('- Conflits de locaux:', allConflicts.locaux.length);
-	  console.log('- Chevauchements détectés:', allConflicts.chevauchements.length);
 	  
-	  if (allConflicts.lecteursInternes.length > 0) {
-	    console.log('Exemple de lecteur interne en conflit:', allConflicts.lecteursInternes[0]);
-	  }
-	
 	  return allConflicts;
 	};
   
@@ -2923,6 +2922,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
