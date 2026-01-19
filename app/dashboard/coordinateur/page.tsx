@@ -2090,98 +2090,57 @@ export default function CoordinateurDashboard() {
 
         {activeTab === 'calendrier' && (
           <div className="space-y-6">						
-						{(conflicts.guides.length > 0 || conflicts.lecteursInternes.length > 0 || 
-						  conflicts.lecteursExternes.length > 0 || conflicts.mediateurs.length > 0 ||
-						  conflicts.locaux.length > 0 || conflicts.chevauchements.length > 0) && (
-						  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-						    <h3 className="text-lg font-medium text-red-800 mb-3 flex items-center gap-2">
-						      ⚠️ Conflits d'emploi du temps détectés
-						    </h3>
-						    <div className="space-y-4">
-						      
-						      {/* Conflits de guides */}
-						      {conflicts.guides.map(({person, conflicts}) => (
-						        <div key={`guide-${person}`} className="text-sm">
-						          <div className="font-medium text-red-700 mb-1">
-						            🧑‍🏫 Guide {person} a {conflicts.length} TFH qui se chevauchent :
-						          </div>
-						          <div className="pl-4 space-y-1">
-						            {conflicts.map(c => (
-						              <div key={c.id} className="flex items-center gap-2">
-						                <span className="text-red-600">•</span>
-						                <span className="font-medium">{c.elevePrenom} {c.eleveNom}</span>
-						                <span className="text-gray-500">
-						                  ({c.date} {c.startTime}-{c.endTime}, {c.location})
-						                </span>
-						              </div>
-						            ))}
-						          </div>
-						        </div>
-						      ))}
-						      
-						      {/* Conflits de lecteurs internes */}
-						      {conflicts.lecteursInternes.map(({person, conflicts}) => (
-						        <div key={`lecteur-int-${person}`} className="text-sm">
-						          <div className="font-medium text-red-700 mb-1">
-						            📖 Lecteur interne {person} a {conflicts.length} TFH qui se chevauchent :
-						          </div>
-						          <div className="pl-4 space-y-1">
-						            {conflicts.map(c => (
-						              <div key={c.id} className="flex items-center gap-2">
-						                <span className="text-red-600">•</span>
-						                <span className="font-medium">{c.elevePrenom} {c.eleveNom}</span>
-						                <span className="text-gray-500">
-						                  ({c.date} {c.startTime}-{c.endTime}, {c.location})
-						                </span>
-						              </div>
-						            ))}
-						          </div>
-						        </div>
-						      ))}
-						      
-						      {/* Conflits de locaux */}
-						      {conflicts.locaux.map(({local, conflicts}) => (
-						        <div key={`local-${local}`} className="text-sm">
-						          <div className="font-medium text-red-700 mb-1">
-						            🏫 Local {local} a {conflicts.length} TFH qui se chevauchent :
-						          </div>
-						          <div className="pl-4 space-y-1">
-						            {conflicts.map(c => (
-						              <div key={c.id} className="flex items-center gap-2">
-						                <span className="text-red-600">•</span>
-						                <span className="font-medium">{c.elevePrenom} {c.eleveNom}</span>
-						                <span className="text-gray-500">
-						                  ({c.date} {c.startTime}-{c.endTime}, Guide: {c.guidePrenom} {c.guideNom})
-						                </span>
-						              </div>
-						            ))}
-						          </div>
-						        </div>
-						      ))}
-						      
-						      {/* Chevauchements généraux */}
-						      {conflicts.chevauchements.map(({description, conflicts}, index) => (
-						        <div key={`overlap-${index}`} className="text-sm">
-						          <div className="font-medium text-red-700 mb-1">
-						            ⏰ {description} :
-						          </div>
-						          <div className="pl-4 space-y-1">
-						            {conflicts.map(c => (
-						              <div key={c.id} className="flex items-center gap-2">
-						                <span className="text-red-600">•</span>
-						                <span className="font-medium">{c.elevePrenom} {c.eleveNom}</span>
-						                <span className="text-gray-500">
-						                  ({c.startTime}-{c.endTime}, {c.location}, Guide: {c.guidePrenom} {c.guideNom})
-						                </span>
-						              </div>
-						            ))}
-						          </div>
-						        </div>
-						      ))}
-						      
-						    </div>
-						  </div>
-						)}
+			{(conflicts.guides.length > 0 || conflicts.lecteursInternes.length > 0 || 
+			  conflicts.lecteursExternes.length > 0 || conflicts.mediateurs.length > 0) && (
+			  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+			    <h3 className="text-lg font-medium text-red-800 mb-3 flex items-center gap-2">
+			      ⚠️ Conflits d'emploi du temps détectés
+			    </h3>
+			    <div className="space-y-4">
+			      
+			      {/* Conflits de guides */}
+			      {conflicts.guides.map(({person, conflicts}) => (
+			        <div key={`guide-${person}`} className="text-sm">
+			          <div className="font-medium text-red-700 mb-1">
+			            🧑‍🏫 Guide {person} a {conflicts.length} TFH qui se chevauchent :
+			          </div>
+			          <div className="pl-4 space-y-1">
+			            {conflicts.map(c => (
+			              <div key={c.id} className="flex items-center gap-2">
+			                <span className="text-red-600">•</span>
+			                <span className="font-medium">{c.elevePrenom} {c.eleveNom}</span>
+			                <span className="text-gray-500">
+			                  ({c.date} {c.startTime}-{c.endTime}, {c.location})
+			                </span>
+			              </div>
+			            ))}
+			          </div>
+			        </div>
+			      ))}
+			      
+			      {/* Conflits de lecteurs internes */}
+			      {conflicts.lecteursInternes.map(({person, conflicts}) => (
+			        <div key={`lecteur-int-${person}`} className="text-sm">
+			          <div className="font-medium text-red-700 mb-1">
+			            📖 Lecteur interne {person} a {conflicts.length} TFH qui se chevauchent :
+			          </div>
+			          <div className="pl-4 space-y-1">
+			            {conflicts.map(c => (
+			              <div key={c.id} className="flex items-center gap-2">
+			                <span className="text-red-600">•</span>
+			                <span className="font-medium">{c.elevePrenom} {c.eleveNom}</span>
+			                <span className="text-gray-500">
+			                  ({c.date} {c.startTime}-{c.endTime}, {c.location})
+			                </span>
+			              </div>
+			            ))}
+			          </div>
+			        </div>
+			      ))}
+			      
+			    </div>
+			  </div>
+			)}
             
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-xl font-semibold text-gray-800 mb-4">Filtres du Calendrier</h2>
@@ -2961,6 +2920,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
