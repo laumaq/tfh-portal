@@ -1173,129 +1173,115 @@ export default function CoordinateurDashboard() {
    
   // Fonction pour détecter les conflits
 	const detectConflicts = (defenses: DefenseEvent[]) => {
+	  console.log('🔍 Détection des conflits sur', defenses.length, 'défenses');
+	  
 	  const guideConflicts = new Map<string, DefenseEvent[]>();
 	  const lecteurInterneConflicts = new Map<string, DefenseEvent[]>();
 	  const lecteurExterneConflicts = new Map<string, DefenseEvent[]>();
 	  const mediateurConflicts = new Map<string, DefenseEvent[]>();
 	  
-	  // Trier les défenses par date et heure
-	  const sortedDefenses = [...defenses].sort((a, b) => {
-	    if (a.date !== b.date) return a.date.localeCompare(b.date);
-	    return a.startTime.localeCompare(b.startTime);
-	  });
-	  
 	  // Fonction pour convertir une heure "HH:MM" en minutes
 	  const timeToMinutes = (time: string) => {
+	    if (!time) return 0;
 	    const [hours, minutes] = time.split(':').map(Number);
 	    return hours * 60 + minutes;
 	  };
 	  
 	  // Fonction pour vérifier le chevauchement
-	  const hasTimeConflict = (start1: string, end1: string, start2: string, end2: string) => {
-	    const s1 = timeToMinutes(start1);
-	    const e1 = timeToMinutes(end1);
-	    const s2 = timeToMinutes(start2);
-	    const e2 = timeToMinutes(end2);
+	  const hasTimeConflict = (d1: DefenseEvent, d2: DefenseEvent) => {
+	    if (d1.date !== d2.date) return false;
+	    
+	    const s1 = timeToMinutes(d1.startTime);
+	    const e1 = timeToMinutes(d1.endTime);
+	    const s2 = timeToMinutes(d2.startTime);
+	    const e2 = timeToMinutes(d2.endTime);
 	    
 	    // Vérifie si les créneaux se chevauchent
 	    return (s1 < e2 && s2 < e1);
 	  };
 	  
-	  // Vérifier les chevauchements pour chaque personne
-	  sortedDefenses.forEach((defense, index) => {
-	    // Guide
-	    if (defense.guideNom && defense.guideNom !== '-') {
-	      const guideKey = `${defense.guidePrenom} ${defense.guideNom}`;
-	      const conflicts = sortedDefenses.filter((d, otherIndex) => 
-	        otherIndex > index && // Éviter les doublons
-	        d.date === defense.date &&
-	        d.guideNom === defense.guideNom &&
-	        d.guidePrenom === defense.guidePrenom &&
-	        hasTimeConflict(defense.startTime, defense.endTime, d.startTime, d.endTime)
-	      );
+	  // Vérifier toutes les paires de défenses
+	  for (let i = 0; i < defenses.length; i++) {
+	    const defense1 = defenses[i];
+	    
+	    for (let j = i + 1; j < defenses.length; j++) {
+	      const defense2 = defenses[j];
 	      
-	      if (conflicts.length > 0) {
+	      // Vérifier s'il y a un conflit de temps
+	      if (!hasTimeConflict(defense1, defense2)) {
+	        continue;
+	      }
+	      
+	      // Guide
+	      if (defense1.guideNom && defense1.guideNom !== '-' && 
+	          defense1.guideNom === defense2.guideNom && 
+	          defense1.guidePrenom === defense2.guidePrenom) {
+	        const guideKey = `${defense1.guidePrenom} ${defense1.guideNom}`;
 	        const existing = guideConflicts.get(guideKey) || [];
-	        guideConflicts.set(guideKey, [...existing, defense, ...conflicts]);
+	        if (!existing.some(d => d.id === defense1.id)) existing.push(defense1);
+	        if (!existing.some(d => d.id === defense2.id)) existing.push(defense2);
+	        guideConflicts.set(guideKey, existing);
 	      }
-	    }
-	    
-	    // Lecteur interne
-	    if (defense.lecteurInterneNom && defense.lecteurInterneNom !== '-') {
-	      const lecteurKey = `${defense.lecteurInternePrenom} ${defense.lecteurInterneNom}`;
-	      const conflicts = sortedDefenses.filter((d, otherIndex) => 
-	        otherIndex > index &&
-	        d.date === defense.date &&
-	        d.lecteurInterneNom === defense.lecteurInterneNom &&
-	        d.lecteurInternePrenom === defense.lecteurInternePrenom &&
-	        hasTimeConflict(defense.startTime, defense.endTime, d.startTime, d.endTime)
-	      );
 	      
-	      if (conflicts.length > 0) {
+	      // Lecteur interne
+	      if (defense1.lecteurInterneNom && defense1.lecteurInterneNom !== '-' && 
+	          defense1.lecteurInterneNom === defense2.lecteurInterneNom && 
+	          defense1.lecteurInternePrenom === defense2.lecteurInternePrenom) {
+	        const lecteurKey = `${defense1.lecteurInternePrenom} ${defense1.lecteurInterneNom}`;
 	        const existing = lecteurInterneConflicts.get(lecteurKey) || [];
-	        lecteurInterneConflicts.set(lecteurKey, [...existing, defense, ...conflicts]);
+	        if (!existing.some(d => d.id === defense1.id)) existing.push(defense1);
+	        if (!existing.some(d => d.id === defense2.id)) existing.push(defense2);
+	        lecteurInterneConflicts.set(lecteurKey, existing);
 	      }
-	    }
-	    
-	    // Lecteur externe
-	    if (defense.lecteurExterneNom && defense.lecteurExterneNom !== '-') {
-	      const lecteurKey = `${defense.lecteurExternePrenom} ${defense.lecteurExterneNom}`;
-	      const conflicts = sortedDefenses.filter((d, otherIndex) => 
-	        otherIndex > index &&
-	        d.date === defense.date &&
-	        d.lecteurExterneNom === defense.lecteurExterneNom &&
-	        d.lecteurExternePrenom === defense.lecteurExternePrenom &&
-	        hasTimeConflict(defense.startTime, defense.endTime, d.startTime, d.endTime)
-	      );
 	      
-	      if (conflicts.length > 0) {
+	      // Lecteur externe
+	      if (defense1.lecteurExterneNom && defense1.lecteurExterneNom !== '-' && 
+	          defense1.lecteurExterneNom === defense2.lecteurExterneNom && 
+	          defense1.lecteurExternePrenom === defense2.lecteurExternePrenom) {
+	        const lecteurKey = `${defense1.lecteurExternePrenom} ${defense1.lecteurExterneNom}`;
 	        const existing = lecteurExterneConflicts.get(lecteurKey) || [];
-	        lecteurExterneConflicts.set(lecteurKey, [...existing, defense, ...conflicts]);
+	        if (!existing.some(d => d.id === defense1.id)) existing.push(defense1);
+	        if (!existing.some(d => d.id === defense2.id)) existing.push(defense2);
+	        lecteurExterneConflicts.set(lecteurKey, existing);
 	      }
-	    }
-	    
-	    // Médiateur
-	    if (defense.mediateurNom && defense.mediateurNom !== '-') {
-	      const mediateurKey = `${defense.mediateurPrenom} ${defense.mediateurNom}`;
-	      const conflicts = sortedDefenses.filter((d, otherIndex) => 
-	        otherIndex > index &&
-	        d.date === defense.date &&
-	        d.mediateurNom === defense.mediateurNom &&
-	        d.mediateurPrenom === defense.mediateurPrenom &&
-	        hasTimeConflict(defense.startTime, defense.endTime, d.startTime, d.endTime)
-	      );
 	      
-	      if (conflicts.length > 0) {
+	      // Médiateur
+	      if (defense1.mediateurNom && defense1.mediateurNom !== '-' && 
+	          defense1.mediateurNom === defense2.mediateurNom && 
+	          defense1.mediateurPrenom === defense2.mediateurPrenom) {
+	        const mediateurKey = `${defense1.mediateurPrenom} ${defense1.mediateurNom}`;
 	        const existing = mediateurConflicts.get(mediateurKey) || [];
-	        mediateurConflicts.set(mediateurKey, [...existing, defense, ...conflicts]);
+	        if (!existing.some(d => d.id === defense1.id)) existing.push(defense1);
+	        if (!existing.some(d => d.id === defense2.id)) existing.push(defense2);
+	        mediateurConflicts.set(mediateurKey, existing);
 	      }
 	    }
-	  });
+	  }
 	  
-	  // Éliminer les doublons et trier par heure
-	  const unique = (arr: DefenseEvent[]) => {
-	    const uniqueMap = new Map(arr.map(item => [item.id, item]));
-	    return Array.from(uniqueMap.values()).sort((a, b) => {
-	      if (a.date !== b.date) return a.date.localeCompare(b.date);
-	      return a.startTime.localeCompare(b.startTime);
-	    });
-	  };
+	  console.log('📊 Résultats détection:');
+	  console.log('- Guides:', Array.from(guideConflicts.entries()).length, 'conflits');
+	  console.log('- Lecteurs internes:', Array.from(lecteurInterneConflicts.entries()).length, 'conflits');
+	  console.log('- Lecteurs externes:', Array.from(lecteurExterneConflicts.entries()).length, 'conflits');
+	  console.log('- Médiateurs:', Array.from(mediateurConflicts.entries()).length, 'conflits');
 	  
-	  // Filtrer pour ne garder que les personnes avec au moins 2 défenses en conflit
-	  const filterConflicts = (conflictMap: Map<string, DefenseEvent[]>) => {
+	  // Trier les conflits par heure
+	  const sortConflicts = (conflictMap: Map<string, DefenseEvent[]>) => {
 	    return Array.from(conflictMap.entries())
-	      .filter(([_, conflicts]) => conflicts.length >= 2)
 	      .map(([person, conflicts]) => ({
 	        person,
-	        conflicts: unique(conflicts)
-	      }));
+	        conflicts: conflicts.sort((a, b) => {
+	          if (a.date !== b.date) return a.date.localeCompare(b.date);
+	          return a.startTime.localeCompare(b.startTime);
+	        })
+	      }))
+	      .filter(({ conflicts }) => conflicts.length >= 2);
 	  };
 	  
 	  return {
-	    guides: filterConflicts(guideConflicts),
-	    lecteursInternes: filterConflicts(lecteurInterneConflicts),
-	    lecteursExternes: filterConflicts(lecteurExterneConflicts),
-	    mediateurs: filterConflicts(mediateurConflicts)
+	    guides: sortConflicts(guideConflicts),
+	    lecteursInternes: sortConflicts(lecteurInterneConflicts),
+	    lecteursExternes: sortConflicts(lecteurExterneConflicts),
+	    mediateurs: sortConflicts(mediateurConflicts)
 	  };
 	};
   
@@ -1326,13 +1312,14 @@ export default function CoordinateurDashboard() {
 	  // Transformer en DefenseEvent
 	  const defenseEvents: DefenseEvent[] = defensesWithSchedule.map(eleve => {
 	    const startTime = eleve.heure_defense!.substring(0, 5);
+	    const endTime = add50Minutes(startTime);
 	    
 	    return {
 	      id: eleve.id,
 	      eleveId: eleve.id,
 	      date: eleve.date_defense!,
 	      startTime: startTime,
-	      endTime: add50Minutes(startTime),
+	      endTime: endTime,
 	      location: eleve.localisation_defense || 'Non défini',
 	      eleveNom: eleve.nom,
 	      elevePrenom: eleve.prenom,
@@ -1347,6 +1334,17 @@ export default function CoordinateurDashboard() {
 	      categorie: eleve.categorie || 'Non catégorisé'
 	    };
 	  });
+	  
+	  console.log('📅 Défenses transformées:', defenseEvents.length);
+	  if (defenseEvents.length > 0) {
+	    console.log('Exemple de défense:', {
+	      id: defenseEvents[0].id,
+	      date: defenseEvents[0].date,
+	      time: defenseEvents[0].startTime + '-' + defenseEvents[0].endTime,
+	      guide: defenseEvents[0].guidePrenom + ' ' + defenseEvents[0].guideNom,
+	      lecteurInterne: defenseEvents[0].lecteurInternePrenom + ' ' + defenseEvents[0].lecteurInterneNom
+	    });
+	  }
 	  
 	  // Appliquer les filtres
 	  let filteredDefenses = defenseEvents;
@@ -1366,7 +1364,9 @@ export default function CoordinateurDashboard() {
 	  console.log(`Défenses après filtrage: ${filteredDefenses.length}`);
 	  
 	  // Détecter les conflits
-	  setConflicts(detectConflicts(filteredDefenses));
+		const detectedConflicts = detectConflicts(filteredDefenses);
+  	console.log('🔍 Conflits détectés:', detectedConflicts);
+  	setConflicts(detectedConflicts);
 	  
 	  // Grouper par date
 	  const dates = Array.from(new Set(filteredDefenses.map(d => d.date))).sort();
@@ -2053,7 +2053,34 @@ export default function CoordinateurDashboard() {
 
         {activeTab === 'calendrier' && (
           <div className="space-y-6">
-           
+
+						<div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+				      <button
+				        onClick={() => {
+				          console.log('=== DEBUG CONFLITS ===');
+				          console.log('Élèves:', eleves.length);
+				          const defensesWithSchedule = eleves.filter(e => e.date_defense && e.heure_defense);
+				          console.log('Défenses programmées:', defensesWithSchedule.length);
+				          
+				          // Afficher les défenses du 12 mai
+				          const defenses12Mai = defensesWithSchedule.filter(e => 
+				            e.date_defense && e.date_defense.includes('2024-05-12')
+				          );
+				          console.log('Défenses du 12 mai:', defenses12Mai.length);
+				          defenses12Mai.forEach(e => {
+				            console.log(`${e.prenom} ${e.nom}: ${e.heure_defense}`, {
+				              guide: e.guide_prenom + ' ' + e.guide_nom,
+				              lecteur_interne: e.lecteur_interne_prenom + ' ' + e.lecteur_interne_nom,
+				              local: e.localisation_defense
+				            });
+				          });
+				        }}
+				        className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 text-sm"
+				      >
+				        Debug Conflits
+				      </button>
+				    </div>
+						
 						{(conflicts.guides.length > 0 || conflicts.lecteursInternes.length > 0 || 
 						  conflicts.lecteursExternes.length > 0 || conflicts.mediateurs.length > 0) && (
 						  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
@@ -2910,6 +2937,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
