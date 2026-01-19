@@ -163,11 +163,6 @@ export default function CoordinateurDashboard() {
 	  mediateurs: [],
 	  locaux: [],
 	  chevauchements: []
-	});>({
-	  guides: [],
-	  lecteursInternes: [],
-	  lecteursExternes: [],
-	  mediateurs: []
 	});
 	
 	const [displaySettings, setDisplaySettings] = useState({
@@ -2920,6 +2915,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
