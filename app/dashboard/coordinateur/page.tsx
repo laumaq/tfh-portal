@@ -2054,46 +2054,83 @@ export default function CoordinateurDashboard() {
         {activeTab === 'calendrier' && (
           <div className="space-y-6">
            
-            {(conflicts.guides.length > 0 || conflicts.lecteursInternes.length > 0 || 
-              conflicts.lecteursExternes.length > 0 || conflicts.mediateurs.length > 0) && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <h3 className="text-lg font-medium text-yellow-800 mb-2">⚠️ Conflits détectés</h3>
-                <div className="space-y-2">
-                  {conflicts.guides.map(({person, conflicts}) => (
-                    <div key={`guide-${person}`} className="text-sm">
-                      <span className="font-medium">Guide {person}:</span>{' '}
-                      {conflicts.map(c => 
-                        `${c.elevePrenom} ${c.eleveNom} (${c.date} ${c.startTime}-${c.endTime})`
-                      ).join(', ')}
-                    </div>
-                  ))}
-                  {conflicts.lecteursInternes.map(({person, conflicts}) => (
-                    <div key={`lecteur-int-${person}`} className="text-sm">
-                      <span className="font-medium">Lecteur interne {person}:</span>{' '}
-                      {conflicts.map(c => 
-                        `${c.elevePrenom} ${c.eleveNom} (${c.date} ${c.startTime}-${c.endTime})`
-                      ).join(', ')}
-                    </div>
-                  ))}
-                  {conflicts.lecteursExternes.map(({person, conflicts}) => (
-                    <div key={`lecteur-ext-${person}`} className="text-sm">
-                      <span className="font-medium">Lecteur externe {person}:</span>{' '}
-                      {conflicts.map(c => 
-                        `${c.elevePrenom} ${c.eleveNom} (${c.date} ${c.startTime}-${c.endTime})`
-                      ).join(', ')}
-                    </div>
-                  ))}
-                  {conflicts.mediateurs.map(({person, conflicts}) => (
-                    <div key={`mediateur-${person}`} className="text-sm">
-                      <span className="font-medium">Médiateur {person}:</span>{' '}
-                      {conflicts.map(c => 
-                        `${c.elevePrenom} ${c.eleveNom} (${c.date} ${c.startTime}-${c.endTime})`
-                      ).join(', ')}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+						{(conflicts.guides.length > 0 || conflicts.lecteursInternes.length > 0 || 
+						  conflicts.lecteursExternes.length > 0 || conflicts.mediateurs.length > 0) && (
+						  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+						    <h3 className="text-lg font-medium text-red-800 mb-3 flex items-center gap-2">
+						      ⚠️ Conflits d'emploi du temps détectés
+						    </h3>
+						    <div className="space-y-4">
+						      {conflicts.guides.map(({person, conflicts}) => (
+						        <div key={`guide-${person}`} className="text-sm">
+						          <div className="font-medium text-red-700 mb-1">Guide {person} :</div>
+						          <div className="pl-4 space-y-1">
+						            {conflicts.map(c => (
+						              <div key={c.id} className="flex items-center gap-2">
+						                <span className="text-red-600">•</span>
+						                <span>{c.elevePrenom} {c.eleveNom}</span>
+						                <span className="text-gray-500">
+						                  ({c.date} {c.startTime}-{c.endTime}, {c.location})
+						                </span>
+						              </div>
+						            ))}
+						          </div>
+						        </div>
+						      ))}
+						      
+						      {conflicts.lecteursInternes.map(({person, conflicts}) => (
+						        <div key={`lecteur-int-${person}`} className="text-sm">
+						          <div className="font-medium text-red-700 mb-1">Lecteur interne {person} :</div>
+						          <div className="pl-4 space-y-1">
+						            {conflicts.map(c => (
+						              <div key={c.id} className="flex items-center gap-2">
+						                <span className="text-red-600">•</span>
+						                <span>{c.elevePrenom} {c.eleveNom}</span>
+						                <span className="text-gray-500">
+						                  ({c.date} {c.startTime}-{c.endTime}, {c.location})
+						                </span>
+						              </div>
+						            ))}
+						          </div>
+						        </div>
+						      ))}
+						      
+						      {conflicts.lecteursExternes.map(({person, conflicts}) => (
+						        <div key={`lecteur-ext-${person}`} className="text-sm">
+						          <div className="font-medium text-red-700 mb-1">Lecteur externe {person} :</div>
+						          <div className="pl-4 space-y-1">
+						            {conflicts.map(c => (
+						              <div key={c.id} className="flex items-center gap-2">
+						                <span className="text-red-600">•</span>
+						                <span>{c.elevePrenom} {c.eleveNom}</span>
+						                <span className="text-gray-500">
+						                  ({c.date} {c.startTime}-{c.endTime}, {c.location})
+						                </span>
+						              </div>
+						            ))}
+						          </div>
+						        </div>
+						      ))}
+						      
+						      {conflicts.mediateurs.map(({person, conflicts}) => (
+						        <div key={`mediateur-${person}`} className="text-sm">
+						          <div className="font-medium text-red-700 mb-1">Médiateur {person} :</div>
+						          <div className="pl-4 space-y-1">
+						            {conflicts.map(c => (
+						              <div key={c.id} className="flex items-center gap-2">
+						                <span className="text-red-600">•</span>
+						                <span>{c.elevePrenom} {c.eleveNom}</span>
+						                <span className="text-gray-500">
+						                  ({c.date} {c.startTime}-{c.endTime}, {c.location})
+						                </span>
+						              </div>
+						            ))}
+						          </div>
+						        </div>
+						      ))}
+						    </div>
+						  </div>
+						)}
             
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-xl font-semibold text-gray-800 mb-4">Filtres du Calendrier</h2>
@@ -2873,5 +2910,6 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
