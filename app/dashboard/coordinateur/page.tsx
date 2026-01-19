@@ -82,7 +82,8 @@ interface DefenseEvent {
   lecteurExternePrenom: string;
   mediateurNom: string;
   mediateurPrenom: string;
-  categorie: string;
+  categorie: string;	
+  role?: 'guide' | 'lecteur_interne';
 }
 
 interface DayDefenses {
@@ -2980,3 +2981,4 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
