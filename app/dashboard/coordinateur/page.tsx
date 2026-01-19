@@ -93,6 +93,13 @@ interface DayDefenses {
   defenses: DefenseEvent[];
 }
 
+interface Conflict {
+  type: 'guide' | 'lecteur_interne' | 'lecteur_externe' | 'mediateur' | 'local';
+  personOrLocation: string;
+  conflictingDefenses: DefenseEvent[];
+  message: string;
+}
+
 interface ToggleSettingProps {
   label: string;
   checked: boolean;
@@ -156,14 +163,7 @@ export default function CoordinateurDashboard() {
   const [selectedCategory, setSelectedCategory] = useState<string>('toutes');
   const [dayDefenses, setDayDefenses] = useState<DayDefenses[]>([]);
 	const [calendarRefreshTrigger, setCalendarRefreshTrigger] = useState(0);
-	const [conflicts, setConflicts] = useState({
-	  guides: [],
-	  lecteursInternes: [],
-	  lecteursExternes: [],
-	  mediateurs: [],
-	  locaux: [],
-	  chevauchements: []
-	});
+	const [conflicts, setConflicts] = useState<Conflict[]>([]);
 	
 	const [displaySettings, setDisplaySettings] = useState({
 	  // Vue Lecteur Externe
@@ -1169,159 +1169,264 @@ export default function CoordinateurDashboard() {
   };
 
 	
-	const detectConflicts = (defenses: DefenseEvent[]) => {
-	  console.log('🔍 DÉTECTION DES CONFLITS - VERSION SIMPLIFIÉE');
+	const detectConflicts = (defenses: DefenseEvent[]): Conflict[] => {
+	  const conflicts: Conflict[] = [];
 	  
-	  // Fonction pour convertir HH:MM en minutes
-	  const timeToMinutes = (time: string): number => {
-	    if (!time) return 0;
-	    const parts = time.split(':');
-	    const hours = parseInt(parts[0]) || 0;
-	    const minutes = parseInt(parts[1]) || 0;
-	    return hours * 60 + minutes;
-	  };
-	
-	  // Fonction pour vérifier le chevauchement
-	  const hasTimeOverlap = (d1: DefenseEvent, d2: DefenseEvent): boolean => {
+	  // 1. Grouper les défenses par date + créneau horaire pour optimisation
+	  const defensesByDate = defenses.reduce((acc, defense) => {
+	    const key = `${defense.date}-${defense.startTime}`;
+	    if (!acc[key]) acc[key] = [];
+	    acc[key].push(defense);
+	    return acc;
+	  }, {} as Record<string, DefenseEvent[]>);
+	  
+	  // 2. Fonction utilitaire pour vérifier le chevauchement
+	  const hasOverlap = (d1: DefenseEvent, d2: DefenseEvent): boolean => {
 	    if (d1.date !== d2.date) return false;
 	    
-	    const start1 = timeToMinutes(d1.startTime);
-	    const end1 = timeToMinutes(d1.endTime);
-	    const start2 = timeToMinutes(d2.startTime);
-	    const end2 = timeToMinutes(d2.endTime);
+	    // Convertir en minutes pour comparaison
+	    const toMinutes = (time: string): number => {
+	      const [hours, minutes] = time.split(':').map(Number);
+	      return hours * 60 + minutes;
+	    };
 	    
+	    const start1 = toMinutes(d1.startTime);
+	    const end1 = toMinutes(d1.endTime);
+	    const start2 = toMinutes(d2.startTime);
+	    const end2 = toMinutes(d2.endTime);
+	    
+	    // Chevauchement si les intervalles se croisent
 	    return (start1 < end2 && start2 < end1);
 	  };
-	
-	  // Initialiser les résultats
-	  const allConflicts = {
-	    guides: [] as Array<{person: string, conflicts: DefenseEvent[]}>,
-	    lecteursInternes: [] as Array<{person: string, conflicts: DefenseEvent[]}>,
-	    lecteursExternes: [] as Array<{person: string, conflicts: DefenseEvent[]}>,
-	    mediateurs: [] as Array<{person: string, conflicts: DefenseEvent[]}>,
-	    locaux: [] as Array<{local: string, conflicts: DefenseEvent[]}>,
-	    chevauchements: [] as Array<{description: string, conflicts: DefenseEvent[]}>
-	  };
-	
-	  // 1. Détecter les conflits de personnes (guides, lecteurs internes, etc.)
-	  const detectPersonConflicts = (type: string, getName: (d: DefenseEvent) => string | null) => {
-	    const conflictsMap = new Map<string, DefenseEvent[]>();
+	  
+	  // 3. Détecter les conflits pour chaque rôle
+	  const roles = ['guide', 'lecteur_interne', 'lecteur_externe', 'mediateur'] as const;
+	  
+	  roles.forEach(role => {
+	    const roleDefensesMap = new Map<string, DefenseEvent[]>();
 	    
-	    for (let i = 0; i < defenses.length; i++) {
-	      for (let j = i + 1; j < defenses.length; j++) {
-	        const d1 = defenses[i];
-	        const d2 = defenses[j];
-	        
-	        const name1 = getName(d1);
-	        const name2 = getName(d2);
-	        
-	        if (name1 && name2 && name1 === name2 && hasTimeOverlap(d1, d2)) {
-	          const existing = conflictsMap.get(name1) || [];
-	          if (!existing.find(d => d.id === d1.id)) existing.push(d1);
-	          if (!existing.find(d => d.id === d2.id)) existing.push(d2);
-	          conflictsMap.set(name1, existing);
-	        }
+	    // Grouper par personne pour ce rôle
+	    defenses.forEach(defense => {
+	      let personKey = '';
+	      
+	      switch(role) {
+	        case 'guide':
+	          personKey = `${defense.guidePrenom} ${defense.guideNom}`;
+	          break;
+	        case 'lecteur_interne':
+	          personKey = `${defense.lecteurInternePrenom} ${defense.lecteurInterneNom}`;
+	          break;
+	        case 'lecteur_externe':
+	          personKey = `${defense.lecteurExternePrenom} ${defense.lecteurExterneNom}`;
+	          break;
+	        case 'mediateur':
+	          personKey = `${defense.mediateurPrenom} ${defense.mediateurNom}`;
+	          break;
 	      }
-	    }
+	      
+	      // Ignorer les valeurs par défaut
+	      if (personKey.trim() === '- -' || !personKey.trim()) return;
+	      
+	      if (!roleDefensesMap.has(personKey)) {
+	        roleDefensesMap.set(personKey, []);
+	      }
+	      roleDefensesMap.get(personKey)!.push(defense);
+	    });
 	    
-	    // Ajouter au résultat selon le type
-	    conflictsMap.forEach((conflicts, person) => {
-	      if (conflicts.length >= 2) {
-	        const typedConflicts = conflicts.sort((a, b) => a.startTime.localeCompare(b.startTime));
+	    // Vérifier les chevauchements pour chaque personne
+	    roleDefensesMap.forEach((personDefenses, person) => {
+	      if (personDefenses.length < 2) return;
+	      
+	      // Trier par date et heure
+	      personDefenses.sort((a, b) => {
+	        if (a.date !== b.date) return a.date.localeCompare(b.date);
+	        return a.startTime.localeCompare(b.startTime);
+	      });
+	      
+	      // Vérifier les chevauchements consécutifs
+	      for (let i = 0; i < personDefenses.length; i++) {
+	        const current = personDefenses[i];
+	        const overlapping: DefenseEvent[] = [current];
 	        
-	        if (type === 'guides') {
-	          allConflicts.guides.push({ person, conflicts: typedConflicts });
-	        } else if (type === 'lecteursInternes') {
-	          allConflicts.lecteursInternes.push({ person, conflicts: typedConflicts });
-	        } else if (type === 'lecteursExternes') {
-	          allConflicts.lecteursExternes.push({ person, conflicts: typedConflicts });
-	        } else if (type === 'mediateurs') {
-	          allConflicts.mediateurs.push({ person, conflicts: typedConflicts });
+	        for (let j = i + 1; j < personDefenses.length; j++) {
+	          const next = personDefenses[j];
+	          
+	          if (hasOverlap(current, next)) {
+	            overlapping.push(next);
+	          } else {
+	            // Pas de chevauchement, on arrête
+	            break;
+	          }
+	        }
+	        
+	        if (overlapping.length >= 2) {
+	          // Éviter les doublons
+	          const existingConflict = conflicts.find(c => 
+	            c.type === role && 
+	            c.personOrLocation === person &&
+	            c.conflictingDefenses.length === overlapping.length &&
+	            c.conflictingDefenses.every(d => overlapping.includes(d))
+	          );
+	          
+	          if (!existingConflict) {
+	            conflicts.push({
+	              type: role as Conflict['type'],
+	              personOrLocation: person,
+	              conflictingDefenses: [...overlapping], // Copie
+	              message: `${role === 'guide' ? '🧑‍🏫 Guide' : 
+	                       role === 'lecteur_interne' ? '📖 Lecteur interne' : 
+	                       role === 'lecteur_externe' ? '👨‍💼 Lecteur externe' : '⚖️ Médiateur'} 
+	                       "${person}" a ${overlapping.length} TFH qui se chevauchent`
+	            });
+	            
+	            // Avancer l'index i pour éviter les conflits redondants
+	            i += overlapping.length - 1;
+	          }
 	        }
 	      }
 	    });
-	  };
-	
-	  // Détecter pour chaque rôle
-	  detectPersonConflicts('guides', (d) => 
-	    d.guideNom !== '-' ? `${d.guidePrenom} ${d.guideNom}` : null
-	  );
+	  });
 	  
-	  detectPersonConflicts('lecteursInternes', (d) => 
-	    d.lecteurInterneNom !== '-' ? `${d.lecteurInternePrenom} ${d.lecteurInterneNom}` : null
-	  );
+	  // 4. Détecter les conflits de locaux
+	  const localDefensesMap = new Map<string, DefenseEvent[]>();
 	  
-	  detectPersonConflicts('lecteursExternes', (d) => 
-	    d.lecteurExterneNom !== '-' ? `${d.lecteurExternePrenom} ${d.lecteurExterneNom}` : null
-	  );
-	  
-	  detectPersonConflicts('mediateurs', (d) => 
-	    d.mediateurNom !== '-' ? `${d.mediateurPrenom} ${d.mediateurNom}` : null
-	  );
-	
-	  // 2. Détecter les conflits de locaux
-	  const localConflicts = new Map<string, DefenseEvent[]>();
-	  
-	  for (let i = 0; i < defenses.length; i++) {
-	    for (let j = i + 1; j < defenses.length; j++) {
-	      const d1 = defenses[i];
-	      const d2 = defenses[j];
-	      
-	      if (d1.location && d1.location !== 'Non défini' && 
-	          d1.location === d2.location && 
-	          hasTimeOverlap(d1, d2)) {
-	        const existing = localConflicts.get(d1.location) || [];
-	        if (!existing.find(d => d.id === d1.id)) existing.push(d1);
-	        if (!existing.find(d => d.id === d2.id)) existing.push(d2);
-	        localConflicts.set(d1.location, existing);
+	  defenses.forEach(defense => {
+	    if (defense.location && defense.location !== 'Non défini') {
+	      if (!localDefensesMap.has(defense.location)) {
+	        localDefensesMap.set(defense.location, []);
 	      }
-	    }
-	  }
-	  
-	  localConflicts.forEach((conflicts, local) => {
-	    if (conflicts.length >= 2) {
-	      allConflicts.locaux.push({
-	        local,
-	        conflicts: conflicts.sort((a, b) => a.startTime.localeCompare(b.startTime))
-	      });
+	      localDefensesMap.get(defense.location)!.push(defense);
 	    }
 	  });
-	
-	  // 3. Détecter les chevauchements généraux (pour debug)
-	  const overlapConflicts = new Map<string, DefenseEvent[]>();
 	  
-	  for (let i = 0; i < defenses.length; i++) {
-	    for (let j = i + 1; j < defenses.length; j++) {
-	      const d1 = defenses[i];
-	      const d2 = defenses[j];
+	  localDefensesMap.forEach((localDefenses, location) => {
+	    if (localDefenses.length < 2) return;
+	    
+	    // Trier par date et heure
+	    localDefenses.sort((a, b) => {
+	      if (a.date !== b.date) return a.date.localeCompare(b.date);
+	      return a.startTime.localeCompare(b.startTime);
+	    });
+	    
+	    for (let i = 0; i < localDefenses.length; i++) {
+	      const current = localDefenses[i];
+	      const overlapping: DefenseEvent[] = [current];
 	      
-	      if (d1.date === d2.date && hasTimeOverlap(d1, d2)) {
-	        const key = `${d1.date} ${Math.min(timeToMinutes(d1.startTime), timeToMinutes(d2.startTime))}`;
-	        const existing = overlapConflicts.get(key) || [];
-	        if (!existing.find(d => d.id === d1.id)) existing.push(d1);
-	        if (!existing.find(d => d.id === d2.id)) existing.push(d2);
-	        overlapConflicts.set(key, existing);
+	      for (let j = i + 1; j < localDefenses.length; j++) {
+	        const next = localDefenses[j];
+	        
+	        if (hasOverlap(current, next)) {
+	          overlapping.push(next);
+	        } else {
+	          break;
+	        }
+	      }
+	      
+	      if (overlapping.length >= 2) {
+	        const existingConflict = conflicts.find(c => 
+	          c.type === 'local' && 
+	          c.personOrLocation === location &&
+	          c.conflictingDefenses.length === overlapping.length &&
+	          c.conflictingDefenses.every(d => overlapping.includes(d))
+	        );
+	        
+	        if (!existingConflict) {
+	          conflicts.push({
+	            type: 'local',
+	            personOrLocation: location,
+	            conflictingDefenses: [...overlapping],
+	            message: `📍 Local "${location}" utilisé pour ${overlapping.length} TFH simultanément`
+	          });
+	          
+	          i += overlapping.length - 1;
+	        }
 	      }
 	    }
-	  }
-	  
-	  overlapConflicts.forEach((conflicts) => {
-	    if (conflicts.length >= 2) {
-	      const first = conflicts[0];
-	      allConflicts.chevauchements.push({
-	        description: `Chevauchement le ${first.date} ${first.startTime}`,
-	        conflicts: conflicts.sort((a, b) => a.startTime.localeCompare(b.startTime))
-	      });
-	    }
 	  });
-	
-	  // Log pour debug
-	  console.log('📊 RÉSULTATS DE LA DÉTECTION :');
-	  console.log('- Guides en conflit:', allConflicts.guides.length);
-	  console.log('- Lecteurs internes en conflit:', allConflicts.lecteursInternes.length);
-	  console.log('- Conflits de locaux:', allConflicts.locaux.length);
 	  
-	  return allConflicts;
+	  // 5. Trier les conflits par gravité (nombre de défenses en conflit)
+	  return conflicts.sort((a, b) => b.conflictingDefenses.length - a.conflictingDefenses.length);
+	};
+	
+	// Composant d'affichage des conflits
+	const ConflictDisplay = ({ conflicts }: { conflicts: Conflict[] }) => {
+	  if (conflicts.length === 0) return null;
+	  
+	  return (
+	    <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+	      <h3 className="text-lg font-medium text-red-800 mb-3 flex items-center gap-2">
+	        ⚠️ {conflicts.length} conflit{conflicts.length > 1 ? 's' : ''} détecté{conflicts.length > 1 ? 's' : ''}
+	      </h3>
+	      
+	      <div className="space-y-4">
+	        {conflicts.map((conflict, index) => (
+	          <div key={index} className="text-sm border-l-4 border-red-400 pl-3">
+	            <div className="font-medium text-red-700 mb-2">
+	              {conflict.message}
+	            </div>
+	            
+	            <div className="pl-2 space-y-1">
+	              {conflict.conflictingDefenses.map(defense => {
+	                const duration = `${defense.startTime.substring(0, 5)}-${defense.endTime.substring(0, 5)}`;
+	                const date = new Date(defense.date).toLocaleDateString('fr-FR', {
+	                  weekday: 'short',
+	                  day: 'numeric',
+	                  month: 'short'
+	                });
+	                
+	                return (
+	                  <div key={defense.id} className="flex flex-wrap items-start gap-2 text-gray-700">
+	                    <span className="font-medium min-w-[120px]">
+	                      {defense.elevePrenom} {defense.eleveNom}
+	                    </span>
+	                    <span className="text-gray-500 text-xs">
+	                      {date} {duration} • {defense.location}
+	                    </span>
+	                    
+	                    {/* Afficher les rôles concernés */}
+	                    <div className="flex flex-wrap gap-1 mt-1 text-xs">
+	                      {conflict.type === 'guide' && (
+	                        <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
+	                          Guide
+	                        </span>
+	                      )}
+	                      {conflict.type === 'lecteur_interne' && (
+	                        <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded">
+	                          Lecteur interne
+	                        </span>
+	                      )}
+	                      {conflict.type === 'lecteur_externe' && (
+	                        <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded">
+	                          Lecteur externe
+	                        </span>
+	                      )}
+	                      {conflict.type === 'mediateur' && (
+	                        <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">
+	                          Médiateur
+	                        </span>
+	                      )}
+	                      {conflict.type === 'local' && (
+	                        <span className="bg-gray-100 text-gray-800 px-2 py-0.5 rounded">
+	                          Local
+	                        </span>
+	                      )}
+	                    </div>
+	                  </div>
+	                );
+	              })}
+	            </div>
+	          </div>
+	        ))}
+	      </div>
+	      
+	      <div className="mt-4 pt-3 border-t border-red-200">
+	        <p className="text-xs text-red-600">
+	          ℹ️ Un conflit survient quand une même personne ou local est assigné à plusieurs TFH
+	          se déroulant au même moment.
+	        </p>
+	      </div>
+	    </div>
+	  );
 	};
   
 
@@ -1404,8 +1509,8 @@ export default function CoordinateurDashboard() {
 	  
 	  // Détecter les conflits
 		const detectedConflicts = detectConflicts(filteredDefenses);
-  	console.log('🔍 Conflits détectés:', detectedConflicts);
-  	setConflicts(detectedConflicts);
+	  console.log('🔍 Conflits détectés:', detectedConflicts);
+	  setConflicts(detectedConflicts);
 	  
 	  // Grouper par date
 	  const dates = Array.from(new Set(filteredDefenses.map(d => d.date))).sort();
@@ -2092,57 +2197,7 @@ export default function CoordinateurDashboard() {
 
         {activeTab === 'calendrier' && (
           <div className="space-y-6">						
-			{(conflicts.guides.length > 0 || conflicts.lecteursInternes.length > 0 || 
-			  conflicts.lecteursExternes.length > 0 || conflicts.mediateurs.length > 0) && (
-			  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-			    <h3 className="text-lg font-medium text-red-800 mb-3 flex items-center gap-2">
-			      ⚠️ Conflits d'emploi du temps détectés
-			    </h3>
-			    <div className="space-y-4">
-			      
-			      {/* Conflits de guides */}
-			      {conflicts.guides.map(({person, conflicts}) => (
-			        <div key={`guide-${person}`} className="text-sm">
-			          <div className="font-medium text-red-700 mb-1">
-			            🧑‍🏫 Guide {person} a {conflicts.length} TFH qui se chevauchent :
-			          </div>
-			          <div className="pl-4 space-y-1">
-			            {conflicts.map(c => (
-			              <div key={c.id} className="flex items-center gap-2">
-			                <span className="text-red-600">•</span>
-			                <span className="font-medium">{c.elevePrenom} {c.eleveNom}</span>
-			                <span className="text-gray-500">
-			                  ({c.date} {c.startTime}-{c.endTime}, {c.location})
-			                </span>
-			              </div>
-			            ))}
-			          </div>
-			        </div>
-			      ))}
-			      
-			      {/* Conflits de lecteurs internes */}
-			      {conflicts.lecteursInternes.map(({person, conflicts}) => (
-			        <div key={`lecteur-int-${person}`} className="text-sm">
-			          <div className="font-medium text-red-700 mb-1">
-			            📖 Lecteur interne {person} a {conflicts.length} TFH qui se chevauchent :
-			          </div>
-			          <div className="pl-4 space-y-1">
-			            {conflicts.map(c => (
-			              <div key={c.id} className="flex items-center gap-2">
-			                <span className="text-red-600">•</span>
-			                <span className="font-medium">{c.elevePrenom} {c.eleveNom}</span>
-			                <span className="text-gray-500">
-			                  ({c.date} {c.startTime}-{c.endTime}, {c.location})
-			                </span>
-			              </div>
-			            ))}
-			          </div>
-			        </div>
-			      ))}
-			      
-			    </div>
-			  </div>
-			)}
+						{conflicts.length > 0 && <ConflictDisplay conflicts={conflicts} />}
             
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-xl font-semibold text-gray-800 mb-4">Filtres du Calendrier</h2>
@@ -2922,6 +2977,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
