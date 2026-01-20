@@ -337,7 +337,6 @@ export default function CoordinateurDashboard() {
   
   const loadData = async () => {
     try {
-			console.log('=== CHARGEMENT DES DONNÉES ===');
       // Charger les guides triés par nom
       const { data: guidesData, error: guidesError } = await supabase
         .from('guides')
@@ -361,7 +360,6 @@ export default function CoordinateurDashboard() {
         .select('id, nom, prenom, email');
 
       if (mediateursError) {
-        console.warn('Table médiateurs non trouvée ou erreur:', mediateursError);
         setMediateurs([]);
       } else {
         setMediateurs(mediateursData || []);
@@ -373,7 +371,6 @@ export default function CoordinateurDashboard() {
         .select('id, nom, prenom, initiale');
 
       if (coordinateursError) {
-        console.warn('Table coordinateurs non trouvée ou erreur:', coordinateursError);
         setCoordinateurs([]);
       } else {
         setCoordinateurs(coordinateursData || []);
@@ -394,18 +391,10 @@ export default function CoordinateurDashboard() {
 	
 	    if (elevesError) throw elevesError;
 	
-	    console.log(`Données brutes reçues: ${elevesData?.length || 0} élèves`);
 	    
 	    // Vérifier les données d'un élève spécifique
 	    if (elevesData && elevesData.length > 0) {
 	      const testEleve = elevesData[0];
-	      console.log('Test élève #1:', {
-	        id: testEleve.id,
-	        nom: testEleve.nom,
-	        date_defense: testEleve.date_defense,
-	        heure_defense: testEleve.heure_defense,
-	        localisation_defense: testEleve.localisation_defense
-	      });
 	    }
 
       const elevesFormatted = (elevesData || []).map(eleve => ({
@@ -521,8 +510,6 @@ export default function CoordinateurDashboard() {
 	    const updateData: any = {};
 	    updateData[field] = value === '' ? null : value;
 	
-	    console.log(`📝 Mise à jour ${field} pour élève ${eleveId}:`, value);
-	
 	    // 1. Mise à jour IMMÉDIATE de l'état local
 	    const updatedEleves = eleves.map(eleve => 
 	      eleve.id === eleveId ? { ...eleve, [field]: value === '' ? null : value } : eleve
@@ -540,7 +527,6 @@ export default function CoordinateurDashboard() {
 	
 	    if (error) throw error;
 	
-	    console.log('✅ Mise à jour réussie');
 	
 	    // 3. Vérifier si c'est un champ qui affecte le calendrier
 	    const isDefenseField = field.includes('date_defense') || 
@@ -552,7 +538,6 @@ export default function CoordinateurDashboard() {
 	                          field.includes('mediateur_id');
 	
 	    if (isDefenseField) {
-	      console.log('🔄 Champ de défense modifié -> rafraîchissement calendrier');
 	      setCalendarRefreshTrigger(prev => prev + 1);
 	    }
 	    
@@ -574,12 +559,10 @@ export default function CoordinateurDashboard() {
     rows.forEach(row => {
       const values = row.split(',').map(v => v.trim());
       if (values.length >= 3) {
-        console.log(`Import: ${values[0]}, ${values[1]}, ${values[2]}`);
         count++;
       }
     });
     
-    console.log(`Total: ${count} lignes détectées`);
     
     // Ensuite appelez handleMassImport() qui traitera ces données
     handleMassImport();
@@ -610,10 +593,8 @@ export default function CoordinateurDashboard() {
 	
 	    if (error) throw error;
 	
-	    console.log(`✅ Mise à jour ${field} réussie`);
 	
 	    // 3. TOUJOURS rafraîchir le calendrier pour ces champs
-	    console.log(`🔄 Champ ${field} modifié -> rafraîchissement calendrier`);
 	    setCalendarRefreshTrigger(prev => prev + 1);
 	    
 	  } catch (err) {
@@ -1107,29 +1088,22 @@ export default function CoordinateurDashboard() {
     
     switch (selectedUserType) {
       case 'eleves':
-        console.log('Retourne élèves:', eleves);
         return eleves;
       case 'guides':
-        console.log('Retourne guides:', guides);
         return guides;
       case 'lecteurs-externes':
-        console.log('Retourne lecteurs externes:', lecteursExternes);
         return lecteursExternes;
       case 'mediateurs':
-        console.log('Retourne médiateurs:', mediateurs);
         return mediateurs;
       case 'coordinateurs':
-        console.log('Retourne coordinateurs:', coordinateurs);
         return coordinateurs;
       default:
-        console.log('Type inconnu, retourne tableau vide');
         return [];
     }
   };
 
   const getCurrentUserCount = () => {
     const users = getCurrentUsers();
-    console.log('Nombre d\'utilisateurs à afficher:', users.length);
     return users.length;
   };
 
@@ -1438,19 +1412,14 @@ export default function CoordinateurDashboard() {
   
 
 	const prepareCalendarData = useCallback(() => {
-	  console.log('=== PRÉPARATION CALENDRIER (version FORCÉE) ===');
-	  console.log('Nombre total d\'élèves:', eleves.length);
 	  
 	  // Filtrer les élèves avec une date et heure de défense
 	  const defensesWithSchedule = eleves.filter(e => 
 	    e.date_defense && e.heure_defense
 	  );
-	  
-	  console.log(`Élèves avec défense programmée: ${defensesWithSchedule.length}`);
-	  
+	   
 	  // Afficher les 5 premières pour vérifier
 	  if (defensesWithSchedule.length > 0) {
-	    console.log('Exemple de défenses (5 premières):', 
 	      defensesWithSchedule.slice(0, 5).map(e => ({
 	        nom: e.nom,
 	        date: e.date_defense,
@@ -1485,18 +1454,7 @@ export default function CoordinateurDashboard() {
 	      categorie: eleve.categorie || 'Non catégorisé'
 	    };
 	  });
-	  
-	  console.log('📅 Défenses transformées:', defenseEvents.length);
-	  if (defenseEvents.length > 0) {
-	    console.log('Exemple de défense:', {
-	      id: defenseEvents[0].id,
-	      date: defenseEvents[0].date,
-	      time: defenseEvents[0].startTime + '-' + defenseEvents[0].endTime,
-	      guide: defenseEvents[0].guidePrenom + ' ' + defenseEvents[0].guideNom,
-	      lecteurInterne: defenseEvents[0].lecteurInternePrenom + ' ' + defenseEvents[0].lecteurInterneNom
-	    });
-	  }
-	  
+	    
 	  // Appliquer les filtres
 	  let filteredDefenses = defenseEvents;
 	  
@@ -1512,11 +1470,9 @@ export default function CoordinateurDashboard() {
 	    filteredDefenses = filteredDefenses.filter(d => selectedLocations.includes(d.location));
 	  }
 	  
-	  console.log(`Défenses après filtrage: ${filteredDefenses.length}`);
-	  
+  
 	  // Détecter les conflits
 		const detectedConflicts = detectConflicts(filteredDefenses);
-	  console.log('🔍 Conflits détectés:', detectedConflicts);
 	  setConflicts(detectedConflicts);
 	  
 	  // Grouper par date
@@ -1539,15 +1495,12 @@ export default function CoordinateurDashboard() {
 	    };
 	  });
 	  
-	  console.log(`Jours avec défenses: ${daysData.length}`);
 	  
 	  // **TOUJOURS mettre à jour** (évite les problèmes de comparaison)
 	  setDayDefenses(daysData);
-	  console.log('Calendrier mis à jour (forcé)');
 	}, [eleves, selectedCategory, selectedDates, selectedLocations]);
 	
 	const refreshCalendar = () => {
-	  console.log('Rafraîchissement manuel du calendrier');
 	  loadData(); // Recharger toutes les données
 	  setTimeout(() => {
 	    prepareCalendarData();
@@ -1556,7 +1509,6 @@ export default function CoordinateurDashboard() {
 
 	useEffect(() => {
 	  if (eleves.length > 0) {
-	    console.log('Rafraîchissement calendrier déclenché');
 	    prepareCalendarData();
 	  }
 	}, [eleves, selectedDates, selectedLocations, selectedCategory, calendarRefreshTrigger, prepareCalendarData]);
@@ -2971,6 +2923,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
