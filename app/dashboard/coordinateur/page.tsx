@@ -320,7 +320,7 @@ export default function CoordinateurDashboard() {
 	        // Petit délai pour être sûr que le DOM est prêt
 	        setTimeout(() => {
 	          msg.classList.remove('hidden');
-	        }, 300);
+	        }, 1000);
 	      }
 	    }
 	  };
@@ -2973,6 +2973,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
