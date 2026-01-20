@@ -209,8 +209,8 @@ export default function CoordinateurDashboard() {
   const [userName, setUserName] = useState('');
   const [showConvoques, setShowConvoques] = useState(false);
   const [editingCell, setEditingCell] = useState<{id: string, field: string} | null>(null);
-  const [isLandscape, setIsLandscape] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabType>('convocations');
+	const [hasShownOrientationWarning, setHasShownOrientationWarning] = useState(false);
+	const [activeTab, setActiveTab] = useState<TabType>('convocations');
   const [editingModeConvocations, setEditingModeConvocations] = useState(false);
   const [editingModeDefenses, setEditingModeDefenses] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
@@ -300,18 +300,23 @@ export default function CoordinateurDashboard() {
     setUserName(name || '');
     loadData();
     
-    checkAndForceLandscape();
-    
-    window.addEventListener('resize', checkAndForceLandscape);
-    window.addEventListener('orientationchange', checkAndForceLandscape);
-		
 		loadSystemSettings();
 		loadDisplaySettings();
+
+		if (typeof window !== 'undefined') {
+	    const isMobile = window.innerWidth <= 768;
+	    const isPortrait = window.innerHeight > window.innerWidth;
+	    
+	    if (isMobile && isPortrait && !hasShownOrientationWarning) {
+	      // Afficher le message une seule fois
+	      const landscapeMsg = document.getElementById('landscape-message');
+	      if (landscapeMsg) {
+	        landscapeMsg.classList.remove('hidden');
+	        setHasShownOrientationWarning(true);
+	      }
+	    }
+	  }
 		
-    return () => {
-      window.removeEventListener('resize', checkAndForceLandscape);
-      window.removeEventListener('orientationchange', checkAndForceLandscape);
-    };
   }, [router]);
 	
   const pluralize = (count: number, singular: string, plural: string) => {
@@ -1569,27 +1574,27 @@ export default function CoordinateurDashboard() {
     return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
       {/* Message pour le mode paysage sur mobile */}
-      <div 
-        id="landscape-message" 
-        className="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
-      >
-        <div className="bg-white rounded-lg p-6 max-w-sm text-center">
-          <div className="text-4xl mb-4">↻</div>
-          <h3 className="text-lg font-semibold mb-2">Pivotez votre appareil</h3>
-          <p className="text-gray-600 mb-4">
-            Pour une meilleure expérience, veuillez utiliser votre téléphone en mode paysage.
-          </p>
-          <button
-            onClick={() => {
-              const msg = document.getElementById('landscape-message');
-              if (msg) msg.classList.add('hidden');
-            }}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            J'ai compris
-          </button>
-        </div>
-      </div>
+			<div 
+			  id="landscape-message" 
+			  className="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
+			>
+			  <div className="bg-white rounded-lg p-6 max-w-sm text-center">
+			    <div className="text-4xl mb-4">↻</div>
+			    <h3 className="text-lg font-semibold mb-2">Pivotez votre appareil</h3>
+			    <p className="text-gray-600 mb-4">
+			      Pour une meilleure expérience, utilisez votre téléphone en mode paysage.
+			    </p>
+			    <button
+			      onClick={() => {
+			        const msg = document.getElementById('landscape-message');
+			        if (msg) msg.classList.add('hidden');
+			      }}
+			      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+			    >
+			      J'ai compris
+			    </button>
+			  </div>
+			</div>
 
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
@@ -2985,6 +2990,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
