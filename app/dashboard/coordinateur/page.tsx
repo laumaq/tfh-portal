@@ -2717,7 +2717,7 @@ export default function CoordinateurDashboard() {
 				
               <div className="border border-blue-200 rounded-lg p-6 mb-8">
                 <h3 className="text-lg font-medium text-gray-700 mb-4 flex items-center gap-2">
-                  <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">⚙️</span>
+                  <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">🚦</span>
                   Autorisations
                 </h3>
                 
@@ -2985,5 +2985,6 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
