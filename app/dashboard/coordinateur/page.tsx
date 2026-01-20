@@ -304,35 +304,34 @@ export default function CoordinateurDashboard() {
 	  
 	  setUserName(name || '');
 	  loadData();
-	  
 	  loadSystemSettings();
 	  loadDisplaySettings();
 	
-	  // Vérification pour afficher le message
-	  if (typeof window !== 'undefined') {
+	  // SIMPLE VÉRIFICATION POUR LE MESSAGE PAYSAGE
+	  const showLandscapeMessage = () => {
+	    if (typeof window === 'undefined') return;
+	    
 	    const isMobile = window.innerWidth <= 768;
 	    const isPortrait = window.innerHeight > window.innerWidth;
-	    const hasAlreadyShown = localStorage.getItem('hasShownOrientationWarning') === 'true';
 	    
-	    console.log('Vérification orientation:', {
-	      isMobile,
-	      isPortrait,
-	      hasAlreadyShown,
-	      hasShownWarning: hasShownOrientationWarning
-	    });
-	    
-	    if (isMobile && isPortrait && !hasAlreadyShown) {
-	      console.log('Afficher message paysage');
-	      // Afficher le message une seule fois
-	      const landscapeMsg = document.getElementById('landscape-message');
-	      if (landscapeMsg) {
+	    if (isMobile && isPortrait) {
+	      const msg = document.getElementById('landscape-message');
+	      if (msg) {
+	        // Petit délai pour être sûr que le DOM est prêt
 	        setTimeout(() => {
-	          landscapeMsg.classList.remove('hidden');
-	        }, 100); // Petit délai pour assurer le rendu
+	          msg.classList.remove('hidden');
+	        }, 300);
 	      }
 	    }
+	  };
+	
+	  // Vérifier quand la page est chargée
+	  if (document.readyState === 'complete') {
+	    showLandscapeMessage();
+	  } else {
+	    window.addEventListener('load', showLandscapeMessage);
 	  }
-	  
+	
 	}, [router]);
 	
   const pluralize = (count: number, singular: string, plural: string) => {
@@ -1575,7 +1574,7 @@ export default function CoordinateurDashboard() {
 
     return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
-      {/* Message pour le mode paysage sur mobile */}
+			{/* Message paysage sur mobile */}
 			<div 
 			  id="landscape-message" 
 			  className="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
@@ -1586,20 +1585,15 @@ export default function CoordinateurDashboard() {
 			    <p className="text-gray-600 mb-4">
 			      Pour une meilleure expérience, utilisez votre téléphone en mode paysage.
 			    </p>
-						<button
-						  onClick={() => {
-						    const msg = document.getElementById('landscape-message');
-						    if (msg) {
-						      msg.classList.add('hidden');
-						      // Sauvegarder dans localStorage que l'utilisateur a vu le message
-						      localStorage.setItem('hasShownOrientationWarning', 'true');
-						      setHasShownOrientationWarning(true);
-						    }
-						  }}
-						  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-						>
-						  J'ai compris
-						</button>
+			    <button
+			      onClick={() => {
+			        const msg = document.getElementById('landscape-message');
+			        if (msg) msg.classList.add('hidden');
+			      }}
+			      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 w-full"
+			    >
+			      J'ai compris
+			    </button>
 			  </div>
 			</div>
 
@@ -2979,6 +2973,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
