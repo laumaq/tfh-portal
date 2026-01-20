@@ -1410,24 +1410,11 @@ export default function CoordinateurDashboard() {
 	  return conflicts.sort((a, b) => b.conflictingDefenses.length - a.conflictingDefenses.length);
 	};
   
-
 	const prepareCalendarData = useCallback(() => {
-	  
 	  // Filtrer les élèves avec une date et heure de défense
 	  const defensesWithSchedule = eleves.filter(e => 
 	    e.date_defense && e.heure_defense
 	  );
-	   
-	  // Afficher les 5 premières pour vérifier
-	  if (defensesWithSchedule.length > 0) {
-	      defensesWithSchedule.slice(0, 5).map(e => ({
-	        nom: e.nom,
-	        date: e.date_defense,
-	        heure: e.heure_defense,
-	        local: e.localisation_defense
-	      }))
-	    );
-	  }
 	  
 	  // Transformer en DefenseEvent
 	  const defenseEvents: DefenseEvent[] = defensesWithSchedule.map(eleve => {
@@ -1454,7 +1441,7 @@ export default function CoordinateurDashboard() {
 	      categorie: eleve.categorie || 'Non catégorisé'
 	    };
 	  });
-	    
+	  
 	  // Appliquer les filtres
 	  let filteredDefenses = defenseEvents;
 	  
@@ -1470,9 +1457,8 @@ export default function CoordinateurDashboard() {
 	    filteredDefenses = filteredDefenses.filter(d => selectedLocations.includes(d.location));
 	  }
 	  
-  
 	  // Détecter les conflits
-		const detectedConflicts = detectConflicts(filteredDefenses);
+	  const detectedConflicts = detectConflicts(filteredDefenses);
 	  setConflicts(detectedConflicts);
 	  
 	  // Grouper par date
@@ -1494,7 +1480,6 @@ export default function CoordinateurDashboard() {
 	      defenses: dateDefenses.sort((a, b) => a.startTime.localeCompare(b.startTime))
 	    };
 	  });
-	  
 	  
 	  // **TOUJOURS mettre à jour** (évite les problèmes de comparaison)
 	  setDayDefenses(daysData);
@@ -2923,6 +2908,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
