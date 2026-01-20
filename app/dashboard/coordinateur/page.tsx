@@ -209,7 +209,12 @@ export default function CoordinateurDashboard() {
   const [userName, setUserName] = useState('');
   const [showConvoques, setShowConvoques] = useState(false);
   const [editingCell, setEditingCell] = useState<{id: string, field: string} | null>(null);
-	const [hasShownOrientationWarning, setHasShownOrientationWarning] = useState(false);
+	const [hasShownOrientationWarning, setHasShownOrientationWarning] = useState(() => {
+	  if (typeof window !== 'undefined') {
+	    return localStorage.getItem('hasShownOrientationWarning') === 'true';
+	  }
+	  return false;
+	});	
 	const [activeTab, setActiveTab] = useState<TabType>('convocations');
   const [editingModeConvocations, setEditingModeConvocations] = useState(false);
   const [editingModeDefenses, setEditingModeDefenses] = useState(false);
@@ -287,37 +292,48 @@ export default function CoordinateurDashboard() {
       color: 'bg-orange-100 text-orange-800 border-orange-200'
     }
   ];
-
-  useEffect(() => {
-    const userType = localStorage.getItem('userType');
-    const name = localStorage.getItem('userName');
-    
-    if (userType !== 'coordinateur') {
-      router.push('/');
-      return;
-    }
-    
-    setUserName(name || '');
-    loadData();
-    
-		loadSystemSettings();
-		loadDisplaySettings();
-
-		if (typeof window !== 'undefined') {
+	
+	useEffect(() => {
+	  const userType = localStorage.getItem('userType');
+	  const name = localStorage.getItem('userName');
+	  
+	  if (userType !== 'coordinateur') {
+	    router.push('/');
+	    return;
+	  }
+	  
+	  setUserName(name || '');
+	  loadData();
+	  
+	  loadSystemSettings();
+	  loadDisplaySettings();
+	
+	  // Vérification pour afficher le message
+	  if (typeof window !== 'undefined') {
 	    const isMobile = window.innerWidth <= 768;
 	    const isPortrait = window.innerHeight > window.innerWidth;
+	    const hasAlreadyShown = localStorage.getItem('hasShownOrientationWarning') === 'true';
 	    
-	    if (isMobile && isPortrait && !hasShownOrientationWarning) {
+	    console.log('Vérification orientation:', {
+	      isMobile,
+	      isPortrait,
+	      hasAlreadyShown,
+	      hasShownWarning: hasShownOrientationWarning
+	    });
+	    
+	    if (isMobile && isPortrait && !hasAlreadyShown) {
+	      console.log('Afficher message paysage');
 	      // Afficher le message une seule fois
 	      const landscapeMsg = document.getElementById('landscape-message');
 	      if (landscapeMsg) {
-	        landscapeMsg.classList.remove('hidden');
-	        setHasShownOrientationWarning(true);
+	        setTimeout(() => {
+	          landscapeMsg.classList.remove('hidden');
+	        }, 100); // Petit délai pour assurer le rendu
 	      }
 	    }
 	  }
-		
-  }, [router]);
+	  
+	}, [router]);
 	
   const pluralize = (count: number, singular: string, plural: string) => {
     return count === 1 ? singular : plural;
@@ -1570,15 +1586,20 @@ export default function CoordinateurDashboard() {
 			    <p className="text-gray-600 mb-4">
 			      Pour une meilleure expérience, utilisez votre téléphone en mode paysage.
 			    </p>
-			    <button
-			      onClick={() => {
-			        const msg = document.getElementById('landscape-message');
-			        if (msg) msg.classList.add('hidden');
-			      }}
-			      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-			    >
-			      J'ai compris
-			    </button>
+						<button
+						  onClick={() => {
+						    const msg = document.getElementById('landscape-message');
+						    if (msg) {
+						      msg.classList.add('hidden');
+						      // Sauvegarder dans localStorage que l'utilisateur a vu le message
+						      localStorage.setItem('hasShownOrientationWarning', 'true');
+						      setHasShownOrientationWarning(true);
+						    }
+						  }}
+						  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+						>
+						  J'ai compris
+						</button>
 			  </div>
 			</div>
 
@@ -2976,6 +2997,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
