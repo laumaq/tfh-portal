@@ -307,43 +307,29 @@ export default function CoordinateurDashboard() {
 	  loadSystemSettings();
 	  loadDisplaySettings();
 	
-	  // FONCTION SIMPLE POUR AFFICHER LE MESSAGE
-	  const showMessageIfNeeded = () => {
-	    // Attendre que tout soit chargé
-	    const check = () => {
-	      const isMobile = window.innerWidth <= 768;
-	      const isPortrait = window.innerHeight > window.innerWidth;
+	  // Vérification simple pour le message paysage
+	  const checkAndShowMessage = () => {
+	    if (typeof window === 'undefined') return;
+	    
+	    const isMobile = window.innerWidth <= 768;
+	    const isPortrait = window.innerHeight > window.innerWidth;
+	    
+	    if (isMobile && isPortrait) {
 	      const msg = document.getElementById('landscape-message');
-	      
-	      console.log('Vérification:', { isMobile, isPortrait, msgExists: !!msg });
-	      
-	      if (isMobile && isPortrait && msg) {
-	        console.log('AFFICHAGE DU MESSAGE');
+	      if (msg) {
 	        msg.style.display = 'flex';
 	      }
-	    };
-	    
-	    // Essayer plusieurs fois au cas où
-	    check();
-	    setTimeout(check, 500);
-	    setTimeout(check, 1000);
+	    }
 	  };
 	
-	  // Démarrer la vérification
-	  showMessageIfNeeded();
-	  
+	  // Attendre que la page soit complètement chargée
+	  if (document.readyState === 'complete') {
+	    checkAndShowMessage();
+	  } else {
+	    window.addEventListener('load', checkAndShowMessage);
+	  }
+	
 	}, [router]);
-
-	// Pour déboguer - vérifiez dans la console du navigateur
-	useEffect(() => {
-	  console.log('Composant rendu - message existe:', !!document.getElementById('landscape-message'));
-	  console.log('Dimensions:', {
-	    width: window.innerWidth,
-	    height: window.innerHeight,
-	    isMobile: window.innerWidth <= 768,
-	    isPortrait: window.innerHeight > window.innerWidth
-	  });
-	}, []);
 	
   const pluralize = (count: number, singular: string, plural: string) => {
     return count === 1 ? singular : plural;
@@ -1585,11 +1571,11 @@ export default function CoordinateurDashboard() {
 
     return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
-			{/* Message paysage sur mobile - PAS DE "hidden" INITIAL */}
+			{/* Message paysage sur mobile */}
 			<div 
 			  id="landscape-message" 
 			  className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
-			  style={{ display: 'none' }}  {/* ← On cache avec style inline */}
+			  style={{ display: 'none' }}
 			>
 			  <div className="bg-white rounded-lg p-6 max-w-sm text-center">
 			    <div className="text-4xl mb-4">↻</div>
@@ -2985,6 +2971,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
