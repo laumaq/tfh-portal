@@ -1121,20 +1121,6 @@ export default function CoordinateurDashboard() {
     return users.length;
   };
 
-  const checkAndForceLandscape = () => {
-    if (typeof window !== 'undefined') {
-      const isMobile = window.innerWidth <= 768;
-      if (isMobile && !isLandscape) {
-        setIsLandscape(true);
-        const landscapeMsg = document.getElementById('landscape-message');
-        if (landscapeMsg) {
-          landscapeMsg.classList.remove('hidden');
-        }
-      } else {
-        setIsLandscape(false);
-      }
-    }
-  };
 
   const handleLogout = () => {
     localStorage.clear();
@@ -2990,6 +2976,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
