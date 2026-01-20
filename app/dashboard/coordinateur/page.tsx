@@ -307,31 +307,31 @@ export default function CoordinateurDashboard() {
 	  loadSystemSettings();
 	  loadDisplaySettings();
 	
-	  // SIMPLE VÉRIFICATION POUR LE MESSAGE PAYSAGE
-	  const showLandscapeMessage = () => {
-	    if (typeof window === 'undefined') return;
-	    
-	    const isMobile = window.innerWidth <= 768;
-	    const isPortrait = window.innerHeight > window.innerWidth;
-	    
-	    if (isMobile && isPortrait) {
+	  // FONCTION SIMPLE POUR AFFICHER LE MESSAGE
+	  const showMessageIfNeeded = () => {
+	    // Attendre que tout soit chargé
+	    const check = () => {
+	      const isMobile = window.innerWidth <= 768;
+	      const isPortrait = window.innerHeight > window.innerWidth;
 	      const msg = document.getElementById('landscape-message');
-	      if (msg) {
-	        // Petit délai pour être sûr que le DOM est prêt
-	        setTimeout(() => {
-	          msg.classList.remove('hidden');
-	        }, 3000);
+	      
+	      console.log('Vérification:', { isMobile, isPortrait, msgExists: !!msg });
+	      
+	      if (isMobile && isPortrait && msg) {
+	        console.log('AFFICHAGE DU MESSAGE');
+	        msg.style.display = 'flex';
 	      }
-	    }
+	    };
+	    
+	    // Essayer plusieurs fois au cas où
+	    check();
+	    setTimeout(check, 500);
+	    setTimeout(check, 1000);
 	  };
 	
-	  // Vérifier quand la page est chargée
-	  if (document.readyState === 'complete') {
-	    showLandscapeMessage();
-	  } else {
-	    window.addEventListener('load', showLandscapeMessage);
-	  }
-	
+	  // Démarrer la vérification
+	  showMessageIfNeeded();
+	  
 	}, [router]);
 	
   const pluralize = (count: number, singular: string, plural: string) => {
@@ -1574,10 +1574,11 @@ export default function CoordinateurDashboard() {
 
     return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
-			{/* Message paysage sur mobile */}
+			{/* Message paysage sur mobile - PAS DE "hidden" INITIAL */}
 			<div 
 			  id="landscape-message" 
-			  className="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
+			  className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
+			  style={{ display: 'none' }}  {/* ← On cache avec style inline */}
 			>
 			  <div className="bg-white rounded-lg p-6 max-w-sm text-center">
 			    <div className="text-4xl mb-4">↻</div>
@@ -1588,7 +1589,7 @@ export default function CoordinateurDashboard() {
 			    <button
 			      onClick={() => {
 			        const msg = document.getElementById('landscape-message');
-			        if (msg) msg.classList.add('hidden');
+			        if (msg) msg.style.display = 'none';
 			      }}
 			      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 w-full"
 			    >
@@ -2973,6 +2974,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
