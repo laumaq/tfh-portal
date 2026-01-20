@@ -2017,24 +2017,6 @@ export default function CoordinateurDashboard() {
                       Mode édition défenses
                     </span>
                   </label>
-                  
-                  <div className="flex items-center gap-2 border-l pl-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={lecteurInterneEnabled}
-                        onChange={(e) => toggleLecteurInterne(e.target.checked)}
-                        className="w-5 h-5 text-purple-600 rounded"
-                        disabled={loadingSettings}
-                      />
-                      <span className="text-sm font-medium">
-                        Autoriser sélection lecteur interne par les guides
-                      </span>
-                    </label>
-                    <div className="text-xs text-gray-500">
-                      {lecteurInterneEnabled ? '🟢 Activé' : '🔴 Désactivé'}
-                    </div>
-                  </div>
                 </div>
                 
                 <span className="text-sm text-gray-500">
@@ -2997,6 +2979,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
