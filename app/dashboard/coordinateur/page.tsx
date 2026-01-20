@@ -1670,7 +1670,7 @@ export default function CoordinateurDashboard() {
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            Paramètres d'affichage
+            Paramètres et affichage
           </button>
         </div>
 
@@ -2710,20 +2710,20 @@ export default function CoordinateurDashboard() {
         {activeTab === 'parametres-affichage' && (
           <div className="space-y-6">
             <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold text-gray-800 mb-6">
-                Paramètres d'affichage (anonymisation)
+
+							<h2 className="text-xl font-semibold text-gray-800 mb-6">
+                ⚙️ Paramètres fonctionnels
               </h2>
-              
+				
               <div className="border border-blue-200 rounded-lg p-6 mb-8">
                 <h3 className="text-lg font-medium text-gray-700 mb-4 flex items-center gap-2">
                   <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">⚙️</span>
-                  Paramètres fonctionnels
+                  Autorisations
                 </h3>
                 
                 <div className="space-y-4">
                   <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
                     <div>
-                      <h4 className="font-medium text-gray-700">Onglet "Lecteur interne" pour les guides</h4>
                       <p className="text-sm text-gray-600 mt-1">
                         Autorise les guides à sélectionner des TFH en tant que lecteur interne
                       </p>
@@ -2747,7 +2747,11 @@ export default function CoordinateurDashboard() {
                   </div>
                 </div>
               </div>
-              
+				
+              <h2 className="text-xl font-semibold text-gray-800 mb-6">
+                Paramètres d'affichage (anonymisation)
+              </h2>
+				
               <div className="space-y-8">
                 <div className="border rounded-lg p-6">
                   <h3 className="text-lg font-medium text-gray-700 mb-4 flex items-center gap-2">
@@ -2981,4 +2985,5 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
