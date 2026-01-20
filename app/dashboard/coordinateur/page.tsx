@@ -333,6 +333,17 @@ export default function CoordinateurDashboard() {
 	  showMessageIfNeeded();
 	  
 	}, [router]);
+
+	// Pour déboguer - vérifiez dans la console du navigateur
+	useEffect(() => {
+	  console.log('Composant rendu - message existe:', !!document.getElementById('landscape-message'));
+	  console.log('Dimensions:', {
+	    width: window.innerWidth,
+	    height: window.innerHeight,
+	    isMobile: window.innerWidth <= 768,
+	    isPortrait: window.innerHeight > window.innerWidth
+	  });
+	}, []);
 	
   const pluralize = (count: number, singular: string, plural: string) => {
     return count === 1 ? singular : plural;
@@ -2974,6 +2985,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
