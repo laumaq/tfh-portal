@@ -260,9 +260,8 @@ const loadSystemSettings = async () => {
     
     // Colonnes toujours visibles
     count += 1; // Checkbox
-    if (isProgrammed) {
-      count += 3; // Date, Heure, Localisation pour les programmées
-    }
+    count += 2; // date heure
+
     
     // Colonnes conditionnelles
     if (displaySettings.lecteur_interne_voir_eleves) {
@@ -700,6 +699,8 @@ const loadSystemSettings = async () => {
                     )}
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Catégorie</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Problématique</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Date défense</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Heure défense</th>
                     {displaySettings.lecteur_interne_voir_guides && ( 
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Guide</th>
                     )}
@@ -752,6 +753,22 @@ const loadSystemSettings = async () => {
                           <div className="max-w-xs whitespace-pre-wrap break-words min-h-[40px]">
                             {eleve.problematique || '-'}
                           </div>
+                        </td>
+
+                        <td className="px-4 py-3 text-sm">
+                          {eleve.date_defense 
+                            ? new Date(eleve.date_defense).toLocaleDateString('fr-FR', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric'
+                              })
+                            : 'Non définie'}
+                        </td>
+                        
+                        <td className="px-4 py-3 text-sm">
+                          {eleve.heure_defense 
+                            ? eleve.heure_defense.substring(0, 5) // Format "HH:MM"
+                            : 'Non définie'}
                         </td>
                         
                         {displaySettings.lecteur_interne_voir_guides && ( 
@@ -1080,3 +1097,4 @@ const loadSystemSettings = async () => {
     </div>
   );
 }
+
