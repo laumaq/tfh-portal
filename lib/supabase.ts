@@ -1,3 +1,4 @@
+// lib/supabase.ts
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -39,12 +40,21 @@ export interface Eleve {
   presence_16_avril: boolean;
   presence_17_avril: boolean;
   created_at: string;
+  date_defense: string | null;
+  heure_defense: string | null;
+  localisation_defense: string | null;
+  lecteur_interne_id: string | null;
+  lecteur_externe_id: string | null;
+  mediateur_id: string | null;
+  source_1: string | null;
+  source_2: string | null;
+  source_3: string | null;
+  source_4: string | null;
+  source_5: string | null;
 }
 
 // Fonction pour récupérer les élèves avec données manquantes
 export async function getElevesWithMissingData(missingField: string) {
-  const supabase = createClient();
-  
   let query = supabase
     .from('eleves')
     .select('*');
@@ -58,8 +68,14 @@ export async function getElevesWithMissingData(missingField: string) {
       query = query.or('categorie.is.null,categorie.eq."",categorie.eq."À définir"');
       break;
     case 'sources':
-      // Vous aurez besoin d'une table sources_eleves ou champ dédié
-      query = query.or('sources_completes.is.false,sources_completes.is.null');
+      // Exemple avec des champs source_1 à source_5
+      query = query.or(
+        'source_1.is.null,source_1.eq."",' +
+        'source_2.is.null,source_2.eq."",' +
+        'source_3.is.null,source_3.eq."",' +
+        'source_4.is.null,source_4.eq."",' +
+        'source_5.is.null,source_5.eq.""'
+      );
       break;
     case 'guide':
       query = query.is('guide_id', null);
@@ -70,66 +86,73 @@ export async function getElevesWithMissingData(missingField: string) {
     case 'lecteur_externe':
       query = query.is('lecteur_externe_id', null);
       break;
-    case 'sources':
-      // Adapter selon votre schéma de base de données
-      // Exemple avec des champs source_1 à source_5
-      query = query.or(
-        'source_1.is.null,source_1.eq."",' +
-        'source_2.is.null,source_2.eq."",' +
-        'source_3.is.null,source_3.eq."",' +
-        'source_4.is.null,source_4.eq."",' +
-        'source_5.is.null,source_5.eq.""'
-      );
-      break;
     default:
       return [];
   }
   
   const { data, error } = await query;
   
-  if (error) throw error;
-  return data;
+  if (error) {
+    console.error('Erreur récupération élèves:', error);
+    throw error;
+  }
+  return data || [];
 }
 
 export async function getStats() {
-  const supabase = createClient();
-  
   // Récupérer tous les élèves
   const { data: eleves, error } = await supabase
     .from('eleves')
     .select('*');
   
-  if (error) throw error;
+  if (error) {
+    console.error('Erreur récupération stats:', error);
+    throw error;
+  }
   
-  const totalEleves = eleves.length;
+  const elevesList = eleves || [];
+  const totalEleves = elevesList.length;
+  
+  if (totalEleves === 0) {
+    return {
+      totalEleves: 0,
+      avecThematique: 0,
+      avecProblematique: 0,
+      avecSources: 0,
+      avecGuide: 0,
+      avecLecteurInterne: 0,
+      avecLecteurExterne: 0,
+      sansThematique: 0,
+      sansProblematique: 0,
+      sansSources: 0,
+      sansGuide: 0,
+      sansLecteurInterne: 0,
+      sansLecteurExterne: 0,
+      pourcentageThematique: 0,
+      pourcentageProblematique: 0,
+      pourcentageSources: 0,
+      pourcentageGuide: 0,
+      pourcentageLecteurInterne: 0,
+      pourcentageLecteurExterne: 0,
+    };
+  }
   
   // COMPTABILITÉ INVERSE pour les champs manquants
-  const avecThematique = eleves.filter(e => e.categorie && e.categorie.trim() !== '' && e.categorie !== 'À définir').length;
-  const sansThematique = totalEleves - avecThematique;
+  const avecThematique = elevesList.filter(e => e.categorie && e.categorie.trim() !== '' && e.categorie !== 'À définir').length;
+  const avecProblematique = elevesList.filter(e => e.problematique && e.problematique.trim() !== '' && e.problematique !== 'À définir').length;
   
-  const avecProblematique = eleves.filter(e => e.problematique && e.problematique.trim() !== '' && e.problematique !== 'À définir').length;
-  const sansProblematique = totalEleves - avecProblematique;
+  // Pour les sources, vérifiez que vos champs existent
+  const avecSources = elevesList.filter(e => {
+    return e.source_1 && e.source_1.trim() !== '' &&
+           e.source_2 && e.source_2.trim() !== '' &&
+           e.source_3 && e.source_3.trim() !== '' &&
+           e.source_4 && e.source_4.trim() !== '' &&
+           e.source_5 && e.source_5.trim() !== '';
+  }).length;
   
-  // Pour les sources, ajustez selon votre schéma de base de données
-  // Si vous n'avez pas de champs source_1, source_2, etc., utilisez une autre logique
-  const avecSources = eleves.filter(e => 
-    // Logique actuelle - à adapter selon vos champs réels
-    e.source_1 && e.source_1.trim() !== '' &&
-    e.source_2 && e.source_2.trim() !== '' &&
-    e.source_3 && e.source_3.trim() !== '' &&
-    e.source_4 && e.source_4.trim() !== '' &&
-    e.source_5 && e.source_5.trim() !== ''
-  ).length;
-  const sansSources = totalEleves - avecSources;
-  
-  const avecGuide = eleves.filter(e => e.guide_id).length;
-  const sansGuide = totalEleves - avecGuide;
-  
-  const avecLecteurInterne = eleves.filter(e => e.lecteur_interne_id).length;
-  const sansLecteurInterne = totalEleves - avecLecteurInterne;
-  
-  const avecLecteurExterne = eleves.filter(e => e.lecteur_externe_id).length;
-  const sansLecteurExterne = totalEleves - avecLecteurExterne;
+  const avecGuide = elevesList.filter(e => e.guide_id).length;
+  const avecLecteurInterne = elevesList.filter(e => e.lecteur_interne_id).length;
+  const avecLecteurExterne = elevesList.filter(e => e.lecteur_externe_id).length;
   
   return {
     totalEleves,
@@ -140,22 +163,17 @@ export async function getStats() {
     avecLecteurInterne,
     avecLecteurExterne,
     // Ajoutez les champs "sans" pour l'affichage des cartes
-    sansThematique,
-    sansProblematique,
-    sansSources,
-    sansGuide,
-    sansLecteurInterne,
-    sansLecteurExterne,
-    pourcentageThematique: totalEleves > 0 ? (avecThematique / totalEleves) * 100 : 0,
-    pourcentageProblematique: totalEleves > 0 ? (avecProblematique / totalEleves) * 100 : 0,
-    pourcentageSources: totalEleves > 0 ? (avecSources / totalEleves) * 100 : 0,
-    pourcentageGuide: totalEleves > 0 ? (avecGuide / totalEleves) * 100 : 0,
-    pourcentageLecteurInterne: totalEleves > 0 ? (avecLecteurInterne / totalEleves) * 100 : 0,
-    pourcentageLecteurExterne: totalEleves > 0 ? (avecLecteurExterne / totalEleves) * 100 : 0,
+    sansThematique: totalEleves - avecThematique,
+    sansProblematique: totalEleves - avecProblematique,
+    sansSources: totalEleves - avecSources,
+    sansGuide: totalEleves - avecGuide,
+    sansLecteurInterne: totalEleves - avecLecteurInterne,
+    sansLecteurExterne: totalEleves - avecLecteurExterne,
+    pourcentageThematique: (avecThematique / totalEleves) * 100,
+    pourcentageProblematique: (avecProblematique / totalEleves) * 100,
+    pourcentageSources: (avecSources / totalEleves) * 100,
+    pourcentageGuide: (avecGuide / totalEleves) * 100,
+    pourcentageLecteurInterne: (avecLecteurInterne / totalEleves) * 100,
+    pourcentageLecteurExterne: (avecLecteurExterne / totalEleves) * 100,
   };
-
-  
 }
-
-
-
