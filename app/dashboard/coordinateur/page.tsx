@@ -228,6 +228,8 @@ const ConflictDisplay = ({ conflicts }: ConflictDisplayProps) => {
 };
 
 type TabType = 'convocations' | 'defenses' | 'gestion-utilisateurs' | 'calendrier' | 'parametres-affichage' | 'stats' | 'controle';
+type UserType = 'eleves' | 'guides' | 'lecteurs-externes' | 'mediateurs' | 'coordinateurs';
+
 export default function CoordinateurDashboard() {
   const [eleves, setEleves] = useState<Eleve[]>([]);
   const [guides, setGuides] = useState<Guide[]>([]);
@@ -3540,6 +3542,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
