@@ -297,7 +297,12 @@ export default function CoordinateurDashboard() {
 	});
 	
   const router = useRouter();
-
+	
+	const [modal, setModal] = useState({
+	  isOpen: false,
+	  title: '',
+	  missingField: '',
+	});
 
   // ⚙️ PARAMÈTRE CENTRAL D'ÉCHELLE DE TEMPS
   // Changez cette valeur pour ajuster la taille verticale de tout le calendrier
@@ -564,6 +569,16 @@ export default function CoordinateurDashboard() {
 	    console.error('Erreur chargement stats guides:', err);
 	  }
 	};
+
+
+	// Fonction pour ouvrir le modal
+	function openModal(title: string, missingField: string) {
+	  setModal({
+	    isOpen: true,
+	    title,
+	    missingField,
+	  });
+	}
 	
 	const handleSort = (key: keyof GuideStats) => {
 	  let direction: 'asc' | 'desc' = 'asc';
@@ -2977,122 +2992,164 @@ export default function CoordinateurDashboard() {
 				
 				    {stats ? (
 				      <>
-				        {/* Cartes de statistiques */}
-				        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-				          <div className="bg-white rounded-lg shadow p-6">
-				            <div className="flex items-center justify-between mb-4">
-				              <h3 className="text-lg font-semibold text-gray-800">Thématique</h3>
-				              <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-				                {stats.pourcentageThematique.toFixed(1)}%
-				              </span>
-				            </div>
-				            <div className="mb-4">
-				              <div className="text-3xl font-bold text-gray-900">{stats.avecThematique}</div>
-				              <div className="text-sm text-gray-500">sur {stats.totalEleves} élèves</div>
-				            </div>
-				            <div className="w-full bg-gray-200 rounded-full h-2">
-				              <div 
-				                className="h-2 rounded-full bg-blue-500"
-				                style={{ width: `${Math.min(stats.pourcentageThematique, 100)}%` }}
-				              />
-				            </div>
-				          </div>
-				
-				          <div className="bg-white rounded-lg shadow p-6">
-				            <div className="flex items-center justify-between mb-4">
-				              <h3 className="text-lg font-semibold text-gray-800">Problématique</h3>
-				              <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-				                {stats.pourcentageProblematique.toFixed(1)}%
-				              </span>
-				            </div>
-				            <div className="mb-4">
-				              <div className="text-3xl font-bold text-gray-900">{stats.avecProblematique}</div>
-				              <div className="text-sm text-gray-500">sur {stats.totalEleves} élèves</div>
-				            </div>
-				            <div className="w-full bg-gray-200 rounded-full h-2">
-				              <div 
-				                className="h-2 rounded-full bg-green-500"
-				                style={{ width: `${Math.min(stats.pourcentageProblematique, 100)}%` }}
-				              />
-				            </div>
-				          </div>
-				
-				          <div className="bg-white rounded-lg shadow p-6">
-				            <div className="flex items-center justify-between mb-4">
-				              <h3 className="text-lg font-semibold text-gray-800">5 Sources rendues</h3>
-				              <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-				                {stats.pourcentageSources.toFixed(1)}%
-				              </span>
-				            </div>
-				            <div className="mb-4">
-				              <div className="text-3xl font-bold text-gray-900">{stats.avecSources}</div>
-				              <div className="text-sm text-gray-500">sur {stats.totalEleves} élèves</div>
-				            </div>
-				            <div className="w-full bg-gray-200 rounded-full h-2">
-				              <div 
-				                className="h-2 rounded-full bg-purple-500"
-				                style={{ width: `${Math.min(stats.pourcentageSources, 100)}%` }}
-				              />
-				            </div>
-				          </div>
-				
-				          <div className="bg-white rounded-lg shadow p-6">
-				            <div className="flex items-center justify-between mb-4">
-				              <h3 className="text-lg font-semibold text-gray-800">Guide assigné</h3>
-				              <span className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-				                {stats.pourcentageGuide.toFixed(1)}%
-				              </span>
-				            </div>
-				            <div className="mb-4">
-				              <div className="text-3xl font-bold text-gray-900">{stats.avecGuide}</div>
-				              <div className="text-sm text-gray-500">sur {stats.totalEleves} élèves</div>
-				            </div>
-				            <div className="w-full bg-gray-200 rounded-full h-2">
-				              <div 
-				                className="h-2 rounded-full bg-yellow-500"
-				                style={{ width: `${Math.min(stats.pourcentageGuide, 100)}%` }}
-				              />
-				            </div>
-				          </div>
-				
-				          <div className="bg-white rounded-lg shadow p-6">
-				            <div className="flex items-center justify-between mb-4">
-				              <h3 className="text-lg font-semibold text-gray-800">Lecteur interne</h3>
-				              <span className="px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-				                {stats.pourcentageLecteurInterne.toFixed(1)}%
-				              </span>
-				            </div>
-				            <div className="mb-4">
-				              <div className="text-3xl font-bold text-gray-900">{stats.avecLecteurInterne}</div>
-				              <div className="text-sm text-gray-500">sur {stats.totalEleves} élèves</div>
-				            </div>
-				            <div className="w-full bg-gray-200 rounded-full h-2">
-				              <div 
-				                className="h-2 rounded-full bg-indigo-500"
-				                style={{ width: `${Math.min(stats.pourcentageLecteurInterne, 100)}%` }}
-				              />
-				            </div>
-				          </div>
-				
-				          <div className="bg-white rounded-lg shadow p-6">
-				            <div className="flex items-center justify-between mb-4">
-				              <h3 className="text-lg font-semibold text-gray-800">Lecteur externe</h3>
-				              <span className="px-3 py-1 rounded-full text-xs font-medium bg-pink-100 text-pink-800">
-				                {stats.pourcentageLecteurExterne.toFixed(1)}%
-				              </span>
-				            </div>
-				            <div className="mb-4">
-				              <div className="text-3xl font-bold text-gray-900">{stats.avecLecteurExterne}</div>
-				              <div className="text-sm text-gray-500">sur {stats.totalEleves} élèves</div>
-				            </div>
-				            <div className="w-full bg-gray-200 rounded-full h-2">
-				              <div 
-				                className="h-2 rounded-full bg-pink-500"
-				                style={{ width: `${Math.min(stats.pourcentageLecteurExterne, 100)}%` }}
-				              />
-				            </div>
-				          </div>
-				        </div>
+							{/* Cartes de statistiques */}
+							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+							  {/* Carte 1 - Thématique */}
+							  <div 
+							    onClick={() => openModal('Élèves sans thématique définie', 'thematique')}
+							    className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-lg transition-transform hover:-translate-y-1"
+							  >
+							    <div className="flex items-center justify-between mb-4">
+							      <h3 className="text-lg font-semibold text-gray-800">Thématique</h3>
+							      <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+							        {stats.pourcentageThematique.toFixed(1)}%
+							      </span>
+							    </div>
+							    <div className="mb-4">
+							      <div className="text-3xl font-bold text-gray-900">{stats.avecThematique}</div>
+							      <div className="text-sm text-gray-500">sur {stats.totalEleves} élèves</div>
+							    </div>
+							    <div className="w-full bg-gray-200 rounded-full h-2">
+							      <div 
+							        className="h-2 rounded-full bg-blue-500"
+							        style={{ width: `${Math.min(stats.pourcentageThematique, 100)}%` }}
+							      />
+							    </div>
+							    <div className="mt-3 text-xs text-blue-600 font-medium text-center">
+							      Cliquez pour voir la liste
+							    </div>
+							  </div>
+							
+							  {/* Carte 2 - Problématique */}
+							  <div 
+							    onClick={() => openModal('Élèves sans problématique définie', 'problematique')}
+							    className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-lg transition-transform hover:-translate-y-1"
+							  >
+							    <div className="flex items-center justify-between mb-4">
+							      <h3 className="text-lg font-semibold text-gray-800">Problématique</h3>
+							      <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+							        {stats.pourcentageProblematique.toFixed(1)}%
+							      </span>
+							    </div>
+							    <div className="mb-4">
+							      <div className="text-3xl font-bold text-gray-900">{stats.avecProblematique}</div>
+							      <div className="text-sm text-gray-500">sur {stats.totalEleves} élèves</div>
+							    </div>
+							    <div className="w-full bg-gray-200 rounded-full h-2">
+							      <div 
+							        className="h-2 rounded-full bg-green-500"
+							        style={{ width: `${Math.min(stats.pourcentageProblematique, 100)}%` }}
+							      />
+							    </div>
+							    <div className="mt-3 text-xs text-green-600 font-medium text-center">
+							      Cliquez pour voir la liste
+							    </div>
+							  </div>
+							
+							  {/* Carte 3 - Sources complètes */}
+							  <div 
+							    onClick={() => openModal('Élèves sans 5 sources complètes', 'sources')}
+							    className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-lg transition-transform hover:-translate-y-1"
+							  >
+							    <div className="flex items-center justify-between mb-4">
+							      <h3 className="text-lg font-semibold text-gray-800">5 Sources rendues</h3>
+							      <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+							        {stats.pourcentageSources.toFixed(1)}%
+							      </span>
+							    </div>
+							    <div className="mb-4">
+							      <div className="text-3xl font-bold text-gray-900">{stats.avecSources}</div>
+							      <div className="text-sm text-gray-500">sur {stats.totalEleves} élèves</div>
+							    </div>
+							    <div className="w-full bg-gray-200 rounded-full h-2">
+							      <div 
+							        className="h-2 rounded-full bg-purple-500"
+							        style={{ width: `${Math.min(stats.pourcentageSources, 100)}%` }}
+							      />
+							    </div>
+							    <div className="mt-3 text-xs text-purple-600 font-medium text-center">
+							      Cliquez pour voir la liste
+							    </div>
+							  </div>
+							
+							  {/* Carte 4 - Guide assigné */}
+							  <div 
+							    onClick={() => openModal('Élèves sans guide assigné', 'guide')}
+							    className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-lg transition-transform hover:-translate-y-1"
+							  >
+							    <div className="flex items-center justify-between mb-4">
+							      <h3 className="text-lg font-semibold text-gray-800">Guide assigné</h3>
+							      <span className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+							        {stats.pourcentageGuide.toFixed(1)}%
+							      </span>
+							    </div>
+							    <div className="mb-4">
+							      <div className="text-3xl font-bold text-gray-900">{stats.avecGuide}</div>
+							      <div className="text-sm text-gray-500">sur {stats.totalEleves} élèves</div>
+							    </div>
+							    <div className="w-full bg-gray-200 rounded-full h-2">
+							      <div 
+							        className="h-2 rounded-full bg-yellow-500"
+							        style={{ width: `${Math.min(stats.pourcentageGuide, 100)}%` }}
+							      />
+							    </div>
+							    <div className="mt-3 text-xs text-yellow-600 font-medium text-center">
+							      Cliquez pour voir la liste
+							    </div>
+							  </div>
+							
+							  {/* Carte 5 - Lecteur interne */}
+							  <div 
+							    onClick={() => openModal('Élèves sans lecteur interne', 'lecteur_interne')}
+							    className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-lg transition-transform hover:-translate-y-1"
+							  >
+							    <div className="flex items-center justify-between mb-4">
+							      <h3 className="text-lg font-semibold text-gray-800">Lecteur interne</h3>
+							      <span className="px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+							        {stats.pourcentageLecteurInterne.toFixed(1)}%
+							      </span>
+							    </div>
+							    <div className="mb-4">
+							      <div className="text-3xl font-bold text-gray-900">{stats.avecLecteurInterne}</div>
+							      <div className="text-sm text-gray-500">sur {stats.totalEleves} élèves</div>
+							    </div>
+							    <div className="w-full bg-gray-200 rounded-full h-2">
+							      <div 
+							        className="h-2 rounded-full bg-indigo-500"
+							        style={{ width: `${Math.min(stats.pourcentageLecteurInterne, 100)}%` }}
+							      />
+							    </div>
+							    <div className="mt-3 text-xs text-indigo-600 font-medium text-center">
+							      Cliquez pour voir la liste
+							    </div>
+							  </div>
+							
+							  {/* Carte 6 - Lecteur externe */}
+							  <div 
+							    onClick={() => openModal('Élèves sans lecteur externe', 'lecteur_externe')}
+							    className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-lg transition-transform hover:-translate-y-1"
+							  >
+							    <div className="flex items-center justify-between mb-4">
+							      <h3 className="text-lg font-semibold text-gray-800">Lecteur externe</h3>
+							      <span className="px-3 py-1 rounded-full text-xs font-medium bg-pink-100 text-pink-800">
+							        {stats.pourcentageLecteurExterne.toFixed(1)}%
+							      </span>
+							    </div>
+							    <div className="mb-4">
+							      <div className="text-3xl font-bold text-gray-900">{stats.avecLecteurExterne}</div>
+							      <div className="text-sm text-gray-500">sur {stats.totalEleves} élèves</div>
+							    </div>
+							    <div className="w-full bg-gray-200 rounded-full h-2">
+							      <div 
+							        className="h-2 rounded-full bg-pink-500"
+							        style={{ width: `${Math.min(stats.pourcentageLecteurExterne, 100)}%` }}
+							      />
+							    </div>
+							    <div className="mt-3 text-xs text-pink-600 font-medium text-center">
+							      Cliquez pour voir la liste
+							    </div>
+							  </div>
+							</div>
 				
 				        {/* Tableau détaillé */}
 				        <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -3520,6 +3577,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
