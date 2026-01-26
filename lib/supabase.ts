@@ -80,3 +80,68 @@ export async function getElevesWithMissingData(missingField: string) {
   return data;
 }
 
+export async function getStats() {
+  const supabase = createClient();
+  
+  // Récupérer tous les élèves
+  const { data: eleves, error } = await supabase
+    .from('eleves')
+    .select('*');
+  
+  if (error) throw error;
+  
+  const totalEleves = eleves.length;
+  
+  // COMPTABILITÉ INVERSE pour les champs manquants
+  const avecThematique = eleves.filter(e => e.categorie && e.categorie.trim() !== '' && e.categorie !== 'À définir').length;
+  const sansThematique = totalEleves - avecThematique;
+  
+  const avecProblematique = eleves.filter(e => e.problematique && e.problematique.trim() !== '' && e.problematique !== 'À définir').length;
+  const sansProblematique = totalEleves - avecProblematique;
+  
+  // Pour les sources, ajustez selon votre schéma de base de données
+  // Si vous n'avez pas de champs source_1, source_2, etc., utilisez une autre logique
+  const avecSources = eleves.filter(e => 
+    // Logique actuelle - à adapter selon vos champs réels
+    e.source_1 && e.source_1.trim() !== '' &&
+    e.source_2 && e.source_2.trim() !== '' &&
+    e.source_3 && e.source_3.trim() !== '' &&
+    e.source_4 && e.source_4.trim() !== '' &&
+    e.source_5 && e.source_5.trim() !== ''
+  ).length;
+  const sansSources = totalEleves - avecSources;
+  
+  const avecGuide = eleves.filter(e => e.guide_id).length;
+  const sansGuide = totalEleves - avecGuide;
+  
+  const avecLecteurInterne = eleves.filter(e => e.lecteur_interne_id).length;
+  const sansLecteurInterne = totalEleves - avecLecteurInterne;
+  
+  const avecLecteurExterne = eleves.filter(e => e.lecteur_externe_id).length;
+  const sansLecteurExterne = totalEleves - avecLecteurExterne;
+  
+  return {
+    totalEleves,
+    avecThematique,
+    avecProblematique,
+    avecSources,
+    avecGuide,
+    avecLecteurInterne,
+    avecLecteurExterne,
+    // Ajoutez les champs "sans" pour l'affichage des cartes
+    sansThematique,
+    sansProblematique,
+    sansSources,
+    sansGuide,
+    sansLecteurInterne,
+    sansLecteurExterne,
+    pourcentageThematique: totalEleves > 0 ? (avecThematique / totalEleves) * 100 : 0,
+    pourcentageProblematique: totalEleves > 0 ? (avecProblematique / totalEleves) * 100 : 0,
+    pourcentageSources: totalEleves > 0 ? (avecSources / totalEleves) * 100 : 0,
+    pourcentageGuide: totalEleves > 0 ? (avecGuide / totalEleves) * 100 : 0,
+    pourcentageLecteurInterne: totalEleves > 0 ? (avecLecteurInterne / totalEleves) * 100 : 0,
+    pourcentageLecteurExterne: totalEleves > 0 ? (avecLecteurExterne / totalEleves) * 100 : 0,
+  };
+}
+
+
