@@ -3310,26 +3310,10 @@ export default function CoordinateurDashboard() {
 				            </th>
 				            <th 
 				              className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer"
-				              onClick={() => handleSort('convocationsMarsRendues')}
-				            >
-				              <div className="flex items-center gap-1">
-				                Convoc. mars rendues {getSortIcon('convocationsMarsRendues')}
-				              </div>
-				            </th>
-				            <th 
-				              className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer"
 				              onClick={() => handleSort('pourcentageConvocationsMars')}
 				            >
 				              <div className="flex items-center gap-1">
 				                % convoc. mars {getSortIcon('pourcentageConvocationsMars')}
-				              </div>
-				            </th>
-				            <th 
-				              className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer"
-				              onClick={() => handleSort('convocationsAvrilRendues')}
-				            >
-				              <div className="flex items-center gap-1">
-				                Convoc. avril rendues {getSortIcon('convocationsAvrilRendues')}
 				              </div>
 				            </th>
 				            <th 
@@ -3357,9 +3341,6 @@ export default function CoordinateurDashboard() {
 				                {guide.elevesLecteurInterne || '0'}
 				              </td>
 				              <td className="px-6 py-4 whitespace-nowrap">
-				                {guide.convocationsMarsRendues || '0'} / {guide.elevesGuides || '0'}
-				              </td>
-				              <td className="px-6 py-4 whitespace-nowrap">
 				                <div className="flex items-center">
 				                  <div className="w-24 bg-gray-200 rounded-full h-2 mr-2">
 				                    <div 
@@ -3371,9 +3352,6 @@ export default function CoordinateurDashboard() {
 				                    {guide.pourcentageConvocationsMars.toFixed(1)}%
 				                  </span>
 				                </div>
-				              </td>
-				              <td className="px-6 py-4 whitespace-nowrap">
-				                {guide.convocationsAvrilRendues || '0'} / {guide.elevesGuides || '0'}
 				              </td>
 				              <td className="px-6 py-4 whitespace-nowrap">
 				                <div className="flex items-center">
@@ -3542,6 +3520,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
