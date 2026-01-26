@@ -40,3 +40,43 @@ export interface Eleve {
   presence_17_avril: boolean;
   created_at: string;
 }
+
+// Fonction pour récupérer les élèves avec données manquantes
+export async function getElevesWithMissingData(missingField: string) {
+  const supabase = createClient();
+  
+  let query = supabase
+    .from('eleves')
+    .select('*');
+  
+  // Filtres selon le champ manquant
+  switch(missingField) {
+    case 'problematique':
+      query = query.or('problematique.is.null,problematique.eq."",problematique.eq."À définir"');
+      break;
+    case 'thematique':
+      query = query.or('categorie.is.null,categorie.eq."",categorie.eq."À définir"');
+      break;
+    case 'sources':
+      // Vous aurez besoin d'une table sources_eleves ou champ dédié
+      query = query.or('sources_completes.is.false,sources_completes.is.null');
+      break;
+    case 'guide':
+      query = query.is('guide_id', null);
+      break;
+    case 'lecteur_interne':
+      query = query.is('lecteur_interne_id', null);
+      break;
+    case 'lecteur_externe':
+      query = query.is('lecteur_externe_id', null);
+      break;
+    default:
+      return [];
+  }
+  
+  const { data, error } = await query;
+  
+  if (error) throw error;
+  return data;
+}
+
