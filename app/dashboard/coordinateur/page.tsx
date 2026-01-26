@@ -86,6 +86,38 @@ interface DefenseEvent {
   role?: 'guide' | 'lecteur_interne';
 }
 
+
+
+// Nouvelles interfaces pour les stats
+interface StatsData {
+  totalEleves: number;
+  avecThematique: number;
+  avecProblematique: number;
+  avecSources: number;
+  avecGuide: number;
+  avecLecteurInterne: number;
+  avecLecteurExterne: number;
+  pourcentageThematique: number;
+  pourcentageProblematique: number;
+  pourcentageSources: number;
+  pourcentageGuide: number;
+  pourcentageLecteurInterne: number;
+  pourcentageLecteurExterne: number;
+}
+
+interface GuideStats {
+  id: string;
+  nom: string;
+  prenom: string;
+  initiale: string;
+  elevesGuides: number;
+  elevesLecteurInterne: number;
+  convocationsMarsRendues: number;
+  convocationsAvrilRendues: number;
+  pourcentageConvocationsMars: number;
+  pourcentageConvocationsAvril: number;
+}
+
 interface DayDefenses {
   date: string;
   displayDate: string;
@@ -195,9 +227,7 @@ const ConflictDisplay = ({ conflicts }: ConflictDisplayProps) => {
   );
 };
 
-type TabType = 'convocations' | 'defenses' | 'gestion-utilisateurs' | 'calendrier'  | 'parametres-affichage' ;
-type UserType = 'eleves' | 'guides' | 'lecteurs-externes' | 'mediateurs' | 'coordinateurs';
-
+type TabType = 'convocations' | 'defenses' | 'gestion-utilisateurs' | 'calendrier' | 'parametres-affichage' | 'stats' | 'controle';
 export default function CoordinateurDashboard() {
   const [eleves, setEleves] = useState<Eleve[]>([]);
   const [guides, setGuides] = useState<Guide[]>([]);
@@ -240,6 +270,9 @@ export default function CoordinateurDashboard() {
   const [dayDefenses, setDayDefenses] = useState<DayDefenses[]>([]);
 	const [calendarRefreshTrigger, setCalendarRefreshTrigger] = useState(0);
 	const [conflicts, setConflicts] = useState<Conflict[]>([]);
+	const [stats, setStats] = useState<StatsData | null>(null);
+	const [guideStats, setGuideStats] = useState<GuideStats[]>([]);
+	const [sortConfig, setSortConfig] = useState<{ key: keyof GuideStats; direction: 'asc' | 'desc' } | null>(null);
 	
 	const [displaySettings, setDisplaySettings] = useState({
 	  // Vue Lecteur Externe
@@ -330,6 +363,14 @@ export default function CoordinateurDashboard() {
 	  }
 	
 	}, [router]);
+
+	useEffect(() => {
+	  if (activeTab === 'stats') {
+	    loadStats();
+	  } else if (activeTab === 'controle') {
+	    loadGuideStats();
+	  }
+	}, [activeTab]);
 	
   const pluralize = (count: number, singular: string, plural: string) => {
     return count === 1 ? singular : plural;
@@ -425,6 +466,129 @@ export default function CoordinateurDashboard() {
       setLoading(false);
     }
   };
+
+	const loadStats = async () => {
+	  try {
+	    const { data: eleves, error } = await supabase
+	      .from('eleves')
+	      .select('*');
+	    
+	    if (error) throw error;
+	
+	    const totalEleves = eleves.length;
+	    
+	    // Calculer les statistiques
+	    const avecThematique = eleves.filter(e => e.thematique && e.thematique.trim() !== '').length;
+	    const avecProblematique = eleves.filter(e => e.problematique && e.problematique.trim() !== '').length;
+	    const avecSources = eleves.filter(e => 
+	      e.source_1 && e.source_1.trim() !== '' &&
+	      e.source_2 && e.source_2.trim() !== '' &&
+	      e.source_3 && e.source_3.trim() !== '' &&
+	      e.source_4 && e.source_4.trim() !== '' &&
+	      e.source_5 && e.source_5.trim() !== ''
+	    ).length;
+	    const avecGuide = eleves.filter(e => e.guide_id).length;
+	    const avecLecteurInterne = eleves.filter(e => e.lecteur_interne_id).length;
+	    const avecLecteurExterne = eleves.filter(e => e.lecteur_externe_id).length;
+	
+	    setStats({
+	      totalEleves,
+	      avecThematique,
+	      avecProblematique,
+	      avecSources,
+	      avecGuide,
+	      avecLecteurInterne,
+	      avecLecteurExterne,
+	      pourcentageThematique: totalEleves > 0 ? (avecThematique / totalEleves) * 100 : 0,
+	      pourcentageProblematique: totalEleves > 0 ? (avecProblematique / totalEleves) * 100 : 0,
+	      pourcentageSources: totalEleves > 0 ? (avecSources / totalEleves) * 100 : 0,
+	      pourcentageGuide: totalEleves > 0 ? (avecGuide / totalEleves) * 100 : 0,
+	      pourcentageLecteurInterne: totalEleves > 0 ? (avecLecteurInterne / totalEleves) * 100 : 0,
+	      pourcentageLecteurExterne: totalEleves > 0 ? (avecLecteurExterne / totalEleves) * 100 : 0,
+	    });
+	
+	  } catch (err) {
+	    console.error('Erreur chargement stats:', err);
+	  }
+	};
+	
+	const loadGuideStats = async () => {
+	  try {
+	    // Charger tous les guides
+	    const { data: guides, error: guidesError } = await supabase
+	      .from('guides')
+	      .select('*');
+	    
+	    if (guidesError) throw guidesError;
+	
+	    // Charger tous les élèves
+	    const { data: eleves, error: elevesError } = await supabase
+	      .from('eleves')
+	      .select('*');
+	    
+	    if (elevesError) throw elevesError;
+	
+	    // Calculer les stats pour chaque guide
+	    const stats = guides.map(guide => {
+	      const elevesDuGuide = eleves.filter(e => e.guide_id === guide.id);
+	      const elevesLecteurInterne = eleves.filter(e => e.lecteur_interne_id === guide.id);
+	      
+	      const convocationsMarsRendues = elevesDuGuide.filter(e => 
+	        e.convocation_mars && e.convocation_mars.trim() !== ''
+	      ).length;
+	      
+	      const convocationsAvrilRendues = elevesDuGuide.filter(e => 
+	        e.convocation_avril && e.convocation_avril.trim() !== ''
+	      ).length;
+	
+	      return {
+	        id: guide.id,
+	        nom: guide.nom,
+	        prenom: guide.prenom,
+	        initiale: guide.initiale,
+	        elevesGuides: elevesDuGuide.length,
+	        elevesLecteurInterne: elevesLecteurInterne.length,
+	        convocationsMarsRendues,
+	        convocationsAvrilRendues,
+	        pourcentageConvocationsMars: elevesDuGuide.length > 0 ? 
+	          (convocationsMarsRendues / elevesDuGuide.length) * 100 : 0,
+	        pourcentageConvocationsAvril: elevesDuGuide.length > 0 ? 
+	          (convocationsAvrilRendues / elevesDuGuide.length) * 100 : 0,
+	      };
+	    });
+	
+	    setGuideStats(stats);
+	  } catch (err) {
+	    console.error('Erreur chargement stats guides:', err);
+	  }
+	};
+	
+	const handleSort = (key: keyof GuideStats) => {
+	  let direction: 'asc' | 'desc' = 'asc';
+	  
+	  if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+	    direction = 'desc';
+	  }
+	  
+	  setSortConfig({ key, direction });
+	  
+	  const sortedData = [...guideStats].sort((a, b) => {
+	    if (a[key] < b[key]) {
+	      return direction === 'asc' ? -1 : 1;
+	    }
+	    if (a[key] > b[key]) {
+	      return direction === 'asc' ? 1 : -1;
+	    }
+	    return 0;
+	  });
+	  
+	  setGuideStats(sortedData);
+	};
+	
+	const getSortIcon = (key: keyof GuideStats) => {
+	  if (!sortConfig || sortConfig.key !== key) return '⇅';
+	  return sortConfig.direction === 'asc' ? '↑' : '↓';
+	};
 
   useEffect(() => {
     if (eleves.length > 0) {
@@ -1613,7 +1777,34 @@ export default function CoordinateurDashboard() {
           >
             Paramètres et affichage
           </button>
+					<button
+					  onClick={() => {
+					    setActiveTab('stats');
+					    setShowConvoques(false);
+					  }}
+					  className={`px-4 py-2 font-medium text-sm md:text-base whitespace-nowrap ${
+					    activeTab === 'stats'
+					      ? 'text-blue-600 border-b-2 border-blue-600'
+					      : 'text-gray-500 hover:text-gray-700'
+					  }`}
+					>
+					  📊 Stats
+					</button>
+					<button
+					  onClick={() => {
+					    setActiveTab('controle');
+					    setShowConvoques(false);
+					  }}
+					  className={`px-4 py-2 font-medium text-sm md:text-base whitespace-nowrap ${
+					    activeTab === 'controle'
+					      ? 'text-blue-600 border-b-2 border-blue-600'
+					      : 'text-gray-500 hover:text-gray-700'
+					  }`}
+					>
+					  👥 Contrôle
+					</button>					
         </div>
+				
 
         {/* Contenu selon l'onglet */}
         {activeTab === 'convocations' && (
@@ -2773,6 +2964,447 @@ export default function CoordinateurDashboard() {
           </div>
         )}
 
+				{activeTab === 'stats' && (
+				  <div className="space-y-6">
+				    <div className="bg-white rounded-lg shadow p-6">
+				      <h2 className="text-xl font-semibold text-gray-800 mb-2">📊 Statistiques générales</h2>
+				      <p className="text-gray-600">
+				        Vue d'ensemble de l'avancement des TFH
+				      </p>
+				    </div>
+				
+				    {stats ? (
+				      <>
+				        {/* Cartes de statistiques */}
+				        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+				          <div className="bg-white rounded-lg shadow p-6">
+				            <div className="flex items-center justify-between mb-4">
+				              <h3 className="text-lg font-semibold text-gray-800">Thématique</h3>
+				              <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+				                {stats.pourcentageThematique.toFixed(1)}%
+				              </span>
+				            </div>
+				            <div className="mb-4">
+				              <div className="text-3xl font-bold text-gray-900">{stats.avecThematique}</div>
+				              <div className="text-sm text-gray-500">sur {stats.totalEleves} élèves</div>
+				            </div>
+				            <div className="w-full bg-gray-200 rounded-full h-2">
+				              <div 
+				                className="h-2 rounded-full bg-blue-500"
+				                style={{ width: `${Math.min(stats.pourcentageThematique, 100)}%` }}
+				              />
+				            </div>
+				          </div>
+				
+				          <div className="bg-white rounded-lg shadow p-6">
+				            <div className="flex items-center justify-between mb-4">
+				              <h3 className="text-lg font-semibold text-gray-800">Problématique</h3>
+				              <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+				                {stats.pourcentageProblematique.toFixed(1)}%
+				              </span>
+				            </div>
+				            <div className="mb-4">
+				              <div className="text-3xl font-bold text-gray-900">{stats.avecProblematique}</div>
+				              <div className="text-sm text-gray-500">sur {stats.totalEleves} élèves</div>
+				            </div>
+				            <div className="w-full bg-gray-200 rounded-full h-2">
+				              <div 
+				                className="h-2 rounded-full bg-green-500"
+				                style={{ width: `${Math.min(stats.pourcentageProblematique, 100)}%` }}
+				              />
+				            </div>
+				          </div>
+				
+				          <div className="bg-white rounded-lg shadow p-6">
+				            <div className="flex items-center justify-between mb-4">
+				              <h3 className="text-lg font-semibold text-gray-800">5 Sources rendues</h3>
+				              <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+				                {stats.pourcentageSources.toFixed(1)}%
+				              </span>
+				            </div>
+				            <div className="mb-4">
+				              <div className="text-3xl font-bold text-gray-900">{stats.avecSources}</div>
+				              <div className="text-sm text-gray-500">sur {stats.totalEleves} élèves</div>
+				            </div>
+				            <div className="w-full bg-gray-200 rounded-full h-2">
+				              <div 
+				                className="h-2 rounded-full bg-purple-500"
+				                style={{ width: `${Math.min(stats.pourcentageSources, 100)}%` }}
+				              />
+				            </div>
+				          </div>
+				
+				          <div className="bg-white rounded-lg shadow p-6">
+				            <div className="flex items-center justify-between mb-4">
+				              <h3 className="text-lg font-semibold text-gray-800">Guide assigné</h3>
+				              <span className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+				                {stats.pourcentageGuide.toFixed(1)}%
+				              </span>
+				            </div>
+				            <div className="mb-4">
+				              <div className="text-3xl font-bold text-gray-900">{stats.avecGuide}</div>
+				              <div className="text-sm text-gray-500">sur {stats.totalEleves} élèves</div>
+				            </div>
+				            <div className="w-full bg-gray-200 rounded-full h-2">
+				              <div 
+				                className="h-2 rounded-full bg-yellow-500"
+				                style={{ width: `${Math.min(stats.pourcentageGuide, 100)}%` }}
+				              />
+				            </div>
+				          </div>
+				
+				          <div className="bg-white rounded-lg shadow p-6">
+				            <div className="flex items-center justify-between mb-4">
+				              <h3 className="text-lg font-semibold text-gray-800">Lecteur interne</h3>
+				              <span className="px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+				                {stats.pourcentageLecteurInterne.toFixed(1)}%
+				              </span>
+				            </div>
+				            <div className="mb-4">
+				              <div className="text-3xl font-bold text-gray-900">{stats.avecLecteurInterne}</div>
+				              <div className="text-sm text-gray-500">sur {stats.totalEleves} élèves</div>
+				            </div>
+				            <div className="w-full bg-gray-200 rounded-full h-2">
+				              <div 
+				                className="h-2 rounded-full bg-indigo-500"
+				                style={{ width: `${Math.min(stats.pourcentageLecteurInterne, 100)}%` }}
+				              />
+				            </div>
+				          </div>
+				
+				          <div className="bg-white rounded-lg shadow p-6">
+				            <div className="flex items-center justify-between mb-4">
+				              <h3 className="text-lg font-semibold text-gray-800">Lecteur externe</h3>
+				              <span className="px-3 py-1 rounded-full text-xs font-medium bg-pink-100 text-pink-800">
+				                {stats.pourcentageLecteurExterne.toFixed(1)}%
+				              </span>
+				            </div>
+				            <div className="mb-4">
+				              <div className="text-3xl font-bold text-gray-900">{stats.avecLecteurExterne}</div>
+				              <div className="text-sm text-gray-500">sur {stats.totalEleves} élèves</div>
+				            </div>
+				            <div className="w-full bg-gray-200 rounded-full h-2">
+				              <div 
+				                className="h-2 rounded-full bg-pink-500"
+				                style={{ width: `${Math.min(stats.pourcentageLecteurExterne, 100)}%` }}
+				              />
+				            </div>
+				          </div>
+				        </div>
+				
+				        {/* Tableau détaillé */}
+				        <div className="bg-white rounded-lg shadow overflow-hidden">
+				          <table className="w-full">
+				            <thead className="bg-gray-100 border-b">
+				              <tr>
+				                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+				                  Métrique
+				                </th>
+				                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+				                  Nombre
+				                </th>
+				                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+				                  Pourcentage
+				                </th>
+				                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+				                  Total élèves
+				                </th>
+				              </tr>
+				            </thead>
+				            <tbody className="divide-y divide-gray-200">
+				              <tr>
+				                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+				                  Avec thématique
+				                </td>
+				                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+				                  {stats.avecThematique}
+				                </td>
+				                <td className="px-6 py-4 whitespace-nowrap">
+				                  <div className="flex items-center">
+				                    <div className="w-32 bg-gray-200 rounded-full h-2 mr-3">
+				                      <div 
+				                        className="bg-blue-500 h-2 rounded-full"
+				                        style={{ width: `${Math.min(stats.pourcentageThematique, 100)}%` }}
+				                      />
+				                    </div>
+				                    <span className="text-sm font-medium text-gray-900">
+				                      {stats.pourcentageThematique.toFixed(1)}%
+				                    </span>
+				                  </div>
+				                </td>
+				                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+				                  {stats.totalEleves}
+				                </td>
+				              </tr>
+				              <tr>
+				                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+				                  Avec problématique
+				                </td>
+				                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+				                  {stats.avecProblematique}
+				                </td>
+				                <td className="px-6 py-4 whitespace-nowrap">
+				                  <div className="flex items-center">
+				                    <div className="w-32 bg-gray-200 rounded-full h-2 mr-3">
+				                      <div 
+				                        className="bg-green-500 h-2 rounded-full"
+				                        style={{ width: `${Math.min(stats.pourcentageProblematique, 100)}%` }}
+				                      />
+				                    </div>
+				                    <span className="text-sm font-medium text-gray-900">
+				                      {stats.pourcentageProblematique.toFixed(1)}%
+				                    </span>
+				                  </div>
+				                </td>
+				                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+				                  {stats.totalEleves}
+				                </td>
+				              </tr>
+				              <tr>
+				                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+				                  5 sources rendues
+				                </td>
+				                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+				                  {stats.avecSources}
+				                </td>
+				                <td className="px-6 py-4 whitespace-nowrap">
+				                  <div className="flex items-center">
+				                    <div className="w-32 bg-gray-200 rounded-full h-2 mr-3">
+				                      <div 
+				                        className="bg-purple-500 h-2 rounded-full"
+				                        style={{ width: `${Math.min(stats.pourcentageSources, 100)}%` }}
+				                      />
+				                    </div>
+				                    <span className="text-sm font-medium text-gray-900">
+				                      {stats.pourcentageSources.toFixed(1)}%
+				                    </span>
+				                  </div>
+				                </td>
+				                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+				                  {stats.totalEleves}
+				                </td>
+				              </tr>
+				              <tr>
+				                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+				                  Guide assigné
+				                </td>
+				                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+				                  {stats.avecGuide}
+				                </td>
+				                <td className="px-6 py-4 whitespace-nowrap">
+				                  <div className="flex items-center">
+				                    <div className="w-32 bg-gray-200 rounded-full h-2 mr-3">
+				                      <div 
+				                        className="bg-yellow-500 h-2 rounded-full"
+				                        style={{ width: `${Math.min(stats.pourcentageGuide, 100)}%` }}
+				                      />
+				                    </div>
+				                    <span className="text-sm font-medium text-gray-900">
+				                      {stats.pourcentageGuide.toFixed(1)}%
+				                    </span>
+				                  </div>
+				                </td>
+				                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+				                  {stats.totalEleves}
+				                </td>
+				              </tr>
+				              <tr>
+				                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+				                  Lecteur interne
+				                </td>
+				                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+				                  {stats.avecLecteurInterne}
+				                </td>
+				                <td className="px-6 py-4 whitespace-nowrap">
+				                  <div className="flex items-center">
+				                    <div className="w-32 bg-gray-200 rounded-full h-2 mr-3">
+				                      <div 
+				                        className="bg-indigo-500 h-2 rounded-full"
+				                        style={{ width: `${Math.min(stats.pourcentageLecteurInterne, 100)}%` }}
+				                      />
+				                    </div>
+				                    <span className="text-sm font-medium text-gray-900">
+				                      {stats.pourcentageLecteurInterne.toFixed(1)}%
+				                    </span>
+				                  </div>
+				                </td>
+				                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+				                  {stats.totalEleves}
+				                </td>
+				              </tr>
+				              <tr>
+				                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+				                  Lecteur externe
+				                </td>
+				                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+				                  {stats.avecLecteurExterne}
+				                </td>
+				                <td className="px-6 py-4 whitespace-nowrap">
+				                  <div className="flex items-center">
+				                    <div className="w-32 bg-gray-200 rounded-full h-2 mr-3">
+				                      <div 
+				                        className="bg-pink-500 h-2 rounded-full"
+				                        style={{ width: `${Math.min(stats.pourcentageLecteurExterne, 100)}%` }}
+				                      />
+				                    </div>
+				                    <span className="text-sm font-medium text-gray-900">
+				                      {stats.pourcentageLecteurExterne.toFixed(1)}%
+				                    </span>
+				                  </div>
+				                </td>
+				                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+				                  {stats.totalEleves}
+				                </td>
+				              </tr>
+				            </tbody>
+				          </table>
+				        </div>
+				      </>
+				    ) : (
+				      <div className="text-center py-12">
+				        <div className="text-xl">Chargement des statistiques...</div>
+				      </div>
+				    )}
+				  </div>
+				)}
+				
+				{activeTab === 'controle' && (
+				  <div className="space-y-6">
+				    <div className="bg-white rounded-lg shadow p-6">
+				      <h2 className="text-xl font-semibold text-gray-800 mb-2">👥 Contrôle des guides</h2>
+				      <p className="text-gray-600">
+				        Vue détaillée de l'activité et des performances des guides
+				      </p>
+				    </div>
+				
+				    {/* Tableau des stats guides */}
+				    <div className="bg-white rounded-lg shadow overflow-x-auto">
+				      <table className="w-full">
+				        <thead className="bg-gray-100 border-b">
+				          <tr>
+				            <th 
+				              className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer"
+				              onClick={() => handleSort('nom')}
+				            >
+				              <div className="flex items-center gap-1">
+				                Guide {getSortIcon('nom')}
+				              </div>
+				            </th>
+				            <th 
+				              className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer"
+				              onClick={() => handleSort('elevesGuides')}
+				            >
+				              <div className="flex items-center gap-1">
+				                TFH comme guide {getSortIcon('elevesGuides')}
+				              </div>
+				            </th>
+				            <th 
+				              className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer"
+				              onClick={() => handleSort('elevesLecteurInterne')}
+				            >
+				              <div className="flex items-center gap-1">
+				                TFH comme lecteur interne {getSortIcon('elevesLecteurInterne')}
+				              </div>
+				            </th>
+				            <th 
+				              className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer"
+				              onClick={() => handleSort('convocationsMarsRendues')}
+				            >
+				              <div className="flex items-center gap-1">
+				                Convoc. mars rendues {getSortIcon('convocationsMarsRendues')}
+				              </div>
+				            </th>
+				            <th 
+				              className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer"
+				              onClick={() => handleSort('pourcentageConvocationsMars')}
+				            >
+				              <div className="flex items-center gap-1">
+				                % convoc. mars {getSortIcon('pourcentageConvocationsMars')}
+				              </div>
+				            </th>
+				            <th 
+				              className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer"
+				              onClick={() => handleSort('convocationsAvrilRendues')}
+				            >
+				              <div className="flex items-center gap-1">
+				                Convoc. avril rendues {getSortIcon('convocationsAvrilRendues')}
+				              </div>
+				            </th>
+				            <th 
+				              className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer"
+				              onClick={() => handleSort('pourcentageConvocationsAvril')}
+				            >
+				              <div className="flex items-center gap-1">
+				                % convoc. avril {getSortIcon('pourcentageConvocationsAvril')}
+				            </div>
+				            </th>
+				          </tr>
+				        </thead>
+				        <tbody className="divide-y divide-gray-200">
+				          {guideStats.map((guide) => (
+				            <tr key={guide.id} className="hover:bg-gray-50">
+				              <td className="px-6 py-4 whitespace-nowrap">
+				                <div className="font-medium text-gray-900">
+				                  {guide.nom} {guide.prenom} {guide.initiale}.
+				                </div>
+				              </td>
+				              <td className="px-6 py-4 whitespace-nowrap">
+				                {guide.elevesGuides || '0'}
+				              </td>
+				              <td className="px-6 py-4 whitespace-nowrap">
+				                {guide.elevesLecteurInterne || '0'}
+				              </td>
+				              <td className="px-6 py-4 whitespace-nowrap">
+				                {guide.convocationsMarsRendues || '0'} / {guide.elevesGuides || '0'}
+				              </td>
+				              <td className="px-6 py-4 whitespace-nowrap">
+				                <div className="flex items-center">
+				                  <div className="w-24 bg-gray-200 rounded-full h-2 mr-2">
+				                    <div 
+				                      className="bg-green-500 h-2 rounded-full"
+				                      style={{ width: `${Math.min(guide.pourcentageConvocationsMars, 100)}%` }}
+				                    />
+				                  </div>
+				                  <span className="text-sm font-medium">
+				                    {guide.pourcentageConvocationsMars.toFixed(1)}%
+				                  </span>
+				                </div>
+				              </td>
+				              <td className="px-6 py-4 whitespace-nowrap">
+				                {guide.convocationsAvrilRendues || '0'} / {guide.elevesGuides || '0'}
+				              </td>
+				              <td className="px-6 py-4 whitespace-nowrap">
+				                <div className="flex items-center">
+				                  <div className="w-24 bg-gray-200 rounded-full h-2 mr-2">
+				                    <div 
+				                      className="bg-blue-500 h-2 rounded-full"
+				                      style={{ width: `${Math.min(guide.pourcentageConvocationsAvril, 100)}%` }}
+				                    />
+				                  </div>
+				                  <span className="text-sm font-medium">
+				                    {guide.pourcentageConvocationsAvril.toFixed(1)}%
+				                  </span>
+				                </div>
+				              </td>
+				            </tr>
+				          ))}
+				        </tbody>
+				      </table>
+				    </div>
+				
+				    {/* Légende */}
+				    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+				      <h4 className="font-medium text-gray-700 mb-2">Légende:</h4>
+				      <ul className="text-sm text-gray-600 space-y-1">
+				        <li>• <strong>TFH comme guide</strong>: Nombre d'élèves assignés comme guide principal</li>
+				        <li>• <strong>TFH comme lecteur interne</strong>: Nombre d'élèves où le guide est lecteur interne</li>
+				        <li>• <strong>Convocations rendues</strong>: Nombre de convocations remplies / Nombre d'élèves assignés</li>
+				        <li>• <strong>% convocations</strong>: Pourcentage de convocations remplies par rapport aux élèves assignés</li>
+				      </ul>
+				    </div>
+				  </div>
+				)}
+
         {/* Modals */}
         {showMassImport && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -2908,6 +3540,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
