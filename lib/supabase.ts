@@ -70,6 +70,17 @@ export async function getElevesWithMissingData(missingField: string) {
     case 'lecteur_externe':
       query = query.is('lecteur_externe_id', null);
       break;
+    case 'sources':
+      // Adapter selon votre schéma de base de données
+      // Exemple avec des champs source_1 à source_5
+      query = query.or(
+        'source_1.is.null,source_1.eq."",' +
+        'source_2.is.null,source_2.eq."",' +
+        'source_3.is.null,source_3.eq."",' +
+        'source_4.is.null,source_4.eq."",' +
+        'source_5.is.null,source_5.eq.""'
+      );
+      break;
     default:
       return [];
   }
@@ -142,6 +153,9 @@ export async function getStats() {
     pourcentageLecteurInterne: totalEleves > 0 ? (avecLecteurInterne / totalEleves) * 100 : 0,
     pourcentageLecteurExterne: totalEleves > 0 ? (avecLecteurExterne / totalEleves) * 100 : 0,
   };
+
+  
 }
+
 
 
