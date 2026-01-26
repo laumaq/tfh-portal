@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import * as XLSX from 'xlsx';
 import CalendarDisplay from '@/app/components/CalendarDisplay';
+import StatsModal from '@/app/components/StatsModal';
 
 interface Eleve {
   id: string;
@@ -3565,7 +3566,15 @@ export default function CoordinateurDashboard() {
             </div>
           </div>
         )}
-
+		  
+		{/* Modal pour afficher les élèves avec données manquantes */}
+		<StatsModal
+		  isOpen={modal.isOpen}
+		  onClose={() => setModal({ ...modal, isOpen: false })}
+		  title={modal.title}
+		  missingField={modal.missingField}
+		/>
+		  
         <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200 md:hidden">
           <p className="text-sm text-blue-700 flex items-center gap-2">
             <span className="text-lg">💡</span>
@@ -3577,6 +3586,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
