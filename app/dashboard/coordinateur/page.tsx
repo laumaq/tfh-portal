@@ -293,6 +293,20 @@ export default function CoordinateurDashboard() {
     mediateur_voir_lecteurs_internes: true,
     mediateur_voir_lecteurs_externes: true,
   });
+
+	const [expandedSections, setExpandedSections] = useState({
+    fonctionnels: true,
+    affichage: false,
+    annee: false
+  });
+  
+  const [journeesTFH, setJourneesTFH] = useState<Array<{
+    id: number;
+    date: string;
+    libelle: string;
+  }>>([]);
+  
+  const [loadingJournees, setLoadingJournees] = useState(false);
   
   const router = useRouter();
   
@@ -822,6 +836,85 @@ export default function CoordinateurDashboard() {
 	    console.error('Erreur chargement paramètres affichage:', err);
 	  }
 	};
+
+	  // Fonction pour charger les journées TFH
+  const loadJourneesTFH = useCallback(async () => {
+    setLoadingJournees(true);
+    try {
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('*')
+        .like('setting_key', 'Journee_%')
+        .order('setting_key');
+      
+      if (error) throw error;
+      
+      // Transformer les données
+      const journees = Array.from({ length: 10 }, (_, i) => {
+        const journeeData = data?.find(d => d.setting_key === `Journee_${i + 1}`);
+        if (journeeData) {
+          return {
+            id: i + 1,
+            date: journeeData.setting_value || '',
+            libelle: journeeData.description || `Journée ${i + 1}`
+          };
+        }
+        return {
+          id: i + 1,
+          date: '',
+          libelle: `Journée ${i + 1}`
+        };
+      });
+      
+      setJourneesTFH(journees);
+    } catch (err) {
+      console.error('Erreur chargement journées TFH:', err);
+    } finally {
+      setLoadingJournees(false);
+    }
+  }, []);
+
+  // Fonctions de sauvegarde (à ajouter aussi)
+  const saveJourneeDate = async (journeeId: number, date: string) => {
+    try {
+      const { error } = await supabase
+        .from('system_settings')
+        .upsert({
+          setting_key: `Journee_${journeeId}`,
+          setting_value: date,
+          description: `Journée ${journeeId}`,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'setting_key' });
+      
+      if (error) throw error;
+      setJourneesTFH(prev => prev.map(j => j.id === journeeId ? { ...j, date } : j));
+      alert(`Date de la journée ${journeeId} sauvegardée`);
+    } catch (err) {
+      console.error('Erreur sauvegarde journée:', err);
+      alert('Erreur lors de la sauvegarde');
+    }
+  };
+
+  const saveAllJournees = async () => {
+    try {
+      const updates = journeesTFH.map(journee => ({
+        setting_key: `Journee_${journee.id}`,
+        setting_value: journee.date,
+        description: `Journée ${journee.id}`,
+        updated_at: new Date().toISOString()
+      }));
+      
+      const { error } = await supabase
+        .from('system_settings')
+        .upsert(updates, { onConflict: 'setting_key' });
+      
+      if (error) throw error;
+      alert('Toutes les dates ont été sauvegardées !');
+    } catch (err) {
+      console.error('Erreur sauvegarde globale:', err);
+      alert('Erreur lors de la sauvegarde globale');
+    }
+  };
 
 	const saveDisplaySetting = async (key: string, value: boolean) => {
 	  try {
@@ -2764,121 +2857,14 @@ export default function CoordinateurDashboard() {
   );
   
   
-const renderParametresTab = () => {
-  const [expandedSections, setExpandedSections] = useState({
-    fonctionnels: true,
-    affichage: false,
-    annee: false
-  });
-  
-  const [journeesTFH, setJourneesTFH] = useState<Array<{
-    id: number;
-    date: string;
-    libelle: string;
-  }>>([]);
-  
-  const [loadingJournees, setLoadingJournees] = useState(false);
-  
-  // Charger les journées TFH
-  useEffect(() => {
-    if (expandedSections.annee) {
-      loadJourneesTFH();
-    }
-  }, [expandedSections.annee]);
-  
-  const loadJourneesTFH = async () => {
-    setLoadingJournees(true);
-    try {
-      const { data, error } = await supabase
-        .from('system_settings')
-        .select('*')
-        .like('setting_key', 'Journee_%')
-        .order('setting_key');
-      
-      if (error) throw error;
-      
-      // Transformer les données en tableau structuré
-      const journees = Array.from({ length: 10 }, (_, i) => {
-        const journeeData = data?.find(d => d.setting_key === `Journee_${i + 1}`);
-        if (journeeData) {
-          return {
-            id: i + 1,
-            date: journeeData.setting_value || '',
-            libelle: journeeData.description || `Journée ${i + 1}`
-          };
-        }
-        return {
-          id: i + 1,
-          date: '',
-          libelle: `Journée ${i + 1}`
-        };
-      });
-      
-      setJourneesTFH(journees);
-    } catch (err) {
-      console.error('Erreur chargement journées TFH:', err);
-    } finally {
-      setLoadingJournees(false);
-    }
-  };
-  
-  const saveJourneeDate = async (journeeId: number, date: string) => {
-    try {
-      const { error } = await supabase
-        .from('system_settings')
-        .upsert({
-          setting_key: `Journee_${journeeId}`,
-          setting_value: date,
-          description: `Journée ${journeeId}`,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'setting_key'
-        });
-      
-      if (error) throw error;
-      
-      // Mettre à jour l'état local
-      setJourneesTFH(prev => prev.map(j => 
-        j.id === journeeId ? { ...j, date } : j
-      ));
-      
-      alert(`Date de la journée ${journeeId} sauvegardée`);
-    } catch (err) {
-      console.error('Erreur sauvegarde journée:', err);
-      alert('Erreur lors de la sauvegarde');
-    }
-  };
-  
-  const saveAllJournees = async () => {
-    try {
-      const updates = journeesTFH.map(journee => ({
-        setting_key: `Journee_${journee.id}`,
-        setting_value: journee.date,
-        description: `Journée ${journee.id}`,
-        updated_at: new Date().toISOString()
+  const renderParametresTab = () => {
+    const toggleSection = (section: keyof typeof expandedSections) => {
+      setExpandedSections(prev => ({
+        ...prev,
+        [section]: !prev[section]
       }));
-      
-      const { error } = await supabase
-        .from('system_settings')
-        .upsert(updates, {
-          onConflict: 'setting_key'
-        });
-      
-      if (error) throw error;
-      
-      alert('Toutes les dates ont été sauvegardées !');
-    } catch (err) {
-      console.error('Erreur sauvegarde globale:', err);
-      alert('Erreur lors de la sauvegarde globale');
-    }
-  };
-  
-  const toggleSection = (section: keyof typeof expandedSections) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
-  };
+    };
+    
   
   return (
     <div className="space-y-6">
@@ -3995,6 +3981,7 @@ return (
   </div>
 );
 }
+
 
 
 
