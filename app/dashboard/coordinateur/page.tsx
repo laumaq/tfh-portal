@@ -3475,6 +3475,7 @@ const renderParametresTab = () => (
       </div>
     );
   }
+};
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -3705,6 +3706,7 @@ const renderParametresTab = () => (
         </div>
   );
 }
+
 
 
 
