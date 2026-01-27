@@ -938,12 +938,7 @@ export default function CoordinateurDashboard() {
 	  }
 	};
 
-	const [expandedSections, setExpandedSections] = useState({
-	  fonctionnels: true,
-	  affichage: false,
-	  annee: false
-	});
-	
+
 	const getSettingDescription = (key: string): string => {
 	  const descriptions: Record<string, string> = {
 	    // Paramètres fonctionnels
@@ -3981,6 +3976,7 @@ return (
   </div>
 );
 }
+
 
 
 
