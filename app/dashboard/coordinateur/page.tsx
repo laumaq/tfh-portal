@@ -3638,6 +3638,6 @@ export default function CoordinateurDashboard() {
             Pour une meilleure expérience, pivotez votre appareil en mode paysage.
           </p>
         </div>
-    </div>
   );
 }
+
