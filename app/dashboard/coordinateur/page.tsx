@@ -9,7 +9,7 @@ import StatsModal from '@/app/components/StatsModal';
 import { 
   Menu, X, ChevronLeft, ChevronRight, LogOut, Users, 
   Calendar, Settings, FileText, BarChart, Shield, 
-  UserCheck, Eye, Info, Save, RefreshCw 
+  UserCheck, Eye, Info, Save, RefreshCw, Plus
 } from 'lucide-react';
 
 // ========== INTERFACES EXISTANTES (COPIER-COLLER) ==========
@@ -455,6 +455,14 @@ export default function CoordinateurDashboard() {
 	    loadGuideStats();
 	  }
 	}, [activeTab]);
+
+	// Effet pour détecter automatiquement les sessions quand les dates changent
+	useEffect(() => {
+	  // Cette fonction sera exécutée à chaque changement de journeesTFH
+	  // Vous pouvez l'utiliser pour loguer ou faire d'autres traitements
+	  const sessions = detecterSessions();
+	  console.log('Sessions détectées:', sessions);
+	}, [journeesTFH, detecterSessions]);	
 	
   const pluralize = (count: number, singular: string, plural: string) => {
     return count === 1 ? singular : plural;
@@ -873,6 +881,87 @@ export default function CoordinateurDashboard() {
       setLoadingJournees(false);
     }
   }, []);
+
+	// Fonction pour détecter les sessions basées sur les dates
+	const detecterSessions = useCallback(() => {
+	  const joursAvecDates = journeesTFH
+	    .filter(j => j.date)
+	    .map(j => ({
+	      id: j.id,
+	      date: new Date(j.date),
+	      timestamp: new Date(j.date).getTime()
+	    }))
+	    .sort((a, b) => a.timestamp - b.timestamp);
+	
+	  if (joursAvecDates.length < 2) return {};
+	
+	  const sessions: Record<number, number> = {};
+	  let sessionId = 1;
+	  let derniereDate: Date | null = null;
+	
+	  joursAvecDates.forEach((jour, index) => {
+	    if (!derniereDate) {
+	      sessions[jour.id] = sessionId;
+	    } else {
+	      // Calculer la différence en jours
+	      const diffJours = Math.floor(
+	        (jour.timestamp - derniereDate.getTime()) / (1000 * 60 * 60 * 24)
+	      );
+	      
+	      // Si plus de 7 jours d'écart, nouvelle session
+	      if (diffJours > 7) {
+	        sessionId++;
+	      }
+	      sessions[jour.id] = sessionId;
+	    }
+	    derniereDate = jour.date;
+	  });
+	
+	  return sessions;
+	}, [journeesTFH]);
+	
+	// Fonction pour déterminer la couleur basée sur la session
+	const getSessionColor = useCallback((journee: { id: number; date: string }) => {
+	  if (!journee.date) return 'bg-white';
+	  
+	  const sessions = detecterSessions();
+	  const sessionId = sessions[journee.id];
+	  
+	  if (!sessionId) return 'bg-white';
+	  
+	  // Couleurs différentes pour chaque session
+	  const couleursSession = [
+	    'bg-blue-50',  // Session 1
+	    'bg-green-50', // Session 2
+	    'bg-purple-50', // Session 3
+	    'bg-yellow-50', // Session 4
+	    'bg-pink-50',  // Session 5
+	    'bg-indigo-50', // Session 6
+	  ];
+	  
+	  const couleurIndex = (sessionId - 1) % couleursSession.length;
+	  return couleursSession[couleurIndex];
+	}, [detecterSessions]);
+	
+	// Fonction pour obtenir le nom de la session
+	const getSessionName = useCallback((journeeId: number) => {
+	  const sessions = detecterSessions();
+	  const sessionId = sessions[journeeId];
+	  
+	  if (!sessionId) return '';
+	  
+	  const nomsSession = [
+	    'Session 1',
+	    'Session 2',
+	    'Session 3',
+	    'Session 4',
+	    'Session 5',
+	    'Session 6',
+	  ];
+	  
+	  const nomIndex = (sessionId - 1) % nomsSession.length;
+	  return nomsSession[nomIndex];
+	}, [detecterSessions]);
 
   // Fonctions de sauvegarde (à ajouter aussi)
   const saveJourneeDate = async (journeeId: number, date: string) => {
@@ -3189,6 +3278,27 @@ export default function CoordinateurDashboard() {
 	              </tbody>
 	            </table>
 	          </div>
+
+						{/* BOUTON POUR AJOUTER DES JOURNÉES */}
+						<div className="mb-6">
+						  <button
+						    onClick={() => {
+						      const nouvelleJourneeId = journeesTFH.length + 1;
+						      setJourneesTFH(prev => [
+						        ...prev,
+						        {
+						          id: nouvelleJourneeId,
+						          date: '',
+						          libelle: `Journée ${nouvelleJourneeId}`
+						        }
+						      ]);
+						    }}
+						    className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-orange-400 hover:text-orange-600 hover:bg-orange-50 transition-colors flex items-center justify-center gap-2"
+						  >
+						    <Plus className="w-5 h-5" />
+						    Ajouter une journée supplémentaire
+						  </button>
+						</div>			
 	          
 	          {/* BOUTONS D'ACTION */}
 	          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 border-t">
@@ -3224,34 +3334,71 @@ export default function CoordinateurDashboard() {
 	            </div>
 	          </div>
 	          
-	          {/* LÉGENDE ET CONSEILS */}
-	          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-	            <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
-	              <h4 className="text-sm font-medium text-orange-800 mb-2 flex items-center gap-2">
-	                <Info className="w-4 h-4" />
-	                Conseils de planification
-	              </h4>
-	              <ul className="text-sm text-orange-700 space-y-1">
-	                <li>• J1-2 : Sessions de mars (convocation préalable)</li>
-	                <li>• J3-4 : Sessions d'avril (convocation préalable)</li>
-	                <li>• J5-10 : Défenses finales & révisions</li>
-	                <li>• Prévoir 1h30 entre deux défenses pour les corrections</li>
-	              </ul>
-	            </div>
-	            
-	            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-	              <h4 className="text-sm font-medium text-blue-800 mb-2 flex items-center gap-2">
-	                <Calendar className="w-4 h-4" />
-	                Utilisation des dates
-	              </h4>
-	              <ul className="text-sm text-blue-700 space-y-1">
-	                <li>• Affichage dans le calendrier général</li>
-	                <li>• Filtrage par période pour les rapports</li>
-	                <li>• Génération automatique des convocations</li>
-	                <li>• Synchronisation avec les emplois du temps</li>
-	              </ul>
-	            </div>
-	          </div>
+						{/* LÉGENDE ET CONSEILS - Section modifiée */}
+						<div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+						  <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+						    <h4 className="text-sm font-medium text-orange-800 mb-2 flex items-center gap-2">
+						      <Info className="w-4 h-4" />
+						      Sessions détectées
+						    </h4>
+						    <div className="space-y-2">
+						      {(() => {
+						        const sessions = detecterSessions();
+						        const sessionsUniques = [...new Set(Object.values(sessions))].sort();
+						        
+						        return sessionsUniques.map(sessionId => {
+						          const joursDansSession = Object.entries(sessions)
+						            .filter(([_, sId]) => sId === sessionId)
+						            .map(([jourId]) => parseInt(jourId));
+						          
+						          const dates = joursDansSession
+						            .map(id => journeesTFH.find(j => j.id === id)?.date)
+						            .filter(Boolean)
+						            .map(date => new Date(date!));
+						          
+						          const couleursSession = ['bg-blue-100', 'bg-green-100', 'bg-purple-100', 'bg-yellow-100', 'bg-pink-100', 'bg-indigo-100'];
+						          const couleurIndex = (sessionId - 1) % couleursSession.length;
+						          
+						          return (
+						            <div key={sessionId} className="flex items-center gap-3">
+						              <div className={`w-3 h-3 rounded-full ${couleursSession[couleurIndex]}`}></div>
+						              <div className="text-sm text-gray-700">
+						                <span className="font-medium">Session {sessionId}:</span>
+						                <span className="ml-2">
+						                  J{joursDansSession.join(', J')}
+						                  {dates.length > 0 && (
+						                    <span className="text-gray-500 ml-2">
+						                      ({dates[0].toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })})
+						                    </span>
+						                  )}
+						                </span>
+						              </div>
+						            </div>
+						          );
+						        });
+						      })()}
+						      
+						      {Object.keys(detecterSessions()).length === 0 && (
+						        <p className="text-sm text-gray-600 italic">
+						          Ajoutez des dates pour voir les sessions regroupées
+						        </p>
+						      )}
+						    </div>
+						  </div>
+						  
+						  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+						    <h4 className="text-sm font-medium text-blue-800 mb-2 flex items-center gap-2">
+						      <Calendar className="w-4 h-4" />
+						      Règles de regroupement
+						    </h4>
+						    <ul className="text-sm text-blue-700 space-y-1">
+						      <li>• Les journées sont regroupées par session</li>
+						      <li>• Une session = dates à moins de 7 jours d'écart</li>
+						      <li>• Chaque session a une couleur distincte</li>
+						      <li>• Les journées sans date restent neutres (blanc)</li>
+						    </ul>
+						  </div>
+						</div>
 	        </>
 	      )}
 	    </div>
@@ -4072,6 +4219,7 @@ return (
   </div>
 );
 }
+
 
 
 
