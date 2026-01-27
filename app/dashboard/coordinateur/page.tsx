@@ -912,7 +912,7 @@ export default function CoordinateurDashboard() {
 	  return sessions;
 	}, [journeesTFH]);
 	
-	// Fonction pour déterminer la couleur basée sur la session
+	// Remplacer la fonction getSessionColor existante par :
 	const getSessionColor = useCallback((journee: { id: number; date: string }) => {
 	  if (!journee.date) return 'bg-white';
 	  
@@ -921,14 +921,14 @@ export default function CoordinateurDashboard() {
 	  
 	  if (!sessionId) return 'bg-white';
 	  
-	  // Couleurs différentes pour chaque session
+	  // COULEURS RENFORCÉES (50% → 100/200)
 	  const couleursSession = [
-	    'bg-blue-50',  // Session 1
-	    'bg-green-50', // Session 2
-	    'bg-purple-50', // Session 3
-	    'bg-yellow-50', // Session 4
-	    'bg-pink-50',  // Session 5
-	    'bg-indigo-50', // Session 6
+	    'bg-blue-100 border-l-4 border-blue-400',       // Session 1 - Bleu
+	    'bg-green-100 border-l-4 border-green-400',     // Session 2 - Vert
+	    'bg-purple-100 border-l-4 border-purple-400',   // Session 3 - Violet
+	    'bg-yellow-100 border-l-4 border-yellow-400',   // Session 4 - Jaune
+	    'bg-pink-100 border-l-4 border-pink-400',       // Session 5 - Rose
+	    'bg-indigo-100 border-l-4 border-indigo-400',   // Session 6 - Indigo
 	  ];
 	  
 	  const couleurIndex = (sessionId - 1) % couleursSession.length;
@@ -3295,11 +3295,6 @@ export default function CoordinateurDashboard() {
 	          
 	          {/* BOUTONS D'ACTION */}
 	          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 border-t">
-	            <div className="text-sm text-gray-500">
-	              <span className="inline-block w-3 h-3 bg-blue-100 mr-1"></span> Sessions mars
-	              <span className="inline-block w-3 h-3 bg-green-100 mx-3 mr-1"></span> Sessions avril
-	              <span className="inline-block w-3 h-3 bg-gray-100 mr-1 ml-3"></span> Défenses & révisions
-	            </div>
 	            <div className="flex gap-3">
 	              <button
 	                onClick={() => {
@@ -3329,55 +3324,77 @@ export default function CoordinateurDashboard() {
 	          
 						{/* LÉGENDE ET CONSEILS - Section modifiée */}
 						<div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-						  <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
-						    <h4 className="text-sm font-medium text-orange-800 mb-2 flex items-center gap-2">
-						      <Info className="w-4 h-4" />
-						      Sessions détectées
-						    </h4>
-						    <div className="space-y-2">
-						      {(() => {
-						        const sessions = detecterSessions();
-						        const sessionsUniques = [...new Set(Object.values(sessions))].sort();
-						        
-						        return sessionsUniques.map(sessionId => {
-						          const joursDansSession = Object.entries(sessions)
-						            .filter(([_, sId]) => sId === sessionId)
-						            .map(([jourId]) => parseInt(jourId));
-						          
-						          const dates = joursDansSession
-						            .map(id => journeesTFH.find(j => j.id === id)?.date)
-						            .filter(Boolean)
-						            .map(date => new Date(date!));
-						          
-						          const couleursSession = ['bg-blue-100', 'bg-green-100', 'bg-purple-100', 'bg-yellow-100', 'bg-pink-100', 'bg-indigo-100'];
-						          const couleurIndex = (sessionId - 1) % couleursSession.length;
-						          
-						          return (
-						            <div key={sessionId} className="flex items-center gap-3">
-						              <div className={`w-3 h-3 rounded-full ${couleursSession[couleurIndex]}`}></div>
-						              <div className="text-sm text-gray-700">
-						                <span className="font-medium">Session {sessionId}:</span>
-						                <span className="ml-2">
-						                  J{joursDansSession.join(', J')}
-						                  {dates.length > 0 && (
-						                    <span className="text-gray-500 ml-2">
-						                      ({dates[0].toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })})
-						                    </span>
-						                  )}
-						                </span>
-						              </div>
-						            </div>
-						          );
-						        });
-						      })()}
-						      
-						      {Object.keys(detecterSessions()).length === 0 && (
-						        <p className="text-sm text-gray-600 italic">
-						          Ajoutez des dates pour voir les sessions regroupées
-						        </p>
-						      )}
-						    </div>
-						  </div>
+							<div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+							  <h4 className="text-sm font-medium text-orange-800 mb-3 flex items-center gap-2">
+							    <Info className="w-4 h-4" />
+							    Sessions détectées automatiquement
+							  </h4>
+							  <div className="space-y-2">
+							    {(() => {
+							      const sessions = detecterSessions();
+							      const sessionsUniques = Array.from(new Set(Object.values(sessions))).sort();
+							      
+							      return sessionsUniques.map(sessionId => {
+							        const joursDansSession = Object.entries(sessions)
+							          .filter(([_, sId]) => sId === sessionId)
+							          .map(([jourId]) => parseInt(jourId));
+							        
+							        const dates = joursDansSession
+							          .map(id => journeesTFH.find(j => j.id === id)?.date)
+							          .filter(Boolean)
+							          .map(date => new Date(date!));
+							        
+							        // MÊMES COULEURS QUE DANS LE TABLEAU
+							        const couleursSession = [
+							          { bg: 'bg-blue-100', border: 'border-blue-400', text: 'text-blue-800' },
+							          { bg: 'bg-green-100', border: 'border-green-400', text: 'text-green-800' },
+							          { bg: 'bg-purple-100', border: 'border-purple-400', text: 'text-purple-800' },
+							          { bg: 'bg-yellow-100', border: 'border-yellow-400', text: 'text-yellow-800' },
+							          { bg: 'bg-pink-100', border: 'border-pink-400', text: 'text-pink-800' },
+							          { bg: 'bg-indigo-100', border: 'border-indigo-400', text: 'text-indigo-800' },
+							        ];
+							        
+							        const couleurIndex = (sessionId - 1) % couleursSession.length;
+							        const couleur = couleursSession[couleurIndex];
+							        
+							        return (
+							          <div key={sessionId} className="flex items-center gap-3 p-2 rounded-lg bg-white border">
+							            <div className={`w-4 h-4 rounded ${couleur.bg} border ${couleur.border}`}></div>
+							            <div className="text-sm">
+							              <span className={`font-medium ${couleur.text}`}>Session {sessionId}</span>
+							              <span className="ml-2 text-gray-700">
+							                J{joursDansSession.join(', J')}
+							                {dates.length > 0 && (
+							                  <span className="text-gray-500 ml-2">
+							                    ({dates[0].toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })})
+							                  </span>
+							                )}
+							              </span>
+							              {dates.length > 1 && (
+							                <div className="text-xs text-gray-500 mt-1">
+							                  {dates.length} journ{dates.length > 1 ? 'ées' : 'ée'} sur {
+							                    Math.floor((dates[dates.length-1].getTime() - dates[0].getTime()) / (1000 * 60 * 60 * 24)) + 1
+							                  } jour{Math.floor((dates[dates.length-1].getTime() - dates[0].getTime()) / (1000 * 60 * 60 * 24)) + 1 > 1 ? 's' : ''}
+							                </div>
+							              )}
+							            </div>
+							          </div>
+							        );
+							      });
+							    })()}
+							    
+							    {Object.keys(detecterSessions()).length === 0 && (
+							      <div className="text-center py-3">
+							        <p className="text-sm text-gray-600 italic">
+							          Ajoutez des dates pour voir les sessions regroupées automatiquement
+							        </p>
+							        <p className="text-xs text-gray-500 mt-1">
+							          Les journées à moins de 7 jours d'écart forment une même session
+							        </p>
+							      </div>
+							    )}
+							  </div>
+							</div>
 						  
 						  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
 						    <h4 className="text-sm font-medium text-blue-800 mb-2 flex items-center gap-2">
@@ -4212,6 +4229,7 @@ return (
   </div>
 );
 }
+
 
 
 
