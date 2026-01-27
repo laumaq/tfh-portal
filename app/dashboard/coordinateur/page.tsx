@@ -455,14 +455,6 @@ export default function CoordinateurDashboard() {
 	    loadGuideStats();
 	  }
 	}, [activeTab]);
-
-	// Effet pour détecter automatiquement les sessions quand les dates changent
-	useEffect(() => {
-	  // Cette fonction sera exécutée à chaque changement de journeesTFH
-	  // Vous pouvez l'utiliser pour loguer ou faire d'autres traitements
-	  const sessions = detecterSessions();
-	  console.log('Sessions détectées:', sessions);
-	}, [journeesTFH, detecterSessions]);	
 	
   const pluralize = (count: number, singular: string, plural: string) => {
     return count === 1 ? singular : plural;
@@ -4220,6 +4212,7 @@ return (
   </div>
 );
 }
+
 
 
 
