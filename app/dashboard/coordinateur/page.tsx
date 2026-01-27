@@ -2826,7 +2826,6 @@ export default function CoordinateurDashboard() {
                       checked={displaySettings.mediateur_voir_lecteurs_externes}
                       onChange={(checked) => saveDisplaySetting('mediateur_voir_lecteurs_externes', checked)}
                     />
-                  </div>
                 </div>
               </div>
             </div>
@@ -3640,4 +3639,5 @@ export default function CoordinateurDashboard() {
         </div>
   );
 }
+
 
