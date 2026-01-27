@@ -2755,151 +2755,148 @@ export default function CoordinateurDashboard() {
   );
   
   
-  const renderParametresTab = () => (
-          <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow p-6">
+const renderParametresTab = () => (
+  <div className="space-y-6">
+    <div className="bg-white rounded-lg shadow p-6">
+      <h2 className="text-xl font-semibold text-gray-800 mb-6">
+        ⚙️ Paramètres fonctionnels
+      </h2>
 
-							<h2 className="text-xl font-semibold text-gray-800 mb-6">
-                ⚙️ Paramètres fonctionnels
-              </h2>
-				
-              <div className="border border-blue-200 rounded-lg p-6 mb-8">
-                <h3 className="text-lg font-medium text-gray-700 mb-4 flex items-center gap-2">
-                  <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">🚦</span>
-                  Autorisations
-                </h3>
-                
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
-                    <div>
-                      <p className="text-sm text-gray-600 mt-1">
-                        Autorise les guides à sélectionner des TFH en tant que lecteur interne
-                      </p>
-                    </div>
-                    <label className="flex items-center cursor-pointer">
-                      <div className="relative">
-                        <input
-                          type="checkbox"
-                          className="sr-only"
-                          checked={lecteurInterneEnabled}
-                          onChange={(e) => toggleLecteurInterne(e.target.checked)}
-                          disabled={loadingSettings}
-                        />
-                        <div className={`block w-14 h-8 rounded-full ${lecteurInterneEnabled ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
-                        <div className={`absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${lecteurInterneEnabled ? 'transform translate-x-6' : ''}`}></div>
-                      </div>
-                      <span className="ml-3 text-sm font-medium text-gray-700">
-                        {lecteurInterneEnabled ? 'Activé' : 'Désactivé'}
-                      </span>
-                    </label>
-                  </div>
-                </div>
-              </div>
-				
-              <h2 className="text-xl font-semibold text-gray-800 mb-6">
-                Paramètres d'affichage (anonymisation)
-              </h2>
-				
-              <div className="space-y-8">
-                <div className="border rounded-lg p-6">
-                  <h3 className="text-lg font-medium text-gray-700 mb-4 flex items-center gap-2">
-                    <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">👁️</span>
-                    Vue Lecteur Externe
-                    <span className="text-sm font-normal text-gray-500">(que voient les lecteurs externes ?)</span>
-                  </h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <ToggleSetting
-                      label="Voir les élèves (noms & prénoms)"
-                      checked={displaySettings.lecteur_externe_voir_eleves}
-                      onChange={(checked) => saveDisplaySetting('lecteur_externe_voir_eleves', checked)}
-                    />
-                    <ToggleSetting
-                      label="Voir les guides (noms & prénoms)"
-                      checked={displaySettings.lecteur_externe_voir_guides}
-                      onChange={(checked) => saveDisplaySetting('lecteur_externe_voir_guides', checked)}
-                    />
-                    <ToggleSetting
-                      label="Voir les lecteurs internes (noms & prénoms)"
-                      checked={displaySettings.lecteur_externe_voir_lecteurs_internes}
-                      onChange={(checked) => saveDisplaySetting('lecteur_externe_voir_lecteurs_internes', checked)}
-                    />
-                    <ToggleSetting
-                      label="Voir les médiateurs (noms & prénoms)"
-                      checked={displaySettings.lecteur_externe_voir_mediateurs}
-                      onChange={(checked) => saveDisplaySetting('lecteur_externe_voir_mediateurs', checked)}
-                    />
-                  </div>
-                </div>
-                
-                <div className="border rounded-lg p-6">
-                  <h3 className="text-lg font-medium text-gray-700 mb-4 flex items-center gap-2">
-                    <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">📖</span>
-                    Vue Lecteur Interne
-                    <span className="text-sm font-normal text-gray-500">(que voient les lecteurs internes ?)</span>
-                  </h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <ToggleSetting
-                      label="Voir les élèves (noms & prénoms)"
-                      checked={displaySettings.lecteur_interne_voir_eleves}
-                      onChange={(checked) => saveDisplaySetting('lecteur_interne_voir_eleves', checked)}
-                    />
-                    <ToggleSetting
-                      label="Voir les guides (noms & prénoms)"
-                      checked={displaySettings.lecteur_interne_voir_guides}
-                      onChange={(checked) => saveDisplaySetting('lecteur_interne_voir_guides', checked)}
-                    />
-                    <ToggleSetting
-                      label="Voir les lecteurs externes (noms & prénoms)"
-                      checked={displaySettings.lecteur_interne_voir_lecteurs_externes}
-                      onChange={(checked) => saveDisplaySetting('lecteur_interne_voir_lecteurs_externes', checked)}
-                    />
-                    <ToggleSetting
-                      label="Voir les médiateurs (noms & prénoms)"
-                      checked={displaySettings.lecteur_interne_voir_mediateurs}
-                      onChange={(checked) => saveDisplaySetting('lecteur_interne_voir_mediateurs', checked)}
-                    />
-                  </div>
-                </div>
-                
-                <div className="border rounded-lg p-6">
-                  <h3 className="text-lg font-medium text-gray-700 mb-4 flex items-center gap-2">
-                    <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">⚖️</span>
-                    Vue Médiateur
-                    <span className="text-sm font-normal text-gray-500">(que voient les médiateurs ?)</span>
-                  </h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <ToggleSetting
-                      label="Voir les élèves (noms & prénoms)"
-                      checked={displaySettings.mediateur_voir_eleves}
-                      onChange={(checked) => saveDisplaySetting('mediateur_voir_eleves', checked)}
-                    />
-                    <ToggleSetting
-                      label="Voir les guides (noms & prénoms)"
-                      checked={displaySettings.mediateur_voir_guides}
-                      onChange={(checked) => saveDisplaySetting('mediateur_voir_guides', checked)}
-                    />
-                    <ToggleSetting
-                      label="Voir les lecteurs internes (noms & prénoms)"
-                      checked={displaySettings.mediateur_voir_lecteurs_internes}
-                      onChange={(checked) => saveDisplaySetting('mediateur_voir_lecteurs_internes', checked)}
-                    />
-                    <ToggleSetting
-                      label="Voir les lecteurs externes (noms & prénoms)"
-                      checked={displaySettings.mediateur_voir_lecteurs_externes}
-                      onChange={(checked) => saveDisplaySetting('mediateur_voir_lecteurs_externes', checked)}
-                    />
-                	</div>
-                </div>
-              </div>
+      <div className="border border-blue-200 rounded-lg p-6 mb-8">
+        <h3 className="text-lg font-medium text-gray-700 mb-4 flex items-center gap-2">
+          <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">🚦</span>
+          Autorisations
+        </h3>
+        
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+            <div>
+              <h4 className="font-medium text-gray-800 mb-1">Onglet "Lecteur interne" pour les guides</h4>
+              <p className="text-sm text-gray-600 mt-1">
+                Autorise les guides à sélectionner des TFH en tant que lecteur interne
+              </p>
             </div>
+            <label className="flex items-center cursor-pointer">
+              <div className="relative">
+                <input
+                  type="checkbox"
+                  className="sr-only"
+                  checked={lecteurInterneEnabled}
+                  onChange={(e) => toggleLecteurInterne(e.target.checked)}
+                  disabled={loadingSettings}
+                />
+                <div className={`block w-14 h-8 rounded-full ${lecteurInterneEnabled ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
+                <div className={`absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${lecteurInterneEnabled ? 'transform translate-x-6' : ''}`}></div>
+              </div>
+              <span className="ml-3 text-sm font-medium text-gray-700">
+                {lecteurInterneEnabled ? 'Activé' : 'Désactivé'}
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <h2 className="text-xl font-semibold text-gray-800 mb-6">
+        Paramètres d'affichage (anonymisation)
+      </h2>
+
+      <div className="space-y-8">
+        <div className="border rounded-lg p-6">
+          <h3 className="text-lg font-medium text-gray-700 mb-4 flex items-center gap-2">
+            <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">👁️</span>
+            Vue Lecteur Externe
+            <span className="text-sm font-normal text-gray-500">(que voient les lecteurs externes ?)</span>
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <ToggleSetting
+              label="Voir les élèves (noms & prénoms)"
+              checked={displaySettings.lecteur_externe_voir_eleves}
+              onChange={(checked) => saveDisplaySetting('lecteur_externe_voir_eleves', checked)}
+            />
+            <ToggleSetting
+              label="Voir les guides (noms & prénoms)"
+              checked={displaySettings.lecteur_externe_voir_guides}
+              onChange={(checked) => saveDisplaySetting('lecteur_externe_voir_guides', checked)}
+            />
+            <ToggleSetting
+              label="Voir les lecteurs internes (noms & prénoms)"
+              checked={displaySettings.lecteur_externe_voir_lecteurs_internes}
+              onChange={(checked) => saveDisplaySetting('lecteur_externe_voir_lecteurs_internes', checked)}
+            />
+            <ToggleSetting
+              label="Voir les médiateurs (noms & prénoms)"
+              checked={displaySettings.lecteur_externe_voir_mediateurs}
+              onChange={(checked) => saveDisplaySetting('lecteur_externe_voir_mediateurs', checked)}
+            />
+          </div>
+        </div>
+        
+        <div className="border rounded-lg p-6">
+          <h3 className="text-lg font-medium text-gray-700 mb-4 flex items-center gap-2">
+            <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">📖</span>
+            Vue Lecteur Interne
+            <span className="text-sm font-normal text-gray-500">(que voient les lecteurs internes ?)</span>
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <ToggleSetting
+              label="Voir les élèves (noms & prénoms)"
+              checked={displaySettings.lecteur_interne_voir_eleves}
+              onChange={(checked) => saveDisplaySetting('lecteur_interne_voir_eleves', checked)}
+            />
+            <ToggleSetting
+              label="Voir les guides (noms & prénoms)"
+              checked={displaySettings.lecteur_interne_voir_guides}
+              onChange={(checked) => saveDisplaySetting('lecteur_interne_voir_guides', checked)}
+            />
+            <ToggleSetting
+              label="Voir les lecteurs externes (noms & prénoms)"
+              checked={displaySettings.lecteur_interne_voir_lecteurs_externes}
+              onChange={(checked) => saveDisplaySetting('lecteur_interne_voir_lecteurs_externes', checked)}
+            />
+            <ToggleSetting
+              label="Voir les médiateurs (noms & prénoms)"
+              checked={displaySettings.lecteur_interne_voir_mediateurs}
+              onChange={(checked) => saveDisplaySetting('lecteur_interne_voir_mediateurs', checked)}
+            />
+          </div>
+        </div>
+        
+        <div className="border rounded-lg p-6">
+          <h3 className="text-lg font-medium text-gray-700 mb-4 flex items-center gap-2">
+            <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">⚖️</span>
+            Vue Médiateur
+            <span className="text-sm font-normal text-gray-500">(que voient les médiateurs ?)</span>
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <ToggleSetting
+              label="Voir les élèves (noms & prénoms)"
+              checked={displaySettings.mediateur_voir_eleves}
+              onChange={(checked) => saveDisplaySetting('mediateur_voir_eleves', checked)}
+            />
+            <ToggleSetting
+              label="Voir les guides (noms & prénoms)"
+              checked={displaySettings.mediateur_voir_guides}
+              onChange={(checked) => saveDisplaySetting('mediateur_voir_guides', checked)}
+            />
+            <ToggleSetting
+              label="Voir les lecteurs internes (noms & prénoms)"
+              checked={displaySettings.mediateur_voir_lecteurs_internes}
+              onChange={(checked) => saveDisplaySetting('mediateur_voir_lecteurs_internes', checked)}
+            />
+            <ToggleSetting
+              label="Voir les lecteurs externes (noms & prénoms)"
+              checked={displaySettings.mediateur_voir_lecteurs_externes}
+              onChange={(checked) => saveDisplaySetting('mediateur_voir_lecteurs_externes', checked)}
+            />
           </div>
         </div>
       </div>
     </div>
-  );
+  </div>
+);
   
   
   const renderStatsTab = () => (
@@ -3708,6 +3705,7 @@ export default function CoordinateurDashboard() {
         </div>
   );
 }
+
 
 
 
