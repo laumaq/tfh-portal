@@ -3467,245 +3467,249 @@ const renderParametresTab = () => (
     </div>
   );
 
-  // ========== RENDU PRINCIPAL ==========
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">Chargement...</div>
-      </div>
-    );
-  }
-
+// ========== RENDU PRINCIPAL ==========
+if (loading) {
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Message paysage mobile */}
-      <div 
-        id="landscape-message" 
-        className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
-        style={{ display: 'none' }}
-      >
-        <div className="bg-white rounded-lg p-6 max-w-sm text-center">
-          <div className="text-4xl mb-4">↻</div>
-          <h3 className="text-lg font-semibold mb-2">Pivotez votre appareil</h3>
-          <p className="text-gray-600 mb-4">
-            Pour une meilleure expérience, utilisez votre téléphone en mode paysage.
-          </p>
-          <button
-            onClick={() => {
-              const msg = document.getElementById('landscape-message');
-              if (msg) msg.style.display = 'none';
-            }}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 w-full"
-          >
-            J'ai compris
-          </button>
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-xl">Chargement...</div>
+    </div>
+  );
+}
+
+return (
+  <div className="min-h-screen bg-gray-50">
+    {/* Message paysage mobile */}
+    <div 
+      id="landscape-message" 
+      className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
+      style={{ display: 'none' }}
+    >
+      <div className="bg-white rounded-lg p-6 max-w-sm text-center">
+        <div className="text-4xl mb-4">↻</div>
+        <h3 className="text-lg font-semibold mb-2">Pivotez votre appareil</h3>
+        <p className="text-gray-600 mb-4">
+          Pour une meilleure expérience, utilisez votre téléphone en mode paysage.
+        </p>
+        <button
+          onClick={() => {
+            const msg = document.getElementById('landscape-message');
+            if (msg) msg.style.display = 'none';
+          }}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 w-full"
+        >
+          J'ai compris
+        </button>
+      </div>
+    </div>
+
+    {/* Layout principal */}
+    <div className="flex h-screen">
+      {/* Sidebar */}
+      <Sidebar />
+
+      {/* Contenu principal */}
+      <main className="flex-1 overflow-auto">
+        {/* En-tête mobile */}
+        <header className="md:hidden p-4 border-b border-gray-200 bg-white sticky top-0 z-20">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="p-2 hover:bg-gray-100 rounded-lg"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <div>
+              <h1 className="font-semibold text-gray-800">
+                {tabs.find(t => t.id === activeTab)?.name}
+              </h1>
+              <p className="text-xs text-gray-500">TFH Portal</p>
+            </div>
+            <div className="w-10"></div>
+          </div>
+        </header>
+
+        {/* En-tête desktop */}
+        <header className="hidden md:block p-6 border-b border-gray-200 bg-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">
+                {tabs.find(t => t.id === activeTab)?.name}
+              </h1>
+              <p className="text-gray-600">
+                {tabs.find(t => t.id === activeTab)?.description}
+              </p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="text-sm text-gray-600">
+                Connecté en tant que <span className="font-semibold">{userName}</span>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Déconnexion</span>
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* Contenu de l'onglet */}
+        <div className="p-4 md:p-6">
+          {activeTab === 'dashboard' && renderDashboard()}
+          {activeTab === 'convocations' && renderConvocationsTab()}
+          {activeTab === 'defenses' && renderDefensesTab()}
+          {activeTab === 'calendrier' && renderCalendrierTab()}
+          {activeTab === 'gestion-utilisateurs' && renderGestionUtilisateursTab()}
+          {activeTab === 'parametres-affichage' && renderParametresTab()}
+          {activeTab === 'stats' && renderStatsTab()}
+          {activeTab === 'controle' && renderControleTab()}
+        </div>
+      </main>
+    </div>
+
+    {/* Modals existants */}
+    {showMassImport && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+          <div className="px-6 py-4 border-b">
+            <h3 className="text-lg font-semibold text-gray-800">Import massif depuis CSV/Excel</h3>
+          </div>
+          
+          <div className="p-6">
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Format attendu pour les {selectedUserType}:
+              </label>
+              <div className="text-sm text-gray-600 mb-3">
+                {selectedUserType === 'eleves' && 'Colonnes: nom, prenom, classe, categorie (optionnel)'}
+                {selectedUserType === 'guides' && 'Colonnes: nom, prenom'}
+                {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && 'Colonnes: nom, prenom, email'}
+                {selectedUserType === 'coordinateurs' && 'Colonnes: nom, prenom'}
+              </div>
+              
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                accept=".csv,.xlsx,.xls"
+                className="w-full border rounded px-3 py-2 text-sm"
+              />
+            </div>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Données CSV (vous pouvez aussi coller directement):
+              </label>
+              <textarea
+                value={massImportData}
+                onChange={(e) => setMassImportData(e.target.value)}
+                rows={10}
+                className="w-full border rounded px-3 py-2 text-sm font-mono"
+                placeholder="Collez vos données CSV ici..."
+              />
+            </div>
+          </div>
+          
+          <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
+            <button
+              onClick={() => {
+                setShowMassImport(false);
+                setMassImportData('');
+              }}
+              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={() => {
+                console.log('Données brutes:', massImportData);
+                const testRows = massImportData.split('\n').filter(row => row.trim());
+                console.log('Lignes détectées:', testRows);
+                handleMassImport();
+              }}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+              disabled={!massImportData.trim()}
+            >
+              Importer
+            </button>
+          </div>
         </div>
       </div>
+    )}
 
-      {/* Layout principal */}
-      <div className="flex h-screen">
-        {/* Sidebar */}
-        <Sidebar />
-
-        {/* Contenu principal */}
-        <main className="flex-1 overflow-auto">
-          {/* En-tête mobile */}
-          <header className="md:hidden p-4 border-b border-gray-200 bg-white sticky top-0 z-20">
-            <div className="flex items-center justify-between">
-              <button
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="p-2 hover:bg-gray-100 rounded-lg"
-              >
-                <Menu className="w-6 h-6" />
-              </button>
-              <div>
-                <h1 className="font-semibold text-gray-800">
-                  {tabs.find(t => t.id === activeTab)?.name}
-                </h1>
-                <p className="text-xs text-gray-500">TFH Portal</p>
-              </div>
-              <div className="w-10"></div>
-            </div>
-          </header>
-
-          {/* En-tête desktop */}
-          <header className="hidden md:block p-6 border-b border-gray-200 bg-white">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-800">
-                  {tabs.find(t => t.id === activeTab)?.name}
-                </h1>
-                <p className="text-gray-600">
-                  {tabs.find(t => t.id === activeTab)?.description}
+    {showClearConfirmations && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+          <div className="px-6 py-4 border-b">
+            <h3 className="text-lg font-semibold text-red-800">
+              Confirmation nécessaire
+            </h3>
+          </div>
+          
+          <div className="p-6">
+            <div className="mb-4">
+              <p className="text-gray-700 mb-3">
+                Vous êtes sur le point de supprimer <strong>TOUS</strong> les {selectedUserType === 'eleves' ? 'élèves' : 'guides'}.
+                Cette action est irréversible.
+              </p>
+              
+              <p className="text-sm text-gray-600 mb-4">
+                Pour des raisons de sécurité, cette opération nécessite la confirmation de 3 coordinateurs différents.
+              </p>
+              
+              <div className="bg-yellow-50 border border-yellow-200 rounded p-3 mb-4">
+                <p className="text-sm text-yellow-800">
+                  Confirmations reçues: {clearConfirmations.length}/3
+                  {clearConfirmations.length > 0 && (
+                    <span className="block mt-1">
+                      {clearConfirmations.map(name => `• ${name}`).join('\n')}
+                    </span>
+                  )}
                 </p>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="text-sm text-gray-600">
-                  Connecté en tant que <span className="font-semibold">{userName}</span>
-                </div>
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span>Déconnexion</span>
-                </button>
-              </div>
-            </div>
-          </header>
-
-          {/* Contenu de l'onglet */}
-          <div className="p-4 md:p-6">
-            {activeTab === 'dashboard' && renderDashboard()}
-            {activeTab === 'convocations' && renderConvocationsTab()}
-            {/* Ajoutez ici les autres onglets */}
-            {/* {activeTab === 'defenses' && renderDefensesTab()} */}
-            {/* etc. */}
-          </div>
-        </main>
-      </div>
-
-      {/* Modals existants */}
-        {showMassImport && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
-              <div className="px-6 py-4 border-b">
-                <h3 className="text-lg font-semibold text-gray-800">Import massif depuis CSV/Excel</h3>
-              </div>
-              
-              <div className="p-6">
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Format attendu pour les {selectedUserType}:
-                  </label>
-                  <div className="text-sm text-gray-600 mb-3">
-                    {selectedUserType === 'eleves' && 'Colonnes: nom, prenom, classe, categorie (optionnel)'}
-                    {selectedUserType === 'guides' && 'Colonnes: nom, prenom'}
-                    {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && 'Colonnes: nom, prenom, email'}
-                    {selectedUserType === 'coordinateurs' && 'Colonnes: nom, prenom'}
-                  </div>
-                  
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileUpload}
-                    accept=".csv,.xlsx,.xls"
-                    className="w-full border rounded px-3 py-2 text-sm"
-                  />
-                </div>
-                
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Données CSV (vous pouvez aussi coller directement):
-                  </label>
-                  <textarea
-                    value={massImportData}
-                    onChange={(e) => setMassImportData(e.target.value)}
-                    rows={10}
-                    className="w-full border rounded px-3 py-2 text-sm font-mono"
-                    placeholder="Collez vos données CSV ici..."
-                  />
-                </div>
-              </div>
-              
-              <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
-                <button
-                  onClick={() => {
-                    setShowMassImport(false);
-                    setMassImportData('');
-                  }}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm"
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={() => {
-                    console.log('Données brutes:', massImportData);
-                    const testRows = massImportData.split('\n').filter(row => row.trim());
-                    console.log('Lignes détectées:', testRows);
-                    handleMassImport();
-                  }}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
-                  disabled={!massImportData.trim()}
-                >
-                  Importer
-                </button>
-              </div>
             </div>
           </div>
-        )}
-
-        {showClearConfirmations && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-              <div className="px-6 py-4 border-b">
-                <h3 className="text-lg font-semibold text-red-800">
-                  Confirmation nécessaire
-                </h3>
-              </div>
-              
-              <div className="p-6">
-                <div className="mb-4">
-                  <p className="text-gray-700 mb-3">
-                    Vous êtes sur le point de supprimer <strong>TOUS</strong> les {selectedUserType === 'eleves' ? 'élèves' : 'guides'}.
-                    Cette action est irréversible.
-                  </p>
-                  
-                  <p className="text-sm text-gray-600 mb-4">
-                    Pour des raisons de sécurité, cette opération nécessite la confirmation de 3 coordinateurs différents.
-                  </p>
-                  
-                  <div className="bg-yellow-50 border border-yellow-200 rounded p-3 mb-4">
-                    <p className="text-sm text-yellow-800">
-                      Confirmations reçues: {clearConfirmations.length}/3
-                      {clearConfirmations.length > 0 && (
-                        <span className="block mt-1">
-                          {clearConfirmations.map(name => `• ${name}`).join('\n')}
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="px-6 py-4 border-t bg-gray-50 flex justify-between">
-                <button
-                  onClick={() => {
-                    setShowClearConfirmations(false);
-                    setClearConfirmations([]);
-                  }}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm"
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={() => handleClearAll(selectedUserType as 'eleves' | 'guides')}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
-                >
-                  Confirmer ({clearConfirmations.length}/3)
-                </button>
-              </div>
-            </div>
+          
+          <div className="px-6 py-4 border-t bg-gray-50 flex justify-between">
+            <button
+              onClick={() => {
+                setShowClearConfirmations(false);
+                setClearConfirmations([]);
+              }}
+              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={() => handleClearAll(selectedUserType as 'eleves' | 'guides')}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
+            >
+              Confirmer ({clearConfirmations.length}/3)
+            </button>
           </div>
-        )}
-
-		<StatsModal
-		  isOpen={modal.isOpen}
-		  onClose={() => setModal({ ...modal, isOpen: false })}
-		  title={modal.title}
-		  missingField={modal.missingField}
-		/>
-		  
-        <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200 md:hidden">
-          <p className="text-sm text-blue-700 flex items-center gap-2">
-            <span className="text-lg">💡</span>
-            Sur mobile, faites défiler horizontalement pour voir toutes les colonnes.
-            Pour une meilleure expérience, pivotez votre appareil en mode paysage.
-          </p>
         </div>
-    </div>  {/* Ferme le <div className="min-h-screen bg-gray-50"> */}
-  ); 
+      </div>
+    )}
+
+    <StatsModal
+      isOpen={modal.isOpen}
+      onClose={() => setModal({ ...modal, isOpen: false })}
+      title={modal.title}
+      missingField={modal.missingField}
+    />
+    
+    <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200 md:hidden">
+      <p className="text-sm text-blue-700 flex items-center gap-2">
+        <span className="text-lg">💡</span>
+        Sur mobile, faites défiler horizontalement pour voir toutes les colonnes.
+        Pour une meilleure expérience, pivotez votre appareil en mode paysage.
+      </p>
+    </div>
+  </div>
+);
 }
+
 
 
 
