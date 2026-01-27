@@ -299,6 +299,20 @@ export default function CoordinateurDashboard() {
     missingField: '',
   });
 
+	const CONVOCATION_OPTIONS = [
+	  { value: '', label: '-', color: 'bg-gray-100' },
+	  { value: 'non_objectifs_atteints', label: 'Non, l\'élève atteint bien les objectifs', color: 'bg-green-100 text-green-800' },
+	  { value: 'oui_objectifs_non_atteints', label: 'Oui, l\'élève n\'atteint pas les objectifs', color: 'bg-yellow-100 text-yellow-800' },
+	  { value: 'oui_pas_avance', label: 'Oui, l\'élève n\'a pas avancé', color: 'bg-red-100 text-red-800' },
+	  { value: 'oui_pas_communique', label: 'Oui, l\'élève n\'a pas communiqué', color: 'bg-orange-100 text-orange-800' },
+	];
+	
+	const cyclePresenceState = (current: boolean | null): boolean | null => {
+	  if (current === null) return true;
+	  if (current === true) return false;
+	  return null;
+	};
+
   const [lecteurInterneEnabled, setLecteurInterneEnabled] = useState(false);
   const [loadingSettings, setLoadingSettings] = useState(false);
   
@@ -2495,198 +2509,249 @@ export default function CoordinateurDashboard() {
   
   
   const renderGestionUtilisateursTab = () => (
+    <div className="space-y-6">
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">Ajouter un utilisateur</h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Type d'utilisateur</label>
+            <select
+              value={selectedUserType}
+              onChange={(e) => setSelectedUserType(e.target.value as UserType)}
+              className="w-full border rounded px-3 py-2 text-sm"
+            >
+              <option value="eleves">Élève</option>
+              <option value="guides">Guide</option>
+              <option value="lecteurs-externes">Lecteur externe</option>
+              <option value="mediateurs">Médiateur</option>
+              <option value="coordinateurs">Coordinateur</option>
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Import massif</label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowMassImport(true)}
+                className="flex-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded text-sm"
+              >
+                📥 Importer CSV
+              </button>
+              {(selectedUserType === 'eleves' || selectedUserType === 'guides') && (
+                <button
+                  onClick={() => setShowClearConfirmations(true)}
+                  className="px-3 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded text-sm"
+                >
+                  🗑️ Tout supprimer
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        {/* Formulaire d'ajout */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+          {selectedUserType === 'eleves' && (
+            <>
+              <input
+                type="text"
+                placeholder="Nom"
+                value={newUser.nom}
+                onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
+                className="border rounded px-3 py-2 text-sm"
+              />
+              <input
+                type="text"
+                placeholder="Prénom"
+                value={newUser.prenom}
+                onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
+                className="border rounded px-3 py-2 text-sm"
+              />
+              <input
+                type="text"
+                placeholder="Classe"
+                value={newUser.classe}
+                onChange={(e) => setNewUser({...newUser, classe: e.target.value})}
+                className="border rounded px-3 py-2 text-sm"
+              />
+            </>
+          )}
+          
+          {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && (
+            <>
+              <input
+                type="text"
+                placeholder="Nom"
+                value={newUser.nom}
+                onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
+                className="border rounded px-3 py-2 text-sm"
+              />
+              <input
+                type="text"
+                placeholder="Prénom"
+                value={newUser.prenom}
+                onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
+                className="border rounded px-3 py-2 text-sm"
+              />
+              <input
+                type="email"
+                placeholder="Email"
+                value={newUser.email}
+                onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                className="border rounded px-3 py-2 text-sm"
+              />
+            </>
+          )}
+          
+          {(selectedUserType === 'guides' || selectedUserType === 'coordinateurs') && (
+            <>
+              <input
+                type="text"
+                placeholder="Nom"
+                value={newUser.nom}
+                onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
+                className="border rounded px-3 py-2 text-sm"
+              />
+              <input
+                type="text"
+                placeholder="Prénom"
+                value={newUser.prenom}
+                onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
+                className="border rounded px-3 py-2 text-sm"
+              />
+            </>
+          )}
+        </div>
+
+        {/* Bouton Ajouter */}
+        <button
+          onClick={handleAddUser}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center gap-2"
+        >
+          <span>+</span>
+          <span>Ajouter</span>
+        </button>
+      </div>
+
+      {/* Liste des utilisateurs */}
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="px-6 py-4 border-b">
+          <h3 className="text-lg font-medium text-gray-700">
+            Liste des {selectedUserType} ({getCurrentUserCount()})
+          </h3>
+        </div>
+        
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-100 border-b">
+              <tr>
+                {selectedUserType === 'eleves' && (
                   <>
-                    <input
-                      type="text"
-                      placeholder="Nom"
-                      value={newUser.nom}
-                      onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
-                      className="border rounded px-3 py-2 text-sm"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Prénom"
-                      value={newUser.prenom}
-                      onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
-                      className="border rounded px-3 py-2 text-sm"
-                    />
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Classe</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Catégorie</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
                   </>
                 )}
-
+                {selectedUserType === 'guides' && (
+                  <>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+                  </>
+                )}
                 {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && (
                   <>
-                    <input
-                      type="text"
-                      placeholder="Nom"
-                      value={newUser.nom}
-                      onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
-                      className="border rounded px-3 py-2 text-sm"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Prénom"
-                      value={newUser.prenom}
-                      onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
-                      className="border rounded px-3 py-2 text-sm"
-                    />
-                    <input
-                      type="email"
-                      placeholder="Email"
-                      value={newUser.email}
-                      onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                      className="border rounded px-3 py-2 text-sm"
-                    />
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
                   </>
                 )}
-
                 {selectedUserType === 'coordinateurs' && (
                   <>
-                    <input
-                      type="text"
-                      placeholder="Nom"
-                      value={newUser.nom}
-                      onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
-                      className="border rounded px-3 py-2 text-sm"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Prénom"
-                      value={newUser.prenom}
-                      onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
-                      className="border rounded px-3 py-2 text-sm"
-                    />
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
                   </>
                 )}
-              </div>
-
-              <div className="mt-4">
-                <button
-                  onClick={handleAddUser}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center gap-2"
-                >
-                  <span>+</span>
-                  <span>Ajouter</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <div className="px-6 py-4 border-b">
-                <h3 className="text-lg font-medium text-gray-700">
-                  Liste des {selectedUserType} ({getCurrentUserCount()})
-                </h3>
-              </div>
-              
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-100 border-b">
-                    <tr>
-                      {selectedUserType === 'eleves' && (
-                        <>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Classe</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Catégorie</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
-                        </>
-                      )}
-                      {selectedUserType === 'guides' && (
-                        <>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
-                        </>
-                      )}
-                      {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && (
-                        <>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
-                        </>
-                      )}
-                      {selectedUserType === 'coordinateurs' && (
-                        <>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
-                        </>
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {getCurrentUsers().map((user: any) => (
-                      <tr key={user.id} className="border-b hover:bg-gray-50">
-                        {selectedUserType === 'eleves' && (
-                          <>
-                            <td className="px-4 py-3 text-sm">{user.classe}</td>
-                            <td className="px-4 py-3 text-sm">{user.nom}</td>
-                            <td className="px-4 py-3 text-sm">{user.prenom}</td>
-                            <td className="px-4 py-3 text-sm">{user.categorie || '-'}</td>
-                            <td className="px-4 py-3">
-                              <button
-                                onClick={() => handleDeleteUser(user.id, user.nom, user.prenom)}
-                                className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 flex items-center gap-1"
-                              >
-                                <span>✕</span>
-                                <span>Supprimer</span>
-                              </button>
-                            </td>
-                          </>
-                        )}
-                        {selectedUserType === 'guides' && (
-                          <>
-                            <td className="px-4 py-3 text-sm">{user.nom}</td>
-                            <td className="px-4 py-3 text-sm">{user.prenom}</td>
-                            <td className="px-4 py-3">
-                              <button
-                                onClick={() => handleDeleteUser(user.id, user.nom)}
-                                className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 flex items-center gap-1"
-                              >
-                                <span>✕</span>
-                                <span>Supprimer</span>
-                              </button>
-                            </td>
-                          </>
-                        )}
-                        {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && (
-                          <>
-                            <td className="px-4 py-3 text-sm">{user.nom}</td>
-                            <td className="px-4 py-3 text-sm">{user.prenom}</td>
-                            <td className="px-4 py-3 text-sm">{user.email}</td>
-                            <td className="px-4 py-3">
-                              <button
-                                onClick={() => handleDeleteUser(user.id, user.nom, user.prenom)}
-                                className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 flex items-center gap-1"
-                              >
-                                <span>✕</span>
-                                <span>Supprimer</span>
-                              </button>
-                            </td>
-                          </>
-                        )}
-                        {selectedUserType === 'coordinateurs' && (
-                          <>
-                            <td className="px-4 py-3 text-sm">{user.nom}</td>
-                            <td className="px-4 py-3 text-sm">{user.prenom}</td>
-                            <td className="px-4 py-3">
-                              <button
-                                onClick={() => handleDeleteUser(user.id, user.nom, user.prenom)}
-                                className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 flex items-center gap-1"
-                              >
-                                <span>✕</span>
-                                <span>Supprimer</span>
-                              </button>
-                            </td>
-                          </>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>  
+              </tr>
+            </thead>
+            <tbody>
+              {getCurrentUsers().map((user: any) => (
+                <tr key={user.id} className="border-b hover:bg-gray-50">
+                  {selectedUserType === 'eleves' && (
+                    <>
+                      <td className="px-4 py-3 text-sm">{user.classe}</td>
+                      <td className="px-4 py-3 text-sm">{user.nom}</td>
+                      <td className="px-4 py-3 text-sm">{user.prenom}</td>
+                      <td className="px-4 py-3 text-sm">{user.categorie || '-'}</td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => handleDeleteUser(user.id, user.nom, user.prenom)}
+                          className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 flex items-center gap-1"
+                        >
+                          <span>✕</span>
+                          <span>Supprimer</span>
+                        </button>
+                      </td>
+                    </>
+                  )}
+                  {selectedUserType === 'guides' && (
+                    <>
+                      <td className="px-4 py-3 text-sm">{user.nom}</td>
+                      <td className="px-4 py-3 text-sm">{user.prenom}</td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => handleDeleteUser(user.id, user.nom)}
+                          className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 flex items-center gap-1"
+                        >
+                          <span>✕</span>
+                          <span>Supprimer</span>
+                        </button>
+                      </td>
+                    </>
+                  )}
+                  {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && (
+                    <>
+                      <td className="px-4 py-3 text-sm">{user.nom}</td>
+                      <td className="px-4 py-3 text-sm">{user.prenom}</td>
+                      <td className="px-4 py-3 text-sm">{user.email}</td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => handleDeleteUser(user.id, user.nom, user.prenom)}
+                          className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 flex items-center gap-1"
+                        >
+                          <span>✕</span>
+                          <span>Supprimer</span>
+                        </button>
+                      </td>
+                    </>
+                  )}
+                  {selectedUserType === 'coordinateurs' && (
+                    <>
+                      <td className="px-4 py-3 text-sm">{user.nom}</td>
+                      <td className="px-4 py-3 text-sm">{user.prenom}</td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => handleDeleteUser(user.id, user.nom, user.prenom)}
+                          className="px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 flex items-center gap-1"
+                        >
+                          <span>✕</span>
+                          <span>Supprimer</span>
+                        </button>
+                      </td>
+                    </>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   );
   
   
@@ -2826,10 +2891,14 @@ export default function CoordinateurDashboard() {
                       checked={displaySettings.mediateur_voir_lecteurs_externes}
                       onChange={(checked) => saveDisplaySetting('mediateur_voir_lecteurs_externes', checked)}
                     />
+                	</div>
                 </div>
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
   );
   
   
@@ -3639,5 +3708,6 @@ export default function CoordinateurDashboard() {
         </div>
   );
 }
+
 
 
