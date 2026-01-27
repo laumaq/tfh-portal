@@ -1,4 +1,3 @@
-// app/dashboard/coordinateur/page.tsx
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -7,7 +6,11 @@ import { supabase } from '@/lib/supabase';
 import * as XLSX from 'xlsx';
 import CalendarDisplay from '@/app/components/CalendarDisplay';
 import StatsModal from '@/app/components/StatsModal';
-import { Menu, X, ChevronLeft, ChevronRight, LogOut, Users, Eye, Calendar, Info, Save, Settings, FileText, BarChart, Shield, UserCheck } from 'lucide-react';
+import { 
+  Menu, X, ChevronLeft, ChevronRight, LogOut, Users, 
+  Calendar, Settings, FileText, BarChart, Shield, 
+  UserCheck, Eye, Info, Save 
+} from 'lucide-react';
 
 // ========== INTERFACES EXISTANTES (COPIER-COLLER) ==========
 interface Eleve {
@@ -3992,6 +3995,7 @@ return (
   </div>
 );
 }
+
 
 
 
