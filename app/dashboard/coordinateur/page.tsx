@@ -961,7 +961,8 @@ export default function CoordinateurDashboard() {
 	  
 	  const nomIndex = (sessionId - 1) % nomsSession.length;
 	  return nomsSession[nomIndex];
-	}, [detecterSessions]);
+	}, [detecterSessions]);	
+
 
   // Fonctions de sauvegarde (à ajouter aussi)
   const saveJourneeDate = async (journeeId: number, date: string) => {
@@ -4219,6 +4220,7 @@ return (
   </div>
 );
 }
+
 
 
 
