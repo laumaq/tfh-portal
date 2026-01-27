@@ -3475,7 +3475,6 @@ const renderParametresTab = () => (
       </div>
     );
   }
-};
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -3704,9 +3703,9 @@ const renderParametresTab = () => (
             Pour une meilleure expérience, pivotez votre appareil en mode paysage.
           </p>
         </div>
-  );
+  	);
+	}
 }
-
 
 
 
