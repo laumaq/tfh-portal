@@ -7,7 +7,9 @@ import { supabase } from '@/lib/supabase';
 import * as XLSX from 'xlsx';
 import CalendarDisplay from '@/app/components/CalendarDisplay';
 import StatsModal from '@/app/components/StatsModal';
+import { Menu, X, ChevronLeft, ChevronRight, LogOut, Users, Calendar, Settings, FileText, BarChart, Shield, UserCheck } from 'lucide-react';
 
+// ========== INTERFACES EXISTANTES (COPIER-COLLER) ==========
 interface Eleve {
   id: string;
   nom: string;
@@ -29,9 +31,9 @@ interface Eleve {
   lecteur_externe_id: string | null;
   mediateur_id: string | null;
   guide_nom?: string;
-  guide_prenom?: string;      // ← Nom cohérent maintenant
+  guide_prenom?: string;
   lecteur_interne_nom?: string;
-  lecteur_interne_prenom?: string; // ← Nom cohérent maintenant
+  lecteur_interne_prenom?: string;
   lecteur_externe_nom?: string;
   lecteur_externe_prenom?: string;
   mediateur_nom?: string;
@@ -70,8 +72,8 @@ interface DefenseEvent {
   id: string;
   eleveId: string;
   date: string;
-  startTime: string; // Format "HH:MM:SS"
-  endTime: string;   // Format "HH:MM:SS" (startTime + 50 minutes)
+  startTime: string;
+  endTime: string;
   location: string;
   eleveNom: string;
   elevePrenom: string;
@@ -87,9 +89,6 @@ interface DefenseEvent {
   role?: 'guide' | 'lecteur_interne';
 }
 
-
-
-// Nouvelles interfaces pour les stats
 interface StatsData {
   totalEleves: number;
   avecThematique: number;
@@ -157,12 +156,10 @@ const ToggleSetting = ({ label, checked, onChange }: ToggleSettingProps) => (
   </div>
 );
 
-// Ajoutez cette interface
 interface ConflictDisplayProps {
   conflicts: Conflict[];
 }
 
-// Ajoutez ce composant
 const ConflictDisplay = ({ conflicts }: ConflictDisplayProps) => {
   if (conflicts.length === 0) return null;
 
@@ -228,10 +225,12 @@ const ConflictDisplay = ({ conflicts }: ConflictDisplayProps) => {
   );
 };
 
-type TabType = 'convocations' | 'defenses' | 'gestion-utilisateurs' | 'calendrier' | 'parametres-affichage' | 'stats' | 'controle';
+type TabType = 'dashboard' | 'convocations' | 'defenses' | 'gestion-utilisateurs' | 'calendrier' | 'parametres-affichage' | 'stats' | 'controle';
 type UserType = 'eleves' | 'guides' | 'lecteurs-externes' | 'mediateurs' | 'coordinateurs';
 
+// ========== COMPOSANT PRINCIPAL ==========
 export default function CoordinateurDashboard() {
+  // ========== ÉTATS EXISTANTS (COPIER-COLLER) ==========
   const [eleves, setEleves] = useState<Eleve[]>([]);
   const [guides, setGuides] = useState<Guide[]>([]);
   const [lecteursExternes, setLecteursExternes] = useState<LecteurExterne[]>([]);
@@ -242,13 +241,13 @@ export default function CoordinateurDashboard() {
   const [userName, setUserName] = useState('');
   const [showConvoques, setShowConvoques] = useState(false);
   const [editingCell, setEditingCell] = useState<{id: string, field: string} | null>(null);
-	const [hasShownOrientationWarning, setHasShownOrientationWarning] = useState(() => {
-	  if (typeof window !== 'undefined') {
-	    return localStorage.getItem('hasShownOrientationWarning') === 'true';
-	  }
-	  return false;
-	});	
-	const [activeTab, setActiveTab] = useState<TabType>('convocations');
+  const [hasShownOrientationWarning, setHasShownOrientationWarning] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('hasShownOrientationWarning') === 'true';
+    }
+    return false;
+  });  
+  const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [editingModeConvocations, setEditingModeConvocations] = useState(false);
   const [editingModeDefenses, setEditingModeDefenses] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
@@ -260,81 +259,126 @@ export default function CoordinateurDashboard() {
     classe: '',
     initiale: '',
     categorie: '',
-    email: '' // ← Important : ajoutez cette propriété
+    email: ''
   });
   const [showMassImport, setShowMassImport] = useState(false);
   const [massImportData, setMassImportData] = useState<string>('');
   const [showClearConfirmations, setShowClearConfirmations] = useState(false);
   const [clearConfirmations, setClearConfirmations] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [selectedDates, setSelectedDates] = useState<string[]>([]); // Seront remplis après chargement
-  const [selectedLocations, setSelectedLocations] = useState<string[]>([]); // Seront remplis après chargement
+  const [selectedDates, setSelectedDates] = useState<string[]>([]);
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('toutes');
   const [dayDefenses, setDayDefenses] = useState<DayDefenses[]>([]);
-	const [calendarRefreshTrigger, setCalendarRefreshTrigger] = useState(0);
-	const [conflicts, setConflicts] = useState<Conflict[]>([]);
-	const [stats, setStats] = useState<StatsData | null>(null);
-	const [guideStats, setGuideStats] = useState<GuideStats[]>([]);
-	const [sortConfig, setSortConfig] = useState<{ key: keyof GuideStats; direction: 'asc' | 'desc' } | null>(null);
-	
-	const [displaySettings, setDisplaySettings] = useState({
-	  // Vue Lecteur Externe
-	  lecteur_externe_voir_eleves: true,
-	  lecteur_externe_voir_guides: true,
-	  lecteur_externe_voir_lecteurs_internes: true,
-	  lecteur_externe_voir_mediateurs: true,
-	  
-	  // Vue Lecteur Interne
-	  lecteur_interne_voir_eleves: true,
-	  lecteur_interne_voir_guides: true,
-	  lecteur_interne_voir_lecteurs_externes: true,
-	  lecteur_interne_voir_mediateurs: true,
-	  
-	  // Vue Médiateur
-	  mediateur_voir_eleves: true,
-	  mediateur_voir_guides: true,
-	  mediateur_voir_lecteurs_internes: true,
-	  mediateur_voir_lecteurs_externes: true,
-	});
-	
+  const [calendarRefreshTrigger, setCalendarRefreshTrigger] = useState(0);
+  const [conflicts, setConflicts] = useState<Conflict[]>([]);
+  const [stats, setStats] = useState<StatsData | null>(null);
+  const [guideStats, setGuideStats] = useState<GuideStats[]>([]);
+  const [sortConfig, setSortConfig] = useState<{ key: keyof GuideStats; direction: 'asc' | 'desc' } | null>(null);
+  
+  const [displaySettings, setDisplaySettings] = useState({
+    lecteur_externe_voir_eleves: true,
+    lecteur_externe_voir_guides: true,
+    lecteur_externe_voir_lecteurs_internes: true,
+    lecteur_externe_voir_mediateurs: true,
+    lecteur_interne_voir_eleves: true,
+    lecteur_interne_voir_guides: true,
+    lecteur_interne_voir_lecteurs_externes: true,
+    lecteur_interne_voir_mediateurs: true,
+    mediateur_voir_eleves: true,
+    mediateur_voir_guides: true,
+    mediateur_voir_lecteurs_internes: true,
+    mediateur_voir_lecteurs_externes: true,
+  });
+  
   const router = useRouter();
-	
-	const [modal, setModal] = useState({
-	  isOpen: false,
-	  title: '',
-	  missingField: '',
-	});
+  
+  const [modal, setModal] = useState({
+    isOpen: false,
+    title: '',
+    missingField: '',
+  });
 
-  // ⚙️ PARAMÈTRE CENTRAL D'ÉCHELLE DE TEMPS
-  // Changez cette valeur pour ajuster la taille verticale de tout le calendrier
-  // Valeurs recommandées : 120-200 pixels par heure
-  const PIXELS_PER_HOUR = 200;
+  const [lecteurInterneEnabled, setLecteurInterneEnabled] = useState(false);
+  const [loadingSettings, setLoadingSettings] = useState(false);
+  
+  // ========== NOUVEAUX ÉTATS POUR LE MENU ==========
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  const CONVOCATION_OPTIONS = [
-    { value: '', label: '-', color: 'bg-gray-100' },
-    { 
-      value: 'Non, l\'élève atteint bien les objectifs', 
-      label: 'Non, l\'élève atteint bien les objectifs',
-      color: 'bg-green-100 text-green-800 border-green-200'
+  // ========== DÉFINITION DES ONGLETS ==========
+  const tabs = [
+    {
+      id: 'dashboard' as TabType,
+      name: 'Tableau de bord',
+      icon: <Shield className="w-5 h-5" />,
+      description: 'Vue d\'ensemble',
+      color: 'blue',
+      showCount: false
     },
-    { 
-      value: 'Oui, l\'élève n\'atteint pas les objectifs', 
-      label: 'Oui, l\'élève n\'atteint pas les objectifs',
-      color: 'bg-yellow-100 text-yellow-800 border-yellow-200'
+    {
+      id: 'convocations' as TabType,
+      name: 'Convocations',
+      icon: <FileText className="w-5 h-5" />,
+      description: 'Gestion des convocations',
+      color: 'purple',
+      showCount: true,
+      count: filteredEleves.length
     },
-    { 
-      value: 'Oui, l\'élève n\'a pas avancé', 
-      label: 'Oui, l\'élève n\'a pas avancé',
-      color: 'bg-red-100 text-red-800 border-red-200'
+    {
+      id: 'defenses' as TabType,
+      name: 'Défenses',
+      icon: <UserCheck className="w-5 h-5" />,
+      description: 'Planification',
+      color: 'green',
+      showCount: true,
+      count: eleves.filter(e => e.date_defense).length
     },
-    { 
-      value: 'Oui, l\'élève n\'a pas communiqué', 
-      label: 'Oui, l\'élève n\'a pas communiqué',
-      color: 'bg-orange-100 text-orange-800 border-orange-200'
+    {
+      id: 'calendrier' as TabType,
+      name: 'Calendrier',
+      icon: <Calendar className="w-5 h-5" />,
+      description: 'Planning & conflits',
+      color: 'orange',
+      showCount: false
+    },
+    {
+      id: 'gestion-utilisateurs' as TabType,
+      name: 'Utilisateurs',
+      icon: <Users className="w-5 h-5" />,
+      description: 'Gestion des comptes',
+      color: 'indigo',
+      showCount: true,
+      count: eleves.length + guides.length
+    },
+    {
+      id: 'parametres-affichage' as TabType,
+      name: 'Paramètres',
+      icon: <Settings className="w-5 h-5" />,
+      description: 'Configuration',
+      color: 'gray',
+      showCount: false
+    },
+    {
+      id: 'stats' as TabType,
+      name: 'Statistiques',
+      icon: <BarChart className="w-5 h-5" />,
+      description: 'Analyses',
+      color: 'emerald',
+      showCount: false
+    },
+    {
+      id: 'controle' as TabType,
+      name: 'Contrôle',
+      icon: <Shield className="w-5 h-5" />,
+      description: 'Suivi des guides',
+      color: 'red',
+      showCount: true,
+      count: guides.length
     }
   ];
-	
-	useEffect(() => {
+  
+  	useEffect(() => {
 	  const userType = localStorage.getItem('userType');
 	  const name = localStorage.getItem('userName');
 	  
@@ -371,7 +415,8 @@ export default function CoordinateurDashboard() {
 	  }
 	
 	}, [router]);
-
+	
+	
 	useEffect(() => {
 	  if (activeTab === 'stats') {
 	    loadStats();
@@ -570,8 +615,8 @@ export default function CoordinateurDashboard() {
 	    console.error('Erreur chargement stats guides:', err);
 	  }
 	};
-
-
+	
+	
 	// Fonction pour ouvrir le modal
 	function openModal(title: string, missingField: string) {
 	  setModal({
@@ -608,54 +653,8 @@ export default function CoordinateurDashboard() {
 	  return sortConfig.direction === 'asc' ? '↑' : '↓';
 	};
 
-  useEffect(() => {
-    if (eleves.length > 0) {
-      // Initialiser toutes les dates par défaut
-      const allDates = Array.from(new Set(
-        eleves
-          .filter(e => e.date_defense)
-          .map(e => e.date_defense!)
-      )).sort();
-      
-      // Initialiser tous les locaux par défaut
-      const allLocations = Array.from(new Set(
-        eleves
-          .filter(e => e.localisation_defense)
-          .map(e => e.localisation_defense!)
-      )).sort((a, b) => a.charAt(0).localeCompare(b.charAt(0)));
-      
-      setSelectedDates(allDates);
-      setSelectedLocations(allLocations);
-    }
-  }, [eleves]);
-  
 
-  useEffect(() => {
-    if (activeTab === 'convocations' && showConvoques) {
-      const convoques = eleves.filter(e => 
-        (e.convocation_mars && e.convocation_mars.startsWith('Oui')) ||
-        (e.convocation_avril && e.convocation_avril.startsWith('Oui'))
-      );
-      setFilteredEleves(convoques);
-    } else {
-      setFilteredEleves(eleves);
-    }
-  }, [showConvoques, eleves, activeTab]);
 
-	useEffect(() => {
-	  console.log('🔄 État eleves a changé:', {
-	    count: eleves.length,
-	    withDateDefense: eleves.filter(e => e.date_defense).length,
-	    withTimeDefense: eleves.filter(e => e.heure_defense).length
-	  });
-	}, [eleves]);
-
-  const cyclePresenceState = (currentState: boolean | null): boolean | null => {
-    if (currentState === null) return true;
-    if (currentState === true) return false;
-    return null;
-  };
-	
   const handlePresenceUpdate = async (eleveId: string, field: string, currentValue: boolean | null) => {
     if (!editingModeConvocations) return;
     
@@ -733,23 +732,7 @@ export default function CoordinateurDashboard() {
 	  }
 	};
 
-  
-  const handleSimpleTextImport = () => {
-    const rows = massImportData.split('\n').filter(row => row.trim());
-    let count = 0;
-    
-    rows.forEach(row => {
-      const values = row.split(',').map(v => v.trim());
-      if (values.length >= 3) {
-        count++;
-      }
-    });
-    
-    
-    // Ensuite appelez handleMassImport() qui traitera ces données
-    handleMassImport();
-  };
-  
+
 	const handleSelectUpdate = async (eleveId: string, field: string, value: string) => {
 	  const isEditing = activeTab === 'convocations' ? editingModeConvocations : editingModeDefenses;
 	  if (!isEditing) return;
@@ -785,10 +768,7 @@ export default function CoordinateurDashboard() {
 	  }
 	};
 	
-	const [lecteurInterneEnabled, setLecteurInterneEnabled] = useState(false);
-	const [loadingSettings, setLoadingSettings] = useState(false);
-	
-	// Fonction pour charger le paramètre
+		// Fonction pour charger le paramètre
 	const loadSystemSettings = async () => {
 	  try {
 	    const { data, error } = await supabase
@@ -804,7 +784,8 @@ export default function CoordinateurDashboard() {
 	    console.error('Erreur chargement paramètres:', err);
 	  }
 	};
-
+	
+	
 	const loadDisplaySettings = async () => {
 	  try {
 	    const { data, error } = await supabase
@@ -846,7 +827,7 @@ export default function CoordinateurDashboard() {
 	    alert('Erreur lors de la sauvegarde du paramètre');
 	  }
 	};
-
+	
 	const getSettingDescription = (key: string): string => {
 	  const descriptions: Record<string, string> = {
 	    // Paramètres fonctionnels
@@ -874,7 +855,6 @@ export default function CoordinateurDashboard() {
 	  return descriptions[key] || 'Paramètre d\'affichage';
 	};
 
-	
 	// Fonction pour mettre à jour le paramètre
 	const toggleLecteurInterne = async (enabled: boolean) => {
 	  try {
@@ -897,7 +877,7 @@ export default function CoordinateurDashboard() {
 	    alert('Erreur lors de la mise à jour');
 	  }
 	};
-
+	
 	
   const handleAddCategory = () => {
     if (newCategory.trim() && !categories.includes(newCategory.trim())) {
@@ -905,7 +885,7 @@ export default function CoordinateurDashboard() {
       setNewCategory('');
     }
   };
-  
+
   const handleAddUser = async () => {
     try {
       // Vérifier les champs requis
@@ -1034,8 +1014,8 @@ export default function CoordinateurDashboard() {
       console.error('Erreur ajout utilisateur:', err);
       alert('Erreur lors de l\'ajout de l\'utilisateur: ' + (err as Error).message);
     }
-  };
-
+  };  
+	
   const handleDeleteUser = async (id: string, nom: string, prenom?: string) => {
     const fullName = prenom ? `${prenom} ${nom}` : nom;
     
@@ -1212,7 +1192,7 @@ export default function CoordinateurDashboard() {
               .insert(coordinateursToInsert);
             if (error) throw error;
           }
-          break; // ← Ajouter break
+          break; 
       }
   
       alert(`${dataRows.length} utilisateur${dataRows.length > 1 ? 's' : ''} importé${dataRows.length > 1 ? 's' : ''} avec succès!`);
@@ -1289,11 +1269,6 @@ export default function CoordinateurDashboard() {
     return users.length;
   };
 
-
-  const handleLogout = () => {
-    localStorage.clear();
-    router.push('/');
-  };
 
   const getConvocationColor = (value: string) => {
     const option = CONVOCATION_OPTIONS.find(opt => opt.value === value);
@@ -1591,7 +1566,7 @@ export default function CoordinateurDashboard() {
 	  // 5. Trier les conflits par gravité (nombre de défenses en conflit)
 	  return conflicts.sort((a, b) => b.conflictingDefenses.length - a.conflictingDefenses.length);
 	};
-  
+	
 	const prepareCalendarData = useCallback(() => {
 	  // Filtrer les élèves avec une date et heure de défense
 	  const defensesWithSchedule = eleves.filter(e => 
@@ -1667,165 +1642,154 @@ export default function CoordinateurDashboard() {
 	  setDayDefenses(daysData);
 	}, [eleves, selectedCategory, selectedDates, selectedLocations]);
 	
+	
 	const refreshCalendar = () => {
 	  loadData(); // Recharger toutes les données
 	  setTimeout(() => {
 	    prepareCalendarData();
 	  }, 500);
 	};
-
-	useEffect(() => {
-	  if (eleves.length > 0) {
-	    prepareCalendarData();
-	  }
-	}, [eleves, selectedDates, selectedLocations, selectedCategory, calendarRefreshTrigger, prepareCalendarData]);
 	
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">Chargement...</div>
-      </div>
-    );
-  }
+  
+  const handleTabChange = (tabId: TabType) => {
+    setActiveTab(tabId);
+    setIsMenuOpen(false); // Ferme le menu sur mobile
+  };
 
-    return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
-			{/* Message paysage sur mobile */}
-			<div 
-			  id="landscape-message" 
-			  className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
-			  style={{ display: 'none' }}
-			>
-			  <div className="bg-white rounded-lg p-6 max-w-sm text-center">
-			    <div className="text-4xl mb-4">↻</div>
-			    <h3 className="text-lg font-semibold mb-2">Pivotez votre appareil</h3>
-			    <p className="text-gray-600 mb-4">
-			      Pour une meilleure expérience, utilisez votre téléphone en mode paysage.
-			    </p>
-			    <button
-			      onClick={() => {
-			        const msg = document.getElementById('landscape-message');
-			        if (msg) msg.style.display = 'none';
-			      }}
-			      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 w-full"
-			    >
-			      J'ai compris
-			    </button>
-			  </div>
-			</div>
+  const handleLogout = () => {
+    localStorage.clear();
+    router.push('/');
+  };
 
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Dashboard Coordinateur</h1>
-            <p className="text-gray-600 mt-1">Connecté en tant que {userName}</p>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm md:text-base"
-          >
-            Déconnexion
-          </button>
+  // ========== COMPOSANT SIDEBAR ==========
+  const Sidebar = () => (
+    <>
+      {/* Overlay mobile */}
+      {isMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"
+          onClick={() => setIsMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`
+        fixed md:relative top-0 left-0 h-screen
+        bg-white border-r border-gray-200
+        z-40 transition-all duration-300 ease-in-out
+        ${sidebarCollapsed ? 'w-20' : 'w-64'}
+        ${isMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        flex flex-col
+      `}>
+        {/* En-tête */}
+        <div className="p-4 border-b border-gray-200">
+          {!sidebarCollapsed ? (
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-bold text-gray-800">TFH Portal</h2>
+                <p className="text-xs text-gray-500">Coordinateur</p>
+              </div>
+              <button
+                onClick={() => setSidebarCollapsed(true)}
+                className="p-1 hover:bg-gray-100 rounded"
+                title="Réduire"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex justify-center">
+              <button
+                onClick={() => setSidebarCollapsed(false)}
+                className="p-1 hover:bg-gray-100 rounded"
+                title="Agrandir"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
-        
-         {/* Onglets */}
-        <div className="flex border-b border-gray-200 mb-6 overflow-x-auto">
-          <button
-            onClick={() => {
-              setActiveTab('convocations');
-              setShowConvoques(false);
-            }}
-            className={`px-4 py-2 font-medium text-sm md:text-base whitespace-nowrap ${
-              activeTab === 'convocations'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Convocations & Présences
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('defenses');
-              setShowConvoques(false);
-            }}
-            className={`px-4 py-2 font-medium text-sm md:text-base whitespace-nowrap ${
-              activeTab === 'defenses'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Gestion des Défenses
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('calendrier');
-              setShowConvoques(false);
-            }}
-            className={`px-4 py-2 font-medium text-sm md:text-base whitespace-nowrap ${
-              activeTab === 'calendrier'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Calendrier des Défenses
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('gestion-utilisateurs');
-              setShowConvoques(false);
-            }}
-            className={`px-4 py-2 font-medium text-sm md:text-base whitespace-nowrap ${
-              activeTab === 'gestion-utilisateurs'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Gestion des Utilisateurs
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('parametres-affichage');
-              setShowConvoques(false);
-            }}
-            className={`px-4 py-2 font-medium text-sm md:text-base whitespace-nowrap ${
-              activeTab === 'parametres-affichage'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Paramètres et affichage
-          </button>
-					<button
-					  onClick={() => {
-					    setActiveTab('stats');
-					    setShowConvoques(false);
-					  }}
-					  className={`px-4 py-2 font-medium text-sm md:text-base whitespace-nowrap ${
-					    activeTab === 'stats'
-					      ? 'text-blue-600 border-b-2 border-blue-600'
-					      : 'text-gray-500 hover:text-gray-700'
-					  }`}
-					>
-					  📊 Stats
-					</button>
-					<button
-					  onClick={() => {
-					    setActiveTab('controle');
-					    setShowConvoques(false);
-					  }}
-					  className={`px-4 py-2 font-medium text-sm md:text-base whitespace-nowrap ${
-					    activeTab === 'controle'
-					      ? 'text-blue-600 border-b-2 border-blue-600'
-					      : 'text-gray-500 hover:text-gray-700'
-					  }`}
-					>
-					  👥 Contrôle
-					</button>					
-        </div>
-				
 
-        {/* Contenu selon l'onglet */}
-        {activeTab === 'convocations' && (
+        {/* Navigation */}
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => handleTabChange(tab.id)}
+              className={`
+                w-full flex items-center gap-3 p-3 rounded-lg transition-all
+                hover:bg-gray-50
+                ${activeTab === tab.id 
+                  ? `bg-${tab.color}-50 text-${tab.color}-700 border border-${tab.color}-200` 
+                  : 'text-gray-700'
+                }
+                ${sidebarCollapsed ? 'justify-center' : ''}
+              `}
+              title={sidebarCollapsed ? tab.name : ''}
+            >
+              <div className={`
+                p-2 rounded-lg
+                ${activeTab === tab.id 
+                  ? `bg-${tab.color}-100 text-${tab.color}-600` 
+                  : 'bg-gray-100 text-gray-600'
+                }
+              `}>
+                {tab.icon}
+              </div>
+              
+              {!sidebarCollapsed && (
+                <div className="flex-1 text-left">
+                  <div className="font-medium flex items-center justify-between">
+                    <span>{tab.name}</span>
+                    {tab.showCount && tab.count !== undefined && (
+                      <span className={`text-xs px-2 py-0.5 rounded-full bg-${tab.color}-100 text-${tab.color}-700`}>
+                        {tab.count}
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-gray-500">{tab.description}</div>
+                </div>
+              )}
+            </button>
+          ))}
+        </nav>
+
+        {/* Pied de page */}
+        <div className="p-4 border-t border-gray-200">
+          {!sidebarCollapsed ? (
+            <div className="space-y-3">
+              <div className="text-xs text-gray-500">
+                Connecté en tant que <span className="font-medium">{userName}</span>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-2 p-2 text-red-600 hover:bg-red-50 rounded-lg text-sm"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Déconnexion</span>
+              </button>
+            </div>
+          ) : (
+            <div className="flex justify-center">
+              <button
+                onClick={handleLogout}
+                className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                title="Déconnexion"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+        </div>
+      </aside>
+    </>
+  );
+
+  // ========== CONTENU DES ONGLETS (À COPIER DE VOTRE ANCIEN FICHIER) ==========
+  // ⚠️ IMPORTANT : Copiez le contenu JSX de chaque onglet depuis votre ancien fichier
+  
+  // Exemple pour l'onglet 'convocations' :
+  const renderConvocationsTab = () => (
           <>
             <div className="bg-white rounded-lg shadow p-4 md:p-6 mb-6">
               <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-4">
@@ -2137,10 +2101,13 @@ export default function CoordinateurDashboard() {
               </div>
             </div>
           </>
-        )}
+  );
 
-        {activeTab === 'defenses' && (
-          <div className="space-y-6">
+
+
+  const renderDefensesTab = () => (
+  
+            <div className="space-y-6">
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-4">
                 <div className="flex items-center gap-4">
@@ -2329,10 +2296,11 @@ export default function CoordinateurDashboard() {
               </div>
             </div>
           </div>
-        )}
-
-        {activeTab === 'calendrier' && (
-          <div className="space-y-6">						
+  );
+  
+  
+  const renderCalendrierTab = () => (
+            <div className="space-y-6">						
 			{conflicts.length > 0 && <ConflictDisplay conflicts={conflicts} />}
             
             <div className="bg-white rounded-lg shadow p-6">
@@ -2523,128 +2491,10 @@ export default function CoordinateurDashboard() {
               selectedLocations={selectedLocations}
             />
           </div>
-        )}
-
-        {activeTab === 'gestion-utilisateurs' && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Gestion des Utilisateurs</h2>
-              
-              <div className="flex flex-wrap gap-2 mb-6">
-                <button
-                  onClick={() => setSelectedUserType('eleves')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                    selectedUserType === 'eleves'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Élèves ({eleves.length})
-                </button>
-                <button
-                  onClick={() => setSelectedUserType('guides')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                    selectedUserType === 'guides'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Guides ({guides.length})
-                </button>
-                <button
-                  onClick={() => setSelectedUserType('lecteurs-externes')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                    selectedUserType === 'lecteurs-externes'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Lecteurs externes ({lecteursExternes.length})
-                </button>
-                <button
-                  onClick={() => setSelectedUserType('mediateurs')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                    selectedUserType === 'mediateurs'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Médiateurs ({mediateurs.length})
-                </button>
-                <button
-                  onClick={() => setSelectedUserType('coordinateurs')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                    selectedUserType === 'coordinateurs'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Coordinateurs ({coordinateurs.length})
-                </button>
-              </div>
-
-              <div className="flex flex-wrap gap-3 mt-4">
-                <button
-                  onClick={() => setShowMassImport(true)}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
-                >
-                  Import CSV/Excel
-                </button>
-                
-                {(selectedUserType === 'eleves' || selectedUserType === 'guides') && (
-                  <button
-                    onClick={() => setShowClearConfirmations(true)}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
-                  >
-                    Vider tous les {selectedUserType === 'eleves' ? 'élèves' : 'guides'}
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-lg font-medium text-gray-700 mb-4">
-                Ajouter un {selectedUserType === 'eleves' ? 'élève' : 
-                          selectedUserType === 'guides' ? 'guide' :
-                          selectedUserType === 'lecteurs-externes' ? 'lecteur externe' :
-                          selectedUserType === 'mediateurs' ? 'médiateur' : 'coordinateur'}
-              </h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {selectedUserType === 'eleves' && (
-                  <>
-                    <input
-                      type="text"
-                      placeholder="Nom"
-                      value={newUser.nom}
-                      onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
-                      className="border rounded px-3 py-2 text-sm"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Prénom"
-                      value={newUser.prenom}
-                      onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
-                      className="border rounded px-3 py-2 text-sm"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Classe"
-                      value={newUser.classe}
-                      onChange={(e) => setNewUser({...newUser, classe: e.target.value})}
-                      className="border rounded px-3 py-2 text-sm"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Catégorie"
-                      value={newUser.categorie}
-                      onChange={(e) => setNewUser({...newUser, categorie: e.target.value})}
-                      className="border rounded px-3 py-2 text-sm"
-                    />
-                  </>
-                )}
-
-                {selectedUserType === 'guides' && (
+  );
+  
+  
+  const renderGestionUtilisateursTab = () => (
                   <>
                     <input
                       type="text"
@@ -2836,10 +2686,11 @@ export default function CoordinateurDashboard() {
                 </table>
               </div>
             </div>
-          </div>
-        )}
-
-        {activeTab === 'parametres-affichage' && (
+          </div>  
+  );
+  
+  
+  const renderParametresTab = () => (
           <div className="space-y-6">
             <div className="bg-white rounded-lg shadow p-6">
 
@@ -2980,9 +2831,10 @@ export default function CoordinateurDashboard() {
               </div>
             </div>
           </div>
-        )}
-
-				{activeTab === 'stats' && (
+  );
+  
+  
+  const renderStatsTab = () => (
 				  <div className="space-y-6">
 				    <div className="bg-white rounded-lg shadow p-6">
 				      <h2 className="text-xl font-semibold text-gray-800 mb-2">📊 Statistiques générales</h2>
@@ -3326,9 +3178,10 @@ export default function CoordinateurDashboard() {
 				      </div>
 				    )}
 				  </div>
-				)}
-				
-				{activeTab === 'controle' && (
+  );
+  
+  
+  const renderControleTab = () => (
 				  <div className="space-y-6">
 				    <div className="bg-white rounded-lg shadow p-6">
 				      <h2 className="text-xl font-semibold text-gray-800 mb-2">👥 Contrôle des guides</h2>
@@ -3441,9 +3294,213 @@ export default function CoordinateurDashboard() {
 				      </ul>
 				    </div>
 				  </div>
-				)}
+  );
 
-        {/* Modals */}
+
+
+  // ========== DASHBOARD D'ACCUEIL ==========
+  const renderDashboard = () => (
+    <div className="p-6">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-800 mb-2">Tableau de bord Coordinateur</h1>
+        <p className="text-gray-600">Bienvenue {userName}. Gestion complète du système TFH Portal.</p>
+      </div>
+
+      {/* Cartes de navigation */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        {tabs.filter(t => t.id !== 'dashboard').map((tab) => (
+          <div
+            key={tab.id}
+            onClick={() => handleTabChange(tab.id)}
+            className={`
+              bg-white rounded-xl shadow-sm border p-6 cursor-pointer
+              transition-all hover:shadow-md hover:-translate-y-1
+              border-${tab.color}-200 hover:border-${tab.color}-300
+              group
+            `}
+          >
+            <div className="flex items-start gap-4 mb-4">
+              <div className={`p-3 rounded-lg bg-${tab.color}-100 text-${tab.color}-600 group-hover:bg-${tab.color}-200`}>
+                {tab.icon}
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-800 mb-1">{tab.name}</h3>
+                <p className="text-sm text-gray-500">{tab.description}</p>
+              </div>
+              {tab.showCount && tab.count !== undefined && (
+                <div className={`text-lg font-bold text-${tab.color}-600`}>
+                  {tab.count}
+                </div>
+              )}
+            </div>
+            <div className="pt-4 border-t border-gray-100">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Accéder à la section</span>
+                <div className={`p-1 rounded-full bg-${tab.color}-50 text-${tab.color}-600`}>
+                  <ChevronRight className="w-4 h-4" />
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Statistiques rapides */}
+      <div className="bg-white rounded-xl shadow-sm border p-6">
+        <h3 className="font-semibold text-gray-800 mb-4">Aperçu rapide du système</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+            <div className="text-2xl font-bold text-blue-700">{eleves.length}</div>
+            <div className="text-sm text-blue-600">Élèves</div>
+          </div>
+          <div className="p-4 bg-green-50 rounded-lg border border-green-100">
+            <div className="text-2xl font-bold text-green-700">{guides.length}</div>
+            <div className="text-sm text-green-600">Guides</div>
+          </div>
+          <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
+            <div className="text-2xl font-bold text-purple-700">
+              {eleves.filter(e => e.date_defense).length}
+            </div>
+            <div className="text-sm text-purple-600">Défenses programmées</div>
+          </div>
+          <div className="p-4 bg-orange-50 rounded-lg border border-orange-100">
+            <div className="text-2xl font-bold text-orange-700">
+              {eleves.filter(e => e.convocation_mars?.startsWith('Oui')).length}
+            </div>
+            <div className="text-sm text-orange-600">Convoqués mars</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Dernières activités */}
+      <div className="mt-6 bg-white rounded-xl shadow-sm border p-6">
+        <h3 className="font-semibold text-gray-800 mb-4">Actions rapides</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <button
+            onClick={() => handleTabChange('convocations')}
+            className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left"
+          >
+            <div className="font-medium text-gray-800 mb-1">📝 Saisir des convocations</div>
+            <div className="text-sm text-gray-500">Pour les sessions de mars/avril</div>
+          </button>
+          <button
+            onClick={() => handleTabChange('defenses')}
+            className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left"
+          >
+            <div className="font-medium text-gray-800 mb-1">🎓 Planifier une défense</div>
+            <div className="text-sm text-gray-500">Date, heure, local</div>
+          </button>
+          <button
+            onClick={() => setShowMassImport(true)}
+            className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left"
+          >
+            <div className="font-medium text-gray-800 mb-1">📥 Importer des utilisateurs</div>
+            <div className="text-sm text-gray-500">CSV, Excel</div>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ========== RENDU PRINCIPAL ==========
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-xl">Chargement...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Message paysage mobile */}
+      <div 
+        id="landscape-message" 
+        className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
+        style={{ display: 'none' }}
+      >
+        <div className="bg-white rounded-lg p-6 max-w-sm text-center">
+          <div className="text-4xl mb-4">↻</div>
+          <h3 className="text-lg font-semibold mb-2">Pivotez votre appareil</h3>
+          <p className="text-gray-600 mb-4">
+            Pour une meilleure expérience, utilisez votre téléphone en mode paysage.
+          </p>
+          <button
+            onClick={() => {
+              const msg = document.getElementById('landscape-message');
+              if (msg) msg.style.display = 'none';
+            }}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 w-full"
+          >
+            J'ai compris
+          </button>
+        </div>
+      </div>
+
+      {/* Layout principal */}
+      <div className="flex h-screen">
+        {/* Sidebar */}
+        <Sidebar />
+
+        {/* Contenu principal */}
+        <main className="flex-1 overflow-auto">
+          {/* En-tête mobile */}
+          <header className="md:hidden p-4 border-b border-gray-200 bg-white sticky top-0 z-20">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="p-2 hover:bg-gray-100 rounded-lg"
+              >
+                <Menu className="w-6 h-6" />
+              </button>
+              <div>
+                <h1 className="font-semibold text-gray-800">
+                  {tabs.find(t => t.id === activeTab)?.name}
+                </h1>
+                <p className="text-xs text-gray-500">TFH Portal</p>
+              </div>
+              <div className="w-10"></div>
+            </div>
+          </header>
+
+          {/* En-tête desktop */}
+          <header className="hidden md:block p-6 border-b border-gray-200 bg-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-800">
+                  {tabs.find(t => t.id === activeTab)?.name}
+                </h1>
+                <p className="text-gray-600">
+                  {tabs.find(t => t.id === activeTab)?.description}
+                </p>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="text-sm text-gray-600">
+                  Connecté en tant que <span className="font-semibold">{userName}</span>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Déconnexion</span>
+                </button>
+              </div>
+            </div>
+          </header>
+
+          {/* Contenu de l'onglet */}
+          <div className="p-4 md:p-6">
+            {activeTab === 'dashboard' && renderDashboard()}
+            {activeTab === 'convocations' && renderConvocationsTab()}
+            {/* Ajoutez ici les autres onglets */}
+            {/* {activeTab === 'defenses' && renderDefensesTab()} */}
+            {/* etc. */}
+          </div>
+        </main>
+      </div>
+
+      {/* Modals existants */}
         {showMassImport && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
@@ -3566,8 +3623,7 @@ export default function CoordinateurDashboard() {
             </div>
           </div>
         )}
-		  
-		{/* Modal pour afficher les élèves avec données manquantes */}
+
 		<StatsModal
 		  isOpen={modal.isOpen}
 		  onClose={() => setModal({ ...modal, isOpen: false })}
@@ -3582,27 +3638,6 @@ export default function CoordinateurDashboard() {
             Pour une meilleure expérience, pivotez votre appareil en mode paysage.
           </p>
         </div>
-      </div>
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
