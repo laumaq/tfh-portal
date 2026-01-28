@@ -17,7 +17,12 @@ interface ConvocationsTabProps {
   editingCell: {id: string, field: string} | null;
   onUpdate: (eleveId: string, field: string, value: string) => Promise<void>;
   onSelectUpdate: (eleveId: string, field: string, value: string) => Promise<void>;
-  onPresenceUpdate: (eleveId: string, field: string, currentValue: boolean | null) => Promise<void>;
+  onPresenceUpdate: (
+    eleveId: string, 
+    field: string, 
+    currentValue: boolean | null,
+    onSuccess?: (newValue: boolean | null) => void // ← Optionnel maintenant
+  ) => Promise<void>;
   onRefresh: () => void;
   onSetEditingCell: (cell: {id: string, field: string} | null) => void;
   onSetEditingMode: (mode: boolean) => void;
