@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo  } from 'react';
 import CalendarDisplay from '@/app/components/CalendarDisplay';
 import ConflictDisplay from '../components/ConflictDisplay';
 import { Eleve, DefenseEvent, Conflict } from '../types';
