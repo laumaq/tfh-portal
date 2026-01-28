@@ -18,7 +18,7 @@ export default function CalendrierTab({
   onRefresh,
 }: CalendrierTabProps) {
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
-  const [selectedLocations, setSelectedLocations] = useState<string[]>(allLocations);
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [conflicts, setConflicts] = useState<Conflict[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -43,6 +43,13 @@ export default function CalendrierTab({
     )
   );
 
+  // Initialiser avec tous les locaux et catégories
+  useEffect(() => {
+    setSelectedLocations(allLocations);
+    setSelectedCategories(categories);
+  }, [allLocations, categories]);
+
+  
   // Détecter les conflits
   const detectConflicts = useCallback((defenses: DefenseEvent[]): Conflict[] => {
     const conflicts: Conflict[] = [];
