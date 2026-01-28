@@ -1,13 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Eleve, Guide } from '../types';
 import { CONVOCATION_OPTIONS } from '../constants';
 import { 
   getConvocationColor, 
   getConvocationLabel, 
-  getPresenceStyles,
-  cyclePresenceState 
+  getPresenceStyles
 } from '../utils/convocationUtils';
 
 interface ConvocationsTabProps {
@@ -39,7 +38,13 @@ export default function ConvocationsTab({
 }: ConvocationsTabProps) {
   const [newCategory, setNewCategory] = useState('');
   const [showConvoques, setShowConvoques] = useState(false);
-  const [filteredEleves, setFilteredEleves] = useState<Eleve[]>(eleves);
+  const [localEleves, setLocalEleves] = useState<Eleve[]>(eleves);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Synchroniser les données locales avec les données parent
+  useEffect(() => {
+    setLocalEleves(eleves);
+  }, [eleves]);
 
   const handleAddCategory = () => {
     if (newCategory.trim() && !categories.includes(newCategory.trim())) {
@@ -50,34 +55,95 @@ export default function ConvocationsTab({
   };
 
   const handleLocalUpdate = async (eleveId: string, field: string, value: string) => {
+    if (isProcessing) return;
+    
     try {
+      setIsProcessing(true);
+      
+      // Mise à jour OPTIMISÉE : pas de rechargement complet
       await onUpdate(eleveId, field, value);
-      onRefresh(); // Rafraîchir les données après mise à jour
+      
+      // Mise à jour locale IMMÉDIATE (sans recharger tout)
+      setLocalEleves(prev => prev.map(eleve => 
+        eleve.id === eleveId 
+          ? { ...eleve, [field]: value === '' ? null : value }
+          : eleve
+      ));
+      
     } catch (err) {
       console.error('Erreur lors de la mise à jour:', err);
+      // En cas d'erreur, recharger pour avoir l'état correct
+      onRefresh();
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const handleLocalSelectUpdate = async (eleveId: string, field: string, value: string) => {
+    if (isProcessing) return;
+    
     try {
+      setIsProcessing(true);
+      
       await onSelectUpdate(eleveId, field, value);
-      onRefresh();
+      
+      // Mise à jour locale IMMÉDIATE
+      setLocalEleves(prev => prev.map(eleve => 
+        eleve.id === eleveId 
+          ? { ...eleve, [field]: value === '' ? null : value }
+          : eleve
+      ));
+      
     } catch (err) {
       console.error('Erreur lors de la mise à jour:', err);
+      onRefresh();
+    } finally {
+      setIsProcessing(false);
     }
   };
 
-  const handleLocalPresenceUpdate = async (eleveId: string, field: string, currentValue: boolean | null) => {
+  const handleLocalPresenceUpdate = async (
+    eleveId: string, 
+    field: string, 
+    currentValue: boolean | null
+  ) => {
+    if (isProcessing) return;
+    
     try {
-      await onPresenceUpdate(eleveId, field, currentValue);
-      onRefresh();
+      setIsProcessing(true);
+      
+      // Utiliser la fonction optimisée avec callback
+      await onPresenceUpdate(eleveId, field, currentValue, (newValue) => {
+        // Mise à jour locale IMMÉDIATE avec la nouvelle valeur
+        setLocalEleves(prev => prev.map(eleve => 
+          eleve.id === eleveId 
+            ? { ...eleve, [field]: newValue }
+            : eleve
+        ));
+      });
+      
     } catch (err) {
-      console.error('Erreur lors de la mise à jour:', err);
+      console.error('Erreur lors de la mise à jour présence:', err);
+      onRefresh();
+    } finally {
+      setIsProcessing(false);
     }
   };
+
+  // Filtrer les élèves selon le filtre "convoqués"
+  const filteredEleves = showConvoques 
+    ? localEleves.filter(e => e.convocation_mars?.startsWith('Oui') || e.convocation_avril?.startsWith('Oui'))
+    : localEleves;
 
   return (
     <>
+      {/* Indicateur de chargement léger */}
+      {isProcessing && (
+        <div className="fixed top-4 right-4 z-50 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg animate-pulse">
+          Mise à jour en cours...
+        </div>
+      )}
+
       <div className="bg-white rounded-lg shadow p-4 md:p-6 mb-6">
         <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-4">
           <div className="flex items-center gap-4">
@@ -87,6 +153,7 @@ export default function ConvocationsTab({
                 checked={showConvoques}
                 onChange={(e) => setShowConvoques(e.target.checked)}
                 className="w-5 h-5 text-blue-600 rounded"
+                disabled={isProcessing}
               />
               <span className="text-sm font-medium">
                 Afficher uniquement les élèves convoqués
@@ -99,6 +166,7 @@ export default function ConvocationsTab({
                 checked={editingMode}
                 onChange={(e) => onSetEditingMode(e.target.checked)}
                 className="w-5 h-5 text-blue-600 rounded"
+                disabled={isProcessing}
               />
               <span className="text-sm font-medium">
                 Mode édition
@@ -176,7 +244,7 @@ export default function ConvocationsTab({
               </tr>
             </thead>
             <tbody>
-              {eleves.map((eleve) => {
+              {filteredEleves.map((eleve) => {
                 const presence9Mars = getPresenceStyles(eleve.presence_9_mars);
                 const presence10Mars = getPresenceStyles(eleve.presence_10_mars);
                 const presence16Avril = getPresenceStyles(eleve.presence_16_avril);
@@ -195,6 +263,7 @@ export default function ConvocationsTab({
                           value={eleve.guide_id || ''}
                           onChange={(e) => handleLocalSelectUpdate(eleve.id, 'guide_id', e.target.value)}
                           className="w-full border rounded px-2 py-1 text-xs md:text-sm"
+                          disabled={isProcessing}
                         >
                           <option value="">-</option>
                           {guides.map(guide => (
@@ -218,6 +287,7 @@ export default function ConvocationsTab({
                             value={eleve.categorie || ''}
                             onChange={(e) => handleLocalSelectUpdate(eleve.id, 'categorie', e.target.value)}
                             className="w-full border rounded px-2 py-1 text-xs md:text-sm"
+                            disabled={isProcessing}
                           >
                             <option value="">-</option>
                             {categories.map(cat => (
@@ -231,10 +301,12 @@ export default function ConvocationsTab({
                               onChange={(e) => setNewCategory(e.target.value)}
                               placeholder="Nouvelle catégorie"
                               className="flex-1 border rounded px-2 py-1 text-xs"
+                              disabled={isProcessing}
                             />
                             <button
                               onClick={handleAddCategory}
-                              className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200"
+                              className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200 disabled:opacity-50"
+                              disabled={isProcessing}
                             >
                               +
                             </button>
@@ -254,11 +326,14 @@ export default function ConvocationsTab({
                           className="w-full border rounded px-2 py-1 text-xs md:text-sm"
                           rows={3}
                           autoFocus
+                          disabled={isProcessing}
                         />
                       ) : editingMode ? (
                         <div
-                          onClick={() => onSetEditingCell({id: eleve.id, field: 'problematique'})}
-                          className="cursor-pointer hover:bg-gray-100 p-1 rounded min-h-[60px] flex items-start"
+                          onClick={() => !isProcessing && onSetEditingCell({id: eleve.id, field: 'problematique'})}
+                          className={`cursor-pointer hover:bg-gray-100 p-1 rounded min-h-[60px] flex items-start ${
+                            isProcessing ? 'opacity-50 cursor-not-allowed' : ''
+                          }`}
                         >
                           {eleve.problematique || '-'}
                         </div>
@@ -277,6 +352,7 @@ export default function ConvocationsTab({
                           onChange={(e) => handleLocalUpdate(eleve.id, 'convocation_mars', e.target.value)}
                           className={`w-full border rounded px-2 py-1 text-xs md:text-sm ${getConvocationColor(eleve.convocation_mars || '')}`}
                           title={getConvocationLabel(eleve.convocation_mars || '')}
+                          disabled={isProcessing}
                         >
                           {CONVOCATION_OPTIONS.map(opt => (
                             <option key={opt.value} value={opt.value} className={opt.color}>
@@ -295,9 +371,12 @@ export default function ConvocationsTab({
                     <td className="px-3 py-3 text-center">
                       {editingMode ? (
                         <button
-                          onClick={() => handleLocalPresenceUpdate(eleve.id, 'presence_9_mars', eleve.presence_9_mars)}
-                          className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presence9Mars.bgColor} ${presence9Mars.hoverColor} ${presence9Mars.textColor} font-bold text-lg`}
+                          onClick={() => !isProcessing && handleLocalPresenceUpdate(eleve.id, 'presence_9_mars', eleve.presence_9_mars)}
+                          className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presence9Mars.bgColor} ${presence9Mars.hoverColor} ${presence9Mars.textColor} font-bold text-lg ${
+                            isProcessing ? 'opacity-50 cursor-not-allowed' : ''
+                          }`}
                           title={`${presence9Mars.title} (cliquer pour changer)`}
+                          disabled={isProcessing}
                         >
                           {presence9Mars.icon}
                         </button>
@@ -312,9 +391,12 @@ export default function ConvocationsTab({
                     <td className="px-3 py-3 text-center">
                       {editingMode ? (
                         <button
-                          onClick={() => handleLocalPresenceUpdate(eleve.id, 'presence_10_mars', eleve.presence_10_mars)}
-                          className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presence10Mars.bgColor} ${presence10Mars.hoverColor} ${presence10Mars.textColor} font-bold text-lg`}
+                          onClick={() => !isProcessing && handleLocalPresenceUpdate(eleve.id, 'presence_10_mars', eleve.presence_10_mars)}
+                          className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presence10Mars.bgColor} ${presence10Mars.hoverColor} ${presence10Mars.textColor} font-bold text-lg ${
+                            isProcessing ? 'opacity-50 cursor-not-allowed' : ''
+                          }`}
                           title={`${presence10Mars.title} (cliquer pour changer)`}
+                          disabled={isProcessing}
                         >
                           {presence10Mars.icon}
                         </button>
@@ -333,6 +415,7 @@ export default function ConvocationsTab({
                           onChange={(e) => handleLocalUpdate(eleve.id, 'convocation_avril', e.target.value)}
                           className={`w-full border rounded px-2 py-1 text-xs md:text-sm ${getConvocationColor(eleve.convocation_avril || '')}`}
                           title={getConvocationLabel(eleve.convocation_avril || '')}
+                          disabled={isProcessing}
                         >
                           {CONVOCATION_OPTIONS.map(opt => (
                             <option key={opt.value} value={opt.value} className={opt.color}>
@@ -351,9 +434,12 @@ export default function ConvocationsTab({
                     <td className="px-3 py-3 text-center">
                       {editingMode ? (
                         <button
-                          onClick={() => handleLocalPresenceUpdate(eleve.id, 'presence_16_avril', eleve.presence_16_avril)}
-                          className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presence16Avril.bgColor} ${presence16Avril.hoverColor} ${presence16Avril.textColor} font-bold text-lg`}
+                          onClick={() => !isProcessing && handleLocalPresenceUpdate(eleve.id, 'presence_16_avril', eleve.presence_16_avril)}
+                          className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presence16Avril.bgColor} ${presence16Avril.hoverColor} ${presence16Avril.textColor} font-bold text-lg ${
+                            isProcessing ? 'opacity-50 cursor-not-allowed' : ''
+                          }`}
                           title={`${presence16Avril.title} (cliquer pour changer)`}
+                          disabled={isProcessing}
                         >
                           {presence16Avril.icon}
                         </button>
@@ -368,9 +454,12 @@ export default function ConvocationsTab({
                     <td className="px-3 py-3 text-center">
                       {editingMode ? (
                         <button
-                          onClick={() => handleLocalPresenceUpdate(eleve.id, 'presence_17_avril', eleve.presence_17_avril)}
-                          className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presence17Avril.bgColor} ${presence17Avril.hoverColor} ${presence17Avril.textColor} font-bold text-lg`}
+                          onClick={() => !isProcessing && handleLocalPresenceUpdate(eleve.id, 'presence_17_avril', eleve.presence_17_avril)}
+                          className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presence17Avril.bgColor} ${presence17Avril.hoverColor} ${presence17Avril.textColor} font-bold text-lg ${
+                            isProcessing ? 'opacity-50 cursor-not-allowed' : ''
+                          }`}
                           title={`${presence17Avril.title} (cliquer pour changer)`}
+                          disabled={isProcessing}
                         >
                           {presence17Avril.icon}
                         </button>
