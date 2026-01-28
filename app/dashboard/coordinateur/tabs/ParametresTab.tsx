@@ -8,7 +8,7 @@ import {
   Save, Plus, Info, ChevronDown, ChevronUp,
   CheckCircle, AlertCircle
 } from 'lucide-react';
-import ToggleSetting from '../components/ToggleSetting';
+import ToggleSetting from '../components/ToggleSettings';
 
 interface JourneeTFH {
   id: number;
