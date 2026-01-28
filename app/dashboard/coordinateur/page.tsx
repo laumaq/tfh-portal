@@ -10,6 +10,7 @@ import DashboardTab from './tabs/DashboardTab';
 import ConvocationsTab from './tabs/ConvocationsTab';
 import DefensesTab from './tabs/DefensesTab';
 import CalendrierTab from './tabs/CalendrierTab';
+import GestionUtilisateursTab from './tabs/GestionUtilisateursTab';
 import { useCoordinateurData } from './hooks/useCoordinateurData';
 import { useElevesOperations } from './hooks/useElevesOperations';
 import { TabType } from './types';
@@ -111,6 +112,18 @@ export default function CoordinateurDashboard() {
             onRefresh={refreshData}
           />
         );
+
+      case 'gestion-utilisateurs':
+        return (
+          <GestionUtilisateursTab
+            eleves={eleves}
+            guides={guides}
+            lecteursExternes={lecteursExternes}
+            mediateurs={mediateurs}
+            coordinateurs={coordinateurs}
+            onRefresh={refreshData}
+          />
+        );
         
       default:
         return (
@@ -193,6 +206,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
