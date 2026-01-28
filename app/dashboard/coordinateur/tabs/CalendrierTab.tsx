@@ -18,8 +18,8 @@ export default function CalendrierTab({
   onRefresh,
 }: CalendrierTabProps) {
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
-  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('toutes');
+  const [selectedLocations, setSelectedLocations] = useState<string[]>(allLocations);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [conflicts, setConflicts] = useState<Conflict[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -228,6 +228,8 @@ export default function CalendrierTab({
   // Mettre à jour les conflits quand les filtres changent
   useEffect(() => {
     setIsLoading(true);
+
+    setSelectedLocations(allLocations);
     
     // Simuler un délai pour la détection
     setTimeout(() => {
@@ -317,66 +319,64 @@ export default function CalendrierTab({
           {/* Filtre des catégories */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Catégories
+              Catégories (sélection multiple)
             </label>
-            <div className="max-h-40 overflow-y-auto border rounded p-3 bg-white">
-              <div className="flex items-center mb-2">
-                <input
-                  type="radio"
-                  id="cat-toutes"
-                  checked={selectedCategory === 'toutes'}
-                  onChange={(e) => {
-                    setSelectedCategory('toutes');
-                  }}
-                  className="mr-2"
-                  disabled={isLoading}
-                />
-                <label 
-                  htmlFor="cat-toutes" 
-                  className="text-sm font-medium cursor-pointer flex items-center"
-                >
-                  <div className="w-4 h-4 rounded mr-2 border" style={{ 
-                    backgroundColor: '#F3F4F6',
-                    borderColor: '#D1D5DB'
-                  }}></div>
-                  Toutes les catégories
-                </label>
-              </div>
-              
-              <div className="space-y-1">
-                {categories.map(cat => {
-                  const color = getCategoryColor(cat);
-                  return (
-                    <div key={cat} className="flex items-center">
-                      <input
-                        type="radio"
-                        id={`cat-${cat}`}
-                        checked={selectedCategory === cat}
-                        onChange={(e) => {
-                          setSelectedCategory(cat);
+            <div className="max-h-40 overflow-y-auto border rounded p-2">
+              {categories.map(cat => {
+                const color = getCategoryColor(cat);
+                const isSelected = selectedCategories.includes(cat);
+                const allSelected = selectedCategories.length === categories.length;
+                
+                return (
+                  <div key={cat} className="flex items-center mb-1">
+                    <input
+                      type="checkbox"
+                      id={`cat-${cat}`}
+                      checked={isSelected}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedCategories([...selectedCategories, cat]);
+                        } else {
+                          setSelectedCategories(selectedCategories.filter(c => c !== cat));
+                        }
+                      }}
+                      className="mr-2"
+                      disabled={isLoading}
+                    />
+                    <label 
+                      htmlFor={`cat-${cat}`} 
+                      className="text-sm cursor-pointer flex items-center group"
+                    >
+                      <div 
+                        className="w-4 h-4 rounded mr-2 border group-hover:opacity-80 transition-opacity"
+                        style={{ 
+                          backgroundColor: color.bg,
+                          borderColor: color.border
                         }}
-                        className="mr-2"
-                        disabled={isLoading}
-                      />
-                      <label 
-                        htmlFor={`cat-${cat}`} 
-                        className="text-sm cursor-pointer flex items-center group"
-                      >
-                        <div 
-                          className="w-4 h-4 rounded mr-2 border group-hover:opacity-80 transition-opacity"
-                          style={{ 
-                            backgroundColor: color.bg,
-                            borderColor: color.border
-                          }}
-                          title={cat}
-                        ></div>
-                        <span className="truncate">{cat}</span>
-                      </label>
-                    </div>
-                  );
-                })}
-              </div>
+                        title={cat}
+                      ></div>
+                      <span className="truncate">{cat}</span>
+                    </label>
+                  </div>
+                );
+              })}
+              {categories.length === 0 && (
+                <p className="text-sm text-gray-500">Aucune catégorie définie</p>
+              )}
             </div>
+            <button
+              onClick={() => {
+                if (selectedCategories.length === categories.length) {
+                  setSelectedCategories([]);
+                } else {
+                  setSelectedCategories([...categories]);
+                }
+              }}
+              className="mt-2 text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50"
+              disabled={isLoading || categories.length === 0}
+            >
+              {selectedCategories.length === categories.length ? "Tout désélectionner" : "Tout sélectionner"}
+            </button>
           </div>
           
           {/* Filtre des locaux */}
