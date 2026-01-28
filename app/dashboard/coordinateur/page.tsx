@@ -62,13 +62,13 @@ export default function CoordinateurDashboard() {
           />
           
           <div className="p-4 md:p-6">
-            {activeTab === 'dashboard' && (
+            {/*{activeTab === 'dashboard' && (
               <DashboardTab 
                 eleves={eleves}
                 guides={guides}
                 onTabChange={setActiveTab}
               />
-            )}
+            )}*/}
             
             {activeTab === 'convocations' && (
               <ConvocationsTab
@@ -80,7 +80,7 @@ export default function CoordinateurDashboard() {
                 onRefresh={refreshData}
               />
             )}
-            
+            {/*
             {activeTab === 'defenses' && (
               <DefensesTab
                 eleves={eleves}
@@ -93,10 +93,11 @@ export default function CoordinateurDashboard() {
               />
             )}
             
-            {/* ... autres onglets ... */}
+            ... autres onglets ... */}
           </div>
         </main>
       </div>
     </div>
   );
 }
+
