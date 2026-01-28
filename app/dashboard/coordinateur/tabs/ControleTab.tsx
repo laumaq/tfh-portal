@@ -455,8 +455,8 @@ export default function ControleTab() {
                     <div className="text-center">
                       <div className="text-xl font-bold text-gray-900">{guide.elevesGuides}</div>
                       <div className={`text-xs px-2 py-1 rounded-full ${
-                        guide.elevesGuides > 3 ? 'bg-yellow-100 text-yellow-800' :
-                        guide.elevesGuides > 1 ? 'bg-green-100 text-green-800' :
+                        guide.elevesGuides > 2 ? 'bg-yellow-100 text-yellow-800' :
+                        guide.elevesGuides > 0 ? 'bg-green-100 text-green-800' :
                         'bg-red-100 text-red-800'
                       }`}>
                         {guide.elevesGuides > 2 ? 'Charge élevée' :
