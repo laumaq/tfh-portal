@@ -646,7 +646,7 @@ export default function ParametresTab() {
                   {journeesTFH.filter(j => j.date).length} / {journeesTFH.length} dates définies
                 </div>
                 <button
-                  onClick={() => loadJourneesTFH(true)}
+                  onClick={loadJourneesTFH}
                   disabled={loadingJournees}
                   className="text-sm text-orange-600 hover:text-orange-800 flex items-center gap-1 disabled:opacity-50"
                 >
