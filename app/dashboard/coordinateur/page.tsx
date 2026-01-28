@@ -98,6 +98,7 @@ export default function CoordinateurDashboard() {
             onUpdate={handleUpdate}
             onSelectUpdate={handleSelectUpdate}
             onRefresh={refreshData}
+            onSetEditingMode={setEditingModeDefenses}
           />
         );
         
@@ -182,6 +183,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
