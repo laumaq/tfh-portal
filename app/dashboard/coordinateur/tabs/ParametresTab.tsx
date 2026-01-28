@@ -336,18 +336,31 @@ export default function ParametresTab() {
   const saveJourneeDate = async (journeeId: number, date: string) => {
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('system_settings')
-        .upsert({
-          setting_key: `Journee_${journeeId}`,
-          setting_value: date,
-          description: `Journée ${journeeId}`,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'setting_key' });
-      
-      if (error) throw error;
-      setJourneesTFH(prev => prev.map(j => j.id === journeeId ? { ...j, date } : j));
-      showMessage('info', `Date de la journée ${journeeId} sauvegardée`);
+      if (date.trim() === '') {
+        // SUPPRESSION : Si date vide, supprimer la ligne
+        const { error } = await supabase
+          .from('system_settings')
+          .delete()
+          .eq('setting_key', `Journee_${journeeId}`);
+        
+        if (error) throw error;
+        setJourneesTFH(prev => prev.map(j => j.id === journeeId ? { ...j, date: '' } : j));
+        showMessage('info', `Journée ${journeeId} supprimée de la base de données`);
+      } else {
+        // SAUVEGARDE : Si date non vide, upsert normal
+        const { error } = await supabase
+          .from('system_settings')
+          .upsert({
+            setting_key: `Journee_${journeeId}`,
+            setting_value: date,
+            description: `Journée ${journeeId}`,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'setting_key' });
+        
+        if (error) throw error;
+        setJourneesTFH(prev => prev.map(j => j.id === journeeId ? { ...j, date } : j));
+        showMessage('info', `Date de la journée ${journeeId} sauvegardée`);
+      }
     } catch (err) {
       console.error('Erreur sauvegarde journée:', err);
       showMessage('error', 'Erreur lors de la sauvegarde');
@@ -360,19 +373,45 @@ export default function ParametresTab() {
   const saveAllJournees = async () => {
     setSaving(true);
     try {
-      const updates = journeesTFH.map(journee => ({
-        setting_key: `Journee_${journee.id}`,
-        setting_value: journee.date,
-        description: `Journée ${journee.id}`,
-        updated_at: new Date().toISOString()
-      }));
+      // Préparer les opérations d'upsert et delete
+      const upserts: any[] = [];
+      const deletes: string[] = [];
       
-      const { error } = await supabase
-        .from('system_settings')
-        .upsert(updates, { onConflict: 'setting_key' });
+      journeesTFH.forEach(journee => {
+        if (journee.date.trim() === '') {
+          // Ajouter à la liste des suppressions
+          deletes.push(`Journee_${journee.id}`);
+        } else {
+          // Ajouter à la liste des upserts
+          upserts.push({
+            setting_key: `Journee_${journee.id}`,
+            setting_value: journee.date,
+            description: `Journée ${journee.id}`,
+            updated_at: new Date().toISOString()
+          });
+        }
+      });
       
-      if (error) throw error;
-      showMessage('info', 'Toutes les dates ont été sauvegardées !');
+      // Exécuter les suppressions si nécessaire
+      if (deletes.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('system_settings')
+          .delete()
+          .in('setting_key', deletes);
+        
+        if (deleteError) throw deleteError;
+      }
+      
+      // Exécuter les upserts si nécessaire
+      if (upserts.length > 0) {
+        const { error: upsertError } = await supabase
+          .from('system_settings')
+          .upsert(upserts, { onConflict: 'setting_key' });
+        
+        if (upsertError) throw upsertError;
+      }
+      
+      showMessage('info', `${upserts.length} journée(s) sauvegardée(s) et ${deletes.length} journée(s) supprimée(s) !`);
     } catch (err) {
       console.error('Erreur sauvegarde globale:', err);
       showMessage('error', 'Erreur lors de la sauvegarde globale');
