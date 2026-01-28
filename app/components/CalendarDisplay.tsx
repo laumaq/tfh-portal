@@ -31,7 +31,7 @@ interface DayDefenses {
 
 interface CalendarDisplayProps {
   eleves: any[];
-  selectedCategories: string;
+  selectedCategories: string[];
   selectedDates: string[];
   selectedLocations: string[];
   onEventClick?: (event: DefenseEvent) => void;
@@ -219,6 +219,9 @@ export default function CalendarDisplay({
 
   const prepareCalendarData = useCallback(() => {
     setIsProcessing(true);
+    const categoriesFromEleves = Array.from(
+      new Set(eleves.map(e => e.categorie).filter(Boolean))
+    );    
       const edouard = eleves.find(e => e.id === '34f64a57-2087-47a6-ae9c-487acb8c3fa3');
       console.log('Edouard FONTAINE COLSON dans eleves?:', edouard ? 'OUI' : 'NON');
       if (edouard) {
@@ -278,8 +281,18 @@ export default function CalendarDisplay({
     
     let filteredDefenses = defenseEvents;
     
-    if (selectedCategories.length > 0 && !selectedCategories.includes('toutes')) {
-      filteredDefenses = filteredDefenses.filter(d => selectedCategories.includes(d.categorie));
+    if (selectedCategories.length > 0) {
+      // Si "toutes" est dans le tableau OU si toutes les catégories sont sélectionnées
+      const allCategoriesSelected = selectedCategories.length === categoriesFromEleves.length;
+      const hasToutes = selectedCategories.includes('toutes');
+      
+      if (!hasToutes && !allCategoriesSelected) {
+        // Filtrer seulement si on a des catégories spécifiques sélectionnées
+        filteredDefenses = filteredDefenses.filter(d => 
+          selectedCategories.includes(d.categorie)
+        );
+      }
+      // Sinon (si "toutes" ou toutes les catégories), on garde tout
     }
     
     if (selectedDates.length > 0) {
