@@ -281,18 +281,10 @@ export default function CalendarDisplay({
     
     let filteredDefenses = defenseEvents;
     
-    if (selectedCategories.length > 0) {
-      // Si "toutes" est dans le tableau OU si toutes les catégories sont sélectionnées
-      const allCategoriesSelected = selectedCategories.length === categoriesFromEleves.length;
-      const hasToutes = selectedCategories.includes('toutes');
-      
-      if (!hasToutes && !allCategoriesSelected) {
-        // Filtrer seulement si on a des catégories spécifiques sélectionnées
-        filteredDefenses = filteredDefenses.filter(d => 
-          selectedCategories.includes(d.categorie)
-        );
-      }
-      // Sinon (si "toutes" ou toutes les catégories), on garde tout
+    if (selectedCategories.length > 0 && !selectedCategories.includes('toutes')) {
+      filteredDefenses = filteredDefenses.filter(d => 
+        selectedCategories.includes(d.categorie)
+      );
     }
     
     if (selectedDates.length > 0) {
