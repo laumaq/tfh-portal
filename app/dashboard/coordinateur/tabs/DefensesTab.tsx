@@ -26,6 +26,7 @@ export default function DefensesTab({
   onUpdate,
   onSelectUpdate,
   onRefresh,
+  onSetEditingMode,
 }: DefensesTabProps) {
   const [filteredEleves, setFilteredEleves] = useState<Eleve[]>(eleves);
   const [isProcessing, setIsProcessing] = useState(false);
