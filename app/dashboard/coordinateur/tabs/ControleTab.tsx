@@ -235,7 +235,7 @@ export default function ControleTab() {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-gray-800">👥 Contrôle des guides</h2>
-              <p className="text-gray-600">Suivi détaillé de l'activité et des performances</p>
+              <p className="text-gray-600">Suivi détaillé de l'activité</p>
             </div>
           </div>
           <button
@@ -427,9 +427,6 @@ export default function ControleTab() {
                     % convocations avril {getSortIcon('pourcentageConvocationsAvril')}
                   </div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Évaluation
-                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -517,20 +514,6 @@ export default function ControleTab() {
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
                       {guide.convocationsAvrilRendues}/{guide.elevesGuides} rendues
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      guide.pourcentageConvocationsMars >= 80 && guide.pourcentageConvocationsAvril >= 80
-                        ? 'bg-green-100 text-green-800' :
-                      guide.pourcentageConvocationsMars >= 50 && guide.pourcentageConvocationsAvril >= 50
-                        ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
-                    }`}>
-                      {guide.pourcentageConvocationsMars >= 80 && guide.pourcentageConvocationsAvril >= 80
-                        ? 'Excellent' :
-                        guide.pourcentageConvocationsMars >= 50 && guide.pourcentageConvocationsAvril >= 50
-                        ? 'Satisfaisant' : 'À améliorer'}
                     </div>
                   </td>
                 </tr>
