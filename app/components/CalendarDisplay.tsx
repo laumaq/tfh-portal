@@ -294,7 +294,7 @@ export default function CalendarDisplay({
     console.log('Edouard dans filteredDefenses?:', edouardInFiltered ? 'OUI' : 'NON');
     if (edouardInFiltered) {
       console.log('Détails filtres:', {
-        selectedCategory,
+        selectedCategories,
         selectedDates,
         selectedLocations,
         categorie: edouardInFiltered.categorie,
@@ -331,7 +331,7 @@ export default function CalendarDisplay({
     setDayDefenses(daysData);
     setIsProcessing(false);
     
-  }, [eleves, selectedCategory, selectedDates, selectedLocations]);
+  }, [eleves, selectedCategories, selectedDates, selectedLocations]);
 
   useEffect(() => {
     console.log('Effet déclenché dans CalendarDisplay');
