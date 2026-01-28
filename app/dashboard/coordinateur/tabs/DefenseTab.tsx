@@ -14,6 +14,7 @@ interface DefensesTabProps {
   onUpdate: (eleveId: string, field: string, value: string) => Promise<void>;
   onSelectUpdate: (eleveId: string, field: string, value: string) => Promise<void>;
   onRefresh: () => void;
+  onSetEditingMode?: (mode: boolean) => void;
 }
 
 export default function DefensesTab({
@@ -102,8 +103,7 @@ export default function DefensesTab({
                 type="checkbox"
                 checked={editingMode}
                 onChange={(e) => {
-                  // Cette fonction sera passée depuis le parent
-                  window.location.reload(); // Solution temporaire
+                  onSetEditingMode?.(e.target.checked);
                 }}
                 className="w-5 h-5 text-blue-600 rounded"
                 disabled={isProcessing}
