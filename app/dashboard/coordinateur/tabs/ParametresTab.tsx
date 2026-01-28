@@ -42,8 +42,8 @@ export default function ParametresTab() {
   // Paramètres fonctionnels
   const [lecteurInterneEnabled, setLecteurInterneEnabled] = useState(false);
   const [loadingSettings, setLoadingSettings] = useState(false);
-  const [settingsMessage, setSettingsMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
-
+  const [settingsMessage, setSettingsMessage] = useState<{type: 'info' | 'error', text: string} | null>(null);
+  
   // Paramètres d'affichage
   const [displaySettings, setDisplaySettings] = useState<DisplaySettings>({
     lecteur_externe_voir_eleves: true,
@@ -66,7 +66,7 @@ export default function ParametresTab() {
   const [saving, setSaving] = useState(false);
 
   // Messages temporaires
-  const showMessage = (type: 'success' | 'error', text: string) => {
+  const showMessage = (type: 'info' | 'error', text: string) => {
     setSettingsMessage({ type, text });
     setTimeout(() => setSettingsMessage(null), 3000);
   };
@@ -247,7 +247,7 @@ export default function ParametresTab() {
       if (error) throw error;
       
       setLecteurInterneEnabled(enabled);
-      showMessage('success', `Onglet "Lecteur interne" ${enabled ? 'activé' : 'désactivé'} pour les guides.`);
+      showMessage('info', `Onglet "Lecteur interne" ${enabled ? 'activé' : 'désactivé'} pour les guides.`);
     } catch (err) {
       console.error('Erreur mise à jour paramètre:', err);
       showMessage('error', 'Erreur lors de la mise à jour');
@@ -273,7 +273,7 @@ export default function ParametresTab() {
       if (error) throw error;
       
       setDisplaySettings(prev => ({ ...prev, [key]: value }));
-      showMessage('success', 'Paramètre sauvegardé');
+      showMessage('info', 'Paramètre sauvegardé');
     } catch (err) {
       console.error('Erreur sauvegarde paramètre:', err);
       showMessage('error', 'Erreur lors de la sauvegarde');
@@ -316,7 +316,7 @@ export default function ParametresTab() {
       
       if (error) throw error;
       setJourneesTFH(prev => prev.map(j => j.id === journeeId ? { ...j, date } : j));
-      showMessage('success', `Date de la journée ${journeeId} sauvegardée`);
+      showMessage('info', `Date de la journée ${journeeId} sauvegardée`);
     } catch (err) {
       console.error('Erreur sauvegarde journée:', err);
       showMessage('error', 'Erreur lors de la sauvegarde');
@@ -341,7 +341,7 @@ export default function ParametresTab() {
         .upsert(updates, { onConflict: 'setting_key' });
       
       if (error) throw error;
-      showMessage('success', 'Toutes les dates ont été sauvegardées !');
+      showMessage('info', 'Toutes les dates ont été sauvegardées !');
     } catch (err) {
       console.error('Erreur sauvegarde globale:', err);
       showMessage('error', 'Erreur lors de la sauvegarde globale');
@@ -374,18 +374,18 @@ export default function ParametresTab() {
   // Rendu des messages
   const renderMessage = () => {
     if (!settingsMessage) return null;
-
+  
     return (
       <div className="fixed top-4 right-4 z-50 max-w-md">
         <div className={`${
-          settingsMessage.type === 'success' 
-            ? 'bg-green-50 border-green-200 text-green-700' 
-            : 'bg-red-50 border-red-200 text-red-700'
+          settingsMessage.type === 'info' 
+            ? 'bg-blue-50 border-blue-200 text-blue-700'  // Info = bleu
+            : 'bg-red-50 border-red-200 text-red-700'     // Error = rouge
         } border rounded-lg p-4 shadow-lg flex items-center gap-2`}>
-          {settingsMessage.type === 'success' ? (
-            <CheckCircle className="w-5 h-5" />
+          {settingsMessage.type === 'info' ? (
+            <Info className="w-5 h-5" />  // Icône info
           ) : (
-            <AlertCircle className="w-5 h-5" />
+            <AlertCircle className="w-5 h-5" />  // Icône alerte
           )}
           <span className="font-medium">{settingsMessage.text}</span>
         </div>
