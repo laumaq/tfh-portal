@@ -107,7 +107,7 @@ export default function ParametresTab() {
   }, []);
 
   // Charger les journées TFH
-  const loadJourneesTFH = useCallback(async () => {
+  const loadJourneesTFH = useCallback(async (forceReload = false) => {
     setLoadingJournees(true);
     try {
       const { data, error } = await supabase
@@ -118,20 +118,46 @@ export default function ParametresTab() {
       
       if (error) throw error;
       
-      // Transformer les données
-      const journees = Array.from({ length: journeesTFH.length }, (_, i) => {
-        const journeeData = data?.find(d => d.setting_key === `Journee_${i + 1}`);
+      // DÉTERMINER LA TAILLE
+      let taille = 10; // Par défaut
+      
+      if (!forceReload && journeesTFH.length > 0) {
+        // Si on a déjà des journées locales et qu'on ne force pas le rechargement
+        taille = Math.max(10, journeesTFH.length);
+      } else if (data && data.length > 0) {
+        // Sinon, prendre le max entre base de données et 10
+        const maxId = data.reduce((max, item) => {
+          const match = item.setting_key.match(/Journee_(\d+)/);
+          return match ? Math.max(max, parseInt(match[1])) : max;
+        }, 0);
+        taille = Math.max(10, maxId);
+      }
+      
+      // CRÉER LE TABLEAU
+      const journees = Array.from({ length: taille }, (_, i) => {
+        const journeeId = i + 1;
+        const journeeData = data?.find(d => d.setting_key === `Journee_${journeeId}`);
+        
+        // Si on ne force pas le rechargement, garder les données locales existantes
+        if (!forceReload) {
+          const existingJournee = journeesTFH.find(j => j.id === journeeId);
+          if (existingJournee) {
+            return existingJournee;
+          }
+        }
+        
         if (journeeData) {
           return {
-            id: i + 1,
+            id: journeeId,
             date: journeeData.setting_value || '',
-            libelle: journeeData.description || `Journée ${i + 1}`
+            libelle: journeeData.description || `Journée ${journeeId}`
           };
         }
+        
         return {
-          id: i + 1,
+          id: journeeId,
           date: '',
-          libelle: `Journée ${i + 1}`
+          libelle: `Journée ${journeeId}`
         };
       });
       
@@ -142,12 +168,12 @@ export default function ParametresTab() {
     } finally {
       setLoadingJournees(false);
     }
-  }, []);
+  }, [journeesTFH]);
 
   // Initialisation
   useEffect(() => {
     loadSystemSettings();
-    loadJourneesTFH();
+    loadJourneesTFH(true); // <-- true pour charger depuis la base
   }, [loadSystemSettings, loadJourneesTFH]);
 
   // Fonction pour détecter les sessions basées sur les dates
@@ -615,7 +641,7 @@ export default function ParametresTab() {
                   {journeesTFH.filter(j => j.date).length} / {journeesTFH.length} dates définies
                 </div>
                 <button
-                  onClick={loadJourneesTFH}
+                  onClick={() => loadJourneesTFH(true)}
                   disabled={loadingJournees}
                   className="text-sm text-orange-600 hover:text-orange-800 flex items-center gap-1 disabled:opacity-50"
                 >
