@@ -248,7 +248,7 @@ export default function CalendrierTab({
       setIsLoading(false);
     }, 500);
     
-  }, [selectedDates, selectedLocations, selectedCategory, detectConflicts]);
+  }, [selectedDates, selectedLocations, selectedCategories, detectConflicts]);
 
   const toggleAllDates = () => {
     if (selectedDates.length === allDates.length) {
@@ -437,7 +437,7 @@ export default function CalendrierTab({
               ? `${selectedLocations.length} ${pluralize(selectedLocations.length, 'local', 'locaux')} sélectionné${selectedLocations.length > 1 ? 's' : ''}`
               : 'Tous les locaux'}
             {' • '}
-            {selectedCategory === 'toutes' ? 'Toutes catégories' : `Catégorie: ${selectedCategory}`}
+            {selectedCategories === 'toutes' ? 'Toutes catégories' : `Catégorie: ${selectedCategories}`}
           </p>
           {conflicts.length > 0 && (
             <p className="mt-1 text-amber-600 font-medium">
@@ -480,7 +480,7 @@ export default function CalendrierTab({
         ) : (
           <CalendarDisplay
             eleves={eleves}
-            selectedCategory={selectedCategory}
+            selectedCategories={selectedCategories}
             selectedDates={selectedDates}
             selectedLocations={selectedLocations}
           />
