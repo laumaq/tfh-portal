@@ -31,7 +31,7 @@ interface DayDefenses {
 
 interface CalendarDisplayProps {
   eleves: any[];
-  selectedCategory: string;
+  selectedCategories: string;
   selectedDates: string[];
   selectedLocations: string[];
   onEventClick?: (event: DefenseEvent) => void;
@@ -42,7 +42,7 @@ interface CalendarDisplayProps {
 
 export default function CalendarDisplay({ 
   eleves, 
-  selectedCategory, 
+  selectedCategories, 
   selectedDates, 
   selectedLocations,
   onEventClick,
@@ -278,8 +278,8 @@ export default function CalendarDisplay({
     
     let filteredDefenses = defenseEvents;
     
-    if (selectedCategory !== 'toutes') {
-      filteredDefenses = filteredDefenses.filter(d => d.categorie === selectedCategory);
+    if (selectedCategories.length > 0 && !selectedCategories.includes('toutes')) {
+      filteredDefenses = filteredDefenses.filter(d => selectedCategories.includes(d.categorie));
     }
     
     if (selectedDates.length > 0) {
