@@ -8,6 +8,7 @@ import Header from './components/Header';
 import LoadingSpinner from './components/LoadingSpinner';
 import DashboardTab from './tabs/DashboardTab';
 import ConvocationsTab from './tabs/ConvocationsTab';
+import DefensesTab from './tabs/DefensesTab';
 import { useCoordinateurData } from './hooks/useCoordinateurData';
 import { useElevesOperations } from './hooks/useElevesOperations';
 import { TabType } from './types';
@@ -19,6 +20,7 @@ export default function CoordinateurDashboard() {
   const [userName, setUserName] = useState('');
   const [editingModeConvocations, setEditingModeConvocations] = useState(false);
   const [editingModeDefenses, setEditingModeDefenses] = useState(false);
+  
   
   // Utiliser les hooks custom
   const { 
@@ -82,6 +84,20 @@ export default function CoordinateurDashboard() {
             onRefresh={refreshData}
             onSetEditingCell={setEditingCell}
             onSetEditingMode={setEditingModeConvocations}
+          />
+        );
+
+      case 'defenses': 
+        return (
+          <DefensesTab
+            eleves={eleves}
+            guides={guides}
+            lecteursExternes={lecteursExternes}
+            mediateurs={mediateurs}
+            editingMode={editingModeDefenses}
+            onUpdate={handleUpdate}
+            onSelectUpdate={handleSelectUpdate}
+            onRefresh={refreshData}
           />
         );
         
@@ -166,5 +182,6 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
