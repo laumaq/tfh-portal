@@ -111,6 +111,13 @@ export function useCoordinateurData() {
     loadData();
   };
 
+  // Dans useCoordinateurData.ts, ajoutez cette fonction :
+  const updateEleveLocal = (updatedEleve: Eleve) => {
+    setEleves(prev => prev.map(e => 
+      e.id === updatedEleve.id ? updatedEleve : e
+    ));
+  };
+  
   return {
     eleves,
     guides,
@@ -119,6 +126,8 @@ export function useCoordinateurData() {
     coordinateurs,
     categories,
     loading,
-    refreshData
+    refreshData,
+    updateEleveLocal
   };
+
 }
