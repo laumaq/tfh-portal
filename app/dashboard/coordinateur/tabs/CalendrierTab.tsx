@@ -437,7 +437,7 @@ export default function CalendrierTab({
               ? `${selectedLocations.length} ${pluralize(selectedLocations.length, 'local', 'locaux')} sélectionné${selectedLocations.length > 1 ? 's' : ''}`
               : 'Tous les locaux'}
             {' • '}
-            {selectedCategories === 'toutes' ? 'Toutes catégories' : `Catégorie: ${selectedCategories}`}
+            {getCategoriesSummary()}
           </p>
           {conflicts.length > 0 && (
             <p className="mt-1 text-amber-600 font-medium">
