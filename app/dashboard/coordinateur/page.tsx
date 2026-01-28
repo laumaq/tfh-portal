@@ -129,6 +129,9 @@ export default function CoordinateurDashboard() {
 
       case 'parametres':
         return <ParametresTab />;
+
+      case 'stats':
+        return <StatsTab />;
         
       default:
         return (
@@ -211,6 +214,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
