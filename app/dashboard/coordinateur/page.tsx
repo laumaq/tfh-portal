@@ -126,7 +126,7 @@ export default function CoordinateurDashboard() {
           />
         );
 
-      case 'parametres-affichage':
+      case 'parametres':
         return <ParametresTab />;
         
       default:
@@ -210,6 +210,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
