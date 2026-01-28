@@ -7,13 +7,13 @@ import { useElevesOperations } from './hooks/useElevesOperations';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import DashboardTab from './tabs/DashboardTab';
-import ConvocationsTab from './tabs/ConvocationsTab';
+import ConvocationsTab from './tabs/ConvocationsTab';{/*
 import DefensesTab from './tabs/DefensesTab';
 import CalendrierTab from './tabs/CalendrierTab';
 import GestionUtilisateursTab from './tabs/GestionUtilisateursTab';
 import ParametresTab from './tabs/ParametresTab';
 import StatsTab from './tabs/StatsTab';
-import ControleTab from './tabs/ControleTab';
+import ControleTab from './tabs/ControleTab';*/}
 
 type TabType = 'dashboard' | 'convocations' | 'defenses' | 'calendrier' | 
                'gestion-utilisateurs' | 'parametres' | 'stats' | 'controle';
@@ -100,4 +100,5 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
