@@ -749,7 +749,7 @@ export default function ParametresTab() {
                               {journee.date && (
                                 <button
                                   onClick={() => {
-                                    if (confirm(`Supprimer la date pour la journée ${journee.id} ?`)) {
+                                    if (confirm(`Si vous désirez réellement supprimer l'existence d'une journée ${journee.id}, veuillez utilisez le bouton "Sauvegarder toute les dates" ci-dessous ?`)) {
                                       setJourneesTFH(prev => prev.map(j => 
                                         j.id === journee.id ? { ...j, date: '' } : j
                                       ));
