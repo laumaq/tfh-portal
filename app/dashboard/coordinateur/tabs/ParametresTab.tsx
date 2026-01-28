@@ -64,6 +64,7 @@ export default function ParametresTab() {
   const [journeesTFH, setJourneesTFH] = useState<JourneeTFH[]>([]);
   const [loadingJournees, setLoadingJournees] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [hasLoadedJournees, setHasLoadedJournees] = useState(false);
 
   // Messages temporaires
   const showMessage = (type: 'info' | 'error', text: string) => {
@@ -106,8 +107,7 @@ export default function ParametresTab() {
     }
   }, []);
 
-  // Charger les journées TFH
-  const loadJourneesTFH = useCallback(async (forceReload = false) => {
+  const loadJourneesTFH = useCallback(async () => {
     setLoadingJournees(true);
     try {
       const { data, error } = await supabase
@@ -118,28 +118,30 @@ export default function ParametresTab() {
       
       if (error) throw error;
       
-      // DÉTERMINER LA TAILLE
-      let taille = 10; // Par défaut
-      
-      if (!forceReload && journeesTFH.length > 0) {
-        // Si on a déjà des journées locales et qu'on ne force pas le rechargement
-        taille = Math.max(10, journeesTFH.length);
-      } else if (data && data.length > 0) {
-        // Sinon, prendre le max entre base de données et 10
-        const maxId = data.reduce((max, item) => {
+      // Récupérer le nombre max depuis la base
+      let maxId = 10;
+      if (data && data.length > 0) {
+        data.forEach(item => {
           const match = item.setting_key.match(/Journee_(\d+)/);
-          return match ? Math.max(max, parseInt(match[1])) : max;
-        }, 0);
-        taille = Math.max(10, maxId);
+          if (match) {
+            const id = parseInt(match[1]);
+            if (id > maxId) maxId = id;
+          }
+        });
       }
       
-      // CRÉER LE TABLEAU
+      // S'il y a déjà des journées locales ET qu'on a déjà chargé une fois
+      // on garde le max entre base et local
+      const taille = hasLoadedJournees 
+        ? Math.max(maxId, journeesTFH.length)
+        : Math.max(maxId, 10);
+      
       const journees = Array.from({ length: taille }, (_, i) => {
         const journeeId = i + 1;
         const journeeData = data?.find(d => d.setting_key === `Journee_${journeeId}`);
         
-        // Si on ne force pas le rechargement, garder les données locales existantes
-        if (!forceReload) {
+        // Si on a déjà chargé une fois, on garde les données locales existantes
+        if (hasLoadedJournees) {
           const existingJournee = journeesTFH.find(j => j.id === journeeId);
           if (existingJournee) {
             return existingJournee;
@@ -162,19 +164,22 @@ export default function ParametresTab() {
       });
       
       setJourneesTFH(journees);
+      setHasLoadedJournees(true); // Marquer comme chargé
     } catch (err) {
       console.error('Erreur chargement journées TFH:', err);
       showMessage('error', 'Erreur lors du chargement des journées TFH');
     } finally {
       setLoadingJournees(false);
     }
-  }, [journeesTFH]);
-
-  // Initialisation
+  }, [hasLoadedJournees, journeesTFH]); // Dépendances limitées
+  
+  // Modifiez useEffect pour n'exécuter qu'une fois
   useEffect(() => {
     loadSystemSettings();
-    loadJourneesTFH(true); // <-- true pour charger depuis la base
-  }, [loadSystemSettings, loadJourneesTFH]);
+    if (!hasLoadedJournees) {
+      loadJourneesTFH();
+    }
+  }, [loadSystemSettings, loadJourneesTFH, hasLoadedJournees]);
 
   // Fonction pour détecter les sessions basées sur les dates
   const detecterSessions = useCallback(() => {
