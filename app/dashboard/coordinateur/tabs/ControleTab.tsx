@@ -459,8 +459,8 @@ export default function ControleTab() {
                         guide.elevesGuides > 1 ? 'bg-green-100 text-green-800' :
                         'bg-red-100 text-red-800'
                       }`}>
-                        {guide.elevesGuides > 3 ? 'Charge élevée' :
-                         guide.elevesGuides > 1 ? 'Charge normale' : 'Charge insuffisante'}
+                        {guide.elevesGuides > 2 ? 'Charge élevée' :
+                         guide.elevesGuides > 0 ? 'Charge normale' : 'Charge insuffisante'}
                       </div>
                     </div>
                   </td>
