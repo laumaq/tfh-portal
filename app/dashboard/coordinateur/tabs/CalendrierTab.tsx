@@ -490,11 +490,9 @@ export default function CalendrierTab({
           <CalendarDisplay
             eleves={eleves}
             selectedCategories={
-              selectedCategories.length === categories.length || selectedCategories.length === 0
-                ? 'toutes'
-                : selectedCategories.length === 1
-                ? selectedCategories[0]
-                : 'multiple'
+              selectedCategories.length === 0 || selectedCategories.length === categories.length
+                ? ['toutes']  // ← Tableau avec 'toutes'
+                : selectedCategories  // ← Déjà un tableau, on le garde
             }
             selectedDates={selectedDates}
             selectedLocations={selectedLocations}
