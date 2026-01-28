@@ -119,7 +119,7 @@ export default function ParametresTab() {
       if (error) throw error;
       
       // Transformer les données
-      const journees = Array.from({ length: 10 }, (_, i) => {
+      const journees = Array.from({ length: journeesTFH.length }, (_, i) => {
         const journeeData = data?.find(d => d.setting_key === `Journee_${i + 1}`);
         if (journeeData) {
           return {
