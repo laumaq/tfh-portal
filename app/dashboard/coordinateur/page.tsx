@@ -9,6 +9,7 @@ import LoadingSpinner from './components/LoadingSpinner';
 import DashboardTab from './tabs/DashboardTab';
 import ConvocationsTab from './tabs/ConvocationsTab';
 import DefensesTab from './tabs/DefensesTab';
+import CalendrierTab from './tabs/CalendrierTab';
 import { useCoordinateurData } from './hooks/useCoordinateurData';
 import { useElevesOperations } from './hooks/useElevesOperations';
 import { TabType } from './types';
@@ -101,6 +102,15 @@ export default function CoordinateurDashboard() {
             onSetEditingMode={setEditingModeDefenses}
           />
         );
+
+      case 'calendrier':
+        return (
+          <CalendrierTab
+            eleves={eleves}
+            categories={categories}
+            onRefresh={refreshData}
+          />
+        );
         
       default:
         return (
@@ -183,6 +193,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
