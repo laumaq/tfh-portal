@@ -375,7 +375,7 @@ export default function ControleTab() {
         <div className="px-6 py-4 border-b bg-gradient-to-r from-gray-50 to-gray-100">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-800">
-              Performances des guides ({sortedStats.length})
+              Liste des guides ({sortedStats.length})
             </h3>
             <div className="text-sm text-gray-600">
               Cliquez sur un nom pour les détails
@@ -455,12 +455,12 @@ export default function ControleTab() {
                     <div className="text-center">
                       <div className="text-xl font-bold text-gray-900">{guide.elevesGuides}</div>
                       <div className={`text-xs px-2 py-1 rounded-full ${
-                        guide.elevesGuides > 5 ? 'bg-red-100 text-red-800' :
                         guide.elevesGuides > 3 ? 'bg-yellow-100 text-yellow-800' :
+                        guide.elevesGuides > 1 ? 'bg-green-100 text-green-800' :
                         'bg-green-100 text-green-800'
                       }`}>
-                        {guide.elevesGuides > 5 ? 'Charge élevée' :
-                         guide.elevesGuides > 3 ? 'Charge moyenne' : 'Charge normale'}
+                        {guide.elevesGuides > 3 ? 'Charge élevée' :
+                         guide.elevesGuides > 1 ? 'Charge moyenne' : 'Charge normale'}
                       </div>
                     </div>
                   </td>
@@ -534,33 +534,16 @@ export default function ControleTab() {
             <h5 className="text-sm font-medium text-gray-600 mb-2">Charge de travail :</h5>
             <ul className="text-sm text-gray-600 space-y-1">
               <li className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-red-100 border border-red-300"></div>
+                <span><strong>0 élèves</strong> : Charge insuffisante</span>
+              </li>
+              <li className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-green-100 border border-green-300"></div>
-                <span><strong>0-3 élèves</strong> : Charge normale</span>
+                <span><strong>1-2 élèves</strong> : Charge normale</span>
               </li>
               <li className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-yellow-100 border border-yellow-300"></div>
-                <span><strong>4-5 élèves</strong> : Charge moyenne</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-red-100 border border-red-300"></div>
-                <span><strong>6+ élèves</strong> : Charge élevée (surveillance requise)</span>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h5 className="text-sm font-medium text-gray-600 mb-2">Performance :</h5>
-            <ul className="text-sm text-gray-600 space-y-1">
-              <li className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-green-500" />
-                <span><strong>≥80%</strong> : Excellente performance</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-yellow-500" />
-                <span><strong>50-79%</strong> : Performance satisfaisante</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <XCircle className="w-4 h-4 text-red-500" />
-                <span><strong>&lt;50%</strong> : Nécessite un suivi</span>
+                <span><strong>3+ élèves</strong> : Charge élevée</span>
               </li>
             </ul>
           </div>
