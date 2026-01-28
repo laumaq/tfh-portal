@@ -392,7 +392,7 @@ export default function ControleTab() {
                   onClick={() => handleSort('nom')}
                 >
                   <div className="flex items-center gap-1">
-                    Guide {getSortIcon('nom')}
+                    Nom {getSortIcon('nom')}
                   </div>
                 </th>
                 <th 
