@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { 
   BarChart3, TrendingUp, Users, BookOpen, UserCheck, Eye, 
-  CheckCircle, XCircle, AlertCircle, Download, Filter
+  CheckCircle, XCircle, AlertCircle, Download, Filter, RefreshCw
 } from 'lucide-react';
 import { Eleve } from '../types';
 
