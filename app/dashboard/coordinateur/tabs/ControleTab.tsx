@@ -579,7 +579,7 @@ export default function ControleTab() {
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div className="border rounded-lg p-4">
-                  <h4 className="font-medium text-gray-700 mb-3">Performance convocations</h4>
+                  <h4 className="font-medium text-gray-700 mb-3">Rendu des convocations</h4>
                   <div className="space-y-3">
                     <div>
                       <div className="flex justify-between text-sm text-gray-600 mb-1">
@@ -633,7 +633,7 @@ export default function ControleTab() {
                       <span className="font-medium">{selectedGuide.elevesLecteurInterne} TFH</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Performance mars :</span>
+                      <span className="text-gray-600">Rendu en mars :</span>
                       <span className={`font-medium ${
                         selectedGuide.pourcentageConvocationsMars >= 80 ? 'text-green-600' :
                         selectedGuide.pourcentageConvocationsMars >= 50 ? 'text-yellow-600' : 'text-red-600'
@@ -642,7 +642,7 @@ export default function ControleTab() {
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Performance avril :</span>
+                      <span className="text-gray-600">Rendu en avril :</span>
                       <span className={`font-medium ${
                         selectedGuide.pourcentageConvocationsAvril >= 80 ? 'text-green-600' :
                         selectedGuide.pourcentageConvocationsAvril >= 50 ? 'text-yellow-600' : 'text-red-600'
