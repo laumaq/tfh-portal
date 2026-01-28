@@ -12,6 +12,7 @@ import DefensesTab from './tabs/DefensesTab';
 import CalendrierTab from './tabs/CalendrierTab';
 import ParametresTab from './tabs/ParametresTab';
 import StatsTab from './tabs/StatsTab';
+import ControleTab from './tabs/ControleTab';
 import GestionUtilisateursTab from './tabs/GestionUtilisateursTab';
 import { useCoordinateurData } from './hooks/useCoordinateurData';
 import { useElevesOperations } from './hooks/useElevesOperations';
@@ -132,6 +133,9 @@ export default function CoordinateurDashboard() {
 
       case 'stats':
         return <StatsTab />;
+
+      case 'controle':
+        return <ControleTab />;
         
       default:
         return (
@@ -214,6 +218,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
