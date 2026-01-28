@@ -1,8 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Eleve, Guide, LecteurExterne, Mediateur, Coordinateur } from '../types';
+import { 
+  Eleve, 
+  Guide, 
+  LecteurExterne, 
+  Mediateur, 
+  Coordinateur 
+} from '../types';
 
 export function useCoordinateurData() {
   const [eleves, setEleves] = useState<Eleve[]>([]);
@@ -11,24 +17,51 @@ export function useCoordinateurData() {
   const [mediateurs, setMediateurs] = useState<Mediateur[]>([]);
   const [coordinateurs, setCoordinateurs] = useState<Coordinateur[]>([]);
   const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<string[]>([]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
-      // Charger guides
-      const { data: guidesData } = await supabase
+      // Charger les guides
+      const { data: guidesData, error: guidesError } = await supabase
         .from('guides')
         .select('id, nom, prenom, initiale')
         .order('nom', { ascending: true });
+      
+      if (guidesError) throw guidesError;
       setGuides(guidesData || []);
 
-      // Charger lecteurs externes
-      const { data: lecteursData } = await supabase
+      // Charger les lecteurs externes
+      const { data: lecteursExternesData, error: lecteursError } = await supabase
         .from('lecteurs_externes')
         .select('id, nom, prenom, email');
-      setLecteursExternes(lecteursData || []);
 
-      // Charger élèves avec jointures
-      const { data: elevesData } = await supabase
+      if (lecteursError) throw lecteursError;
+      setLecteursExternes(lecteursExternesData || []);
+
+      // Charger les médiateurs
+      const { data: mediateursData, error: mediateursError } = await supabase
+        .from('mediateurs')
+        .select('id, nom, prenom, email');
+
+      if (mediateursError) {
+        setMediateurs([]);
+      } else {
+        setMediateurs(mediateursData || []);
+      }
+
+      // Charger les coordinateurs
+      const { data: coordinateursData, error: coordinateursError } = await supabase
+        .from('coordinateurs')
+        .select('id, nom, prenom, initiale');
+
+      if (coordinateursError) {
+        setCoordinateurs([]);
+      } else {
+        setCoordinateurs(coordinateursData || []);
+      }
+
+      // Charger les élèves avec jointures
+      const { data: elevesData, error: elevesError } = await supabase
         .from('eleves')
         .select(`
           *,
@@ -37,10 +70,12 @@ export function useCoordinateurData() {
           lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
           mediateur:mediateurs!mediateur_id (nom, prenom)
         `)
-        .order('classe')
-        .order('nom');
+        .order('classe', { ascending: true })
+        .order('nom', { ascending: true });
 
-      const elevesFormatted = (elevesData || []).map(eleve => ({
+      if (elevesError) throw elevesError;
+
+      const elevesFormatted: Eleve[] = (elevesData || []).map(eleve => ({
         ...eleve,
         guide_nom: eleve.guide?.nom || '-',
         guide_prenom: eleve.guide?.prenom || '-',
@@ -53,19 +88,26 @@ export function useCoordinateurData() {
       }));
 
       setEleves(elevesFormatted);
-      
+
+      // Extraire les catégories uniques
+      const uniqueCategories = Array.from(
+        new Set(elevesFormatted.map(e => e.categorie).filter(Boolean))
+      ).sort();
+      setCategories(uniqueCategories);
+
     } catch (err) {
       console.error('Erreur chargement données:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const refreshData = () => {
+    setLoading(true);
     loadData();
   };
 
@@ -75,6 +117,7 @@ export function useCoordinateurData() {
     lecteursExternes,
     mediateurs,
     coordinateurs,
+    categories,
     loading,
     refreshData
   };
