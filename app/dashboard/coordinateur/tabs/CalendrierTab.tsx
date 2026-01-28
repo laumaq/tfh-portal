@@ -44,6 +44,8 @@ export default function CalendrierTab({
       )
     ), [eleves]);
 
+  const ALL_CATEGORIES_FLAG = 'toutes';
+
   // Initialiser avec tous les locaux et catégories
   useEffect(() => {
      setSelectedCategories(categories);
