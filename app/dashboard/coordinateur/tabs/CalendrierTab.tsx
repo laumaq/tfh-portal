@@ -23,25 +23,26 @@ export default function CalendrierTab({
   const [conflicts, setConflicts] = useState<Conflict[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Extraire toutes les dates uniques des défenses
-  const allDates = Array.from(
-    new Set(
-      eleves
-        .filter(e => e.date_defense)
-        .map(e => e.date_defense!)
-        .sort()
-    )
-  );
-
-  // Extraire tous les locaux uniques
-  const allLocations = Array.from(
-    new Set(
-      eleves
-        .filter(e => e.localisation_defense)
-        .map(e => e.localisation_defense!)
-        .sort((a, b) => a.charAt(0).localeCompare(b.charAt(0)))
-    )
-  );
+  // Remplacer les calculs directs par useMemo
+  const allDates = useMemo(() => 
+    Array.from(
+      new Set(
+        eleves
+          .filter(e => e.date_defense)
+          .map(e => e.date_defense!)
+          .sort()
+      )
+    ), [eleves]);
+  
+  const allLocations = useMemo(() => 
+    Array.from(
+      new Set(
+        eleves
+          .filter(e => e.localisation_defense)
+          .map(e => e.localisation_defense!)
+          .sort((a, b) => a.charAt(0).localeCompare(b.charAt(0)))
+      )
+    ), [eleves]);
 
   // Initialiser avec tous les locaux et catégories
   useEffect(() => {
