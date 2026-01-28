@@ -46,8 +46,7 @@ export default function CalendrierTab({
 
   // Initialiser avec tous les locaux et catégories
   useEffect(() => {
-    setSelectedLocations(allLocations);
-    setSelectedCategories(categories);
+     setSelectedCategories(categories);
   }, [allLocations, categories]);
 
   
@@ -270,6 +269,14 @@ export default function CalendrierTab({
     return count === 1 ? singular : plural;
   };
 
+  // Ajoutez cette fonction
+  const getCategoriesSummary = (): string => {
+    if (selectedCategories.length === 0) return 'Aucune catégorie';
+    if (selectedCategories.length === categories.length) return 'Toutes catégories';
+    if (selectedCategories.length === 1) return `Catégorie: ${selectedCategories[0]}`;
+    return `${selectedCategories.length} catégories`;
+  };
+
   return (
     <div className="space-y-6">
       {/* Affichage des conflits */}
@@ -480,7 +487,13 @@ export default function CalendrierTab({
         ) : (
           <CalendarDisplay
             eleves={eleves}
-            selectedCategories={selectedCategories}
+            selectedCategory={
+              selectedCategories.length === categories.length || selectedCategories.length === 0
+                ? 'toutes'
+                : selectedCategories.length === 1
+                ? selectedCategories[0]
+                : 'multiple'
+            }
             selectedDates={selectedDates}
             selectedLocations={selectedLocations}
           />
