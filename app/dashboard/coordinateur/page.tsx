@@ -10,6 +10,7 @@ import DashboardTab from './tabs/DashboardTab';
 import ConvocationsTab from './tabs/ConvocationsTab';
 import DefensesTab from './tabs/DefensesTab';
 import CalendrierTab from './tabs/CalendrierTab';
+import ParametresTab from './tabs/ParametresTab';
 import GestionUtilisateursTab from './tabs/GestionUtilisateursTab';
 import { useCoordinateurData } from './hooks/useCoordinateurData';
 import { useElevesOperations } from './hooks/useElevesOperations';
@@ -124,6 +125,9 @@ export default function CoordinateurDashboard() {
             onRefresh={refreshData}
           />
         );
+
+      case 'parametres-affichage':
+        return <ParametresTab />;
         
       default:
         return (
@@ -206,6 +210,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
