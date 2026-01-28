@@ -487,7 +487,7 @@ export default function CalendrierTab({
         ) : (
           <CalendarDisplay
             eleves={eleves}
-            selectedCategory={
+            selectedCategories={
               selectedCategories.length === categories.length || selectedCategories.length === 0
                 ? 'toutes'
                 : selectedCategories.length === 1
