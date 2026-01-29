@@ -249,7 +249,7 @@ export default function ControleTab() {
 
         {/* Métriques globales */}
         {globalMetrics && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <div className="text-3xl font-bold text-blue-700">{globalMetrics.totalGuides}</div>
               <div className="text-sm text-blue-600">Guides actifs</div>
