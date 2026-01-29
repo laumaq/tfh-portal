@@ -26,6 +26,12 @@ export default function CoordinateurDashboard() {
   const [editingModeConvocations, setEditingModeConvocations] = useState(false);
   const [editingModeDefenses, setEditingModeDefenses] = useState(false);
   
+  const handleUpdateEleve = (updatedEleve: Eleve) => {
+    // Mettre à jour l'élève dans la liste
+    setEleves(prev => prev.map(e => 
+      e.id === updatedEleve.id ? updatedEleve : e
+    ));
+  };
   
   // Utiliser les hooks custom
   const { 
@@ -89,6 +95,7 @@ export default function CoordinateurDashboard() {
             onRefresh={refreshData}
             onSetEditingCell={setEditingCell}
             onSetEditingMode={setEditingModeConvocations}
+            onUpdateEleve={handleUpdateEleve}
           />
         );
 
@@ -218,6 +225,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
