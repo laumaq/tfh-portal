@@ -103,9 +103,9 @@ export default function ConvocationsTab({
     const actuellementConvoque = estConvoque(eleve, sessionIndex);
     return mettreAJourConvocation(eleve, sessionIndex, !actuellementConvoque);
   };
-  
-  const handleSave = async (eleve: Eleve) => {
-    setIsProcessing(true); // Utilise setIsProcessing au lieu de setLoading
+
+  const handleSave = async (eleve: Eleve, onUpdateEleve?: (eleve: Eleve) => void) => {
+    setIsProcessing(true);
     try {
       // Préparer l'objet de mise à jour
       const updateData: any = {};
@@ -159,7 +159,7 @@ export default function ConvocationsTab({
       console.error('Erreur lors de la sauvegarde:', error);
       alert('Erreur lors de la sauvegarde');
     } finally {
-      setIsProcessing(false); // Utilise setIsProcessing au lieu de setLoading
+      setIsProcessing(false); 
     }
   };
 
