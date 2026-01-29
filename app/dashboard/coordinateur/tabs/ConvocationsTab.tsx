@@ -64,8 +64,17 @@ export default function ConvocationsTab({
   
   // Synchroniser les données locales avec les données parent
   useEffect(() => {
-    setLocalEleves(eleves);
-  }, [eleves]);
+    console.log('Sessions détectées:', sessions);
+    console.log('Journées:', journees);
+    console.log('Premier élève:', eleves[0] ? {
+      id: eleves[0].id,
+      nom: eleves[0].nom,
+      session_3_convoque: (eleves[0] as any).session_3_convoque,
+      session_4_convoque: (eleves[0] as any).session_4_convoque,
+      journee_4_present: eleves[0].journee_4_present,
+      journee_5_present: eleves[0].journee_5_present,
+    } : 'Aucun élève');
+  }, [sessions, journees, eleves]);
 
   useEffect(() => {
   const chargerSessions = async () => {
