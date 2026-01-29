@@ -111,16 +111,7 @@ export default function ConvocationsTab({
     try {
       const updateData: any = {};
       
-      // Migration pour rétrocompatibilité (session 3 et 4 seulement)
-      updateData.convocation_mars = eleve.session_3_convoque;
-      updateData.convocation_avril = eleve.session_4_convoque;
-      
-      // Migration des présences
-      updateData.presence_9_mars = eleve.journee_4_present;
-      updateData.presence_10_mars = eleve.journee_5_present;
-      updateData.presence_16_avril = eleve.journee_6_present;
-      updateData.presence_17_avril = eleve.journee_7_present;
-      
+      // SEULEMENT les nouvelles colonnes
       // Toutes les sessions (1 à 20) - texte
       for (let i = 1; i <= 20; i++) {
         const sessionKey = `session_${i}_convoque` as keyof Eleve;
@@ -177,8 +168,18 @@ export default function ConvocationsTab({
   };
 
   const handleSessionConvocationClick = async (eleve: Eleve, sessionIndex: number) => {
-    const actuellementConvoque = estConvoque(eleve, sessionIndex);
-    const updatedEleve = mettreAJourConvocation(eleve, sessionIndex, !actuellementConvoque);
+    // Récupère la valeur actuelle
+    const currentValue = (eleve as any)[`session_${sessionIndex}_convoque`] as string | undefined;
+    
+    // Trouve l'option actuelle dans CONVOCATION_OPTIONS
+    const currentOption = CONVOCATION_OPTIONS.find(opt => opt.value === currentValue);
+    const currentIndex = CONVOCATION_OPTIONS.findIndex(opt => opt.value === currentValue);
+    
+    // Passe à l'option suivante, ou à la première si non défini
+    const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % CONVOCATION_OPTIONS.length;
+    const nextValue = CONVOCATION_OPTIONS[nextIndex].value;
+    
+    const updatedEleve = mettreAJourConvocation(eleve, sessionIndex, nextValue);
     
     // Mise à jour locale
     const updatedList = localEleves.map(e => 
@@ -271,7 +272,12 @@ export default function ConvocationsTab({
 
   // Filtrer les élèves selon le filtre "convoqués"
   const filteredEleves = showConvoques 
-    ? localEleves.filter(e => e.convocation_mars?.startsWith('Oui') || e.convocation_avril?.startsWith('Oui'))
+    ? localEleves.filter(e => 
+        // Vérifie si convoqué à n'importe quelle session
+        Array.from({length: 20}, (_, i) => i + 1).some(i => 
+          (e as any)[`session_${i}_convoque`]?.startsWith('Oui')
+        )
+      )
     : localEleves;
 
   // Fonction pour obtenir les styles de présence basés sur les nouvelles colonnes
@@ -552,8 +558,9 @@ export default function ConvocationsTab({
                     ) : (
                       sessions.map((session, sessionIndex) => {
                         const sessionNum = sessionIndex + 1;
-                        const isConvoque = estConvoque(eleve, sessionNum);
-                        const convocationStyles = getSessionConvocationStyles(isConvoque);
+                        const convocationValeur = (eleve as any)[`session_${sessionNum}_convoque`] as string | undefined;
+                        const isConvoque = convocationValeur?.startsWith('Oui') === true;
+                        const convocationStyles = getSessionConvocationStyles(convocationValeur);
                         
                         return (
                           <React.Fragment key={session.id}>
