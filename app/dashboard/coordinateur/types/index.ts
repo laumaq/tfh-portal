@@ -76,10 +76,6 @@ export interface Eleve {
   journee_18_present?: boolean | null;
   journee_19_present?: boolean | null;
   journee_20_present?: boolean | null;
-  
-  [key: `session_${number}_convoque`]: string | null | undefined;
-  [key: `journee_${number}_present`]: boolean | null | undefined;
-  [key: string]: string | number | boolean | null | undefined;
 }
 
 export interface Guide {
