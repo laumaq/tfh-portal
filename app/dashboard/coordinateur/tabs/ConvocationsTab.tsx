@@ -563,16 +563,31 @@ export default function ConvocationsTab({
                             {/* Cellule Convocation pour la session */}
                             <td className="px-3 py-3 border-l">
                               {editingMode ? (
-                                <button
-                                  onClick={() => !isProcessing && handleSessionConvocationClick(eleve, sessionNum)}
-                                  className={`w-full border rounded px-2 py-1 text-xs md:text-sm text-left ${convocationStyles.bgColor} ${convocationStyles.textColor} hover:opacity-80 ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                <select
+                                  value={convocationValeur || ''}
+                                  onChange={(e) => {
+                                    const updatedEleve = { ...eleve } as any;
+                                    updatedEleve[`session_${sessionNum}_convoque`] = e.target.value;
+                                    
+                                    const updatedList = localEleves.map(e => 
+                                      e.id === eleve.id ? updatedEleve : e
+                                    );
+                                    setLocalEleves(updatedList);
+                                    
+                                    handleSave(updatedEleve, onUpdateEleve);
+                                  }}
+                                  className={`w-full border rounded px-2 py-1 text-xs md:text-sm ${getConvocationColor(convocationValeur || '')}`}
                                   disabled={isProcessing}
                                 >
-                                  {convocationStyles.label}
-                                </button>
+                                  {CONVOCATION_OPTIONS.map(opt => (
+                                    <option key={opt.value} value={opt.value} className={opt.color}>
+                                      {opt.label}
+                                    </option>
+                                  ))}
+                                </select>
                               ) : (
-                                <div className={`px-2 py-1 rounded ${convocationStyles.bgColor} ${convocationStyles.textColor}`}>
-                                  {convocationStyles.label}
+                                <div className={`px-2 py-1 rounded ${getConvocationColor(convocationValeur || '')}`}>
+                                  {getConvocationLabel(convocationValeur || '').split(',')[0]}
                                 </div>
                               )}
                             </td>
