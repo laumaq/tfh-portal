@@ -165,17 +165,28 @@ export function getStatutSession(eleve: Eleve, session: Session): string {
 /**
  * Met à jour la présence pour une journée
  */
+/**
+ * Met à jour la présence pour une journée
+ */
 export function mettreAJourPresence(
   eleve: Eleve,
   journeeIndex: number,
   nouvelleValeur: boolean | null
 ): Eleve {
   const nouvelEleve = { ...eleve };
-  const journeeKey = `journee_${journeeIndex}_present` as keyof Eleve;
-  nouvelEleve[journeeKey] = nouvelleValeur;
+  
+  // Solution pour le typage TypeScript
+  const key = `journee_${journeeIndex}_present` as keyof Eleve;
+  
+  // Cast pour résoudre l'erreur de type
+  nouvelEleve[key] = nouvelleValeur as any;
+  
   return nouvelEleve;
 }
 
+/**
+ * Met à jour la convocation pour une session
+ */
 /**
  * Met à jour la convocation pour une session
  */
@@ -185,7 +196,10 @@ export function mettreAJourConvocation(
   convoque: boolean
 ): Eleve {
   const nouvelEleve = { ...eleve };
-  const sessionKey = `session_${sessionIndex}_convoque` as keyof Eleve;
-  nouvelEleve[sessionKey] = convoque;
+  const key = `session_${sessionIndex}_convoque` as keyof Eleve;
+  
+  // Cast pour résoudre l'erreur de type
+  nouvelEleve[key] = convoque as any;
+  
   return nouvelEleve;
 }
