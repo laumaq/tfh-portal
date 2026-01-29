@@ -89,6 +89,7 @@ export default function CoordinateurDashboard() {
             onRefresh={refreshData}
             onSetEditingCell={setEditingCell}
             onSetEditingMode={setEditingModeConvocations}
+           onUpdateEleve={undefined}
           />
         );
 
@@ -218,6 +219,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
