@@ -36,7 +36,7 @@ interface ConvocationsTabProps {
   onRefresh: () => void;
   onSetEditingCell: (cell: {id: string, field: string} | null) => void;
   onSetEditingMode: (mode: boolean) => void;
-  onUpdateEleve: (eleve: Eleve) => void;
+  onUpdateEleve?: (eleve: Eleve) => void;
 }
 
 export default function ConvocationsTab({
@@ -151,8 +151,10 @@ export default function ConvocationsTab({
         .eq('id', eleve.id);
   
       if (error) throw error;
-      
-      onUpdateEleve(eleve); // Note: tu as onUpdateEleve dans les props mais pas dans les paramètres de la fonction
+            
+      if (onUpdateEleve) {
+        onUpdateEleve(eleve);
+      }
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
       alert('Erreur lors de la sauvegarde');
