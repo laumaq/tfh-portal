@@ -485,15 +485,6 @@ export default function ControleTab() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="w-32 bg-gray-200 rounded-full h-2 mr-3">
-                        <div 
-                          className={`h-2 rounded-full ${
-                            guide.pourcentageConvocationsAvril >= 80 ? 'bg-green-500' :
-                            guide.pourcentageConvocationsAvril >= 50 ? 'bg-yellow-500' : 'bg-red-500'
-                          }`}
-                          style={{ width: `${Math.min(guide.pourcentageConvocationsAvril, 100)}%` }}
-                        />
-                      </div>
                       <div className={`flex items-center gap-1 ${getPerformanceColor(guide.pourcentageConvocationsAvril)} px-2 py-1 rounded`}>
                         {getPerformanceIcon(guide.pourcentageConvocationsAvril)}
                         <span className="font-medium">
