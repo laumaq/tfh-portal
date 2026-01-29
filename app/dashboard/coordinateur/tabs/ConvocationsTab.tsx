@@ -192,19 +192,26 @@ export default function ConvocationsTab({
     try {
       setIsProcessing(true);
       
-      // Mise à jour OPTIMISÉE : pas de rechargement complet
       await onUpdate(eleveId, field, value);
       
-      // Mise à jour locale IMMÉDIATE (sans recharger tout)
-      setLocalEleves(prev => prev.map(eleve => 
-        eleve.id === eleveId 
-          ? { ...eleve, [field]: value === '' ? null : value }
-          : eleve
-      ));
+      // Mise à jour locale IMMÉDIATE
+      setLocalEleves(prev => prev.map(eleve => {
+        if (eleve.id !== eleveId) return eleve;
+        
+        const updatedEleve = { ...eleve } as any;
+        
+        // Gestion spéciale pour les sessions (string, pas null)
+        if (field.startsWith('session_')) {
+          updatedEleve[field] = value === '' ? undefined : value;
+        } else {
+          updatedEleve[field] = value === '' ? null : value;
+        }
+        
+        return updatedEleve as Eleve;
+      }));
       
     } catch (err) {
       console.error('Erreur lors de la mise à jour:', err);
-      // En cas d'erreur, recharger pour avoir l'état correct
       onRefresh();
     } finally {
       setIsProcessing(false);
