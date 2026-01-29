@@ -32,7 +32,8 @@ export interface Eleve {
   source_3?: string;
   source_4?: string;
   source_5?: string;
-    // Nouveau système de sessions
+  
+  // Nouveau système de sessions - STRINGS
   session_1_convoque?: string;
   session_2_convoque?: string;
   session_3_convoque?: string;
@@ -76,8 +77,10 @@ export interface Eleve {
   journee_19_present?: boolean | null;
   journee_20_present?: boolean | null;
 
-  [key: `session_${number}_convoque`]: boolean | undefined;
+  // Signatures d'index CORRIGÉES
+  [key: `session_${number}_convoque`]: string | undefined; // ← STRING
   [key: `journee_${number}_present`]: boolean | null | undefined;
+  [key: string]: string | number | boolean | null | undefined; // Pour tous les autres champs
 }
 
 export interface Guide {
