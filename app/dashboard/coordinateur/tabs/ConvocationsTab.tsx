@@ -672,7 +672,7 @@ export default function ConvocationsTab({
                             })}
                           </React.Fragment>
                         );
-                      })})
+                      })}
                     )}
                   </tr>
                 );
