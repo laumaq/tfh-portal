@@ -116,18 +116,29 @@ export default function ConvocationsTab({
     try {
       const updateData: any = {};
       
-      // SEULEMENT les nouvelles colonnes
-      // Toutes les sessions (1 à 20) - texte
+      // Ne sauvegarder que les sessions qui existent dans l'objet eleve
       for (let i = 1; i <= 20; i++) {
         const sessionKey = `session_${i}_convoque` as keyof Eleve;
-        updateData[sessionKey] = eleve[sessionKey] || null;
+        if (sessionKey in eleve) { // Seulement si la propriété existe
+          updateData[sessionKey] = eleve[sessionKey];
+        }
       }
       
-      // Toutes les journées (1 à 20)
+      // Même chose pour les journées
       for (let i = 1; i <= 20; i++) {
         const journeeKey = `journee_${i}_present` as keyof Eleve;
-        updateData[journeeKey] = eleve[journeeKey];
+        if (journeeKey in eleve) {
+          updateData[journeeKey] = eleve[journeeKey];
+        }
       }
+      
+      // Si aucun changement, ne pas envoyer de requête
+      if (Object.keys(updateData).length === 0) {
+        console.log('Aucune donnée à mettre à jour');
+        return;
+      }
+      
+      console.log('Données à sauvegarder:', updateData);
       
       const { error } = await supabase
         .from('eleves')
@@ -139,6 +150,8 @@ export default function ConvocationsTab({
       if (onUpdateEleve) {
         onUpdateEleve(eleve);
       }
+      
+      console.log('Sauvegarde réussie pour élève:', eleve.id);
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
       alert('Erreur lors de la sauvegarde');
