@@ -479,24 +479,12 @@ export default function ControleTab() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="w-32 bg-gray-200 rounded-full h-2 mr-3">
-                        <div 
-                          className={`h-2 rounded-full ${
-                            guide.pourcentageConvocationsMars >= 80 ? 'bg-green-500' :
-                            guide.pourcentageConvocationsMars >= 50 ? 'bg-yellow-500' : 'bg-red-500'
-                          }`}
-                          style={{ width: `${Math.min(guide.pourcentageConvocationsMars, 100)}%` }}
-                        />
-                      </div>
                       <div className={`flex items-center gap-1 ${getPerformanceColor(guide.pourcentageConvocationsMars)} px-2 py-1 rounded`}>
                         {getPerformanceIcon(guide.pourcentageConvocationsMars)}
                         <span className="font-medium">
                           {guide.pourcentageConvocationsMars.toFixed(1)}%
                         </span>
                       </div>
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      {guide.convocationsMarsRendues}/{guide.elevesGuides} rendues
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -516,9 +504,6 @@ export default function ControleTab() {
                           {guide.pourcentageConvocationsAvril.toFixed(1)}%
                         </span>
                       </div>
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      {guide.convocationsAvrilRendues}/{guide.elevesGuides} rendues
                     </div>
                   </td>
                 </tr>
