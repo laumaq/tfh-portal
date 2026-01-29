@@ -77,38 +77,37 @@ export default function ConvocationsTab({
   }, [sessions, journees, eleves]);
 
   useEffect(() => {
-  const chargerSessions = async () => {
-    setLoadingSessions(true);
-    try {
-      // Charger les journées depuis system_settings
-      const journeesData = await getJourneesFromSupabase(supabase);
-      setJournees(journeesData);
-      
-      // Détecter les sessions automatiquement
-      const sessionsDetectees = detecterSessions(journeesData);
-      console.log('Sessions détectées RAW:', sessionsDetectees.map(s => ({
-        nom: s.nom,
-        journees: s.journees,
-        date_debut: s.date_debut,
-        date_fin: s.date_fin
-      })));
-      setSessions(sessionsDetectees);
-      
-      // Avertissement si trop de sessions
-      if (sessionsDetectees.length > 20) {
-        console.error(`⚠️ ATTENTION : ${sessionsDetectees.length} sessions détectées (max: 20)`);
+    const chargerSessions = async () => {
+      setLoadingSessions(true);
+      try {
+        // Charger les journées depuis system_settings
+        const journeesData = await getJourneesFromSupabase(supabase);
+        setJournees(journeesData);
+        
+        // Détecter les sessions automatiquement
+        const sessionsDetectees = detecterSessions(journeesData);
+        console.log('Sessions détectées RAW:', sessionsDetectees.map(s => ({
+          nom: s.nom,
+          journees: s.journees,
+          date_debut: s.date_debut,
+          date_fin: s.date_fin
+        })));
+        
+        setSessions(sessionsDetectees);
+        
+        // Avertissement si trop de sessions
+        if (sessionsDetectees.length > 20) {
+          console.error(`⚠️ ATTENTION : ${sessionsDetectees.length} sessions détectées (max: 20)`);
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des sessions:', error);
+      } finally {
+        setLoadingSessions(false);
       }
-    } catch (error) {
-      console.error('Erreur lors du chargement des sessions:', error);
-    } finally {
-      setLoadingSessions(false);
-    }
-  };
-
-  setSessions(sessionsDetectees);
+    };
   
-  chargerSessions();
-}, []);
+    chargerSessions();
+  }, []);
 
   const handleAddCategory = () => {
     if (newCategory.trim() && !categories.includes(newCategory.trim())) {
@@ -583,7 +582,7 @@ export default function ConvocationsTab({
                         <div className="animate-pulse">Chargement...</div>
                       </td>
                     ) : (
-                      {sessions.map((session, sessionIndex) => {
+                      sessions.map((session, sessionIndex) => {
                         const sessionNum = sessionIndex + 1;
                         
                         // DÉTERMINE quelle colonne BDD utiliser BASÉE SUR LES JOURNÉES
