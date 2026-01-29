@@ -467,8 +467,13 @@ export default function ControleTab() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-center">
                       <div className="text-xl font-bold text-gray-900">{guide.elevesLecteurInterne}</div>
-                      <div className="text-sm text-gray-500">
-                        lecteur{guide.elevesLecteurInterne > 1 ? 's' : ''}
+                      <div className={`text-xs px-2 py-1 rounded-full ${
+                        guide.elevesLecteurInterne > 2 ? 'bg-yellow-100 text-yellow-800' :
+                        guide.elevesLecteurInterne > 0 ? 'bg-green-100 text-green-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {guide.elevesLecteurInterne > 2 ? 'Charge élevée' :
+                         guide.elevesLecteurInterne > 0 ? 'Charge normale' : 'Charge insuffisante'}
                       </div>
                     </div>
                   </td>
