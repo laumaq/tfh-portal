@@ -1,5 +1,6 @@
 'use client';
 
+import { supabase } from '@/lib/supabase';
 import { useState, useEffect } from 'react';
 import { Eleve, Guide } from '../types';
 import { CONVOCATION_OPTIONS } from '../constants';
@@ -8,6 +9,15 @@ import {
   getConvocationLabel, 
   getPresenceStyles
 } from '../utils/convocationUtils';
+import { 
+  getJourneesFromSupabase, 
+  detecterSessions, 
+  estConvoque, 
+  getStatutSession,
+  mettreAJourPresence,
+  mettreAJourConvocation,
+  type Session
+} from '../utils/sessionUtils';
 
 interface ConvocationsTabProps {
   eleves: Eleve[];
@@ -26,6 +36,7 @@ interface ConvocationsTabProps {
   onRefresh: () => void;
   onSetEditingCell: (cell: {id: string, field: string} | null) => void;
   onSetEditingMode: (mode: boolean) => void;
+  onUpdateEleve: (eleve: Eleve) => void;
 }
 
 export default function ConvocationsTab({
@@ -45,11 +56,40 @@ export default function ConvocationsTab({
   const [showConvoques, setShowConvoques] = useState(false);
   const [localEleves, setLocalEleves] = useState<Eleve[]>(eleves);
   const [isProcessing, setIsProcessing] = useState(false);
-
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [journees, setJournees] = useState<any[]>([]);
+  const [loadingSessions, setLoadingSessions] = useState(true);
+  
   // Synchroniser les données locales avec les données parent
   useEffect(() => {
     setLocalEleves(eleves);
   }, [eleves]);
+
+  useEffect(() => {
+  const chargerSessions = async () => {
+    setLoadingSessions(true);
+    try {
+      // Charger les journées depuis system_settings
+      const journeesData = await getJourneesFromSupabase(supabase);
+      setJournees(journeesData);
+      
+      // Détecter les sessions automatiquement
+      const sessionsDetectees = detecterSessions(journeesData);
+      setSessions(sessionsDetectees);
+      
+      // Avertissement si trop de sessions
+      if (sessionsDetectees.length > 20) {
+        console.error(`⚠️ ATTENTION : ${sessionsDetectees.length} sessions détectées (max: 20)`);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des sessions:', error);
+    } finally {
+      setLoadingSessions(false);
+    }
+  };
+  
+  chargerSessions();
+}, []);
 
   const handleAddCategory = () => {
     if (newCategory.trim() && !categories.includes(newCategory.trim())) {
@@ -57,6 +97,107 @@ export default function ConvocationsTab({
       alert('Ajout de catégorie à implémenter');
       setNewCategory('');
     }
+  };
+
+  const toggleConvocationSession = (eleve: Eleve, sessionIndex: number): Eleve => {
+    const actuellementConvoque = estConvoque(eleve, sessionIndex);
+    return mettreAJourConvocation(eleve, sessionIndex, !actuellementConvoque);
+  };
+  
+  const handleSave = async (eleve: Eleve) => {
+    setIsProcessing(true); // Utilise setIsProcessing au lieu de setLoading
+    try {
+      // Préparer l'objet de mise à jour
+      const updateData: any = {};
+      
+      // Migration pour rétrocompatibilité (seulement pour les 2 premières sessions)
+      if (eleve.session_1_convoque) {
+        updateData.convocation_mars = 'Convoqué';
+        // Migration des présences journee_4 et journee_5 vers les anciens champs
+        updateData.presence_9_mars = eleve.journee_4_present;
+        updateData.presence_10_mars = eleve.journee_5_present;
+      } else {
+        updateData.convocation_mars = null;
+        updateData.presence_9_mars = null;
+        updateData.presence_10_mars = null;
+      }
+      
+      if (eleve.session_2_convoque) {
+        updateData.convocation_avril = 'Convoqué';
+        // Migration des présences journee_6 et journee_7 vers les anciens champs
+        updateData.presence_16_avril = eleve.journee_6_present;
+        updateData.presence_17_avril = eleve.journee_7_present;
+      } else {
+        updateData.convocation_avril = null;
+        updateData.presence_16_avril = null;
+        updateData.presence_17_avril = null;
+      }
+      
+      // Ajouter toutes les sessions (1 à 20)
+      for (let i = 1; i <= 20; i++) {
+        const sessionKey = `session_${i}_convoque` as keyof Eleve;
+        updateData[sessionKey] = eleve[sessionKey] || false;
+      }
+      
+      // Ajouter toutes les journées (1 à 20)
+      for (let i = 1; i <= 20; i++) {
+        const journeeKey = `journee_${i}_present` as keyof Eleve;
+        updateData[journeeKey] = eleve[journeeKey];
+      }
+      
+      const { error } = await supabase
+        .from('eleves')
+        .update(updateData)
+        .eq('id', eleve.id);
+  
+      if (error) throw error;
+      
+      onUpdateEleve(eleve); // Note: tu as onUpdateEleve dans les props mais pas dans les paramètres de la fonction
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      alert('Erreur lors de la sauvegarde');
+    } finally {
+      setIsProcessing(false); // Utilise setIsProcessing au lieu de setLoading
+    }
+  };
+
+  const handleJourneePresenceClick = async (eleve: Eleve, journeeIndex: number) => {
+    const currentValue = eleve[`journee_${journeeIndex}_present` as keyof Eleve];
+    let nouvelleValeur: boolean | null = null;
+    
+    // Cycle: null → true → false → null
+    if (currentValue === null || currentValue === undefined) {
+      nouvelleValeur = true;
+    } else if (currentValue === true) {
+      nouvelleValeur = false;
+    } else {
+      nouvelleValeur = null;
+    }
+    
+    const updatedEleve = mettreAJourPresence(eleve, journeeIndex, nouvelleValeur);
+    
+    // Mise à jour locale immédiate
+    const updatedList = localEleves.map(e => 
+      e.id === eleve.id ? updatedEleve : e
+    );
+    setLocalEleves(updatedList);
+    
+    // Sauvegarde
+    await handleSave(updatedEleve);
+  };
+
+  const handleSessionConvocationClick = async (eleve: Eleve, sessionIndex: number) => {
+    const actuellementConvoque = estConvoque(eleve, sessionIndex);
+    const updatedEleve = mettreAJourConvocation(eleve, sessionIndex, !actuellementConvoque);
+    
+    // Mise à jour locale
+    const updatedList = localEleves.map(e => 
+      e.id === eleve.id ? updatedEleve : e
+    );
+    setLocalEleves(updatedList);
+    
+    // Sauvegarde
+    await handleSave(updatedEleve);
   };
 
   const handleLocalUpdate = async (eleveId: string, field: string, value: string) => {
@@ -83,6 +224,9 @@ export default function ConvocationsTab({
       setIsProcessing(false);
     }
   };
+  
+
+    
 
   const handleLocalSelectUpdate = async (eleveId: string, field: string, value: string) => {
     if (isProcessing) return;
@@ -139,6 +283,54 @@ export default function ConvocationsTab({
   const filteredEleves = showConvoques 
     ? localEleves.filter(e => e.convocation_mars?.startsWith('Oui') || e.convocation_avril?.startsWith('Oui'))
     : localEleves;
+
+  // Fonction pour obtenir les styles de présence basés sur les nouvelles colonnes
+  const getJourneePresenceStyles = (present: boolean | null | undefined) => {
+    if (present === true) {
+      return {
+        bgColor: 'bg-green-100',
+        hoverColor: 'hover:bg-green-200',
+        textColor: 'text-green-700',
+        icon: '✓',
+        title: 'Présent'
+      };
+    } else if (present === false) {
+      return {
+        bgColor: 'bg-red-100',
+        hoverColor: 'hover:bg-red-200',
+        textColor: 'text-red-700',
+        icon: '✗',
+        title: 'Absent'
+      };
+    } else {
+      return {
+        bgColor: 'bg-gray-100',
+        hoverColor: 'hover:bg-gray-200',
+        textColor: 'text-gray-600',
+        icon: '?',
+        title: 'Non défini'
+      };
+    }
+  };
+  
+  // Fonction pour obtenir les styles de convocation
+  const getSessionConvocationStyles = (convoque: boolean | undefined) => {
+    if (convoque === true) {
+      return {
+        bgColor: 'bg-green-50',
+        textColor: 'text-green-700',
+        borderColor: 'border-green-200',
+        label: 'Convoqué'
+      };
+    } else {
+      return {
+        bgColor: 'bg-gray-50',
+        textColor: 'text-gray-600',
+        borderColor: 'border-gray-200',
+        label: 'Non convoqué'
+      };
+    }
+  };
 
   return (
     <>
@@ -240,12 +432,34 @@ export default function ConvocationsTab({
                 <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Guide</th>
                 <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Catégorie</th>
                 <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Problématique</th>
-                <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Convoc. 9-10 mars</th>
-                <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Prés. 9 mars</th>
-                <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Prés. 10 mars</th>
-                <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Convoc. 16-17 avril</th>
-                <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Prés. 16 avril</th>
-                <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">Prés. 17 avril</th>
+                
+                {/* Colonnes dynamiques pour les sessions */}
+                {loadingSessions ? (
+                  <th colSpan={sessions.length * 3} className="px-3 py-3 text-center">
+                    <div className="animate-pulse">Chargement des sessions...</div>
+                  </th>
+                ) : (
+                  sessions.map((session, sessionIndex) => (
+                    <React.Fragment key={session.id}>
+                      {/* Colonne Convocation pour la session */}
+                      <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap border-l">
+                        {session.nom}<br />
+                        <span className="text-xs font-normal">Convocation</span>
+                      </th>
+                      
+                      {/* Colonnes Présence pour chaque journée de la session */}
+                      {session.journees.map((journeeKey, journeeIndex) => {
+                        const journee = journees.find(j => j.key === journeeKey);
+                        return (
+                          <th key={`${session.id}-${journeeKey}`} className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap">
+                            {journee ? journee.nom : journeeKey}<br />
+                            <span className="text-xs font-normal">Présence</span>
+                          </th>
+                        );
+                      })}
+                    </React.Fragment>
+                  ))
+                )}
               </tr>
             </thead>
             <tbody>
@@ -349,131 +563,69 @@ export default function ConvocationsTab({
                       )}
                     </td>
                     
-                    {/* Convocation Mars */}
-                    <td className="px-3 py-3">
-                      {editingMode ? (
-                        <select
-                          value={eleve.convocation_mars || ''}
-                          onChange={(e) => handleLocalUpdate(eleve.id, 'convocation_mars', e.target.value)}
-                          className={`w-full border rounded px-2 py-1 text-xs md:text-sm ${getConvocationColor(eleve.convocation_mars || '')}`}
-                          title={getConvocationLabel(eleve.convocation_mars || '')}
-                          disabled={isProcessing}
-                        >
-                          {CONVOCATION_OPTIONS.map(opt => (
-                            <option key={opt.value} value={opt.value} className={opt.color}>
-                              {opt.label}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <div className={`px-2 py-1 rounded ${getConvocationColor(eleve.convocation_mars || '')}`}>
-                          {getConvocationLabel(eleve.convocation_mars || '').split(',')[0]}
-                        </div>
-                      )}
-                    </td>
-                    
-                    {/* Présence 9 mars */}
-                    <td className="px-3 py-3 text-center">
-                      {editingMode ? (
-                        <button
-                          onClick={() => !isProcessing && handleLocalPresenceUpdate(eleve.id, 'presence_9_mars', eleve.presence_9_mars)}
-                          className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presence9Mars.bgColor} ${presence9Mars.hoverColor} ${presence9Mars.textColor} font-bold text-lg ${
-                            isProcessing ? 'opacity-50 cursor-not-allowed' : ''
-                          }`}
-                          title={`${presence9Mars.title} (cliquer pour changer)`}
-                          disabled={isProcessing}
-                        >
-                          {presence9Mars.icon}
-                        </button>
-                      ) : (
-                        <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center ${presence9Mars.bgColor} ${presence9Mars.textColor} font-bold text-lg`}>
-                          {presence9Mars.icon}
-                        </div>
-                      )}
-                    </td>
-                    
-                    {/* Présence 10 mars */}
-                    <td className="px-3 py-3 text-center">
-                      {editingMode ? (
-                        <button
-                          onClick={() => !isProcessing && handleLocalPresenceUpdate(eleve.id, 'presence_10_mars', eleve.presence_10_mars)}
-                          className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presence10Mars.bgColor} ${presence10Mars.hoverColor} ${presence10Mars.textColor} font-bold text-lg ${
-                            isProcessing ? 'opacity-50 cursor-not-allowed' : ''
-                          }`}
-                          title={`${presence10Mars.title} (cliquer pour changer)`}
-                          disabled={isProcessing}
-                        >
-                          {presence10Mars.icon}
-                        </button>
-                      ) : (
-                        <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center ${presence10Mars.bgColor} ${presence10Mars.textColor} font-bold text-lg`}>
-                          {presence10Mars.icon}
-                        </div>
-                      )}
-                    </td>
-                    
-                    {/* Convocation Avril */}
-                    <td className="px-3 py-3">
-                      {editingMode ? (
-                        <select
-                          value={eleve.convocation_avril || ''}
-                          onChange={(e) => handleLocalUpdate(eleve.id, 'convocation_avril', e.target.value)}
-                          className={`w-full border rounded px-2 py-1 text-xs md:text-sm ${getConvocationColor(eleve.convocation_avril || '')}`}
-                          title={getConvocationLabel(eleve.convocation_avril || '')}
-                          disabled={isProcessing}
-                        >
-                          {CONVOCATION_OPTIONS.map(opt => (
-                            <option key={opt.value} value={opt.value} className={opt.color}>
-                              {opt.label}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <div className={`px-2 py-1 rounded ${getConvocationColor(eleve.convocation_avril || '')}`}>
-                          {getConvocationLabel(eleve.convocation_avril || '').split(',')[0]}
-                        </div>
-                      )}
-                    </td>
-                    
-                    {/* Présence 16 avril */}
-                    <td className="px-3 py-3 text-center">
-                      {editingMode ? (
-                        <button
-                          onClick={() => !isProcessing && handleLocalPresenceUpdate(eleve.id, 'presence_16_avril', eleve.presence_16_avril)}
-                          className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presence16Avril.bgColor} ${presence16Avril.hoverColor} ${presence16Avril.textColor} font-bold text-lg ${
-                            isProcessing ? 'opacity-50 cursor-not-allowed' : ''
-                          }`}
-                          title={`${presence16Avril.title} (cliquer pour changer)`}
-                          disabled={isProcessing}
-                        >
-                          {presence16Avril.icon}
-                        </button>
-                      ) : (
-                        <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center ${presence16Avril.bgColor} ${presence16Avril.textColor} font-bold text-lg`}>
-                          {presence16Avril.icon}
-                        </div>
-                      )}
-                    </td>
-                    
-                    {/* Présence 17 avril */}
-                    <td className="px-3 py-3 text-center">
-                      {editingMode ? (
-                        <button
-                          onClick={() => !isProcessing && handleLocalPresenceUpdate(eleve.id, 'presence_17_avril', eleve.presence_17_avril)}
-                          className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presence17Avril.bgColor} ${presence17Avril.hoverColor} ${presence17Avril.textColor} font-bold text-lg ${
-                            isProcessing ? 'opacity-50 cursor-not-allowed' : ''
-                          }`}
-                          title={`${presence17Avril.title} (cliquer pour changer)`}
-                          disabled={isProcessing}
-                        >
-                          {presence17Avril.icon}
-                        </button>
-                      ) : (
-                        <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center ${presence17Avril.bgColor} ${presence17Avril.textColor} font-bold text-lg`}>
-                          {presence17Avril.icon}
-                        </div>
-                      )}
-                    </td>
+                    {/* Colonnes dynamiques pour les sessions */}
+                    {loadingSessions ? (
+                      <td colSpan={sessions.length * 3} className="px-3 py-3 text-center">
+                        <div className="animate-pulse">Chargement...</div>
+                      </td>
+                    ) : (
+                      sessions.map((session, sessionIndex) => {
+                        const sessionNum = sessionIndex + 1;
+                        const isConvoque = estConvoque(eleve, sessionNum);
+                        const convocationStyles = getSessionConvocationStyles(isConvoque);
+                        
+                        return (
+                          <React.Fragment key={session.id}>
+                            {/* Cellule Convocation pour la session */}
+                            <td className="px-3 py-3 border-l">
+                              {editingMode ? (
+                                <button
+                                  onClick={() => !isProcessing && handleSessionConvocationClick(eleve, sessionNum)}
+                                  className={`w-full border rounded px-2 py-1 text-xs md:text-sm text-left ${convocationStyles.bgColor} ${convocationStyles.textColor} hover:opacity-80 ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                  disabled={isProcessing}
+                                >
+                                  {convocationStyles.label}
+                                </button>
+                              ) : (
+                                <div className={`px-2 py-1 rounded ${convocationStyles.bgColor} ${convocationStyles.textColor}`}>
+                                  {convocationStyles.label}
+                                </div>
+                              )}
+                            </td>
+                            
+                            {/* Cellules Présence pour chaque journée de la session */}
+                            {session.journees.map((journeeKey) => {
+                              const journeeNum = parseInt(journeeKey.split('_')[1]);
+                              const present = eleve[`journee_${journeeNum}_present` as keyof Eleve] as boolean | null | undefined;
+                              const presenceStyles = getJourneePresenceStyles(present);
+                              
+                              return (
+                                <td key={`${eleve.id}-${journeeKey}`} className="px-3 py-3 text-center">
+                                  {editingMode && isConvoque ? (
+                                    <button
+                                      onClick={() => !isProcessing && handleJourneePresenceClick(eleve, journeeNum)}
+                                      className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center transition-all ${presenceStyles.bgColor} ${presenceStyles.hoverColor} ${presenceStyles.textColor} font-bold text-lg ${
+                                        isProcessing ? 'opacity-50 cursor-not-allowed' : ''
+                                      }`}
+                                      title={`${presenceStyles.title} (cliquer pour changer)`}
+                                      disabled={isProcessing}
+                                    >
+                                      {presenceStyles.icon}
+                                    </button>
+                                  ) : (
+                                    <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center ${presenceStyles.bgColor} ${presenceStyles.textColor} font-bold text-lg ${
+                                      !isConvoque ? 'opacity-40' : ''
+                                    }`}>
+                                      {!isConvoque ? '-' : presenceStyles.icon}
+                                    </div>
+                                  )}
+                                </td>
+                              );
+                            })}
+                          </React.Fragment>
+                        );
+                      })
+                    )}
                   </tr>
                 );
               })}
