@@ -33,26 +33,26 @@ export interface Eleve {
   source_4?: string;
   source_5?: string;
     // Nouveau système de sessions
-  session_1_convoque?: boolean;
-  session_2_convoque?: boolean;
-  session_3_convoque?: boolean;
-  session_4_convoque?: boolean;
-  session_5_convoque?: boolean;
-  session_6_convoque?: boolean;
-  session_7_convoque?: boolean;
-  session_8_convoque?: boolean;
-  session_9_convoque?: boolean;
-  session_10_convoque?: boolean;
-  session_11_convoque?: boolean;
-  session_12_convoque?: boolean;
-  session_13_convoque?: boolean;
-  session_14_convoque?: boolean;
-  session_15_convoque?: boolean;
-  session_16_convoque?: boolean;
-  session_17_convoque?: boolean;
-  session_18_convoque?: boolean;
-  session_19_convoque?: boolean;
-  session_20_convoque?: boolean;
+  session_1_convoque?: string;
+  session_2_convoque?: string;
+  session_3_convoque?: string;
+  session_4_convoque?: string;
+  session_5_convoque?: string;
+  session_6_convoque?: string;
+  session_7_convoque?: string;
+  session_8_convoque?: string;
+  session_9_convoque?: string;
+  session_10_convoque?: string;
+  session_11_convoque?: string;
+  session_12_convoque?: string;
+  session_13_convoque?: string;
+  session_14_convoque?: string;
+  session_15_convoque?: string;
+  session_16_convoque?: string;
+  session_17_convoque?: string;
+  session_18_convoque?: string;
+  session_19_convoque?: string;
+  session_20_convoque?: string;
 
   // Présences par journée
   journee_1_present?: boolean | null;
