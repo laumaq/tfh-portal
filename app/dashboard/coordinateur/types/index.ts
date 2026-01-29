@@ -32,6 +32,49 @@ export interface Eleve {
   source_3?: string;
   source_4?: string;
   source_5?: string;
+    // Nouveau système de sessions
+  session_1_convoque?: boolean;
+  session_2_convoque?: boolean;
+  session_3_convoque?: boolean;
+  session_4_convoque?: boolean;
+  session_5_convoque?: boolean;
+  session_6_convoque?: boolean;
+  session_7_convoque?: boolean;
+  session_8_convoque?: boolean;
+  session_9_convoque?: boolean;
+  session_10_convoque?: boolean;
+  session_11_convoque?: boolean;
+  session_12_convoque?: boolean;
+  session_13_convoque?: boolean;
+  session_14_convoque?: boolean;
+  session_15_convoque?: boolean;
+  session_16_convoque?: boolean;
+  session_17_convoque?: boolean;
+  session_18_convoque?: boolean;
+  session_19_convoque?: boolean;
+  session_20_convoque?: boolean;
+
+  // Présences par journée
+  journee_1_present?: boolean | null;
+  journee_2_present?: boolean | null;
+  journee_3_present?: boolean | null;
+  journee_4_present?: boolean | null;
+  journee_5_present?: boolean | null;
+  journee_6_present?: boolean | null;
+  journee_7_present?: boolean | null;
+  journee_8_present?: boolean | null;
+  journee_9_present?: boolean | null;
+  journee_10_present?: boolean | null;
+  journee_11_present?: boolean | null;
+  journee_12_present?: boolean | null;
+  journee_13_present?: boolean | null;
+  journee_14_present?: boolean | null;
+  journee_15_present?: boolean | null;
+  journee_16_present?: boolean | null;
+  journee_17_present?: boolean | null;
+  journee_18_present?: boolean | null;
+  journee_19_present?: boolean | null;
+  journee_20_present?: boolean | null;
 }
 
 export interface Guide {
