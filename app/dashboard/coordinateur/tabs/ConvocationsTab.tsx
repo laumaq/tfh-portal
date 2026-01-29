@@ -1,6 +1,7 @@
 'use client';
 
 import { supabase } from '@/lib/supabase';
+import React from 'react';
 import { useState, useEffect } from 'react';
 import { Eleve, Guide } from '../types';
 import { CONVOCATION_OPTIONS } from '../constants';
