@@ -615,7 +615,7 @@ export default function ConvocationsTab({
                                     <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center ${presenceStyles.bgColor} ${presenceStyles.textColor} font-bold text-lg ${
                                       !isConvoque ? 'opacity-40' : ''
                                     }`}>
-                                      {!isConvoque ? '-' : presenceStyles.icon}
+                                      {presenceStyles.icon}
                                     </div>
                                   )}
                                 </td>
