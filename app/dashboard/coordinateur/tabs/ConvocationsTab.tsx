@@ -109,39 +109,25 @@ export default function ConvocationsTab({
   const handleSave = async (eleve: Eleve, onUpdateEleve?: (eleve: Eleve) => void) => {
     setIsProcessing(true);
     try {
-      // Préparer l'objet de mise à jour
       const updateData: any = {};
       
-      // Migration pour rétrocompatibilité (seulement pour les 2 premières sessions)
-      if (eleve.session_1_convoque) {
-        updateData.convocation_mars = 'Convoqué';
-        // Migration des présences journee_4 et journee_5 vers les anciens champs
-        updateData.presence_9_mars = eleve.journee_4_present;
-        updateData.presence_10_mars = eleve.journee_5_present;
-      } else {
-        updateData.convocation_mars = null;
-        updateData.presence_9_mars = null;
-        updateData.presence_10_mars = null;
-      }
+      // Migration pour rétrocompatibilité (session 3 et 4 seulement)
+      updateData.convocation_mars = eleve.session_3_convoque;
+      updateData.convocation_avril = eleve.session_4_convoque;
       
-      if (eleve.session_2_convoque) {
-        updateData.convocation_avril = 'Convoqué';
-        // Migration des présences journee_6 et journee_7 vers les anciens champs
-        updateData.presence_16_avril = eleve.journee_6_present;
-        updateData.presence_17_avril = eleve.journee_7_present;
-      } else {
-        updateData.convocation_avril = null;
-        updateData.presence_16_avril = null;
-        updateData.presence_17_avril = null;
-      }
+      // Migration des présences
+      updateData.presence_9_mars = eleve.journee_4_present;
+      updateData.presence_10_mars = eleve.journee_5_present;
+      updateData.presence_16_avril = eleve.journee_6_present;
+      updateData.presence_17_avril = eleve.journee_7_present;
       
-      // Ajouter toutes les sessions (1 à 20)
+      // Toutes les sessions (1 à 20) - texte
       for (let i = 1; i <= 20; i++) {
         const sessionKey = `session_${i}_convoque` as keyof Eleve;
-        updateData[sessionKey] = eleve[sessionKey] || false;
+        updateData[sessionKey] = eleve[sessionKey] || null;
       }
       
-      // Ajouter toutes les journées (1 à 20)
+      // Toutes les journées (1 à 20)
       for (let i = 1; i <= 20; i++) {
         const journeeKey = `journee_${i}_present` as keyof Eleve;
         updateData[journeeKey] = eleve[journeeKey];
@@ -153,7 +139,7 @@ export default function ConvocationsTab({
         .eq('id', eleve.id);
   
       if (error) throw error;
-            
+              
       if (onUpdateEleve) {
         onUpdateEleve(eleve);
       }
@@ -318,22 +304,13 @@ export default function ConvocationsTab({
   };
   
   // Fonction pour obtenir les styles de convocation
-  const getSessionConvocationStyles = (convoque: boolean | undefined) => {
-    if (convoque === true) {
-      return {
-        bgColor: 'bg-green-50',
-        textColor: 'text-green-700',
-        borderColor: 'border-green-200',
-        label: 'Convoqué'
-      };
-    } else {
-      return {
-        bgColor: 'bg-gray-50',
-        textColor: 'text-gray-600',
-        borderColor: 'border-gray-200',
-        label: 'Non convoqué'
-      };
-    }
+  const getSessionConvocationStyles = (valeur: string | undefined) => {
+    // Utilise les mêmes fonctions que l'ancien système
+    return {
+      bgColor: getConvocationColor(valeur || ''),
+      textColor: 'text-gray-800',
+      label: getConvocationLabel(valeur || '').split(',')[0]
+    };
   };
 
   return (
