@@ -185,7 +185,7 @@ export default function ConvocationsTab({
     // Sauvegarde
     await handleSave(updatedEleve, onUpdateEleve);
   };
-
+  
   const handleLocalUpdate = async (eleveId: string, field: string, value: string) => {
     if (isProcessing) return;
     
@@ -195,18 +195,11 @@ export default function ConvocationsTab({
       await onUpdate(eleveId, field, value);
       
       // Mise à jour locale IMMÉDIATE
-      setLocalEleves(prev => prev.map(eleve => {
-        if (eleve.id !== eleveId) return eleve;
+      setLocalEleves(prev => prev.map(e => {
+        if (e.id !== eleveId) return e;
         
-        const updatedEleve = { ...eleve } as any;
-        
-        // Gestion spéciale pour les sessions (string, pas null)
-        if (field.startsWith('session_')) {
-          updatedEleve[field] = value === '' ? undefined : value;
-        } else {
-          updatedEleve[field] = value === '' ? null : value;
-        }
-        
+        const updatedEleve = { ...e } as any;
+        updatedEleve[field] = value === '' ? null : value;
         return updatedEleve as Eleve;
       }));
       
@@ -219,23 +212,23 @@ export default function ConvocationsTab({
   };
   
 
-    
-
   const handleLocalSelectUpdate = async (eleveId: string, field: string, value: string) => {
     if (isProcessing) return;
-    
+      
     try {
       setIsProcessing(true);
-      
+        
       await onSelectUpdate(eleveId, field, value);
-      
+        
       // Mise à jour locale IMMÉDIATE
-      setLocalEleves(prev => prev.map(eleve => 
-        eleve.id === eleveId 
-          ? { ...eleve, [field]: value === '' ? null : value }
-          : eleve
-      ));
-      
+      setLocalEleves(prev => prev.map(e => {
+        if (e.id !== eleveId) return e;
+        
+        const updatedEleve = { ...e } as any;
+        updatedEleve[field] = value === '' ? null : value;
+        return updatedEleve as Eleve;
+      }));
+        
     } catch (err) {
       console.error('Erreur lors de la mise à jour:', err);
       onRefresh();
@@ -250,20 +243,21 @@ export default function ConvocationsTab({
     currentValue: boolean | null
   ) => {
     if (isProcessing) return;
-    
+      
     try {
       setIsProcessing(true);
-      
-      // Utiliser la fonction optimisée avec callback
+        
       await onPresenceUpdate(eleveId, field, currentValue, (newValue) => {
         // Mise à jour locale IMMÉDIATE avec la nouvelle valeur
-        setLocalEleves(prev => prev.map(eleve => 
-          eleve.id === eleveId 
-            ? { ...eleve, [field]: newValue }
-            : eleve
-        ));
+        setLocalEleves(prev => prev.map(e => {
+          if (e.id !== eleveId) return e;
+          
+          const updatedEleve = { ...e } as any;
+          updatedEleve[field] = newValue;
+          return updatedEleve as Eleve;
+        }));
       });
-      
+        
     } catch (err) {
       console.error('Erreur lors de la mise à jour présence:', err);
       onRefresh();
