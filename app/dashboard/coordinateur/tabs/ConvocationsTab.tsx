@@ -101,10 +101,6 @@ export default function ConvocationsTab({
     }
   };
 
-  const toggleConvocationSession = (eleve: Eleve, sessionIndex: number): Eleve => {
-    const actuellementConvoque = estConvoque(eleve, sessionIndex);
-    return mettreAJourConvocation(eleve, sessionIndex, !actuellementConvoque);
-  };
 
   const handleSave = async (eleve: Eleve, onUpdateEleve?: (eleve: Eleve) => void) => {
     setIsProcessing(true);
@@ -166,13 +162,12 @@ export default function ConvocationsTab({
     // Sauvegarde
     await handleSave(updatedEleve, onUpdateEleve);
   };
-
+  
   const handleSessionConvocationClick = async (eleve: Eleve, sessionIndex: number) => {
     // Récupère la valeur actuelle
     const currentValue = (eleve as any)[`session_${sessionIndex}_convoque`] as string | undefined;
     
     // Trouve l'option actuelle dans CONVOCATION_OPTIONS
-    const currentOption = CONVOCATION_OPTIONS.find(opt => opt.value === currentValue);
     const currentIndex = CONVOCATION_OPTIONS.findIndex(opt => opt.value === currentValue);
     
     // Passe à l'option suivante, ou à la première si non défini
