@@ -113,16 +113,16 @@ export function detecterSessions(journees: Journee[]): Session[] {
  * Vérifie si un élève est convoqué à une session
  */
 export function estConvoque(eleve: Eleve, sessionIndex: number): boolean {
-  const sessionKey = `session_${sessionIndex}_convoque` as keyof Eleve;
-  return eleve[sessionKey] === true;
+  const key = `session_${sessionIndex}_convoque`;
+  return (eleve as any)[key] === true;
 }
 
 /**
  * Obtient le statut de présence pour une journée
  */
 export function getPresenceJournee(eleve: Eleve, journeeIndex: number): boolean | null {
-  const journeeKey = `journee_${journeeIndex}_present` as keyof Eleve;
-  const valeur = eleve[journeeKey];
+  const key = `journee_${journeeIndex}_present`;
+  const valeur = (eleve as any)[key];
   
   // Conversion pour rétrocompatibilité
   if (valeur === true) return true;
@@ -173,33 +173,23 @@ export function mettreAJourPresence(
   journeeIndex: number,
   nouvelleValeur: boolean | null
 ): Eleve {
-  const nouvelEleve = { ...eleve };
+  const nouvelEleve = { ...eleve } as any; // Cast l'objet entier en any
   
-  // Solution pour le typage TypeScript
-  const key = `journee_${journeeIndex}_present` as keyof Eleve;
+  const key = `journee_${journeeIndex}_present`;
+  nouvelEleve[key] = nouvelleValeur;
   
-  // Cast pour résoudre l'erreur de type
-  nouvelEleve[key] = nouvelleValeur as any;
-  
-  return nouvelEleve;
+  return nouvelEleve as Eleve;
 }
 
-/**
- * Met à jour la convocation pour une session
- */
-/**
- * Met à jour la convocation pour une session
- */
 export function mettreAJourConvocation(
   eleve: Eleve,
   sessionIndex: number,
   convoque: boolean
 ): Eleve {
-  const nouvelEleve = { ...eleve };
-  const key = `session_${sessionIndex}_convoque` as keyof Eleve;
+  const nouvelEleve = { ...eleve } as any; // Cast l'objet entier en any
   
-  // Cast pour résoudre l'erreur de type
-  nouvelEleve[key] = convoque as any;
+  const key = `session_${sessionIndex}_convoque`;
+  nouvelEleve[key] = convoque;
   
-  return nouvelEleve;
+  return nouvelEleve as Eleve;
 }
