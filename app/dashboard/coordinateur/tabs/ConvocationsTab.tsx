@@ -50,7 +50,8 @@ export default function ConvocationsTab({
   onPresenceUpdate,
   onRefresh,
   onSetEditingCell,
-  onSetEditingMode
+  onSetEditingMode,
+  onUpdateEleve
 }: ConvocationsTabProps) {
   const [newCategory, setNewCategory] = useState('');
   const [showConvoques, setShowConvoques] = useState(false);
