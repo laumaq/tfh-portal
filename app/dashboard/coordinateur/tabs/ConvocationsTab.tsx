@@ -185,7 +185,7 @@ export default function ConvocationsTab({
     setLocalEleves(updatedList);
     
     // Sauvegarde
-    await handleSave(updatedEleve);
+    await handleSave(updatedEleve, onUpdateEleve);
   };
 
   const handleSessionConvocationClick = async (eleve: Eleve, sessionIndex: number) => {
@@ -199,7 +199,7 @@ export default function ConvocationsTab({
     setLocalEleves(updatedList);
     
     // Sauvegarde
-    await handleSave(updatedEleve);
+    await handleSave(updatedEleve, onUpdateEleve);
   };
 
   const handleLocalUpdate = async (eleveId: string, field: string, value: string) => {
