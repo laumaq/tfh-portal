@@ -445,24 +445,6 @@ export default function ConvocationsTab({
                   </th>
                 ) : (
                   sessions.map((session, sessionIndex) => (
-
-                    console.log(`Session ${sessionNum}:`, {
-                      nom: session.nom,
-                      journees: session.journees,
-                      date_debut: session.date_debut,
-                      date_fin: session.date_fin
-                    });
-
-                      const isMarsSession = session.journees.includes('Journee_4') && session.journees.includes('Journee_5');
-                      const isAvrilSession = session.journees.includes('Journee_6') && session.journees.includes('Journee_7');
-                      
-                      // Détermine quelle colonne utiliser
-                      let sessionColumn = sessionNum; // Par défaut
-                      if (isMarsSession) sessionColumn = 3;
-                      if (isAvrilSession) sessionColumn = 4;
-                      
-                      const convocationValeur = (eleve as any)[`session_${sessionColumn}_convoque`] as string | undefined;
-                      const isConvoque = convocationValeur?.startsWith('Oui') === true;
                 
                     <React.Fragment key={session.id}>
                       {/* Colonne Convocation pour la session */}
