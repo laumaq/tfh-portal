@@ -16,7 +16,7 @@ import ControleTab from './tabs/ControleTab';
 import GestionUtilisateursTab from './tabs/GestionUtilisateursTab';
 import { useCoordinateurData } from './hooks/useCoordinateurData';
 import { useElevesOperations } from './hooks/useElevesOperations';
-import { TabType } from './types';
+import { TabType, Eleve } from './types';
 
 export default function CoordinateurDashboard() {
   const router = useRouter();
@@ -225,6 +225,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
