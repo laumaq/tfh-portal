@@ -454,7 +454,6 @@ export default function StatsTab() {
                           </div>
                           <div>
                             <div className="font-medium text-gray-900">{item.label}</div>
-                            <div className="text-sm text-gray-500">Indicateur prioritaire</div>
                           </div>
                         </div>
                       </td>
