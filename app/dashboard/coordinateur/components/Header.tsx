@@ -33,7 +33,7 @@ export default function Header({ activeTab, userName, onLogout }: HeaderProps) {
       'gestion-utilisateurs': 'Gestion des comptes utilisateurs',
       parametres: 'Configuration système',
       stats: 'Analyses et métriques',
-      controle: 'Suivi des performances des guides'
+      controle: 'Suivi des guides'
     };
     return descriptions[tab];
   };
