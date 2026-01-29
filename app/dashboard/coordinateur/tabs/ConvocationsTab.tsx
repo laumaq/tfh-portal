@@ -86,6 +86,12 @@ export default function ConvocationsTab({
       
       // Détecter les sessions automatiquement
       const sessionsDetectees = detecterSessions(journeesData);
+      console.log('Sessions détectées RAW:', sessionsDetectees.map(s => ({
+        nom: s.nom,
+        journees: s.journees,
+        date_debut: s.date_debut,
+        date_fin: s.date_fin
+      })));
       setSessions(sessionsDetectees);
       
       // Avertissement si trop de sessions
@@ -98,15 +104,7 @@ export default function ConvocationsTab({
       setLoadingSessions(false);
     }
   };
-    
-  // Dans le useEffect chargerSessions
-  const sessionsDetectees = detecterSessions(journeesData);
-  console.log('Sessions détectées RAW:', sessionsDetectees.map(s => ({
-    nom: s.nom,
-    journees: s.journees,
-    date_debut: s.date_debut,
-    date_fin: s.date_fin
-  })));
+
   setSessions(sessionsDetectees);
   
   chargerSessions();
@@ -585,25 +583,34 @@ export default function ConvocationsTab({
                         <div className="animate-pulse">Chargement...</div>
                       </td>
                     ) : (
-                      sessions.map((session, sessionIndex) => {
+                      {sessions.map((session, sessionIndex) => {
                         const sessionNum = sessionIndex + 1;
-                        console.log(`Session ${sessionNum} - ${session.nom}:`, session.journees);
+                        
+                        // DÉTERMINE quelle colonne BDD utiliser BASÉE SUR LES JOURNÉES
                         let bddColumn = sessionNum; // Par défaut
+                        
+                        // DEBUG
+                        console.log(`Session ${sessionNum} "${session.nom}":`, {
+                          journees: session.journees,
+                          contientMars: session.journees.includes('Journee_4') || session.journees.includes('Journee_5'),
+                          contientAvril: session.journees.includes('Journee_6') || session.journees.includes('Journee_7')
+                        });
+                        
+                        // Si cette session contient mars
                         if (session.journees.includes('Journee_4') || session.journees.includes('Journee_5')) {
-                          bddColumn = 3; // Utiliser session_3_convoque
+                          bddColumn = 3; // session_3_convoque
                         }
-                        // Si cette session contient les journées d'avril (Journee_6 et/ou Journee_7)
+                        // Si cette session contient avril
                         else if (session.journees.includes('Journee_6') || session.journees.includes('Journee_7')) {
-                          bddColumn = 4; // Utiliser session_4_convoque
+                          bddColumn = 4; // session_4_convoque
                         }
                         
                         const convocationValeur = (eleve as any)[`session_${bddColumn}_convoque`] as string | undefined;
                         const isConvoque = convocationValeur?.startsWith('Oui') === true;
-                        const convocationStyles = getSessionConvocationStyles(convocationValeur);
                         
                         return (
                           <React.Fragment key={session.id}>
-                            {/* Cellule Convocation pour la session */}
+                            {/* Cellule Convocation */}
                             <td className="px-3 py-3 border-l">
                               {editingMode ? (
                                 <select
@@ -635,7 +642,7 @@ export default function ConvocationsTab({
                               )}
                             </td>
                             
-                            {/* Cellules Présence pour chaque journée de la session */}
+                            {/* Cellules Présence pour chaque journée */}
                             {session.journees.map((journeeKey) => {
                               const journeeNum = parseInt(journeeKey.split('_')[1]);
                               const present = eleve[`journee_${journeeNum}_present` as keyof Eleve] as boolean | null | undefined;
@@ -666,7 +673,7 @@ export default function ConvocationsTab({
                             })}
                           </React.Fragment>
                         );
-                      })
+                      })})
                     )}
                   </tr>
                 );
