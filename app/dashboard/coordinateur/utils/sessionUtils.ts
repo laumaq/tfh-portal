@@ -114,7 +114,10 @@ export function detecterSessions(journees: Journee[]): Session[] {
  */
 export function estConvoque(eleve: Eleve, sessionIndex: number): boolean {
   const key = `session_${sessionIndex}_convoque`;
-  return (eleve as any)[key] === true;
+  const valeur = (eleve as any)[key] as string | undefined;
+  
+  // Convoqué si la valeur commence par "Oui"
+  return valeur?.startsWith('Oui') === true;
 }
 
 /**
@@ -184,12 +187,10 @@ export function mettreAJourPresence(
 export function mettreAJourConvocation(
   eleve: Eleve,
   sessionIndex: number,
-  convoque: boolean
+  nouvelleValeur: string
 ): Eleve {
-  const nouvelEleve = { ...eleve } as any; // Cast l'objet entier en any
-  
+  const nouvelEleve = { ...eleve } as any;
   const key = `session_${sessionIndex}_convoque`;
-  nouvelEleve[key] = convoque;
-  
+  nouvelEleve[key] = nouvelleValeur;
   return nouvelEleve as Eleve;
 }
