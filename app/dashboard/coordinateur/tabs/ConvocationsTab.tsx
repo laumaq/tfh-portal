@@ -98,6 +98,16 @@ export default function ConvocationsTab({
       setLoadingSessions(false);
     }
   };
+    
+  // Dans le useEffect chargerSessions
+  const sessionsDetectees = detecterSessions(journeesData);
+  console.log('Sessions détectées RAW:', sessionsDetectees.map(s => ({
+    nom: s.nom,
+    journees: s.journees,
+    date_debut: s.date_debut,
+    date_fin: s.date_fin
+  })));
+  setSessions(sessionsDetectees);
   
   chargerSessions();
 }, []);
@@ -577,7 +587,17 @@ export default function ConvocationsTab({
                     ) : (
                       sessions.map((session, sessionIndex) => {
                         const sessionNum = sessionIndex + 1;
-                        const convocationValeur = (eleve as any)[`session_${sessionNum}_convoque`] as string | undefined;
+                        console.log(`Session ${sessionNum} - ${session.nom}:`, session.journees);
+                        let bddColumn = sessionNum; // Par défaut
+                        if (session.journees.includes('Journee_4') || session.journees.includes('Journee_5')) {
+                          bddColumn = 3; // Utiliser session_3_convoque
+                        }
+                        // Si cette session contient les journées d'avril (Journee_6 et/ou Journee_7)
+                        else if (session.journees.includes('Journee_6') || session.journees.includes('Journee_7')) {
+                          bddColumn = 4; // Utiliser session_4_convoque
+                        }
+                        
+                        const convocationValeur = (eleve as any)[`session_${bddColumn}_convoque`] as string | undefined;
                         const isConvoque = convocationValeur?.startsWith('Oui') === true;
                         const convocationStyles = getSessionConvocationStyles(convocationValeur);
                         
@@ -590,7 +610,7 @@ export default function ConvocationsTab({
                                   value={convocationValeur || ''}
                                   onChange={(e) => {
                                     const updatedEleve = { ...eleve } as any;
-                                    updatedEleve[`session_${sessionNum}_convoque`] = e.target.value;
+                                    updatedEleve[`session_${bddColumn}_convoque`] = e.target.value;
                                     
                                     const updatedList = localEleves.map(e => 
                                       e.id === eleve.id ? updatedEleve : e
