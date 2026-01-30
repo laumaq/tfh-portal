@@ -131,10 +131,24 @@ export default function PresencesTab({
     return session.nom.replace('Session ', '');
   };
   
+  const getElevesToExport = () => {
+    // Appliquer tous les filtres comme dans filteredEleves
+    return localEleves.filter(eleve => {
+      // Filtre "convoqués uniquement"
+      if (showConvoquesOnly && selectedSession !== 'all') {
+        const session = sessions.find(s => s.id === `session_${parseInt(selectedSession)}`);
+        if (!session) return false;
+        return estConvoquePourSession(eleve, session);
+      }
+      return true;
+    });
+  };
+  
   const exportToTSV = () => {
+    const elevesToExport = getElevesToExport(); // <-- CHANGER filteredEleves par ça
     const headers = ['Classe', 'Nom', 'Prénom', ...getJourneesToDisplay().map(j => j.nom)];
     
-    const data = filteredEleves.map(eleve => {
+    const data = elevesToExport.map(eleve => { // <-- ICI AUSSI
       const row = [
         eleve.classe,
         eleve.nom,
@@ -167,9 +181,10 @@ export default function PresencesTab({
   };
   
   const exportToXLSX = () => {
+    const elevesToExport = getElevesToExport(); // <-- CHANGER filteredEleves par ça
     const headers = ['Classe', 'Nom', 'Prénom', ...getJourneesToDisplay().map(j => j.nom)];
     
-    const data = filteredEleves.map(eleve => {
+    const data = elevesToExport.map(eleve => { // <-- ICI AUSSI
       return [
         eleve.classe,
         eleve.nom,
@@ -185,7 +200,7 @@ export default function PresencesTab({
         })
       ];
     });
-  
+    
     const worksheet = XLSX.utils.aoa_to_sheet([headers, ...data]);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Présences');
