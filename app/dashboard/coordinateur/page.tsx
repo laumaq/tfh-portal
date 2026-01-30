@@ -93,6 +93,17 @@ export default function CoordinateurDashboard() {
           />
         );
 
+      case 'presences':
+        return (
+          <PresencesTab
+            eleves={eleves}
+            editingMode={editingModeConvocations} // Utiliser le même mode édition
+            onSetEditingMode={setEditingModeConvocations}
+            onPresenceUpdate={handlePresenceUpdate} // Cette fonction existe déjà
+            onRefresh={refreshData}
+          />
+        );
+
       case 'defenses': 
         return (
           <DefensesTab
@@ -219,6 +230,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
