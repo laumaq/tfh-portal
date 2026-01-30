@@ -29,6 +29,7 @@ export default function Header({ activeTab, userName, onLogout }: HeaderProps) {
     const descriptions: Record<TabType, string> = {
       dashboard: 'Vue d\'ensemble du système',
       convocations: 'Gestion des convocations mars/avril',
+      presences: 'Présences lors des journées TFH',
       defenses: 'Planification des soutenances',
       calendrier: 'Planning & détection de conflits',
       'gestion-utilisateurs': 'Gestion des comptes utilisateurs',
