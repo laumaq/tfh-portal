@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getJourneesFromSupabase, detecterSessions } from '@/app/dashboard/coordinateur/utils/sessionUtils';
+import { getConvocationColor, getConvocationLabelShort } from '@/app/dashboard/coordinateur/utils/convocationUtils';
 
 interface Eleve {
   id: string;
@@ -79,10 +80,9 @@ export default function GuideDashboard() {
     lecteur_interne_voir_mediateurs: true,
   });
   
-  const [sessionsDisponibles, setSessionsDisponibles] = useState<Array<{
-    id: string;
-    nom: string;
+  const [sessions, setSessions] = useState<Array<{
     index: number;
+    nom: string;
   }>>([]);
   
   const router = useRouter();
@@ -127,6 +127,31 @@ export default function GuideDashboard() {
     loadData(userId);
     loadSystemSettings();
   }, [router]);
+
+  useEffect(() => {
+    const chargerSessions = async () => {
+      try {
+        const journeesData = await getJourneesFromSupabase(supabase);
+        const sessionsDetectees = detecterSessions(journeesData);
+        
+        // Prendre les 2 premières sessions seulement (comme dans ConvocationsTab)
+        const deuxPremieresSessions = sessionsDetectees.slice(0, 2).map(session => {
+          const match = session.id.match(/session_(\d+)/);
+          const index = match ? parseInt(match[1]) : 0;
+          return {
+            index: index,
+            nom: session.nom
+          };
+        });
+        
+        setSessions(deuxPremieresSessions);
+      } catch (error) {
+        console.error('Erreur chargement des sessions:', error);
+      }
+    };
+    
+    chargerSessions();
+  }, []);
 
   const loadData = async (guideId: string) => {
     try {
@@ -399,24 +424,30 @@ const loadSystemSettings = async () => {
   };
 
   // Fonction pour mettre à jour une convocation
-  const handleUpdateConvocation = async (eleveId: string, field: string, value: string) => {
+  const handleUpdateConvocation = async (eleveId: string, sessionIndex: number, value: string) => {
     try {
+      const columnName = `session_${sessionIndex}_convoque`;
       const updateData: any = {};
-      updateData[field] = value;
-
+      updateData[columnName] = value;
+  
       const { error } = await supabase
         .from('eleves')
         .update(updateData)
         .eq('id', eleveId);
-
+  
       if (error) throw error;
-
+  
       // Mettre à jour l'état local
-      setEleves(prev => prev.map(eleve => 
-        eleve.id === eleveId ? { ...eleve, [field]: value } : eleve
-      ));
+      setEleves(prev => prev.map(eleve => {
+        if (eleve.id === eleveId) {
+          return { 
+            ...eleve, 
+            [columnName]: value
+          };
+        }
+        return eleve;
+      }));
       
-      setEditingCell(null);
     } catch (err) {
       console.error('Erreur mise à jour convocation:', err);
       loadData(userGuideId);
@@ -424,19 +455,11 @@ const loadSystemSettings = async () => {
   };
 
   // Fonction pour obtenir la couleur d'une convocation
-  const getConvocationColor = (value: string) => {
-    const option = CONVOCATION_OPTIONS.find(opt => opt.value === value);
-    return option ? option.color : 'bg-gray-100';
-  };
+
 
   // Fonction pour obtenir le label court
   const getShortLabel = (value: string) => {
-    if (!value) return '-';
-    if (value.includes('atteint bien')) return 'Objectifs atteints';
-    if (value.includes('n\'atteint pas')) return 'Objectifs non atteints';
-    if (value.includes('pas avancé')) return 'Pas avancé';
-    if (value.includes('pas communiqué')) return 'Pas communiqué';
-    return value;
+    return getConvocationLabelShort(value);
   };
 
   const handleLogout = () => {
@@ -546,8 +569,12 @@ const loadSystemSettings = async () => {
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Problématique</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Convoc. 9-10 mars</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Convoc. 16-17 avril</th>
+                    {/* En-têtes dynamiques des sessions */}
+                    {sessions.map(session => (
+                      <th key={session.index} className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                        {session.nom}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
@@ -575,45 +602,34 @@ const loadSystemSettings = async () => {
                         )}
                       </td>
                       
-                      <td className="px-4 py-3">
-                        <div className="space-y-1">
-                          <select
-                            value={eleve.convocation_mars || ''}
-                            onChange={(e) => handleUpdateConvocation(eleve.id, 'convocation_mars', e.target.value)}
-                            className={`w-full border rounded px-2 py-1 text-sm ${getConvocationColor(eleve.convocation_mars || '')}`}
-                            title={eleve.convocation_mars || 'Non défini'}
-                          >
-                            {CONVOCATION_OPTIONS.map(opt => (
-                              <option key={opt.value} value={opt.value} className={opt.color}>
-                                {opt.label}
-                              </option>
-                            ))}
-                          </select>
-                          <div className={`text-xs px-2 py-1 rounded truncate ${getConvocationColor(eleve.convocation_mars || '')}`}>
-                            {getShortLabel(eleve.convocation_mars || '')}
-                          </div>
-                        </div>
-                      </td>
-                      
-                      <td className="px-4 py-3">
-                        <div className="space-y-1">
-                          <select
-                            value={eleve.convocation_avril || ''}
-                            onChange={(e) => handleUpdateConvocation(eleve.id, 'convocation_avril', e.target.value)}
-                            className={`w-full border rounded px-2 py-1 text-sm ${getConvocationColor(eleve.convocation_avril || '')}`}
-                            title={eleve.convocation_avril || 'Non défini'}
-                          >
-                            {CONVOCATION_OPTIONS.map(opt => (
-                              <option key={opt.value} value={opt.value} className={opt.color}>
-                                {opt.label}
-                              </option>
-                            ))}
-                          </select>
-                          <div className={`text-xs px-2 py-1 rounded truncate ${getConvocationColor(eleve.convocation_avril || '')}`}>
-                            {getShortLabel(eleve.convocation_avril || '')}
-                          </div>
-                        </div>
-                      </td>
+                      {/* Sessions dynamiques */}
+                      {sessions.map(session => {
+                        const columnName = `session_${session.index}_convoque`;
+                        const valeur = (eleve as any)[columnName] as string | undefined;
+                        const statut = valeur || '';
+                        
+                        return (
+                          <td key={session.index} className="px-4 py-3">
+                            <div className="space-y-1">
+                              <select
+                                value={statut}
+                                onChange={(e) => handleUpdateConvocation(eleve.id, session.index, e.target.value)}
+                                className={`w-full border rounded px-2 py-1 text-sm ${getConvocationColor(statut)}`}
+                                title={statut || 'Non défini'}
+                              >
+                                {CONVOCATION_OPTIONS.map(opt => (
+                                  <option key={opt.value} value={opt.value} className={opt.color}>
+                                    {opt.label}
+                                  </option>
+                                ))}
+                              </select>
+                              <div className={`text-xs px-2 py-1 rounded truncate ${getConvocationColor(statut)}`}>
+                                {getConvocationLabelShort(statut)}
+                              </div>
+                            </div>
+                          </td>
+                        );
+                      })}
                     </tr>
                   ))}
                 </tbody>
@@ -1105,5 +1121,6 @@ const loadSystemSettings = async () => {
     </div>
   );
 }
+
 
 
