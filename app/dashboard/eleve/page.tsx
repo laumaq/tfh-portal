@@ -206,14 +206,14 @@ export default function EleveDashboard() {
               </div>
             )}
           </div>
-          
+
+
           <div className="border-t pt-6">
             <h3 className="text-lg font-semibold text-gray-700 mb-3">Convocations</h3>
             <div className="space-y-2">
-              {sessions.length > 0 ? (
-                sessions.map(session => {
-                  const sessionEleve = eleve.sessions?.find(s => s.index === session.index);
-                  const statut = sessionEleve?.statut || 'Non défini';
+              {eleve.sessions && eleve.sessions.length > 0 ? (
+                eleve.sessions.map(session => {
+                  const statut = session.statut || 'Non défini';
                   const estConvoque = statut.startsWith('Oui');
                   
                   return (
@@ -238,11 +238,13 @@ export default function EleveDashboard() {
               )}
             </div>
           </div>
+
         </div>
       </div>
     </div>
   );
 }
+
 
 
 
