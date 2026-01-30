@@ -14,6 +14,7 @@ export default function Header({ activeTab, userName, onLogout }: HeaderProps) {
     const titles: Record<TabType, string> = {
       dashboard: 'Tableau de bord',
       convocations: 'Convocations',
+      presences: 'Présences',
       defenses: 'Défenses',
       calendrier: 'Calendrier',
       'gestion-utilisateurs': 'Gestion des utilisateurs',
