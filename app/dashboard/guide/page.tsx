@@ -134,8 +134,8 @@ export default function GuideDashboard() {
         const journeesData = await getJourneesFromSupabase(supabase);
         const sessionsDetectees = detecterSessions(journeesData);
         
-        // Prendre les 2 premières sessions seulement (comme dans ConvocationsTab)
-        const deuxPremieresSessions = sessionsDetectees.slice(0, 2).map(session => {
+        // Prendre TOUTES les sessions détectées
+        const toutesSessions = sessionsDetectees.map(session => {
           const match = session.id.match(/session_(\d+)/);
           const index = match ? parseInt(match[1]) : 0;
           return {
@@ -144,7 +144,8 @@ export default function GuideDashboard() {
           };
         });
         
-        setSessions(deuxPremieresSessions);
+        setSessions(toutesSessions);
+        
       } catch (error) {
         console.error('Erreur chargement des sessions:', error);
       }
@@ -621,7 +622,7 @@ const loadSystemSettings = async () => {
                         )}
                       </td>
                       
-                      {/* Sessions dynamiques */}
+                      {/* Toutes les sessions détectées */}
                       {sessions.map(session => {
                         const columnName = `session_${session.index}_convoque`;
                         const valeur = (eleve as any)[columnName] as string | undefined;
@@ -1140,6 +1141,7 @@ const loadSystemSettings = async () => {
     </div>
   );
 }
+
 
 
 
