@@ -423,8 +423,28 @@ const loadSystemSettings = async () => {
     }
   };
 
-  // Fonction pour mettre à jour une convocation
-  const handleUpdateConvocation = async (eleveId: string, sessionIndex: number, value: string) => {
+  // Fonction ORIGINALE pour la problématique (ne pas modifier)
+  const handleUpdateProblematique = async (eleveId: string, value: string) => {
+    try {
+      const { error } = await supabase
+        .from('eleves')
+        .update({ problematique: value })
+        .eq('id', eleveId);
+  
+      if (error) throw error;
+  
+      setEleves(prev => prev.map(eleve => 
+        eleve.id === eleveId ? { ...eleve, problematique: value } : eleve
+      ));
+      
+    } catch (err) {
+      console.error('Erreur mise à jour problématique:', err);
+      loadData(userGuideId);
+    }
+  };
+
+  // NOUVELLE fonction pour les sessions
+  const handleUpdateSessionConvocation = async (eleveId: string, sessionIndex: number, value: string) => {
     try {
       const columnName = `session_${sessionIndex}_convoque`;
       const updateData: any = {};
@@ -437,7 +457,6 @@ const loadSystemSettings = async () => {
   
       if (error) throw error;
   
-      // Mettre à jour l'état local
       setEleves(prev => prev.map(eleve => {
         if (eleve.id === eleveId) {
           return { 
@@ -587,7 +606,7 @@ const loadSystemSettings = async () => {
                         {editingCell?.id === eleve.id && editingCell?.field === 'problematique' ? (
                           <textarea
                             defaultValue={eleve.problematique}
-                            onBlur={(e) => handleUpdateConvocation(eleve.id, 'problematique', e.target.value)}
+                            onBlur={(e) => handleUpdateProblematique(eleve.id, e.target.value)}
                             className="w-full border rounded px-2 py-1 text-sm"
                             rows={3}
                             autoFocus
@@ -613,7 +632,7 @@ const loadSystemSettings = async () => {
                             <div className="space-y-1">
                               <select
                                 value={statut}
-                                onChange={(e) => handleUpdateConvocation(eleve.id, session.index, e.target.value)}
+                                onChange={(e) => handleUpdateSessionConvocation(eleve.id, session.index, e.target.value)}
                                 className={`w-full border rounded px-2 py-1 text-sm ${getConvocationColor(statut)}`}
                                 title={statut || 'Non défini'}
                               >
@@ -1121,6 +1140,7 @@ const loadSystemSettings = async () => {
     </div>
   );
 }
+
 
 
 
