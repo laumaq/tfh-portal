@@ -269,18 +269,18 @@ export default function EleveDashboard() {
                             ({session.date_debut.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })})
                           </span>
                         </div>
-                        <span className={
-                          estConvoque 
-                            ? 'text-orange-600 font-medium' 
-                            : statut.startsWith('Non')
-                            ? 'text-green-600 font-medium'
-                            : 'text-gray-500'
-                        }>
-                          {estConvoque ? 'Convoqué' : 'Non convoqué'}
-                        </span>
+                          <span className={
+                            estConvoque 
+                              ? 'text-orange-600 font-medium' 
+                              : statut.startsWith('Non')
+                              ? 'text-green-600 font-medium'
+                              : 'text-gray-500'
+                          }>
+                            {estConvoque ? 'Convoqué·e' : statut.startsWith('Non') ? 'Non convoqué·e' : '—'}
+                          </span>
                       </div>
                       
-                      {statut && (
+                      {statut && statut !== '' && !statut.startsWith('Non') && (
                         <div className="p-3 border-t bg-white">
                           <p className="text-sm text-gray-700">
                             {message}
@@ -304,6 +304,7 @@ export default function EleveDashboard() {
     </div>
   );
 }
+
 
 
 
