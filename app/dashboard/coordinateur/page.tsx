@@ -81,16 +81,13 @@ export default function CoordinateurDashboard() {
           <ConvocationsTab
             eleves={eleves}
             guides={guides}
-            categories={categories}
             editingMode={editingModeConvocations}
             editingCell={editingCell}
             onUpdate={handleUpdate}
             onSelectUpdate={handleSelectUpdate}
-            onPresenceUpdate={handlePresenceUpdate}
             onRefresh={refreshData}
             onSetEditingCell={setEditingCell}
             onSetEditingMode={setEditingModeConvocations}
-           onUpdateEleve={undefined}
           />
         );
 
@@ -231,6 +228,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
