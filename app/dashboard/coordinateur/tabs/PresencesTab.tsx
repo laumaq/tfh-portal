@@ -5,6 +5,7 @@ import { Eleve } from '../types';
 import { getPresenceStyles, cyclePresenceState } from '../utils/convocationUtils';
 import { detecterSessions, getJourneesFromSupabase, type Session } from '../utils/sessionUtils';
 import { supabase } from '@/lib/supabase';
+import * as XLSX from 'xlsx';
 
 interface PresencesTabProps {
   eleves: Eleve[];
@@ -129,7 +130,81 @@ export default function PresencesTab({
     // "Session mars 2026" → "mars 2026"
     return session.nom.replace('Session ', '');
   };
-
+  
+  const exportToTSV = () => {
+    const headers = ['Classe', 'Nom', 'Prénom', ...getJourneesToDisplay().map(j => j.nom)];
+    
+    const data = filteredEleves.map(eleve => {
+      const row = [
+        eleve.classe,
+        eleve.nom,
+        eleve.prenom,
+        ...getJourneesToDisplay().map(journee => {
+          const journeeNum = parseInt(journee.key.split('_')[1]);
+          const field = `journee_${journeeNum}_present`;
+          const present = (eleve as any)[field];
+          
+          if (present === true) return '✓';
+          if (present === false) return '✗';
+          return '?';
+        })
+      ];
+      return row;
+    });
+  
+    const tsvContent = [
+      headers.join('\t'),
+      ...data.map(row => row.join('\t'))
+    ].join('\n');
+  
+    const blob = new Blob(['\ufeff' + tsvContent], { type: 'text/tab-separated-values;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `presences_${selectedSession === 'all' ? 'toutes_sessions' : `session_${selectedSession}`}_${new Date().toISOString().split('T')[0]}.tsv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+  
+  const exportToXLSX = () => {
+    const headers = ['Classe', 'Nom', 'Prénom', ...getJourneesToDisplay().map(j => j.nom)];
+    
+    const data = filteredEleves.map(eleve => {
+      return [
+        eleve.classe,
+        eleve.nom,
+        eleve.prenom,
+        ...getJourneesToDisplay().map(journee => {
+          const journeeNum = parseInt(journee.key.split('_')[1]);
+          const field = `journee_${journeeNum}_present`;
+          const present = (eleve as any)[field];
+          
+          if (present === true) return '✓';
+          if (present === false) return '✗';
+          return '?';
+        })
+      ];
+    });
+  
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...data]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Présences');
+    
+    // Auto-size columns
+    const max_width = headers.reduce((w, r) => Math.max(w, r.length), 10);
+    worksheet['!cols'] = headers.map(() => ({ wch: max_width }));
+  
+    XLSX.writeFile(workbook, `presences_${selectedSession === 'all' ? 'toutes_sessions' : `session_${selectedSession}`}_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+  
+  const handleExport = (format: 'tsv' | 'xlsx') => {
+    if (format === 'tsv') {
+      exportToTSV();
+    } else {
+      exportToXLSX();
+    }
+  };
+  
   return (
     <>
       {/* Indicateur de chargement */}
@@ -192,10 +267,107 @@ export default function PresencesTab({
             </select>
           </div>
 
+          
+
           <span className="text-sm text-gray-500">
             ({filteredEleves.length} élève{filteredEleves.length > 1 ? 's' : ''})
           </span>
         </div>
+
+
+
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-4">
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Mode édition */}
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={editingMode}
+                onChange={(e) => onSetEditingMode(e.target.checked)}
+                className="w-5 h-5 text-blue-600 rounded"
+                disabled={isProcessing}
+              />
+              <span className="text-sm font-medium">
+                Mode édition
+              </span>
+            </label>
+        
+            {/* Filtre convoqués uniquement */}
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showConvoquesOnly}
+                onChange={(e) => setShowConvoquesOnly(e.target.checked)}
+                className="w-5 h-5 text-blue-600 rounded"
+                disabled={isProcessing || selectedSession === 'all'}
+              />
+              <span className="text-sm font-medium">
+                Afficher uniquement les convoqués
+              </span>
+            </label>
+        
+            {/* Bouton Export */}
+            <div className="relative group">
+              <button
+                onClick={() => handleExport('xlsx')}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 flex items-center gap-2"
+                disabled={filteredEleves.length === 0 || isProcessing}
+              >
+                📊 Exporter
+              </button>
+              
+              {/* Menu déroulant pour le format */}
+              <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+                <button
+                  onClick={() => handleExport('xlsx')}
+                  className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-2"
+                >
+                  <span className="text-green-600">📗</span>
+                  <div>
+                    <div className="font-medium">Excel (.xlsx)</div>
+                    <div className="text-xs text-gray-500">Format recommandé</div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => handleExport('tsv')}
+                  className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-2 border-t"
+                >
+                  <span className="text-blue-600">📄</span>
+                  <div>
+                    <div className="font-medium">TSV (.tsv)</div>
+                    <div className="text-xs text-gray-500">Pour Excel/Google Sheets</div>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+        
+          {/* Sélecteur de session */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-700">Session :</span>
+            <select
+              value={selectedSession}
+              onChange={(e) => setSelectedSession(e.target.value)}
+              className="border border-gray-300 rounded px-3 py-1.5 text-sm"
+              disabled={loadingSessions || isProcessing}
+            >
+              <option value="all">Toutes les sessions</option>
+              {sessions.map(session => {
+                const sessionNum = parseInt(session.id.split('_')[1]);
+                return (
+                  <option key={session.id} value={sessionNum.toString()}>
+                    {getSessionDisplayName(session)}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+        
+          <span className="text-sm text-gray-500">
+            ({filteredEleves.length} élève{filteredEleves.length > 1 ? 's' : ''})
+          </span>
+        </div>
+        
         
         {/* Légende */}
         <div className="mt-4 pt-4 border-t border-gray-200">
