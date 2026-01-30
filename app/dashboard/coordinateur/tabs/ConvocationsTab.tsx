@@ -608,26 +608,56 @@ export default function ConvocationsTab({
                       sessions.map((session, sessionIndex) => {
                         const sessionNum = sessionIndex + 1;
                         
-                        // DÉTERMINE quelle colonne BDD utiliser BASÉE SUR LES JOURNÉES
-                        let bddColumn = sessionNum; // Par défaut
+                        // RECHERCHE INTELLIGENTE : Trouver la meilleure colonne correspondante
+                        let bddColumn = sessionNum; // Par défaut, on essaie le même numéro
                         
-                        // DEBUG
-                        console.log(`Session ${sessionNum} "${session.nom}":`, {
+                        // 1. Vérifier si la colonne par défaut existe
+                        const defaultColumn = `session_${sessionNum}_convoque`;
+                        const hasDefaultColumn = defaultColumn in eleve;
+                        
+                        // 2. Si la colonne par défaut existe ET a une valeur, l'utiliser
+                        if (hasDefaultColumn && (eleve as any)[defaultColumn]) {
+                          bddColumn = sessionNum;
+                        } else {
+                          // 3. Sinon, chercher parmi toutes les colonnes session_X_convoque
+                          // qui ont une valeur pour cet élève
+                          const availableColumns: number[] = [];
+                          
+                          for (let i = 1; i <= 10; i++) {
+                            const columnName = `session_${i}_convoque`;
+                            if (columnName in eleve) {
+                              availableColumns.push(i);
+                            }
+                          }
+                          
+                          // 4. Si on a des colonnes disponibles, prendre la première non utilisée
+                          // (pour éviter d'afficher la même colonne pour plusieurs sessions)
+                          if (availableColumns.length > 0 && sessionNum <= availableColumns.length) {
+                            bddColumn = availableColumns[sessionNum - 1];
+                          }
+                          // 5. Pour compatibilité legacy : si session contient mars/avril
+                          else if (session.journees.includes('Journee_4') || session.journees.includes('Journee_5')) {
+                            bddColumn = 3; // session_3_convoque pour mars
+                          } else if (session.journees.includes('Journee_6') || session.journees.includes('Journee_7')) {
+                            bddColumn = 4; // session_4_convoque pour avril
+                          }
+                        }
+                          
+                        // Récupérer la valeur
+                        const columnName = `session_${bddColumn}_convoque`;
+                        const convocationValeur = (eleve as any)[columnName] as string | undefined;
+                        
+                        // DEBUG CRITIQUE
+                        console.log(`Élève ${eleve.nom}:`, {
+                          sessionInterface: sessionNum,
+                          sessionNom: session.nom,
+                          bddColumnUsed: bddColumn,
+                          columnName: columnName,
+                          valeur: convocationValeur,
                           journees: session.journees,
-                          contientMars: session.journees.includes('Journee_4') || session.journees.includes('Journee_5'),
-                          contientAvril: session.journees.includes('Journee_6') || session.journees.includes('Journee_7')
+                          toutesColonnes: Object.keys(eleve).filter(k => k.startsWith('session_') && k.includes('convoque'))
                         });
                         
-                        // Si cette session contient mars
-                        if (session.journees.includes('Journee_4') || session.journees.includes('Journee_5')) {
-                          bddColumn = 3; // session_3_convoque
-                        }
-                        // Si cette session contient avril
-                        else if (session.journees.includes('Journee_6') || session.journees.includes('Journee_7')) {
-                          bddColumn = 4; // session_4_convoque
-                        }
-                        
-                        const convocationValeur = (eleve as any)[`session_${bddColumn}_convoque`] as string | undefined;
                         const isConvoque = convocationValeur?.startsWith('Oui') === true;
                         
                         return (
