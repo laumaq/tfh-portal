@@ -53,10 +53,10 @@ export function getConvocationLabel(value: string): string {
 export function getConvocationLabelShort(value: string): string {
   if (!value) return '?';
   
-  if (value === 'Non, l\'élève atteint bien les objectifs') return 'Non-Obj ✓';
-  if (value === 'Oui, l\'élève n\'atteint pas les objectifs') return 'Oui-Obj ✗';
-  if (value === 'Oui, l\'élève n\'a pas avancé') return 'Oui-Avan';
-  if (value === 'Oui, l\'élève n\'a pas communiqué') return 'Oui-Com';
+  if (value === 'Non, l\'élève atteint bien les objectifs') return 'Non - Objectifs ✓';
+  if (value === 'Oui, l\'élève n\'atteint pas les objectifs') return 'Oui - Objectifs ✗';
+  if (value === 'Oui, l\'élève n\'a pas avancé') return 'Oui - Avance ✗';
+  if (value === 'Oui, l\'élève n\'a pas communiqué') return 'Oui - Communication ✗';
   
   if (value === 'false') return 'Non';
   if (value === 'true') return 'Oui';
