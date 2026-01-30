@@ -48,35 +48,18 @@ export default function EleveDashboard() {
     }
   }, [router]);
 
-  useEffect(() => {
-    const chargerSessions = async () => {
-      try {
-        const journeesData = await getJourneesFromSupabase(supabase);
-        const sessionsDetectees = detecterSessions(journeesData);
-        
-        const toutesSessions = sessionsDetectees.map(session => {
-          const match = session.id.match(/session_(\d+)/);
-          const index = match ? parseInt(match[1]) : 0;
-          return {
-            index: index,
-            nom: session.nom
-          };
-        });
-        
-        setSessions(toutesSessions);
-      } catch (error) {
-        console.error('Erreur chargement des sessions:', error);
-      }
-    };
-    
-    chargerSessions();
-  }, []);
-
   const loadEleve = async (eleveId: string) => {
     try {
+      // Utiliser la table 'eleves' directement au lieu de la vue
       const { data, error } = await supabase
-        .from('vue_eleves_complete')
-        .select('*')
+        .from('eleves')
+        .select(`
+          *,
+          guide:guides!guide_id (nom, initiale),
+          lecteur_interne:guides!lecteur_interne_id (nom, initiale),
+          lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
+          mediateur:mediateurs!mediateur_id (nom, prenom)
+        `)
         .eq('id', eleveId)
         .single();
   
@@ -86,9 +69,17 @@ export default function EleveDashboard() {
       const journeesData = await getJourneesFromSupabase(supabase);
       const sessionsDetectees = detecterSessions(journeesData);
       
-      // Ajouter les sessions aux données élève
-      const eleveAvecSessions = {
-        ...data,
+      // Formater les données
+      const eleveFormate = {
+        id: data.id,
+        nom: data.nom,
+        prenom: data.prenom,
+        classe: data.classe,
+        problematique: data.problematique,
+        categorie: data.categorie,
+        guide_nom: data.guide?.nom || '-',
+        guide_initiale: data.guide?.initiale || '-',
+        // Ajouter les sessions
         sessions: sessionsDetectees.map(session => {
           const match = session.id.match(/session_(\d+)/);
           const index = match ? parseInt(match[1]) : 0;
@@ -103,7 +94,7 @@ export default function EleveDashboard() {
         })
       };
       
-      setEleve(eleveAvecSessions);
+      setEleve(eleveFormate);
       setNewProblematique(data.problematique || '');
     } catch (err) {
       console.error('Erreur chargement élève:', err);
@@ -252,6 +243,7 @@ export default function EleveDashboard() {
     </div>
   );
 }
+
 
 
 
