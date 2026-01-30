@@ -708,8 +708,8 @@ export default function ConvocationsTab({
                                   ))}
                                 </select>
                               ) : (
-                                <div className={`px-2 py-1 rounded ${getConvocationColor(convocationValeur || '')}`}>
-                                  {getConvocationLabel(convocationValeur || '').split(',')[0]}
+                                <div className={`px-2 py-1 rounded text-center font-medium ${getConvocationColor(convocationValeur || '')}`}>
+                                  {getConvocationLabelShort(convocationValeur || '')}
                                 </div>
                               )}
                             </td>
