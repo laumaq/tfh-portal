@@ -1,18 +1,26 @@
 import { CONVOCATION_OPTIONS } from '../constants';
 
-// Dans convocationUtils.ts
+// convocationUtils.ts
 export function getConvocationColor(value: string): string {
   if (!value) return 'bg-gray-200 text-gray-700'; // Vide ou null
   
-  if (value.startsWith('Oui')) {
-    // Différents types de "Oui"
-    if (value.includes('mais')) return 'bg-orange-100 text-orange-800';
-    if (value.includes('n\'a pas communiqué')) return 'bg-yellow-100 text-yellow-800';
-    if (value.includes('annulée')) return 'bg-red-100 text-red-800';
-    return 'bg-green-100 text-green-800'; // "Oui" simple
+  // Correspondance EXACTE avec ce qui est dans la BDD
+  if (value === 'Non, l\'élève atteint bien les objectifs') {
+    return 'bg-green-100 text-green-800';
+  }
+  if (value === 'Oui, l\'élève n\'atteint pas les objectifs') {
+    return 'bg-yellow-100 text-yellow-800';
+  }
+  if (value === 'Oui, l\'élève n\'a pas avancé') {
+    return 'bg-red-100 text-red-800';
+  }
+  if (value === 'Oui, l\'élève n\'a pas communiqué') {
+    return 'bg-orange-100 text-orange-800';
   }
   
-  if (value === 'Non') return 'bg-gray-200 text-gray-700';
+  // Pour rétrocompatibilité
+  if (value === 'false') return 'bg-gray-200 text-gray-700';
+  if (value === 'true') return 'bg-green-100 text-green-800';
   
   return 'bg-gray-100 text-gray-600'; // Valeur inconnue
 }
@@ -20,17 +28,40 @@ export function getConvocationColor(value: string): string {
 export function getConvocationLabel(value: string): string {
   if (!value) return 'Non défini';
   
-  if (value.startsWith('Oui')) {
-    if (value.includes('mais')) return 'Oui, mais annulée après';
-    if (value.includes('n\'a pas communiqué')) return 'Oui, pas communiqué';
-    if (value.includes('annulée')) return 'Oui, annulée';
-    return 'Oui';
+  // Correspondance EXACTE
+  if (value === 'Non, l\'élève atteint bien les objectifs') {
+    return 'Non - Objectifs atteints';
+  }
+  if (value === 'Oui, l\'élève n\'atteint pas les objectifs') {
+    return 'Oui - Objectifs non atteints';
+  }
+  if (value === 'Oui, l\'élève n\'a pas avancé') {
+    return 'Oui - Pas avancé';
+  }
+  if (value === 'Oui, l\'élève n\'a pas communiqué') {
+    return 'Oui - Pas communiqué';
   }
   
-  if (value === 'Non') return 'Non';
-  if (value === 'false') return 'Non'; // Pour rétrocompatibilité
+  // Pour rétrocompatibilité
+  if (value === 'false') return 'Non';
+  if (value === 'true') return 'Oui';
   
   return value; // Retourne la valeur telle quelle
+}
+
+// Ajouter cette fonction pour l'affichage compact
+export function getConvocationLabelShort(value: string): string {
+  if (!value) return '?';
+  
+  if (value === 'Non, l\'élève atteint bien les objectifs') return 'Non-Obj ✓';
+  if (value === 'Oui, l\'élève n\'atteint pas les objectifs') return 'Oui-Obj ✗';
+  if (value === 'Oui, l\'élève n\'a pas avancé') return 'Oui-Avan';
+  if (value === 'Oui, l\'élève n\'a pas communiqué') return 'Oui-Com';
+  
+  if (value === 'false') return 'Non';
+  if (value === 'true') return 'Oui';
+  
+  return value.length > 8 ? value.substring(0, 8) + '...' : value;
 }
 
 export const getPresenceStyles = (value: boolean | null) => {
