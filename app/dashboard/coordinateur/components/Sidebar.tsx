@@ -50,7 +50,7 @@ export default function Sidebar({
       id: 'presences' as TabType,
       name: 'Présences',
       icon: '✓',
-      color: 'green',
+      color: 'fuschia',
     },
     {
       id: 'defenses' as TabType,
