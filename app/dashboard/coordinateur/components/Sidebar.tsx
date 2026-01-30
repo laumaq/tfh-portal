@@ -47,7 +47,7 @@ export default function Sidebar({
       count: elevesCount
     },
     {
-      id: 'presences',
+      id: 'presences' as TabType,
       name: 'Présences',
       icon: '✓',
       color: 'green',
