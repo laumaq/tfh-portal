@@ -19,6 +19,7 @@ interface EleveInfo {
   sessions?: Array<{
     index: number;
     nom: string;
+    date_debut: Date; 
     statut: string;
   }>;
 }
@@ -68,6 +69,34 @@ export default function EleveDashboard() {
       // Charger les sessions séparément
       const journeesData = await getJourneesFromSupabase(supabase);
       const sessionsDetectees = detecterSessions(journeesData);
+      
+      // Ajouter les sessions aux données élève
+      const sessionsAvecDates = sessionsDetectees.map(session => {
+        const match = session.id.match(/session_(\d+)/);
+        const index = match ? parseInt(match[1]) : 0;
+        const columnName = `session_${index}_convoque`;
+        const statut = (data as any)[columnName] as string | undefined;
+        
+        return {
+          index: index,
+          nom: session.nom,
+          date_debut: session.date_debut, // <-- IMPORTANT: ajoute la date
+          statut: statut || ''
+        };
+      });
+      
+      // Filtrer les sessions à venir (date >= aujourd'hui)
+      const aujourdhui = new Date();
+      aujourdhui.setHours(0, 0, 0, 0); // Normaliser à minuit
+      
+      const sessionsAVenir = sessionsAvecDates.filter(session => 
+        session.date_debut >= aujourdhui
+      );
+      
+      const eleveFormate = {
+        // ... autres champs
+        sessions: sessionsAVenir
+      };
       
       // Formater les données
       const eleveFormate = {
@@ -119,6 +148,25 @@ export default function EleveDashboard() {
     }
   };
 
+  const getMessagePourEleve = (statut: string): string => {
+    switch (statut) {
+      case 'Oui, l\'élève n\'a pas communiqué':
+        return 'Tu es convoqué car tu n\'as pas communiqué (ou pas assez) selon ton/ta guide.';
+      case 'Oui, l\'élève n\'a pas avancé':
+        return 'Tu es convoqué car tu n\'as pas avancé (ou sensiblement pas) selon ton/ta guide.';
+      case 'Oui, l\'élève n\'atteint pas les objectifs':
+        return 'Tu es convoqué car tu as avancé mais n\'atteint pas les objectifs.';
+      case 'Non, l\'élève atteint bien les objectifs':
+        return 'Tu n\'es pas convoqué.';
+      case '':
+      case null:
+      case undefined:
+        return 'Statut non défini.';
+      default:
+        return statut;
+    }
+  };
+  
   const handleLogout = () => {
     if (typeof window !== 'undefined') {
       localStorage.clear();
@@ -209,31 +257,48 @@ export default function EleveDashboard() {
 
 
           <div className="border-t pt-6">
-            <h3 className="text-lg font-semibold text-gray-700 mb-3">Convocations</h3>
-            <div className="space-y-2">
+            <h3 className="text-lg font-semibold text-gray-700 mb-3">Convocations à venir</h3>
+            <div className="space-y-4">
               {eleve.sessions && eleve.sessions.length > 0 ? (
                 eleve.sessions.map(session => {
-                  const statut = session.statut || 'Non défini';
+                  const statut = session.statut || '';
                   const estConvoque = statut.startsWith('Oui');
+                  const message = getMessagePourEleve(statut);
                   
                   return (
-                    <div key={session.index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                      <span className="font-medium">{session.nom}:</span>
-                      <span className={
-                        estConvoque 
-                          ? 'text-orange-600 font-medium' 
-                          : statut.startsWith('Non')
-                          ? 'text-green-600'
-                          : 'text-gray-500'
-                      }>
-                        {statut}
-                      </span>
+                    <div key={session.index} className="border rounded-lg overflow-hidden">
+                      <div className={`flex justify-between items-center p-3 ${estConvoque ? 'bg-orange-50' : 'bg-gray-50'}`}>
+                        <div>
+                          <span className="font-medium">{session.nom}</span>
+                          <span className="text-sm text-gray-500 ml-2">
+                            ({session.date_debut.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })})
+                          </span>
+                        </div>
+                        <span className={
+                          estConvoque 
+                            ? 'text-orange-600 font-medium' 
+                            : statut.startsWith('Non')
+                            ? 'text-green-600 font-medium'
+                            : 'text-gray-500'
+                        }>
+                          {estConvoque ? 'Convoqué' : 'Non convoqué'}
+                        </span>
+                      </div>
+                      
+                      {statut && (
+                        <div className="p-3 border-t bg-white">
+                          <p className="text-sm text-gray-700">
+                            {message}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   );
                 })
               ) : (
-                <div className="text-center text-gray-500 py-4">
-                  Aucune session planifiée
+                <div className="text-center text-gray-500 py-6">
+                  <p className="mb-2">Aucune session à venir planifiée.</p>
+                  <p className="text-sm">Tes prochaines convocations apparaîtront ici.</p>
                 </div>
               )}
             </div>
@@ -244,6 +309,7 @@ export default function EleveDashboard() {
     </div>
   );
 }
+
 
 
 
