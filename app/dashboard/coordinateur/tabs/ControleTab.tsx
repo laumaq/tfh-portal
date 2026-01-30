@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { getJourneesFromSupabase, detecterSessions } from '../utils/sessionUtils';
 import { 
   Users, BookOpen, FileText, CheckCircle, XCircle, 
   AlertCircle, TrendingUp, Filter, Download, RefreshCw,
@@ -17,10 +18,12 @@ interface GuideStats {
   initiale: string;
   elevesGuides: number;
   elevesLecteurInterne: number;
-  convocationsMarsRendues: number;
-  convocationsAvrilRendues: number;
-  pourcentageConvocationsMars: number;
-  pourcentageConvocationsAvril: number;
+  sessionsStats: Array<{
+    id: number;
+    nom: string;
+    convocationsRendues: number;
+    pourcentage: number;
+  }>;
   elevesDetails?: Eleve[];
 }
 
@@ -31,8 +34,7 @@ interface SortConfig {
 
 interface FilterConfig {
   minElevesGuides: number;
-  minConvocationsMars: number;
-  minConvocationsAvril: number;
+  minConvocations: number;
 }
 
 export default function ControleTab() {
@@ -44,8 +46,7 @@ export default function ControleTab() {
   });
   const [filters, setFilters] = useState<FilterConfig>({
     minElevesGuides: 0,
-    minConvocationsMars: 0,
-    minConvocationsAvril: 0
+    minConvocations: 0
   });
   const [showFilters, setShowFilters] = useState(false);
   const [selectedGuide, setSelectedGuide] = useState<GuideStats | null>(null);
@@ -61,27 +62,43 @@ export default function ControleTab() {
         .order('nom', { ascending: true });
       
       if (guidesError) throw guidesError;
-
+  
       // Charger tous les élèves avec leurs guides
       const { data: eleves, error: elevesError } = await supabase
         .from('eleves')
         .select('*');
       
       if (elevesError) throw elevesError;
-
+  
+      // Charger et détecter les sessions dynamiques
+      const journeesData = await getJourneesFromSupabase(supabase);
+      const sessions = detecterSessions(journeesData);
+  
       // Calculer les stats pour chaque guide
       const stats = guides.map(guide => {
         const elevesDuGuide = eleves.filter(e => e.guide_id === guide.id);
         const elevesLecteurInterne = eleves.filter(e => e.lecteur_interne_id === guide.id);
         
-        const convocationsMarsRendues = elevesDuGuide.filter(e => 
-          e.convocation_mars && e.convocation_mars.trim() !== ''
-        ).length;
-        
-        const convocationsAvrilRendues = elevesDuGuide.filter(e => 
-          e.convocation_avril && e.convocation_avril.trim() !== ''
-        ).length;
-
+        // Calculer les stats par session
+        const sessionsStats = sessions.map(session => {
+          const match = session.id.match(/session_(\d+)/);
+          const sessionId = match ? parseInt(match[1]) : 0;
+          
+          const convocationsRendues = elevesDuGuide.filter(eleve => {
+            const columnName = `session_${sessionId}_convoque`;
+            const valeur = (eleve as any)[columnName];
+            return valeur && valeur.trim() !== '';
+          }).length;
+  
+          return {
+            id: sessionId,
+            nom: session.nom,
+            convocationsRendues,
+            pourcentage: elevesDuGuide.length > 0 ? 
+              (convocationsRendues / elevesDuGuide.length) * 100 : 0
+          };
+        });
+  
         return {
           id: guide.id,
           nom: guide.nom,
@@ -89,15 +106,10 @@ export default function ControleTab() {
           initiale: guide.initiale,
           elevesGuides: elevesDuGuide.length,
           elevesLecteurInterne: elevesLecteurInterne.length,
-          convocationsMarsRendues,
-          convocationsAvrilRendues,
-          pourcentageConvocationsMars: elevesDuGuide.length > 0 ? 
-            (convocationsMarsRendues / elevesDuGuide.length) * 100 : 0,
-          pourcentageConvocationsAvril: elevesDuGuide.length > 0 ? 
-            (convocationsAvrilRendues / elevesDuGuide.length) * 100 : 0,
+          sessionsStats
         };
       });
-
+  
       setGuideStats(stats);
     } catch (err) {
       console.error('Erreur chargement stats guides:', err);
@@ -149,10 +161,10 @@ export default function ControleTab() {
   };
 
   const filteredStats = guideStats.filter(guide => {
+    const pourcentageMinSession = Math.min(...guide.sessionsStats.map(s => s.pourcentage));
     return (
       guide.elevesGuides >= filters.minElevesGuides &&
-      guide.pourcentageConvocationsMars >= filters.minConvocationsMars &&
-      guide.pourcentageConvocationsAvril >= filters.minConvocationsAvril
+      pourcentageMinSession >= filters.minConvocations
     );
   });
 
@@ -187,24 +199,40 @@ export default function ControleTab() {
 
   const calculateGlobalMetrics = () => {
     if (guideStats.length === 0) return null;
-
+  
     const totalGuides = guideStats.length;
     const totalElevesGuides = guideStats.reduce((sum, g) => sum + g.elevesGuides, 0);
     const avgElevesPerGuide = totalElevesGuides / totalGuides;
-    const avgMarsConvocations = guideStats.reduce((sum, g) => sum + g.pourcentageConvocationsMars, 0) / totalGuides;
-    const avgAvrilConvocations = guideStats.reduce((sum, g) => sum + g.pourcentageConvocationsAvril, 0) / totalGuides;
-
+    
+    // Calculer les moyennes par session
+    let sessionsAverages: Record<number, number> = {};
+    
+    guideStats.forEach(guide => {
+      guide.sessionsStats.forEach(session => {
+        if (!sessionsAverages[session.id]) {
+          sessionsAverages[session.id] = 0;
+        }
+        sessionsAverages[session.id] += session.pourcentage;
+      });
+    });
+    
+    // Normaliser les moyennes
+    Object.keys(sessionsAverages).forEach(key => {
+      sessionsAverages[parseInt(key)] /= totalGuides;
+    });
+  
     const guidesWithHighLoad = guideStats.filter(g => g.elevesGuides > 5).length;
-    const guidesWithLowConvocations = guideStats.filter(g => 
-      g.pourcentageConvocationsMars < 50 || g.pourcentageConvocationsAvril < 50
+    
+    // Guides avec moins de 50% de convocations dans au moins une session
+    const guidesWithLowConvocations = guideStats.filter(guide => 
+      guide.sessionsStats.some(session => session.pourcentage < 50)
     ).length;
-
+  
     return {
       totalGuides,
       totalElevesGuides,
       avgElevesPerGuide: avgElevesPerGuide.toFixed(1),
-      avgMarsConvocations: avgMarsConvocations.toFixed(1),
-      avgAvrilConvocations: avgAvrilConvocations.toFixed(1),
+      sessionsAverages,
       guidesWithHighLoad,
       guidesWithLowConvocations,
       loadDistribution: (guidesWithHighLoad / totalGuides * 100).toFixed(1)
@@ -262,6 +290,12 @@ export default function ControleTab() {
               <div className="text-3xl font-bold text-purple-700">{globalMetrics.avgElevesPerGuide}</div>
               <div className="text-sm text-purple-600">Moyenne par guide</div>
             </div>
+            {globalMetrics?.sessionsAverages && Object.entries(globalMetrics.sessionsAverages).slice(0, 2).map(([sessionId, moyenne]) => (
+              <div key={sessionId} className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="text-3xl font-bold text-yellow-700">{moyenne.toFixed(1)}%</div>
+                <div className="text-sm text-yellow-600">Session {sessionId}</div>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -407,22 +441,19 @@ export default function ControleTab() {
                     TFH lecteur interne {getSortIcon('elevesLecteurInterne')}
                   </div>
                 </th>
-                <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer"
-                  onClick={() => handleSort('pourcentageConvocationsMars')}
-                >
-                  <div className="flex items-center gap-1">
-                    % convocations mars {getSortIcon('pourcentageConvocationsMars')}
-                  </div>
-                </th>
-                <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer"
-                  onClick={() => handleSort('pourcentageConvocationsAvril')}
-                >
-                  <div className="flex items-center gap-1">
-                    % convocations avril {getSortIcon('pourcentageConvocationsAvril')}
-                  </div>
-                </th>
+                {/* Colonnes dynamiques pour les sessions */}
+                {guideStats.length > 0 && guideStats[0].sessionsStats.slice(0, 3).map((session, index) => (
+                  <th 
+                    key={session.id}
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer"
+                    onClick={() => handleSort(`session${index}` as keyof GuideStats)}
+                  >
+                    <div className="flex items-center gap-1">
+                      % {session.nom.split(' ')[1]} {/* Affiche seulement le mois */}
+                      {/* {getSortIcon(`session${index}` as keyof GuideStats)} */}
+                    </div>
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -474,25 +505,18 @@ export default function ControleTab() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className={`flex items-center gap-1 ${getPerformanceColor(guide.pourcentageConvocationsMars)} px-2 py-1 rounded`}>
-                        {getPerformanceIcon(guide.pourcentageConvocationsMars)}
-                        <span className="font-medium">
-                          {guide.pourcentageConvocationsMars.toFixed(1)}%
-                        </span>
+                  {guide.sessionsStats.slice(0, 3).map((session, index) => (
+                    <td key={session.id} className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className={`flex items-center gap-1 ${getPerformanceColor(session.pourcentage)} px-2 py-1 rounded`}>
+                          {getPerformanceIcon(session.pourcentage)}
+                          <span className="font-medium">
+                            {session.pourcentage.toFixed(1)}%
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className={`flex items-center gap-1 ${getPerformanceColor(guide.pourcentageConvocationsAvril)} px-2 py-1 rounded`}>
-                        {getPerformanceIcon(guide.pourcentageConvocationsAvril)}
-                        <span className="font-medium">
-                          {guide.pourcentageConvocationsAvril.toFixed(1)}%
-                        </span>
-                      </div>
-                    </div>
-                  </td>
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>
