@@ -7,14 +7,11 @@ import { Eleve, Guide } from '../types';
 import { CONVOCATION_OPTIONS } from '../constants';
 import { 
   getConvocationColor, 
-  getConvocationLabel, 
-  getPresenceStyles
+  getConvocationLabel 
 } from '../utils/convocationUtils';
 import { 
   getJourneesFromSupabase, 
   detecterSessions, 
-  estConvoque, 
-  getStatutSession,
   mettreAJourPresence,
   mettreAJourConvocation,
   type Session
@@ -32,7 +29,7 @@ interface ConvocationsTabProps {
     eleveId: string, 
     field: string, 
     currentValue: boolean | null,
-    onSuccess?: (newValue: boolean | null) => void // ← Optionnel maintenant
+    onSuccess?: (newValue: boolean | null) => void
   ) => Promise<void>;
   onRefresh: () => void;
   onSetEditingCell: (cell: {id: string, field: string} | null) => void;
@@ -117,7 +114,6 @@ export default function ConvocationsTab({
     }
   };
 
-
   const handleSave = async (eleve: Eleve, onUpdateEleve?: (eleve: Eleve) => void) => {
     setIsProcessing(true);
     try {
@@ -168,7 +164,7 @@ export default function ConvocationsTab({
   };
 
   const handleJourneePresenceClick = async (eleve: Eleve, journeeIndex: number) => {
-    const currentValue = eleve[`journee_${journeeIndex}_present` as keyof Eleve];
+    const currentValue = eleve[`journee_${journeeIndex}_present` as keyof Eleve] as boolean | null | undefined;
     let nouvelleValeur: boolean | null = null;
     
     // Cycle: null → true → false → null
@@ -240,7 +236,6 @@ export default function ConvocationsTab({
     }
   };
   
-
   const handleLocalSelectUpdate = async (eleveId: string, field: string, value: string) => {
     if (isProcessing) return;
       
@@ -342,6 +337,35 @@ export default function ConvocationsTab({
       textColor: 'text-gray-800',
       label: getConvocationLabel(valeur || '').split(',')[0]
     };
+  };
+
+  // Fonction pour obtenir les styles de présence (compatibilité)
+  const getPresenceStyles = (present: boolean | null | undefined) => {
+    if (present === true) {
+      return {
+        bgColor: 'bg-green-100',
+        hoverColor: 'hover:bg-green-200',
+        textColor: 'text-green-700',
+        icon: '✓',
+        title: 'Présent'
+      };
+    } else if (present === false) {
+      return {
+        bgColor: 'bg-red-100',
+        hoverColor: 'hover:bg-red-200',
+        textColor: 'text-red-700',
+        icon: '✗',
+        title: 'Absent'
+      };
+    } else {
+      return {
+        bgColor: 'bg-gray-100',
+        hoverColor: 'hover:bg-gray-200',
+        textColor: 'text-gray-600',
+        icon: '?',
+        title: 'Non défini'
+      };
+    }
   };
 
   return (
@@ -452,7 +476,6 @@ export default function ConvocationsTab({
                   </th>
                 ) : (
                   sessions.map((session, sessionIndex) => (
-                
                     <React.Fragment key={session.id}>
                       {/* Colonne Convocation pour la session */}
                       <th className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 whitespace-nowrap border-l">
@@ -672,7 +695,7 @@ export default function ConvocationsTab({
                             })}
                           </React.Fragment>
                         );
-                      })}
+                      })
                     )}
                   </tr>
                 );
