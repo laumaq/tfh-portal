@@ -106,6 +106,26 @@ export default function ConvocationsTab({
     chargerSessions();
   }, []);
 
+  useEffect(() => {
+    if (eleves.length > 0) {
+      const premierEleve = eleves[0];
+      console.log('Structure du premier élève:', {
+        id: premierEleve.id,
+        nom: premierEleve.nom,
+        // Lister toutes les colonnes session_*
+        sessionColumns: Object.keys(premierEleve).filter(key => 
+          key.startsWith('session_') && key.includes('convoque')
+        ),
+        // Valeurs des premières colonnes
+        session_1_convoque: (premierEleve as any).session_1_convoque,
+        session_2_convoque: (premierEleve as any).session_2_convoque,
+        session_3_convoque: (premierEleve as any).session_3_convoque,
+        session_4_convoque: (premierEleve as any).session_4_convoque,
+        session_5_convoque: (premierEleve as any).session_5_convoque,
+      });
+    }
+  }, [eleves]);
+
   const handleAddCategory = () => {
     if (newCategory.trim() && !categories.includes(newCategory.trim())) {
       // Cette fonctionnalité sera implémentée plus tard
