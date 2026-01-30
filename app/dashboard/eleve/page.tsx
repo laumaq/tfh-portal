@@ -3,7 +3,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase'; // <-- UNIQUEMENT CET IMPORT
+import { supabase } from '@/lib/supabase'; 
+import { getJourneesFromSupabase, detecterSessions } from '@/app/dashboard/coordinateur/utils/sessionUtils';
 
 interface EleveInfo {
   id: string;
@@ -14,8 +15,12 @@ interface EleveInfo {
   categorie: string;
   guide_nom: string;
   guide_initiale: string;
-  convocation_mars: string;
-  convocation_avril: string;
+  // Sessions dynamiques
+  sessions?: Array<{
+    index: number;
+    nom: string;
+    statut: string;
+  }>;
 }
 
 export default function EleveDashboard() {
@@ -23,6 +28,10 @@ export default function EleveDashboard() {
   const [loading, setLoading] = useState(true);
   const [editingProblematique, setEditingProblematique] = useState(false);
   const [newProblematique, setNewProblematique] = useState('');
+  const [sessions, setSessions] = useState<Array<{
+    index: number;
+    nom: string;
+  }>>([]);
   const router = useRouter();
 
   useEffect(() => {
@@ -39,6 +48,30 @@ export default function EleveDashboard() {
     }
   }, [router]);
 
+  useEffect(() => {
+    const chargerSessions = async () => {
+      try {
+        const journeesData = await getJourneesFromSupabase(supabase);
+        const sessionsDetectees = detecterSessions(journeesData);
+        
+        const toutesSessions = sessionsDetectees.map(session => {
+          const match = session.id.match(/session_(\d+)/);
+          const index = match ? parseInt(match[1]) : 0;
+          return {
+            index: index,
+            nom: session.nom
+          };
+        });
+        
+        setSessions(toutesSessions);
+      } catch (error) {
+        console.error('Erreur chargement des sessions:', error);
+      }
+    };
+    
+    chargerSessions();
+  }, []);
+
   const loadEleve = async (eleveId: string) => {
     try {
       const { data, error } = await supabase
@@ -46,9 +79,31 @@ export default function EleveDashboard() {
         .select('*')
         .eq('id', eleveId)
         .single();
-
+  
       if (error) throw error;
-      setEleve(data);
+      
+      // Charger les sessions séparément
+      const journeesData = await getJourneesFromSupabase(supabase);
+      const sessionsDetectees = detecterSessions(journeesData);
+      
+      // Ajouter les sessions aux données élève
+      const eleveAvecSessions = {
+        ...data,
+        sessions: sessionsDetectees.map(session => {
+          const match = session.id.match(/session_(\d+)/);
+          const index = match ? parseInt(match[1]) : 0;
+          const columnName = `session_${index}_convoque`;
+          const statut = (data as any)[columnName] as string | undefined;
+          
+          return {
+            index: index,
+            nom: session.nom,
+            statut: statut || ''
+          };
+        })
+      };
+      
+      setEleve(eleveAvecSessions);
       setNewProblematique(data.problematique || '');
     } catch (err) {
       console.error('Erreur chargement élève:', err);
@@ -160,34 +215,36 @@ export default function EleveDashboard() {
               </div>
             )}
           </div>
-
+          
           <div className="border-t pt-6">
             <h3 className="text-lg font-semibold text-gray-700 mb-3">Convocations</h3>
             <div className="space-y-2">
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="font-medium">9-10 mars:</span>
-                <span className={
-                  eleve.convocation_mars?.startsWith('Oui') 
-                    ? 'text-orange-600 font-medium' 
-                    : eleve.convocation_mars?.startsWith('Non')
-                    ? 'text-green-600'
-                    : 'text-gray-500'
-                }>
-                  {eleve.convocation_mars || 'Non défini'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="font-medium">16-17 avril:</span>
-                <span className={
-                  eleve.convocation_avril?.startsWith('Oui') 
-                    ? 'text-orange-600 font-medium' 
-                    : eleve.convocation_avril?.startsWith('Non')
-                    ? 'text-green-600'
-                    : 'text-gray-500'
-                }>
-                  {eleve.convocation_avril || 'Non défini'}
-                </span>
-              </div>
+              {sessions.length > 0 ? (
+                sessions.map(session => {
+                  const sessionEleve = eleve.sessions?.find(s => s.index === session.index);
+                  const statut = sessionEleve?.statut || 'Non défini';
+                  const estConvoque = statut.startsWith('Oui');
+                  
+                  return (
+                    <div key={session.index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <span className="font-medium">{session.nom}:</span>
+                      <span className={
+                        estConvoque 
+                          ? 'text-orange-600 font-medium' 
+                          : statut.startsWith('Non')
+                          ? 'text-green-600'
+                          : 'text-gray-500'
+                      }>
+                        {statut}
+                      </span>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-center text-gray-500 py-4">
+                  Aucune session planifiée
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -195,5 +252,6 @@ export default function EleveDashboard() {
     </div>
   );
 }
+
 
 
