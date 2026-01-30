@@ -8,6 +8,7 @@ import Header from './components/Header';
 import LoadingSpinner from './components/LoadingSpinner';
 import DashboardTab from './tabs/DashboardTab';
 import ConvocationsTab from './tabs/ConvocationsTab';
+import PresencesTab from './tabs/PresencesTab';
 import DefensesTab from './tabs/DefensesTab';
 import CalendrierTab from './tabs/CalendrierTab';
 import ParametresTab from './tabs/ParametresTab';
@@ -230,6 +231,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
