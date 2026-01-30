@@ -1,14 +1,37 @@
 import { CONVOCATION_OPTIONS } from '../constants';
 
-export const getConvocationColor = (value: string) => {
-  const option = CONVOCATION_OPTIONS.find(opt => opt.value === value);
-  return option ? option.color : 'bg-gray-100';
-};
+// Dans convocationUtils.ts
+export function getConvocationColor(value: string): string {
+  if (!value) return 'bg-gray-200 text-gray-700'; // Vide ou null
+  
+  if (value.startsWith('Oui')) {
+    // Différents types de "Oui"
+    if (value.includes('mais')) return 'bg-orange-100 text-orange-800';
+    if (value.includes('n\'a pas communiqué')) return 'bg-yellow-100 text-yellow-800';
+    if (value.includes('annulée')) return 'bg-red-100 text-red-800';
+    return 'bg-green-100 text-green-800'; // "Oui" simple
+  }
+  
+  if (value === 'Non') return 'bg-gray-200 text-gray-700';
+  
+  return 'bg-gray-100 text-gray-600'; // Valeur inconnue
+}
 
-export const getConvocationLabel = (value: string) => {
-  const option = CONVOCATION_OPTIONS.find(opt => opt.value === value);
-  return option ? option.label : '-';
-};
+export function getConvocationLabel(value: string): string {
+  if (!value) return 'Non défini';
+  
+  if (value.startsWith('Oui')) {
+    if (value.includes('mais')) return 'Oui, mais annulée après';
+    if (value.includes('n\'a pas communiqué')) return 'Oui, pas communiqué';
+    if (value.includes('annulée')) return 'Oui, annulée';
+    return 'Oui';
+  }
+  
+  if (value === 'Non') return 'Non';
+  if (value === 'false') return 'Non'; // Pour rétrocompatibilité
+  
+  return value; // Retourne la valeur telle quelle
+}
 
 export const getPresenceStyles = (value: boolean | null) => {
   switch (value) {
