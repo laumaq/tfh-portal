@@ -51,7 +51,6 @@ export default function EleveDashboard() {
 
   const loadEleve = async (eleveId: string) => {
     try {
-      // Utiliser la table 'eleves' directement au lieu de la vue
       const { data, error } = await supabase
         .from('eleves')
         .select(`
@@ -70,6 +69,13 @@ export default function EleveDashboard() {
       const journeesData = await getJourneesFromSupabase(supabase);
       const sessionsDetectees = detecterSessions(journeesData);
       
+      // DEBUG: Vérifier la première session
+      if (sessionsDetectees.length > 0) {
+        console.log('Première session:', sessionsDetectees[0]);
+        console.log('date_debut type:', typeof sessionsDetectees[0].date_debut);
+        console.log('date_debut value:', sessionsDetectees[0].date_debut);
+      }
+      
       // Ajouter les sessions aux données élève
       const sessionsAvecDates = sessionsDetectees.map(session => {
         const match = session.id.match(/session_(\d+)/);
@@ -77,10 +83,15 @@ export default function EleveDashboard() {
         const columnName = `session_${index}_convoque`;
         const statut = (data as any)[columnName] as string | undefined;
         
+        // Vérifier que date_debut est un Date valide
+        const dateDebut = session.date_debut instanceof Date 
+          ? session.date_debut 
+          : new Date(session.date_debut);
+        
         return {
           index: index,
           nom: session.nom,
-          date_debut: session.date_debut, // <-- IMPORTANT: ajoute la date
+          date_debut: dateDebut,
           statut: statut || ''
         };
       });
@@ -93,9 +104,8 @@ export default function EleveDashboard() {
         session.date_debut >= aujourdhui
       );
       
-      
       // Formater les données
-      const eleveFormate = {
+      const eleveFormate: EleveInfo = {
         id: data.id,
         nom: data.nom,
         prenom: data.prenom,
@@ -104,19 +114,8 @@ export default function EleveDashboard() {
         categorie: data.categorie,
         guide_nom: data.guide?.nom || '-',
         guide_initiale: data.guide?.initiale || '-',
-        // Ajouter les sessions
-        sessions: sessionsDetectees.map(session => {
-          const match = session.id.match(/session_(\d+)/);
-          const index = match ? parseInt(match[1]) : 0;
-          const columnName = `session_${index}_convoque`;
-          const statut = (data as any)[columnName] as string | undefined;
-          
-          return {
-            index: index,
-            nom: session.nom,
-            statut: statut || ''
-          };
-        })
+        // Utiliser sessionsAVenir (filtré et avec dates)
+        sessions: sessionsAVenir
       };
       
       setEleve(eleveFormate);
@@ -305,6 +304,7 @@ export default function EleveDashboard() {
     </div>
   );
 }
+
 
 
 
