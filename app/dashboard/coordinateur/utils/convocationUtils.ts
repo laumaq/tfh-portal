@@ -64,7 +64,8 @@ export function getConvocationLabelShort(value: string): string {
   return value.length > 8 ? value.substring(0, 8) + '...' : value;
 }
 
-export const getPresenceStyles = (value: boolean | null) => {
+export const getPresenceStyles = (value: boolean | null | undefined) => {
+  const val = value ?? null;
   switch (value) {
     case null:
       return {
