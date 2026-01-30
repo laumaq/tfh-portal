@@ -192,5 +192,5 @@ export interface DisplaySettings {
   mediateur_voir_lecteurs_externes: boolean;
 }
 
-export type TabType = 'dashboard' | 'convocations' | 'defenses' | 'calendrier' | 'gestion-utilisateurs' | 'parametres' | 'stats' | 'controle';
+export type TabType = 'dashboard' | 'convocations'| 'presences' | 'defenses' | 'calendrier' | 'gestion-utilisateurs' | 'parametres' | 'stats' | 'controle';
 export type UserType = 'eleves' | 'guides' | 'lecteurs-externes' | 'mediateurs' | 'coordinateurs';
