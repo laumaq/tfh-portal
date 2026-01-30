@@ -1,9 +1,10 @@
+// constants/index.ts
 export const CONVOCATION_OPTIONS = [
   { value: '', label: '-', color: 'bg-gray-100' },
-  { value: 'non_objectifs_atteints', label: 'Non, l\'élève atteint bien les objectifs', color: 'bg-green-100 text-green-800' },
-  { value: 'oui_objectifs_non_atteints', label: 'Oui, l\'élève n\'atteint pas les objectifs', color: 'bg-yellow-100 text-yellow-800' },
-  { value: 'oui_pas_avance', label: 'Oui, l\'élève n\'a pas avancé', color: 'bg-red-100 text-red-800' },
-  { value: 'oui_pas_communique', label: 'Oui, l\'élève n\'a pas communiqué', color: 'bg-orange-100 text-orange-800' },
+  { value: 'Non, l\'élève atteint bien les objectifs', label: 'Non - Objectifs atteints', color: 'bg-green-100 text-green-800' },
+  { value: 'Oui, l\'élève n\'atteint pas les objectifs', label: 'Oui - Objectifs non atteints', color: 'bg-yellow-100 text-yellow-800' },
+  { value: 'Oui, l\'élève n\'a pas avancé', label: 'Oui - Pas avancé', color: 'bg-red-100 text-red-800' },
+  { value: 'Oui, l\'élève n\'a pas communiqué', label: 'Oui - Pas communiqué', color: 'bg-orange-100 text-orange-800' },
 ] as const;
 
 export const TABS_CONFIG = [
