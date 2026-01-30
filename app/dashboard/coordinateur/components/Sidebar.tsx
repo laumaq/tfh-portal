@@ -47,6 +47,12 @@ export default function Sidebar({
       count: elevesCount
     },
     {
+      id: 'presences',
+      name: 'Présences',
+      icon: '✓',
+      color: 'green',
+    },
+    {
       id: 'defenses' as TabType,
       name: 'Défenses',
       icon: <UserCheck className="w-5 h-5" />,
