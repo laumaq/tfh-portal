@@ -292,7 +292,7 @@ export default function PresencesTab({
                         const journeeNum = parseInt(journee.key.split('_')[1]);
                         const field = `journee_${journeeNum}_present`;
                         const present = (eleve as any)[field] as boolean | null | undefined;
-                        const presenceStyles = getPresenceStyles(present);
+                        const presenceStyles = getPresenceStyles((eleve as any)[field] ?? null);
                         
                         return (
                           <td key={`${eleve.id}-${journee.key}`} className="px-3 py-3 text-center border-l">
