@@ -7,7 +7,8 @@ import { Eleve, Guide } from '../types';
 import { CONVOCATION_OPTIONS } from '../constants';
 import { 
   getConvocationColor, 
-  getConvocationLabel 
+  getConvocationLabel ,
+  getConvocationLabelShort
 } from '../utils/convocationUtils';
 import { 
   getJourneesFromSupabase, 
