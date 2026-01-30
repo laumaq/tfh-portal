@@ -215,66 +215,6 @@ export default function PresencesTab({
       )}
 
       <div className="bg-white rounded-lg shadow p-4 md:p-6 mb-6">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-4">
-          <div className="flex flex-wrap items-center gap-4">
-            {/* Mode édition */}
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={editingMode}
-                onChange={(e) => onSetEditingMode(e.target.checked)}
-                className="w-5 h-5 text-blue-600 rounded"
-                disabled={isProcessing}
-              />
-              <span className="text-sm font-medium">
-                Mode édition
-              </span>
-            </label>
-
-            {/* Filtre convoqués uniquement */}
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showConvoquesOnly}
-                onChange={(e) => setShowConvoquesOnly(e.target.checked)}
-                className="w-5 h-5 text-blue-600 rounded"
-                disabled={isProcessing || selectedSession === 'all'}
-              />
-              <span className="text-sm font-medium">
-                Afficher uniquement les convoqués
-              </span>
-            </label>
-          </div>
-
-          {/* Sélecteur de session */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-700">Session :</span>
-            <select
-              value={selectedSession}
-              onChange={(e) => setSelectedSession(e.target.value)}
-              className="border border-gray-300 rounded px-3 py-1.5 text-sm"
-              disabled={loadingSessions || isProcessing}
-            >
-              <option value="all">Toutes les sessions</option>
-              {sessions.map(session => {
-                const sessionNum = parseInt(session.id.split('_')[1]);
-                return (
-                  <option key={session.id} value={sessionNum.toString()}>
-                    {getSessionDisplayName(session)}
-                  </option>
-                );
-              })}
-            </select>
-          </div>
-
-          
-
-          <span className="text-sm text-gray-500">
-            ({filteredEleves.length} élève{filteredEleves.length > 1 ? 's' : ''})
-          </span>
-        </div>
-
-
 
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-4">
           <div className="flex flex-wrap items-center gap-4">
