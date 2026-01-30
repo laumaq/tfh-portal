@@ -1,4 +1,4 @@
-// app/dashboard/eleve/page.tsx - LIGNES À GARDER
+// app/dashboard/eleve/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -93,10 +93,6 @@ export default function EleveDashboard() {
         session.date_debut >= aujourdhui
       );
       
-      const eleveFormate = {
-        // ... autres champs
-        sessions: sessionsAVenir
-      };
       
       // Formater les données
       const eleveFormate = {
@@ -309,6 +305,7 @@ export default function EleveDashboard() {
     </div>
   );
 }
+
 
 
 
