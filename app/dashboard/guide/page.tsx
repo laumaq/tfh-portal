@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { getJourneesFromSupabase, detecterSessions } from '@/app/dashboard/coordinateur/utils/sessionUtils';
 
 interface Eleve {
   id: string;
@@ -29,6 +30,7 @@ interface Eleve {
   lecteur_externe_prenom?: string;
   mediateur_nom?: string;
   mediateur_prenom?: string;
+
 }
 
 interface Guide {
@@ -76,6 +78,12 @@ export default function GuideDashboard() {
     lecteur_interne_voir_lecteurs_externes: true,
     lecteur_interne_voir_mediateurs: true,
   });
+  
+  const [sessionsDisponibles, setSessionsDisponibles] = useState<Array<{
+    id: string;
+    nom: string;
+    index: number;
+  }>>([]);
   
   const router = useRouter();
 
@@ -1097,4 +1105,5 @@ const loadSystemSettings = async () => {
     </div>
   );
 }
+
 
