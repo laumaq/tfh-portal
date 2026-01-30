@@ -146,13 +146,13 @@ export default function EleveDashboard() {
   const getMessagePourEleve = (statut: string): string => {
     switch (statut) {
       case 'Oui, l\'élève n\'a pas communiqué':
-        return 'Tu es convoqué car tu n\'as pas communiqué (ou pas assez) selon ton/ta guide.';
+        return 'Tu es convoqué·e car tu n\'as pas communiqué (ou pas assez) selon ton/ta guide.';
       case 'Oui, l\'élève n\'a pas avancé':
-        return 'Tu es convoqué car tu n\'as pas avancé (ou sensiblement pas) selon ton/ta guide.';
+        return 'Tu es convoqué·e car tu n\'as pas avancé (ou sensiblement pas) selon ton/ta guide.';
       case 'Oui, l\'élève n\'atteint pas les objectifs':
-        return 'Tu es convoqué car tu as avancé mais n\'atteint pas les objectifs.';
+        return 'Tu es convoqué·e car tu as avancé mais n\'atteins pas les objectifs.';
       case 'Non, l\'élève atteint bien les objectifs':
-        return 'Tu n\'es pas convoqué.';
+        return 'Tu n\'es pas convoqué·e.';
       case '':
       case null:
       case undefined:
@@ -304,6 +304,7 @@ export default function EleveDashboard() {
     </div>
   );
 }
+
 
 
 
