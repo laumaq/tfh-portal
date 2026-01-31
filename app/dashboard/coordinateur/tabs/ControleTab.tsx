@@ -56,7 +56,6 @@ export default function ControleTab() {
   const loadGuideStats = async () => {
     setLoading(true);
     try {
-      // Charger tous les guides
       const { data: guides, error: guidesError } = await supabase
         .from('guides')
         .select('*')
@@ -64,23 +63,19 @@ export default function ControleTab() {
       
       if (guidesError) throw guidesError;
   
-      // Charger tous les élèves avec leurs guides
       const { data: eleves, error: elevesError } = await supabase
         .from('eleves')
         .select('*');
       
       if (elevesError) throw elevesError;
   
-      // Charger et détecter les sessions dynamiques
       const journeesData = await getJourneesFromSupabase(supabase);
       const sessions = detecterSessions(journeesData);
   
-      // Calculer les stats pour chaque guide
       const stats = guides.map(guide => {
         const elevesDuGuide = eleves.filter(e => e.guide_id === guide.id);
         const elevesLecteurInterne = eleves.filter(e => e.lecteur_interne_id === guide.id);
         
-        // Calculer les stats par session
         const sessionsStats = sessions.map(session => {
           const match = session.id.match(/session_(\d+)/);
           const sessionId = match ? parseInt(match[1]) : 0;
@@ -91,25 +86,20 @@ export default function ControleTab() {
             return valeur && valeur.trim() !== '';
           }).length;
         
-          // Si pas d'élèves, retourner null pour afficher tiret
-          if (elevesDuGuide.length === 0) {
-            return {
-              id: sessionId,
-              nom: session.nom,
-              convocationsRendues: 0,
-              pourcentage: null // <-- NULL au lieu de 0
-            };
-          }
+          const pourcentage = elevesDuGuide.length === 0 ? 
+            null : 
+            (convocationsRendues / elevesDuGuide.length) * 100;
         
           return {
             id: sessionId,
             nom: session.nom,
             convocationsRendues,
-            pourcentage: (convocationsRendues / elevesDuGuide.length) * 100
+            pourcentage
           };
         });
-
-        const guideAvecTri = {
+  
+        // Créer un objet avec les propriétés dynamiques pour le tri
+        const guideStatsObj: any = {
           id: guide.id,
           nom: guide.nom,
           prenom: guide.prenom,
@@ -117,22 +107,15 @@ export default function ControleTab() {
           elevesGuides: elevesDuGuide.length,
           elevesLecteurInterne: elevesLecteurInterne.length,
           sessionsStats,
-          // Propriétés pour le tri
-          ...sessionsStats.reduce((acc, session) => {
-            acc[`session_${session.id}_percentage`] = session.pourcentage;
-            return acc;
-          }, {} as Record<string, number | null>)
+          elevesDetails: [] // pour le modal
         };
   
-        return {
-          id: guide.id,
-          nom: guide.nom,
-          prenom: guide.prenom,
-          initiale: guide.initiale,
-          elevesGuides: elevesDuGuide.length,
-          elevesLecteurInterne: elevesLecteurInterne.length,
-          sessionsStats
-        };
+        // Ajouter les propriétés de pourcentage pour chaque session
+        sessionsStats.forEach(session => {
+          guideStatsObj[`session_${session.id}_percentage`] = session.pourcentage;
+        });
+  
+        return guideStatsObj;
       });
   
       setGuideStats(stats);
@@ -208,7 +191,15 @@ export default function ControleTab() {
     const aValue = a[sortConfig.key];
     const bValue = b[sortConfig.key];
     
-    // Gérer null pour le tri
+    // Logique spéciale pour les pourcentages de session
+    if (sortConfig.key.toString().includes('session_') && sortConfig.key.toString().includes('_percentage')) {
+      // Pour les pourcentages de session, nous voulons placer les nulls en dernier
+      if (aValue === null && bValue === null) return 0;
+      if (aValue === null) return sortConfig.direction === 'asc' ? 1 : -1;
+      if (bValue === null) return sortConfig.direction === 'asc' ? -1 : 1;
+    }
+    
+    // Logique générale
     if (aValue === null && bValue === null) return 0;
     if (aValue === null) return sortConfig.direction === 'asc' ? 1 : -1;
     if (bValue === null) return sortConfig.direction === 'asc' ? -1 : 1;
@@ -226,6 +217,20 @@ export default function ControleTab() {
     return 0;
   });
 
+  const getSessionPercentageValue = (guide: GuideStats, sessionId: number): number | null => {
+    // Essayer d'accéder via la propriété dynamique
+    const dynamicKey = `session_${sessionId}_percentage` as keyof GuideStats;
+    const value = guide[dynamicKey];
+    
+    if (typeof value === 'number' || value === null) {
+      return value;
+    }
+    
+    // Fallback: chercher dans sessionsStats
+    const sessionStat = guide.sessionsStats.find(s => s.id === sessionId);
+    return sessionStat ? sessionStat.pourcentage : null;
+  };
+  
   const getPerformanceColor = (percentage: number) => {
     if (percentage >= 80) return 'text-green-600 bg-green-50';
     if (percentage >= 50) return 'text-yellow-600 bg-yellow-50';
@@ -540,13 +545,13 @@ export default function ControleTab() {
                   {guide.sessionsStats.map((session) => (
                     <td key={session.id} className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center justify-center">
-                        {session.pourcentage === null ? (
+                        {getSessionPercentageValue(guide, session.id) === null ? (
                           <span className="text-gray-400">—</span>
                         ) : (
-                          <div className={`flex items-center gap-1 ${getPerformanceColor(session.pourcentage)} px-2 py-1 rounded`}>
-                            {getPerformanceIcon(session.pourcentage)}
+                          <div className={`flex items-center gap-1 ${getPerformanceColor(getSessionPercentageValue(guide, session.id)!)} px-2 py-1 rounded`}>
+                            {getPerformanceIcon(getSessionPercentageValue(guide, session.id)!)}
                             <span className="font-medium">
-                              {session.pourcentage === null ? '—' : `${session.pourcentage.toFixed(1)}%`}
+                              {getSessionPercentageValue(guide, session.id)!.toFixed(1)}%
                             </span>
                           </div>
                         )}
