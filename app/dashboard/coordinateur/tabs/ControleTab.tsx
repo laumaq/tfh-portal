@@ -186,7 +186,18 @@ export default function ControleTab() {
   };
 
   const filteredStats = guideStats.filter(guide => {
-    const pourcentageMinSession = Math.min(...guide.sessionsStats.map(s => s.pourcentage));
+    // Si le guide n'a pas d'élèves, il passe automatiquement le filtre
+    if (guide.elevesGuides === 0) return true;
+    
+    // Sinon, calculer le minimum des pourcentages non-null
+    const pourcentagesValides = guide.sessionsStats
+      .map(s => s.pourcentage)
+      .filter((p): p is number => p !== null);
+    
+    const pourcentageMinSession = pourcentagesValides.length > 0 
+      ? Math.min(...pourcentagesValides)
+      : 0;
+    
     return (
       guide.elevesGuides >= filters.minElevesGuides &&
       pourcentageMinSession >= filters.minConvocations
