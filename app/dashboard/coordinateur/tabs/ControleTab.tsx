@@ -22,8 +22,9 @@ interface GuideStats {
     id: number;
     nom: string;
     convocationsRendues: number;
-    pourcentage: number;
+    pourcentage: number | null;
   }>;
+  [key: `session_${number}_percentage`]: number | null;
   elevesDetails?: Eleve[];
 }
 
@@ -89,15 +90,39 @@ export default function ControleTab() {
             const valeur = (eleve as any)[columnName];
             return valeur && valeur.trim() !== '';
           }).length;
-  
+        
+          // Si pas d'élèves, retourner null pour afficher tiret
+          if (elevesDuGuide.length === 0) {
+            return {
+              id: sessionId,
+              nom: session.nom,
+              convocationsRendues: 0,
+              pourcentage: null // <-- NULL au lieu de 0
+            };
+          }
+        
           return {
             id: sessionId,
             nom: session.nom,
             convocationsRendues,
-            pourcentage: elevesDuGuide.length > 0 ? 
-              (convocationsRendues / elevesDuGuide.length) * 100 : 0
+            pourcentage: (convocationsRendues / elevesDuGuide.length) * 100
           };
         });
+
+        const guideAvecTri = {
+          id: guide.id,
+          nom: guide.nom,
+          prenom: guide.prenom,
+          initiale: guide.initiale,
+          elevesGuides: elevesDuGuide.length,
+          elevesLecteurInterne: elevesLecteurInterne.length,
+          sessionsStats,
+          // Propriétés pour le tri
+          ...sessionsStats.reduce((acc, session) => {
+            acc[`session_${session.id}_percentage`] = session.pourcentage;
+            return acc;
+          }, {} as Record<string, number | null>)
+        };
   
         return {
           id: guide.id,
@@ -160,6 +185,11 @@ export default function ControleTab() {
     return sortConfig.direction === 'asc' ? '↑' : '↓';
   };
 
+  const getSortIcon = (key: keyof GuideStats) => {
+    if (sortConfig.key !== key) return '⇅';
+    return sortConfig.direction === 'asc' ? '↑' : '↓';
+  };
+
   const filteredStats = guideStats.filter(guide => {
     const pourcentageMinSession = Math.min(...guide.sessionsStats.map(s => s.pourcentage));
     return (
@@ -167,10 +197,15 @@ export default function ControleTab() {
       pourcentageMinSession >= filters.minConvocations
     );
   });
-
+  
   const sortedStats = [...filteredStats].sort((a, b) => {
     const aValue = a[sortConfig.key];
     const bValue = b[sortConfig.key];
+    
+    // Gérer null pour le tri
+    if (aValue === null && bValue === null) return 0;
+    if (aValue === null) return sortConfig.direction === 'asc' ? 1 : -1;
+    if (bValue === null) return sortConfig.direction === 'asc' ? -1 : 1;
     
     if (typeof aValue === 'number' && typeof bValue === 'number') {
       return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
@@ -429,15 +464,15 @@ export default function ControleTab() {
                   </div>
                 </th>
                 {/* Colonnes dynamiques pour les sessions */}
-                {guideStats.length > 0 && guideStats[0].sessionsStats.slice(0, 3).map((session, index) => (
+                {guideStats.length > 0 && guideStats[0].sessionsStats.map((session) => (
                   <th 
                     key={session.id}
                     className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer"
-                    onClick={() => handleSort(`session${index}` as keyof GuideStats)}
+                    onClick={() => handleSort(`session_${session.id}_percentage` as keyof GuideStats)}
                   >
                     <div className="flex items-center gap-1">
-                      % {session.nom.split(' ')[1]} {/* Affiche seulement le mois */}
-                      {/* {getSortIcon(`session${index}` as keyof GuideStats)} */}
+                      % {session.nom.split(' ')[1]}
+                      {getSortIcon(`session_${session.id}_percentage` as keyof GuideStats)}
                     </div>
                   </th>
                 ))}
@@ -491,15 +526,19 @@ export default function ControleTab() {
                       </div>
                     </div>
                   </td>
-                  {guide.sessionsStats.slice(0, 3).map((session) => (
+                  {guide.sessionsStats.map((session) => (
                     <td key={session.id} className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className={`flex items-center gap-1 ${getPerformanceColor(session.pourcentage)} px-2 py-1 rounded`}>
-                          {getPerformanceIcon(session.pourcentage)}
-                          <span className="font-medium">
-                            {session.pourcentage.toFixed(1)}%
-                          </span>
-                        </div>
+                      <div className="flex items-center justify-center">
+                        {session.pourcentage === null ? (
+                          <span className="text-gray-400">—</span>
+                        ) : (
+                          <div className={`flex items-center gap-1 ${getPerformanceColor(session.pourcentage)} px-2 py-1 rounded`}>
+                            {getPerformanceIcon(session.pourcentage)}
+                            <span className="font-medium">
+                              {session.pourcentage.toFixed(1)}%
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </td>
                   ))}
