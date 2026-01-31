@@ -633,10 +633,11 @@ export default function ControleTab() {
                       <div key={session.id} className="flex justify-between">
                         <span className="text-gray-600">{session.nom} :</span>
                         <span className={`font-medium ${
+                          session.pourcentage === null ? 'text-gray-400' :
                           session.pourcentage >= 80 ? 'text-green-600' :
                           session.pourcentage >= 50 ? 'text-yellow-600' : 'text-red-600'
                         }`}>
-                          {session.pourcentage.toFixed(1)}%
+                          {session.pourcentage === null ? '—' : `${session.pourcentage.toFixed(1)}%`}
                         </span>
                       </div>
                     ))}
