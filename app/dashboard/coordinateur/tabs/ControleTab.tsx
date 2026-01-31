@@ -564,43 +564,58 @@ export default function ControleTab() {
                 <div className="border rounded-lg p-4">
                   <h4 className="font-medium text-gray-700 mb-3">Rendu des convocations</h4>
                   <div className="space-y-3">
-                    <div>
-                      <div className="flex justify-between text-sm text-gray-600 mb-1">
-                        <span>Mars</span>
-                        <span>{selectedGuide.pourcentageConvocationsMars.toFixed(1)}%</span>
+                    {/* Session 1 */}
+                    {selectedGuide.sessionsStats[0] && (
+                      <div>
+                        <div className="flex justify-between text-sm text-gray-600 mb-1">
+                          <span>{selectedGuide.sessionsStats[0].nom}</span>
+                          <span>{selectedGuide.sessionsStats[0].pourcentage.toFixed(1)}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className={`h-2 rounded-full ${
+                              selectedGuide.sessionsStats[0].pourcentage >= 80 ? 'bg-green-500' :
+                              selectedGuide.sessionsStats[0].pourcentage >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                            }`}
+                            style={{ width: `${Math.min(selectedGuide.sessionsStats[0].pourcentage, 100)}%` }}
+                          />
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {selectedGuide.sessionsStats[0].convocationsRendues}/{selectedGuide.elevesGuides} convocations rendues
+                        </div>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className={`h-2 rounded-full ${
-                            selectedGuide.pourcentageConvocationsMars >= 80 ? 'bg-green-500' :
-                            selectedGuide.pourcentageConvocationsMars >= 50 ? 'bg-yellow-500' : 'bg-red-500'
-                          }`}
-                          style={{ width: `${Math.min(selectedGuide.pourcentageConvocationsMars, 100)}%` }}
-                        />
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {selectedGuide.convocationsMarsRendues}/{selectedGuide.elevesGuides} convocations rendues
-                      </div>
-                    </div>
+                    )}
                     
-                    <div>
-                      <div className="flex justify-between text-sm text-gray-600 mb-1">
-                        <span>Avril</span>
-                        <span>{selectedGuide.pourcentageConvocationsAvril.toFixed(1)}%</span>
+                    {/* Session 2 */}
+                    {selectedGuide.sessionsStats[1] && (
+                      <div>
+                        <div className="flex justify-between text-sm text-gray-600 mb-1">
+                          <span>{selectedGuide.sessionsStats[1].nom}</span>
+                          <span>{selectedGuide.sessionsStats[1].pourcentage.toFixed(1)}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className={`h-2 rounded-full ${
+                              selectedGuide.sessionsStats[1].pourcentage >= 80 ? 'bg-green-500' :
+                              selectedGuide.sessionsStats[1].pourcentage >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                            }`}
+                            style={{ width: `${Math.min(selectedGuide.sessionsStats[1].pourcentage, 100)}%` }}
+                          />
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {selectedGuide.sessionsStats[1].convocationsRendues}/{selectedGuide.elevesGuides} convocations rendues
+                        </div>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className={`h-2 rounded-full ${
-                            selectedGuide.pourcentageConvocationsAvril >= 80 ? 'bg-green-500' :
-                            selectedGuide.pourcentageConvocationsAvril >= 50 ? 'bg-yellow-500' : 'bg-red-500'
-                          }`}
-                          style={{ width: `${Math.min(selectedGuide.pourcentageConvocationsAvril, 100)}%` }}
-                        />
+                    )}
+                    
+                    {/* Afficher les autres sessions s'il y en a plus de 2 */}
+                    {selectedGuide.sessionsStats.length > 2 && (
+                      <div className="pt-2 border-t">
+                        <p className="text-xs text-gray-500">
+                          + {selectedGuide.sessionsStats.length - 2} autre(s) session(s)
+                        </p>
                       </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {selectedGuide.convocationsAvrilRendues}/{selectedGuide.elevesGuides} convocations rendues
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
                 
@@ -615,24 +630,19 @@ export default function ControleTab() {
                       <span className="text-gray-600">Lecteur interne :</span>
                       <span className="font-medium">{selectedGuide.elevesLecteurInterne} TFH</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Rendu en mars :</span>
-                      <span className={`font-medium ${
-                        selectedGuide.pourcentageConvocationsMars >= 80 ? 'text-green-600' :
-                        selectedGuide.pourcentageConvocationsMars >= 50 ? 'text-yellow-600' : 'text-red-600'
-                      }`}>
-                        {selectedGuide.pourcentageConvocationsMars.toFixed(1)}%
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Rendu en avril :</span>
-                      <span className={`font-medium ${
-                        selectedGuide.pourcentageConvocationsAvril >= 80 ? 'text-green-600' :
-                        selectedGuide.pourcentageConvocationsAvril >= 50 ? 'text-yellow-600' : 'text-red-600'
-                      }`}>
-                        {selectedGuide.pourcentageConvocationsAvril.toFixed(1)}%
-                      </span>
-                    </div>
+                    
+                    {/* Stats par session */}
+                    {selectedGuide.sessionsStats.map((session, index) => (
+                      <div key={session.id} className="flex justify-between">
+                        <span className="text-gray-600">{session.nom} :</span>
+                        <span className={`font-medium ${
+                          session.pourcentage >= 80 ? 'text-green-600' :
+                          session.pourcentage >= 50 ? 'text-yellow-600' : 'text-red-600'
+                        }`}>
+                          {session.pourcentage.toFixed(1)}%
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -657,18 +667,26 @@ export default function ControleTab() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <div className="text-sm text-gray-600">Convocations</div>
+                            <div className="text-sm text-gray-600">Convocations par session</div>
                             <div className="flex items-center gap-2">
-                              <span className={`text-xs px-2 py-1 rounded ${
-                                eleve.convocation_mars ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                              }`}>
-                                Mars: {eleve.convocation_mars ? '✓' : '✗'}
-                              </span>
-                              <span className={`text-xs px-2 py-1 rounded ${
-                                eleve.convocation_avril ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                              }`}>
-                                Avril: {eleve.convocation_avril ? '✓' : '✗'}
-                              </span>
+                              {/* Afficher les convocations par session */}
+                              {selectedGuide.sessionsStats.slice(0, 3).map((session) => {
+                                const columnName = `session_${session.id}_convoque`;
+                                const statut = (eleve as any)[columnName];
+                                const estRendu = statut && statut.trim() !== '';
+                                
+                                return (
+                                  <span 
+                                    key={session.id} 
+                                    className={`text-xs px-2 py-1 rounded ${
+                                      estRendu ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                                    }`}
+                                    title={session.nom}
+                                  >
+                                    {session.nom.split(' ')[1]}: {estRendu ? '✓' : '✗'}
+                                  </span>
+                                );
+                              })}
                             </div>
                           </div>
                         </div>
@@ -678,7 +696,7 @@ export default function ControleTab() {
                 </div>
               )}
             </div>
-            
+                        
             <div className="px-6 py-4 border-t bg-gray-50">
               <button
                 onClick={() => {
