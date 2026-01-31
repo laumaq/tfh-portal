@@ -560,63 +560,6 @@ export default function ControleTab() {
             
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div className="border rounded-lg p-4">
-                  <h4 className="font-medium text-gray-700 mb-3">Rendu des convocations</h4>
-                  <div className="space-y-3">
-                    {/* Session 1 */}
-                    {selectedGuide.sessionsStats[0] && (
-                      <div>
-                        <div className="flex justify-between text-sm text-gray-600 mb-1">
-                          <span>{selectedGuide.sessionsStats[0].nom}</span>
-                          <span>{selectedGuide.sessionsStats[0].pourcentage.toFixed(1)}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
-                            className={`h-2 rounded-full ${
-                              selectedGuide.sessionsStats[0].pourcentage >= 80 ? 'bg-green-500' :
-                              selectedGuide.sessionsStats[0].pourcentage >= 50 ? 'bg-yellow-500' : 'bg-red-500'
-                            }`}
-                            style={{ width: `${Math.min(selectedGuide.sessionsStats[0].pourcentage, 100)}%` }}
-                          />
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {selectedGuide.sessionsStats[0].convocationsRendues}/{selectedGuide.elevesGuides} convocations rendues
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Session 2 */}
-                    {selectedGuide.sessionsStats[1] && (
-                      <div>
-                        <div className="flex justify-between text-sm text-gray-600 mb-1">
-                          <span>{selectedGuide.sessionsStats[1].nom}</span>
-                          <span>{selectedGuide.sessionsStats[1].pourcentage.toFixed(1)}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
-                            className={`h-2 rounded-full ${
-                              selectedGuide.sessionsStats[1].pourcentage >= 80 ? 'bg-green-500' :
-                              selectedGuide.sessionsStats[1].pourcentage >= 50 ? 'bg-yellow-500' : 'bg-red-500'
-                            }`}
-                            style={{ width: `${Math.min(selectedGuide.sessionsStats[1].pourcentage, 100)}%` }}
-                          />
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {selectedGuide.sessionsStats[1].convocationsRendues}/{selectedGuide.elevesGuides} convocations rendues
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Afficher les autres sessions s'il y en a plus de 2 */}
-                    {selectedGuide.sessionsStats.length > 2 && (
-                      <div className="pt-2 border-t">
-                        <p className="text-xs text-gray-500">
-                          + {selectedGuide.sessionsStats.length - 2} autre(s) session(s)
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
                 
                 <div className="border rounded-lg p-4">
                   <h4 className="font-medium text-gray-700 mb-3">Récapitulatif</h4>
