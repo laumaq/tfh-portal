@@ -303,7 +303,8 @@ export default function ControleTab() {
             </div>
           </>
         )}
-
+      </div>
+      
       {/* Filtres */}
       <div className="bg-white rounded-lg shadow">
         <button
