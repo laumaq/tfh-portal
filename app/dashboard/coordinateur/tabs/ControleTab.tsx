@@ -185,11 +185,6 @@ export default function ControleTab() {
     return sortConfig.direction === 'asc' ? '↑' : '↓';
   };
 
-  const getSortIcon = (key: keyof GuideStats) => {
-    if (sortConfig.key !== key) return '⇅';
-    return sortConfig.direction === 'asc' ? '↑' : '↓';
-  };
-
   const filteredStats = guideStats.filter(guide => {
     const pourcentageMinSession = Math.min(...guide.sessionsStats.map(s => s.pourcentage));
     return (
