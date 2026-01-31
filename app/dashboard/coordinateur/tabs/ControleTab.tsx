@@ -505,18 +505,18 @@ export default function ControleTab() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                  {guide.sessionsStats.slice(0, 3).map((session, index) => (
-                    <td key={session.id} className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className={`flex items-center gap-1 ${getPerformanceColor(session.pourcentage)} px-2 py-1 rounded`}>
-                          {getPerformanceIcon(session.pourcentage)}
-                          <span className="font-medium">
-                            {session.pourcentage.toFixed(1)}%
-                          </span>
+                    {guide.sessionsStats.slice(0, 3).map((session) => (
+                      <td key={session.id} className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className={`flex items-center gap-1 ${getPerformanceColor(session.pourcentage)} px-2 py-1 rounded`}>
+                            {getPerformanceIcon(session.pourcentage)}
+                            <span className="font-medium">
+                              {session.pourcentage.toFixed(1)}%
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                  ))}
+                      </td>
+                    ))}
                 </tr>
               ))}
             </tbody>
