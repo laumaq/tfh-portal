@@ -324,7 +324,7 @@ export default function ControleTab() {
         
         {showFilters && (
           <div className="px-6 pb-6 pt-2 border-t">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> {/* Changé de 3 à 2 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Nombre minimum d'élèves guidés
@@ -342,39 +342,22 @@ export default function ControleTab() {
                 </div>
               </div>
               
+              {/* REMPLACER les 2 filtres Mars/Avril par un seul */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  % minimum convocations mars
+                  % minimum convocations (toutes sessions)
                 </label>
                 <input
                   type="range"
                   min="0"
                   max="100"
                   step="10"
-                  value={filters.minConvocationsMars}
-                  onChange={(e) => setFilters({...filters, minConvocationsMars: parseInt(e.target.value)})}
+                  value={filters.minConvocations}
+                  onChange={(e) => setFilters({...filters, minConvocations: parseInt(e.target.value)})}
                   className="w-full"
                 />
                 <div className="text-sm text-gray-600 mt-1">
-                  {filters.minConvocationsMars}% minimum
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  % minimum convocations avril
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  step="10"
-                  value={filters.minConvocationsAvril}
-                  onChange={(e) => setFilters({...filters, minConvocationsAvril: parseInt(e.target.value)})}
-                  className="w-full"
-                />
-                <div className="text-sm text-gray-600 mt-1">
-                  {filters.minConvocationsAvril}% minimum
+                  {filters.minConvocations}% minimum
                 </div>
               </div>
             </div>
@@ -387,8 +370,7 @@ export default function ControleTab() {
                 <button
                   onClick={() => setFilters({
                     minElevesGuides: 0,
-                    minConvocationsMars: 0,
-                    minConvocationsAvril: 0
+                    minConvocations: 0
                   })}
                   className="text-sm text-blue-600 hover:text-blue-800"
                 >
