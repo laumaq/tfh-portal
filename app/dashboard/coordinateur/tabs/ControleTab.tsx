@@ -271,7 +271,7 @@ export default function ControleTab() {
     
     // Guides avec moins de 50% de convocations dans au moins une session
     const guidesWithLowConvocations = guideStats.filter(guide => 
-      guide.sessionsStats.some(session => session.pourcentage < 50)
+      guide.sessionsStats.some(session => session.pourcentage !== null && session.pourcentage < 50)
     ).length;
   
     return {
