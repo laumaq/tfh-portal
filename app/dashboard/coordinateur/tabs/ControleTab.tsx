@@ -279,15 +279,15 @@ export default function ControleTab() {
         {globalMetrics && (
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6">
-              <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
-                <div className="text-3xl font-bold text-blue-700">{globalMetrics.totalGuides}</div>
-                <div className="text-sm text-blue-600">Guides actifs</div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 h-16 flex flex-col justify-center">
+                <div className="text-xl font-bold text-blue-700">{globalMetrics.totalGuides}</div>
+                <div className="text-xs text-blue-600">Guides actifs</div>
               </div>
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-2 h-16 flex flex-col justify-center">
                 <div className="text-3xl font-bold text-green-700">{globalMetrics.totalElevesGuides}</div>
                 <div className="text-sm text-green-600">Élèves assignés</div>
               </div>
-              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-2 h-16 flex flex-col justify-center">
                 <div className="text-3xl font-bold text-purple-700">{globalMetrics.avgElevesPerGuide}</div>
                 <div className="text-sm text-purple-600">Moyenne par guide</div>
               </div>
@@ -295,7 +295,7 @@ export default function ControleTab() {
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">  
               {globalMetrics?.sessionsAverages && Object.entries(globalMetrics.sessionsAverages).slice(0, 4).map(([sessionId, moyenne]) => (
-                <div key={sessionId} className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 h-16 flex flex-col justify-center">
                   <div className="text-3xl font-bold text-yellow-700">{moyenne.toFixed(1)}%</div>
                   <div className="text-sm text-yellow-600">Session {sessionId}</div>
                 </div>
