@@ -247,13 +247,18 @@ export default function ControleTab() {
     
     // Calculer les moyennes par session
     let sessionsAverages: Record<number, number> = {};
+    let sessionCounts: Record<number, number> = {};
     
     guideStats.forEach(guide => {
       guide.sessionsStats.forEach(session => {
-        if (!sessionsAverages[session.id]) {
-          sessionsAverages[session.id] = 0;
+        if (session.pourcentage !== null) {
+          if (!sessionsAverages[session.id]) {
+            sessionsAverages[session.id] = 0;
+            sessionCounts[session.id] = 0;
+          }
+          sessionsAverages[session.id] += session.pourcentage;
+          sessionCounts[session.id]++;
         }
-        sessionsAverages[session.id] += session.pourcentage;
       });
     });
     
