@@ -546,7 +546,7 @@ export default function ControleTab() {
                           <div className={`flex items-center gap-1 ${getPerformanceColor(session.pourcentage)} px-2 py-1 rounded`}>
                             {getPerformanceIcon(session.pourcentage)}
                             <span className="font-medium">
-                              {session.pourcentage.toFixed(1)}%
+                              {session.pourcentage === null ? '—' : `${session.pourcentage.toFixed(1)}%`}
                             </span>
                           </div>
                         )}
