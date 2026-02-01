@@ -20,26 +20,20 @@ export default function LoginLecteurExternePage() {
   const [welcomeMessage, setWelcomeMessage] = useState('');
   const router = useRouter();
 
-  // Fonction pour formater le prénom (majuscule initiale, reste en minuscule)
-  const formatPrenom = (prenom: string): string => {
-    const trimmed = prenom.trim();
-    if (!trimmed) return '';
-    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
-  };
-
   // Vérifier si l'utilisateur existe déjà
   const checkExistingUser = async () => {
     if (!nom.trim() || !prenom.trim()) return;
 
-    const nomNormalized = nom.trim().toUpperCase();
-    const prenomNormalized = prenom.trim().toUpperCase(); // Pour la recherche, on met en majuscules
+    // Pour la recherche : on trime mais on garde la casse pour la requête
+    const nomTrimmed = nom.trim();
+    const prenomTrimmed = prenom.trim();
 
     try {
       const { data: lecteurData, error: lecteurError } = await supabase
         .from('lecteurs_externes')
         .select('id, email, telephone, mot_de_passe')
-        .ilike('nom', nomNormalized)
-        .ilike('prenom', prenomNormalized + '%')
+        .ilike('nom', nomTrimmed) // ilike = insensible à la casse
+        .ilike('prenom', prenomTrimmed + '%') // ilike = insensible à la casse
         .maybeSingle();
 
       if (!lecteurError && lecteurData) {
@@ -62,17 +56,17 @@ export default function LoginLecteurExternePage() {
     setError('');
     setLoading(true);
 
-    // Pour la recherche/connexion : majuscules et trim
-    const nomNormalized = nom.trim().toUpperCase();
-    const prenomForSearch = prenom.trim().toUpperCase();
+    // On trime les valeurs mais on garde la casse
+    const nomTrimmed = nom.trim();
+    const prenomTrimmed = prenom.trim();
 
     try {
-      // 1. VÉRIFICATION UTILISATEUR EXISTANT
+      // 1. VÉRIFICATION UTILISATEUR EXISTANT (insensible à la casse)
       const { data: existingUser, error: checkError } = await supabase
         .from('lecteurs_externes')
-        .select('id, email, mot_de_passe')
-        .ilike('nom', nomNormalized)
-        .ilike('prenom', prenomForSearch + '%')
+        .select('id, email, mot_de_passe, nom, prenom')
+        .ilike('nom', nomTrimmed) // Recherche insensible à la casse
+        .ilike('prenom', prenomTrimmed + '%') // Recherche insensible à la casse
         .maybeSingle();
 
       if (!checkError && existingUser) {
@@ -105,18 +99,8 @@ export default function LoginLecteurExternePage() {
         // Connexion réussie
         localStorage.setItem('userType', 'lecteur_externe');
         localStorage.setItem('userId', existingUser.id);
-        // On garde l'affichage original du nom/prénom
-        const userData = await supabase
-          .from('lecteurs_externes')
-          .select('nom, prenom')
-          .eq('id', existingUser.id)
-          .single();
-        
-        if (userData.data) {
-          localStorage.setItem('userName', `${userData.data.prenom} ${userData.data.nom}`);
-        } else {
-          localStorage.setItem('userName', `${formatPrenom(prenom)} ${nomNormalized}`);
-        }
+        // On utilise les valeurs exactes de la BDD pour l'affichage
+        localStorage.setItem('userName', `${existingUser.prenom} ${existingUser.nom}`);
         
         router.push('/dashboard/lecteur_externe');
         return;
@@ -129,11 +113,13 @@ export default function LoginLecteurExternePage() {
         return;
       }
 
-      // Vérifier si l'email existe déjà
+      const emailTrimmed = email.trim();
+
+      // Vérifier si l'email existe déjà (insensible à la casse)
       const { data: emailCheck } = await supabase
         .from('lecteurs_externes')
         .select('id')
-        .ilike('email', email.trim())
+        .ilike('email', emailTrimmed) // ilike pour email aussi
         .maybeSingle();
 
       if (emailCheck) {
@@ -143,18 +129,16 @@ export default function LoginLecteurExternePage() {
       }
 
       // 3. CRÉATION DU NOUVEAU LECTEUR EXTERNE
-      // Ici on garde la casse originale formatée (majuscule initiale)
-      const prenomFormatted = formatPrenom(prenom);
-      const emailTrimmed = email.trim();
+      // On enregistre les valeurs exactes (trimées mais avec la casse d'origine)
       const telephoneTrimmed = telephone.trim() || null;
 
       const { data: newLecteur, error: insertError } = await supabase
         .from('lecteurs_externes')
         .insert([
           {
-            nom: nomNormalized, // Nom en majuscules pour uniformité
-            prenom: prenomFormatted, // Prénom formaté (majuscule initiale)
-            email: emailTrimmed,
+            nom: nomTrimmed, // Nom avec la casse exacte
+            prenom: prenomTrimmed, // Prénom avec la casse exacte
+            email: emailTrimmed, // Email exact (mais recherche insensible à la casse)
             telephone: telephoneTrimmed,
             mot_de_passe: password || null,
             created_at: new Date().toISOString()  
@@ -168,7 +152,7 @@ export default function LoginLecteurExternePage() {
       // Connexion automatique
       localStorage.setItem('userType', 'lecteur_externe');
       localStorage.setItem('userId', newLecteur.id);
-      localStorage.setItem('userName', `${prenomFormatted} ${nomNormalized}`);
+      localStorage.setItem('userName', `${prenomTrimmed} ${nomTrimmed}`);
       
       // Redirection avec message de bienvenue
       setWelcomeMessage('Bienvenue ! Votre compte a été créé avec succès \n \n Merci de prendre du temps pour nos rhétos !');
@@ -196,7 +180,6 @@ export default function LoginLecteurExternePage() {
     return () => clearTimeout(timeoutId);
   }, [nom, prenom]);
 
-  // JSX avec nettoyage en temps réel dans les inputs
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
@@ -242,11 +225,7 @@ export default function LoginLecteurExternePage() {
                 type="text"
                 value={prenom}
                 onChange={(e) => setPrenom(e.target.value)}
-                onBlur={(e) => {
-                  // Formatage visuel pour l'utilisateur
-                  const formatted = formatPrenom(e.target.value);
-                  setPrenom(formatted);
-                }}
+                onBlur={(e) => setPrenom(e.target.value.trim())}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
                 autoComplete="given-name"
