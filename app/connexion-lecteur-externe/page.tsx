@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Image from 'next/image';
-import logo from '@/app/components/Logotypebaseline_NB.png'; // Chemin vers votre logo
+import logo from '@/app/components/Logotypebaseline_NB.png';
 
 export default function LoginLecteurExternePage() {
   const [nom, setNom] = useState('');
@@ -20,16 +20,21 @@ export default function LoginLecteurExternePage() {
   const [welcomeMessage, setWelcomeMessage] = useState('');
   const router = useRouter();
 
+  // Fonction pour formater le prénom (majuscule initiale, reste en minuscule)
+  const formatPrenom = (prenom: string): string => {
+    const trimmed = prenom.trim();
+    if (!trimmed) return '';
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+  };
+
   // Vérifier si l'utilisateur existe déjà
   const checkExistingUser = async () => {
     if (!nom.trim() || !prenom.trim()) return;
 
     const nomNormalized = nom.trim().toUpperCase();
-    const prenomNormalized = prenom.trim();
-    const initiale = prenomNormalized.charAt(0).toUpperCase();
+    const prenomNormalized = prenom.trim().toUpperCase(); // Pour la recherche, on met en majuscules
 
     try {
-      // Vérifier dans la table lecteurs_externes
       const { data: lecteurData, error: lecteurError } = await supabase
         .from('lecteurs_externes')
         .select('id, email, telephone, mot_de_passe')
@@ -38,11 +43,9 @@ export default function LoginLecteurExternePage() {
         .maybeSingle();
 
       if (!lecteurError && lecteurData) {
-        // Utilisateur existant
         setIsNewUser(false);
         return lecteurData;
       } else {
-        // Nouvel utilisateur
         setIsNewUser(true);
         return null;
       }
@@ -59,9 +62,9 @@ export default function LoginLecteurExternePage() {
     setError('');
     setLoading(true);
 
+    // Pour la recherche/connexion : majuscules et trim
     const nomNormalized = nom.trim().toUpperCase();
-    const prenomNormalized = prenom.trim();
-    const initiale = prenomNormalized.charAt(0).toUpperCase();
+    const prenomForSearch = prenom.trim().toUpperCase();
 
     try {
       // 1. VÉRIFICATION UTILISATEUR EXISTANT
@@ -69,7 +72,7 @@ export default function LoginLecteurExternePage() {
         .from('lecteurs_externes')
         .select('id, email, mot_de_passe')
         .ilike('nom', nomNormalized)
-        .ilike('prenom', prenomNormalized + '%')
+        .ilike('prenom', prenomForSearch + '%')
         .maybeSingle();
 
       if (!checkError && existingUser) {
@@ -84,7 +87,6 @@ export default function LoginLecteurExternePage() {
             return;
           }
 
-          // Enregistrer le mot de passe
           const { error: updateError } = await supabase
             .from('lecteurs_externes')
             .update({ mot_de_passe: password })
@@ -103,7 +105,19 @@ export default function LoginLecteurExternePage() {
         // Connexion réussie
         localStorage.setItem('userType', 'lecteur_externe');
         localStorage.setItem('userId', existingUser.id);
-        localStorage.setItem('userName', `${prenomNormalized} ${nomNormalized}`);
+        // On garde l'affichage original du nom/prénom
+        const userData = await supabase
+          .from('lecteurs_externes')
+          .select('nom, prenom')
+          .eq('id', existingUser.id)
+          .single();
+        
+        if (userData.data) {
+          localStorage.setItem('userName', `${userData.data.prenom} ${userData.data.nom}`);
+        } else {
+          localStorage.setItem('userName', `${formatPrenom(prenom)} ${nomNormalized}`);
+        }
+        
         router.push('/dashboard/lecteur_externe');
         return;
       }
@@ -129,15 +143,20 @@ export default function LoginLecteurExternePage() {
       }
 
       // 3. CRÉATION DU NOUVEAU LECTEUR EXTERNE
+      // Ici on garde la casse originale formatée (majuscule initiale)
+      const prenomFormatted = formatPrenom(prenom);
+      const emailTrimmed = email.trim();
+      const telephoneTrimmed = telephone.trim() || null;
+
       const { data: newLecteur, error: insertError } = await supabase
         .from('lecteurs_externes')
         .insert([
           {
-            nom: nomNormalized,
-            prenom: prenomNormalized,
-            email: email.trim(),
-            telephone: telephone.trim() || null,
-            mot_de_passe: password || null, // Peut être vide pour première connexion
+            nom: nomNormalized, // Nom en majuscules pour uniformité
+            prenom: prenomFormatted, // Prénom formaté (majuscule initiale)
+            email: emailTrimmed,
+            telephone: telephoneTrimmed,
+            mot_de_passe: password || null,
             created_at: new Date().toISOString()  
           }
         ])
@@ -149,16 +168,13 @@ export default function LoginLecteurExternePage() {
       // Connexion automatique
       localStorage.setItem('userType', 'lecteur_externe');
       localStorage.setItem('userId', newLecteur.id);
-      localStorage.setItem('userName', `${prenomNormalized} ${nomNormalized}`);
+      localStorage.setItem('userName', `${prenomFormatted} ${nomNormalized}`);
       
       // Redirection avec message de bienvenue
       setWelcomeMessage('Bienvenue ! Votre compte a été créé avec succès \n \n Merci de prendre du temps pour nos rhétos !');
       setShowWelcome(true);
 
       setTimeout(() => {
-        localStorage.setItem('userType', 'lecteur_externe');
-        localStorage.setItem('userId', newLecteur.id);
-        localStorage.setItem('userName', `${prenomNormalized} ${nomNormalized}`);
         router.push('/dashboard/lecteur_externe');
       }, 6000);
 
@@ -180,6 +196,7 @@ export default function LoginLecteurExternePage() {
     return () => clearTimeout(timeoutId);
   }, [nom, prenom]);
 
+  // JSX avec nettoyage en temps réel dans les inputs
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
@@ -189,7 +206,7 @@ export default function LoginLecteurExternePage() {
                 src={logo}
                 alt="Logo de l'école"
                 className="h-auto max-w-[400px] object-contain"
-                priority // Important pour le LCP (Largest Contentful Paint)
+                priority
               />
             </div>
           <h1 className="text-3xl font-bold text-gray-800 mb-2">
@@ -211,6 +228,7 @@ export default function LoginLecteurExternePage() {
                 type="text"
                 value={nom}
                 onChange={(e) => setNom(e.target.value)}
+                onBlur={(e) => setNom(e.target.value.trim())}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
                 autoComplete="family-name"
@@ -224,6 +242,11 @@ export default function LoginLecteurExternePage() {
                 type="text"
                 value={prenom}
                 onChange={(e) => setPrenom(e.target.value)}
+                onBlur={(e) => {
+                  // Formatage visuel pour l'utilisateur
+                  const formatted = formatPrenom(e.target.value);
+                  setPrenom(formatted);
+                }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
                 autoComplete="given-name"
@@ -254,6 +277,7 @@ export default function LoginLecteurExternePage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  onBlur={(e) => setEmail(e.target.value.trim())}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required={isNewUser}
                   autoComplete="email"
@@ -269,6 +293,7 @@ export default function LoginLecteurExternePage() {
                   type="tel"
                   value={telephone}
                   onChange={(e) => setTelephone(e.target.value)}
+                  onBlur={(e) => setTelephone(e.target.value.trim())}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   autoComplete="tel"
                 />
@@ -345,12 +370,7 @@ export default function LoginLecteurExternePage() {
                   <div className="bg-blue-600 h-2 rounded-full animate-progress"></div>
                 </div>
                 <button
-                  onClick={() => {
-                    // On récupère les valeurs actuelles pour la redirection
-                    const nomNormalized = nom.trim().toUpperCase();
-                    const prenomNormalized = prenom.trim();
-                    router.push('/dashboard/lecteur_externe');
-                  }}
+                  onClick={() => router.push('/dashboard/lecteur_externe')}
                   className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
                 >
                   Aller maintenant →
