@@ -21,11 +21,18 @@ export default function LoginPage() {
     setLoading(true);
   
     try {
-      // Normaliser les entrées (majuscules pour l'initiale, capitalisation pour le nom)
-      const nomNormalized = nom.toUpperCase();
-      const initialeNormalized = initiale.toUpperCase();
+      // Nettoyer et normaliser les entrées
+      const nomNormalized = nom.trim().toUpperCase();
+      const initialeNormalized = initiale.trim().toUpperCase();
   
-      // 1. VÉRIFIER LES COORDINATEURS (code existant) - REQUÊTE MANQUANTE !
+      console.log("DEBUG - Entrées nettoyées:", {
+        nomOriginal: nom,
+        nomNormalized,
+        initialeOriginal: initiale,
+        initialeNormalized
+      });
+  
+      // 1. VÉRIFIER LES COORDINATEURS
       const { data: coordData, error: coordError } = await supabase
         .from('coordinateurs')
         .select('*')
@@ -36,13 +43,6 @@ export default function LoginPage() {
       if (!coordError && coordData) {
         const storedPassword = coordData.mot_de_passe;
         
-        console.log("DEBUG - Coordinateur trouvé:", {
-          nom: coordData.nom,
-          storedPassword,
-          isNull: storedPassword === null,
-          isEmpty: storedPassword === ''
-        });
-      
         // CAS 1: PREMIÈRE CONNEXION (NULL ou chaîne vide)
         if (storedPassword === null || storedPassword === '') {
           console.log("Première connexion - enregistrement du mot de passe");
@@ -83,14 +83,15 @@ export default function LoginPage() {
           return;
         }
       }
-      // 2. VÉRIFIER LES GUIDES (code existant)
+  
+      // 2. VÉRIFIER LES GUIDES
       const { data: guideData, error: guideError } = await supabase
         .from('guides')
         .select('*')
         .ilike('nom', nomNormalized)
         .ilike('initiale', initialeNormalized)
         .maybeSingle();
-
+  
       if (!guideError && guideData) {
         const storedPassword = guideData.mot_de_passe;
         
@@ -109,7 +110,7 @@ export default function LoginPage() {
           router.push('/dashboard/guide');
           return;
         }
-
+  
         // CAS 2: MOT DE PASSE EXISTANT
         if (guideData.mot_de_passe === password) {
           localStorage.setItem('userType', 'guide');
@@ -123,15 +124,15 @@ export default function LoginPage() {
           return;
         }
       }
-
-      // 3. VÉRIFIER LES ÉLÈVES (code existant)
+  
+      // 3. VÉRIFIER LES ÉLÈVES
       const { data: eleveData, error: eleveError } = await supabase
         .from('eleves')
         .select('*')
         .ilike('nom', nomNormalized)
         .ilike('initiale', initialeNormalized)
         .maybeSingle();
-
+  
       if (!eleveError && eleveData) {
         const storedPassword = eleveData.mot_de_passe;
         
@@ -150,7 +151,7 @@ export default function LoginPage() {
           router.push('/dashboard/eleve');
           return;
         }
-
+  
         // CAS 2: MOT DE PASSE EXISTANT
         if (eleveData.mot_de_passe === password) {
           localStorage.setItem('userType', 'eleve');
@@ -164,15 +165,15 @@ export default function LoginPage() {
           return;
         }
       }
-
-      // 4. VÉRIFIER LES MÉDIATEURS (NOUVEAU)
+  
+      // 4. VÉRIFIER LES MÉDIATEURS
       const { data: mediateurData, error: mediateurError } = await supabase
         .from('mediateurs')
         .select('*')
         .ilike('nom', nomNormalized)
-        .ilike('prenom', initialeNormalized + '%') // Cherche par prénom commençant par l'initiale
+        .ilike('prenom', initialeNormalized + '%')
         .maybeSingle();
-
+  
       if (!mediateurError && mediateurData) {
         const storedPassword = mediateurData.mot_de_passe;
         
@@ -181,7 +182,7 @@ export default function LoginPage() {
           prenom: mediateurData.prenom,
           storedPassword
         });
-
+  
         // CAS 1: PREMIÈRE CONNEXION (NULL ou chaîne vide)
         if (!storedPassword || storedPassword === '') {
           console.log("Première connexion médiateur - enregistrement du mot de passe");
@@ -197,7 +198,7 @@ export default function LoginPage() {
           router.push('/dashboard/mediateur');
           return;
         }
-
+  
         // CAS 2: MOT DE PASSE EXISTANT
         if (mediateurData.mot_de_passe === password) {
           localStorage.setItem('userType', 'mediateur');
@@ -211,7 +212,7 @@ export default function LoginPage() {
           return;
         }
       }
-
+  
       // Si aucune correspondance trouvée dans aucune table
       setError('Utilisateur non trouvé. Vérifiez votre nom et votre initiale.');
       setLoading(false);
@@ -308,6 +309,7 @@ export default function LoginPage() {
     </div>
   );
 }
+
 
 
 
