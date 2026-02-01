@@ -192,14 +192,23 @@ export default function ControleTab() {
     const bValue = b[sortConfig.key];
     
     // Logique spéciale pour les pourcentages de session
-    if (sortConfig.key.toString().includes('session_') && sortConfig.key.toString().includes('_percentage')) {
-      // Pour les pourcentages de session, nous voulons placer les nulls en dernier
+    const isSessionPercentage = sortConfig.key.toString().includes('session_') && 
+                                sortConfig.key.toString().includes('_percentage');
+    
+    if (isSessionPercentage) {
+      // Pour les pourcentages de session, nous voulons TOUJOURS placer les nulls en dernier
+      // Peu importe le sens du tri (ascendant ou descendant)
       if (aValue === null && bValue === null) return 0;
-      if (aValue === null) return sortConfig.direction === 'asc' ? 1 : -1;
-      if (bValue === null) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aValue === null) return 1;  // null toujours après
+      if (bValue === null) return -1; // non-null toujours avant
+      
+      // Pour les valeurs non-null, appliquer le tri selon la direction
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
+      }
     }
     
-    // Logique générale
+    // Logique générale pour les autres colonnes
     if (aValue === null && bValue === null) return 0;
     if (aValue === null) return sortConfig.direction === 'asc' ? 1 : -1;
     if (bValue === null) return sortConfig.direction === 'asc' ? -1 : 1;
