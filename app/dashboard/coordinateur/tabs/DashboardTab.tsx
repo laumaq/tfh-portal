@@ -34,6 +34,18 @@ export default function DashboardTab({
       description: 'Gestion des convocations'
     },
     {
+      id: 'presences' as TabType,
+      name: 'Présences',
+      icon: <span className="font-bold">✓</span>,
+      bgColor: 'bg-fuchsia-50',
+      borderColor: 'border-fuchsia-200 hover:border-fuchsia-300',
+      iconBg: 'bg-fuchsia-100 text-fuchsia-600 group-hover:bg-fuchsia-200',
+      countColor: 'text-fuchsia-600',
+      chevronColor: 'bg-fuchsia-50 text-fuchsia-600',
+      showCount: false,
+      description: 'Suivi des présences/absences'
+    },
+    {
       id: 'defenses' as TabType,
       name: 'Défenses',
       icon: <UserCheck className="w-5 h-5" />,
