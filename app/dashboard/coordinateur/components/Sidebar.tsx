@@ -35,14 +35,20 @@ export default function Sidebar({
       id: 'dashboard' as TabType,
       name: 'Tableau de bord',
       icon: <Shield className="w-5 h-5" />,
-      color: 'blue',
+      // Couleur complète (fond + texte + bordure)
+      activeClass: 'bg-blue-50 text-blue-700 border border-blue-200',
+      iconClass: 'bg-blue-100 text-blue-600',
+      countClass: 'bg-blue-100 text-blue-700',
       showCount: false
     },
     {
       id: 'convocations' as TabType,
       name: 'Convocations',
       icon: <FileText className="w-5 h-5" />,
-      color: 'purple',
+      // Couleur complète
+      activeClass: 'bg-purple-50 text-purple-700 border border-purple-200',
+      iconClass: 'bg-purple-100 text-purple-600',
+      countClass: 'bg-purple-100 text-purple-700',
       showCount: true,
       count: elevesCount
     },
@@ -50,13 +56,20 @@ export default function Sidebar({
       id: 'presences' as TabType,
       name: 'Présences',
       icon: '✓',
-      color: 'fuchsia',
+      // À MOITIÉ - seulement icône colorée
+      activeClass: 'bg-gray-50 text-gray-700 border border-gray-200',
+      iconClass: 'bg-fuchsia-100 text-fuchsia-600', // Icône colorée
+      countClass: 'bg-gray-100 text-gray-700', // Compteur gris
+      showCount: false
     },
     {
       id: 'defenses' as TabType,
       name: 'Défenses',
       icon: <UserCheck className="w-5 h-5" />,
-      color: 'green',
+      // Couleur complète
+      activeClass: 'bg-green-50 text-green-700 border border-green-200',
+      iconClass: 'bg-green-100 text-green-600',
+      countClass: 'bg-green-100 text-green-700',
       showCount: true,
       count: defensesCount
     },
@@ -64,14 +77,20 @@ export default function Sidebar({
       id: 'calendrier' as TabType,
       name: 'Calendrier',
       icon: <Calendar className="w-5 h-5" />,
-      color: 'orange',
+      // À MOITIÉ - seulement icône colorée
+      activeClass: 'bg-gray-50 text-gray-700 border border-gray-200',
+      iconClass: 'bg-orange-100 text-orange-600', // Icône colorée
+      countClass: 'bg-gray-100 text-gray-700', // Compteur gris
       showCount: false
     },
     {
       id: 'gestion-utilisateurs' as TabType,
       name: 'Utilisateurs',
       icon: <Users className="w-5 h-5" />,
-      color: 'indigo',
+      // Couleur complète
+      activeClass: 'bg-indigo-50 text-indigo-700 border border-indigo-200',
+      iconClass: 'bg-indigo-100 text-indigo-600',
+      countClass: 'bg-indigo-100 text-indigo-700',
       showCount: true,
       count: elevesCount + guidesCount
     },
@@ -79,21 +98,30 @@ export default function Sidebar({
       id: 'parametres' as TabType,
       name: 'Paramètres',
       icon: <Settings className="w-5 h-5" />,
-      color: 'gray',
+      // SANS COULEUR - tout en gris
+      activeClass: 'bg-gray-50 text-gray-700 border border-gray-200',
+      iconClass: 'bg-gray-100 text-gray-600', // Icône grise
+      countClass: 'bg-gray-100 text-gray-700', // Compteur gris
       showCount: false
     },
     {
       id: 'stats' as TabType,
       name: 'Statistiques',
       icon: <BarChart className="w-5 h-5" />,
-      color: 'emerald',
+      // À MOITIÉ - seulement fond coloré
+      activeClass: 'bg-emerald-50 text-gray-700 border border-gray-200', // Fond coloré, texte gris
+      iconClass: 'bg-gray-100 text-gray-600', // Icône grise
+      countClass: 'bg-gray-100 text-gray-700', // Compteur gris
       showCount: false
     },
     {
       id: 'controle' as TabType,
       name: 'Contrôle',
       icon: <Shield className="w-5 h-5" />,
-      color: 'red',
+      // Couleur complète
+      activeClass: 'bg-red-50 text-red-700 border border-red-200',
+      iconClass: 'bg-red-100 text-red-600',
+      countClass: 'bg-red-100 text-red-700',
       showCount: true,
       count: guidesCount
     }
@@ -140,12 +168,29 @@ export default function Sidebar({
               className={`
                 w-full flex items-center gap-3 p-3 rounded-lg transition-all
                 hover:bg-gray-50
-                ${activeTab === tab.id 
-                  ? `bg-${tab.color}-50 text-${tab.color}-700 border border-${tab.color}-200` 
-                  : 'text-gray-700'
-                }
+                ${activeTab === tab.id ? tab.activeClass : 'text-gray-700'}
               `}
             >
+              <div className={`
+                p-2 rounded-lg
+                ${activeTab === tab.id ? tab.iconClass : 'bg-gray-100 text-gray-600'}
+              `}>
+                {tab.icon}
+              </div>
+              
+              <div className="flex-1 text-left">
+                <div className="font-medium flex items-center justify-between">
+                  <span>{tab.name}</span>
+                  {tab.showCount && tab.count !== undefined && (
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                      activeTab === tab.id ? tab.countClass : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      {tab.count}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </button>
               <div className={`
                 p-2 rounded-lg
                 ${activeTab === tab.id 
