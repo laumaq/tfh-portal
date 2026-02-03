@@ -29,6 +29,9 @@ export default function EleveDashboard() {
   const [loading, setLoading] = useState(true);
   const [editingProblematique, setEditingProblematique] = useState(false);
   const [newProblematique, setNewProblematique] = useState('');
+  // Objectifs
+  const [objectifGeneral, setObjectifGeneral] = useState('');
+  const [objectifParticulier, setObjectifParticulier] = useState('');
   const [sessions, setSessions] = useState<Array<{
     index: number;
     nom: string;
@@ -62,6 +65,7 @@ export default function EleveDashboard() {
         `)
         .eq('id', eleveId)
         .single();
+      
   
       if (error) throw error;
       
@@ -120,6 +124,21 @@ export default function EleveDashboard() {
       
       setEleve(eleveFormate);
       setNewProblematique(data.problematique || '');
+      
+      // Charger l'objectif général depuis system_settings
+      const { data: objectifGeneralData } = await supabase
+        .from('system_settings')
+        .select('setting_value')
+        .eq('setting_key', 'objectif_general_tfh')
+        .single();
+      
+      if (objectifGeneralData) {
+        setObjectifGeneral(objectifGeneralData.setting_value || '');
+      }
+      
+      // L'objectif particulier est déjà dans les données élève
+      setObjectifParticulier(data.objectif_particulier || '');
+      
     } catch (err) {
       console.error('Erreur chargement élève:', err);
     } finally {
@@ -250,7 +269,81 @@ export default function EleveDashboard() {
             )}
           </div>
 
-
+          {/* Section Objectif Général */}
+          {objectifGeneral && (
+            <div className="border-t pt-6">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-lg">🎯</span>
+                <h3 className="text-lg font-semibold text-gray-700">Objectif général du TFH</h3>
+              </div>
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-5 border border-blue-100">
+                <div className="flex items-start gap-3">
+                  <div className="mt-1">
+                    <span className="text-blue-500 text-xl">📋</span>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                      {objectifGeneral}
+                    </p>
+                    <p className="text-sm text-blue-600 mt-3 font-medium">
+                      Cet objectif s'applique à tous les élèves.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Section Objectif Particulier */}
+          {objectifParticulier && (
+            <div className="border-t pt-6">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-lg">⭐</span>
+                <h3 className="text-lg font-semibold text-gray-700">Objectif particulier pour vous</h3>
+              </div>
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-5 border border-green-100">
+                <div className="flex items-start gap-3">
+                  <div className="mt-1">
+                    <span className="text-green-500 text-xl">✨</span>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                      {objectifParticulier}
+                    </p>
+                    <div className="flex items-center gap-2 mt-3">
+                      <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                        Défini par ton/ta guide
+                      </span>
+                      <span className="text-xs text-green-600">
+                        {eleve.guide_nom} {eleve.guide_initiale}.
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Message si aucun objectif particulier */}
+          {!objectifParticulier && (
+            <div className="border-t pt-6">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-lg">⭐</span>
+                <h3 className="text-lg font-semibold text-gray-700">Objectif particulier</h3>
+              </div>
+              <div className="bg-gradient-to-r from-gray-50 to-slate-50 rounded-lg p-5 border border-gray-100">
+                <div className="text-center py-4">
+                  <span className="text-3xl mb-3 block">🤔</span>
+                  <p className="text-gray-600 mb-2">
+                    Ton/ta guide n'a pas encore défini d'objectif particulier pour toi.
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Cet objectif sera personnalisé selon tes besoins spécifiques.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="border-t pt-6">
             <h3 className="text-lg font-semibold text-gray-700 mb-3">Convocations à venir</h3>
             <div className="space-y-4">
@@ -304,6 +397,7 @@ export default function EleveDashboard() {
     </div>
   );
 }
+
 
 
 
