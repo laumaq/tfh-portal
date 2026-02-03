@@ -669,7 +669,31 @@ export default function ParametresTab() {
   const saveAllDefenses = async () => {
     setSavingDefenses(true);
     try {
-      // Sauvegarder toutes les défenses existantes
+      // 1. D'abord, récupérer TOUTES les défenses actuelles de la base
+      const { data: existingDefenses, error: fetchError } = await supabase
+        .from('system_settings')
+        .select('setting_key')
+        .like('setting_key', 'Journee_defense_%');
+      
+      if (fetchError) throw fetchError;
+      
+      // 2. Préparer les suppressions pour les défenses qui existent en base mais plus localement
+      const currentDefenseKeys = journeesDefense.map(j => `Journee_defense_${j.id}`);
+      const defensesToDelete = existingDefenses
+        ?.filter(def => !currentDefenseKeys.includes(def.setting_key))
+        .map(def => def.setting_key) || [];
+      
+      // 3. Exécuter les suppressions si nécessaire
+      if (defensesToDelete.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('system_settings')
+          .delete()
+          .in('setting_key', defensesToDelete);
+        
+        if (deleteError) throw deleteError;
+      }
+      
+      // 4. Sauvegarder les défenses actuelles (sans date = vide)
       const upserts = journeesDefense.map(journee => ({
         setting_key: `Journee_defense_${journee.id}`,
         setting_value: journee.date, // Peut être vide
@@ -677,30 +701,22 @@ export default function ParametresTab() {
         updated_at: new Date().toISOString()
       }));
       
-      // Exécuter les upserts
-      const { error } = await supabase
-        .from('system_settings')
-        .upsert(upserts, { onConflict: 'setting_key' });
-      
-      if (error) throw error;
-      
-      // Nettoyer les défenses sans date de la base (optionnel)
-      const { error: deleteError } = await supabase
-        .from('system_settings')
-        .delete()
-        .in('setting_key', journeesDefense
-          .filter(j => j.date.trim() === '')
-          .map(j => `Journee_defense_${j.id}`)
-        );
-      
-      if (deleteError) {
-        console.warn('Avertissement suppression défenses vides:', deleteError);
+      // 5. Exécuter les upserts
+      if (upserts.length > 0) {
+        const { error: upsertError } = await supabase
+          .from('system_settings')
+          .upsert(upserts, { onConflict: 'setting_key' });
+        
+        if (upsertError) throw upsertError;
       }
       
-      // Recharger pour avoir l'état à jour
+      // 6. Recharger pour synchroniser
       await loadJourneesDefense();
       
-      showMessage('info', `${journeesDefense.filter(j => j.date.trim() !== '').length} défense(s) sauvegardée(s)`);
+      showMessage('info', 
+        `${journeesDefense.filter(j => j.date.trim() !== '').length} défense(s) sauvegardée(s) ` +
+        `${defensesToDelete.length > 0 ? `et ${defensesToDelete.length} défense(s) supprimée(s)` : ''}`
+      );
     } catch (err) {
       console.error('Erreur sauvegarde globale des défenses:', err);
       showMessage('error', 'Erreur lors de la sauvegarde globale');
@@ -751,14 +767,6 @@ export default function ParametresTab() {
     }
   };
 
-  // NOUVEAU : Supprimer une défense spécifique
-  const removeJourneeDefense = (journeeId: number) => {
-    if (confirm(`Voulez-vous vraiment supprimer la défense ${journeeId} ?`)) {
-      // Supprimer immédiatement de l'état local
-      setJourneesDefense(prev => prev.filter(j => j.id !== journeeId));
-      showMessage('info', `Défense ${journeeId} supprimée localement. Sauvegardez pour appliquer à la base.`);
-    }
-  };
 
   // Rendu des messages
   const renderMessage = () => {
@@ -1373,7 +1381,7 @@ export default function ParametresTab() {
                           </td>
                         </tr>
                       ) : (
-                        {journeesDefense.map((journee) => (
+                        journeesDefense.map((journee) => (
                           <tr key={journee.id} className="hover:bg-gray-50 transition-colors">
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center justify-center">
@@ -1439,7 +1447,8 @@ export default function ParametresTab() {
                               </div>
                             </td>
                           </tr>
-                        ))})
+                        ))
+                      )})
                       )}
                     </tbody>
                   </table>
