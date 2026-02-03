@@ -142,40 +142,39 @@ export default function ParametresTab() {
         .from('system_settings')
         .select('*')
         .like('setting_key', 'Journee_%')
+        .not('setting_key', 'like', 'Journee_defense_%') // EXCLURE les défenses
         .order('setting_key');
       
       if (error) throw error;
       
-      // Récupérer le nombre max depuis la base
-      let maxId = 10;
-      if (data && data.length > 0) {
-        data.forEach(item => {
-          const match = item.setting_key.match(/Journee_(\d+)/);
-          if (match) {
-            const id = parseInt(match[1]);
-            if (id > maxId) maxId = id;
-          }
-        });
+      // CRITIQUE : Ne créer que les journées qui existent dans la base
+      // OU les 10 premières si aucune journée n'existe
+      if (!data || data.length === 0) {
+        // Initialiser avec 10 journées vides
+        const journees = Array.from({ length: 10 }, (_, i) => ({
+          id: i + 1,
+          date: '',
+          libelle: `Journée ${i + 1}`
+        }));
+        setJourneesTFH(journees);
+        setHasLoadedJournees(true);
+        return;
       }
       
-      // S'il y a déjà des journées locales ET qu'on a déjà chargé une fois
-      // on garde le max entre base et local
-      const taille = hasLoadedJournees 
-        ? Math.max(maxId, journeesTFH.length)
-        : Math.max(maxId, 10);
+      // Récupérer les IDs existants pour déterminer le max
+      const existingIds = data.map(item => {
+        const match = item.setting_key.match(/Journee_(\d+)/);
+        return match ? parseInt(match[1]) : 0;
+      }).filter(id => id > 0);
       
-      const journees = Array.from({ length: taille }, (_, i) => {
+      const maxId = Math.max(...existingIds);
+      
+      // CRÉATION DU TABLEAU : Seulement les journées qui existent
+      const journees = Array.from({ length: Math.max(maxId, 10) }, (_, i) => {
         const journeeId = i + 1;
         const journeeData = data?.find(d => d.setting_key === `Journee_${journeeId}`);
         
-        // Si on a déjà chargé une fois, on garde les données locales existantes
-        if (hasLoadedJournees) {
-          const existingJournee = journeesTFH.find(j => j.id === journeeId);
-          if (existingJournee) {
-            return existingJournee;
-          }
-        }
-        
+        // Si la journée existe dans la base, l'utiliser
         if (journeeData) {
           return {
             id: journeeId,
@@ -184,22 +183,29 @@ export default function ParametresTab() {
           };
         }
         
-        return {
-          id: journeeId,
-          date: '',
-          libelle: `Journée ${journeeId}`
-        };
-      });
+        // Si la journée n'existe pas dans la base mais est dans la plage, la créer vide
+        if (journeeId <= maxId) {
+          return {
+            id: journeeId,
+            date: '',
+            libelle: `Journée ${journeeId}`
+          };
+        }
+        
+        // Pour les IDs supérieurs au max, ne pas les créer du tout
+        return null;
+      }).filter((j): j is JourneeTFH => j !== null);
       
       setJourneesTFH(journees);
-      setHasLoadedJournees(true); // Marquer comme chargé
+      setHasLoadedJournees(true);
+      
     } catch (err) {
       console.error('Erreur chargement journées TFH:', err);
       showMessage('error', 'Erreur lors du chargement des journées TFH');
     } finally {
       setLoadingJournees(false);
     }
-  }, [hasLoadedJournees, journeesTFH]); 
+  }, []);
 
   
   const loadJourneesDefense = useCallback(async () => {
@@ -457,7 +463,12 @@ export default function ParametresTab() {
           .eq('setting_key', `Journee_${journeeId}`);
         
         if (error) throw error;
-        setJourneesTFH(prev => prev.map(j => j.id === journeeId ? { ...j, date: '' } : j));
+        
+        // IMPORTANT : Mettre la date à vide dans l'état, mais garder la ligne
+        setJourneesTFH(prev => prev.map(j => 
+          j.id === journeeId ? { ...j, date: '' } : j
+        ));
+        
         showMessage('info', `Journée ${journeeId} supprimée de la base de données`);
       } else {
         // SAUVEGARDE : Si date non vide, upsert normal
@@ -471,7 +482,11 @@ export default function ParametresTab() {
           }, { onConflict: 'setting_key' });
         
         if (error) throw error;
-        setJourneesTFH(prev => prev.map(j => j.id === journeeId ? { ...j, date } : j));
+        
+        setJourneesTFH(prev => prev.map(j => 
+          j.id === journeeId ? { ...j, date } : j
+        ));
+        
         showMessage('info', `Date de la journée ${journeeId} sauvegardée`);
       }
     } catch (err) {
@@ -524,6 +539,12 @@ export default function ParametresTab() {
         if (upsertError) throw upsertError;
       }
       
+      // APRÈS LA SAUVEGARDE : Recharger pour nettoyer les lignes sans date
+      // Cela enlèvera les journées qui ont été supprimées
+      if (deletes.length > 0) {
+        await loadJourneesTFH();
+      }
+      
       showMessage('info', `${upserts.length} journée(s) sauvegardée(s) et ${deletes.length} journée(s) supprimée(s) !`);
     } catch (err) {
       console.error('Erreur sauvegarde globale:', err);
@@ -533,9 +554,14 @@ export default function ParametresTab() {
     }
   };
 
+
   // Ajouter une journée supplémentaire
   const addJournee = () => {
-    const nouvelleJourneeId = journeesTFH.length + 1;
+    // Trouver le prochain ID disponible
+    const existingIds = journeesTFH.map(j => j.id);
+    const maxId = existingIds.length > 0 ? Math.max(...existingIds) : 0;
+    const nouvelleJourneeId = maxId + 1;
+    
     setJourneesTFH(prev => [
       ...prev,
       {
@@ -548,9 +574,24 @@ export default function ParametresTab() {
 
   // Effacer toutes les dates
   const clearAllDates = () => {
-    if (confirm('Voulez-vous effacer toutes les dates ?')) {
+    if (confirm('Voulez-vous effacer toutes les dates ? Cette action supprimera aussi les entrées de la base de données.')) {
+      // D'abord vider localement
       setJourneesTFH(prev => prev.map(j => ({ ...j, date: '' })));
-      showMessage('info', 'Toutes les dates ont été effacées localement. N\'oubliez pas de sauvegarder.');
+      
+      // Ensuite supprimer de la base
+      supabase
+        .from('system_settings')
+        .delete()
+        .like('setting_key', 'Journee_%')
+        .not('setting_key', 'like', 'Journee_defense_%')
+        .then(({ error }) => {
+          if (error) {
+            console.error('Erreur suppression:', error);
+            showMessage('error', 'Erreur lors de la suppression');
+          } else {
+            showMessage('info', 'Toutes les dates ont été effacées.');
+          }
+        });
     }
   };
 
@@ -565,7 +606,10 @@ export default function ParametresTab() {
           .eq('setting_key', `Journee_defense_${journeeId}`);
         
         if (error) throw error;
+        
+        // IMPORTANT : Supprimer vraiment de l'état local
         setJourneesDefense(prev => prev.filter(j => j.id !== journeeId));
+        
         showMessage('info', `Défense ${journeeId} supprimée de la base de données`);
       } else {
         // SAUVEGARDE : Si date non vide, upsert normal
@@ -579,15 +623,18 @@ export default function ParametresTab() {
           }, { onConflict: 'setting_key' });
         
         if (error) throw error;
+        
         // Mettre à jour l'état local
         setJourneesDefense(prev => {
           const existing = prev.find(j => j.id === journeeId);
           if (existing) {
             return prev.map(j => j.id === journeeId ? { ...j, date } : j);
           } else {
-            return [...prev, { id: journeeId, date, libelle: `Défense TFH ${journeeId}` }];
+            return [...prev, { id: journeeId, date, libelle: `Défense TFH ${journeeId}` }]
+              .sort((a, b) => a.id - b.id); // Trier par ID
           }
         });
+        
         showMessage('info', `Date de la défense ${journeeId} sauvegardée`);
       }
     } catch (err) {
