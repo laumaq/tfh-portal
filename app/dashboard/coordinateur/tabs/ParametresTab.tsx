@@ -237,7 +237,9 @@ export default function ParametresTab() {
           };
         }
         return null;
-      }).filter((j): j is JourneeDefense => j !== null);
+      })
+      .filter((j): j is JourneeDefense => j !== null)
+      .sort((a, b) => a.id - b.id); // Trier par ID
       
       setJourneesDefense(journees);
       setHasLoadedDefenses(true);
@@ -248,7 +250,7 @@ export default function ParametresTab() {
       setLoadingDefenses(false);
     }
   }, []);
-  
+    
 
   useEffect(() => {
     loadSystemSettings();
@@ -598,43 +600,33 @@ export default function ParametresTab() {
   const saveJourneeDefense = async (journeeId: number, date: string) => {
     setSavingDefenses(true);
     try {
+      // Toujours sauvegarder (même si date vide)
+      // C'est plus simple de toujours upsert, et gérer l'affichage côté front
+      const { error } = await supabase
+        .from('system_settings')
+        .upsert({
+          setting_key: `Journee_defense_${journeeId}`,
+          setting_value: date, // Peut être une chaîne vide
+          description: `Journée de défense des TFH ${journeeId}`,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'setting_key' });
+      
+      if (error) throw error;
+      
+      // Mettre à jour l'état local
+      setJourneesDefense(prev => {
+        const existing = prev.find(j => j.id === journeeId);
+        if (existing) {
+          return prev.map(j => j.id === journeeId ? { ...j, date } : j);
+        } else {
+          return [...prev, { id: journeeId, date, libelle: `Défense TFH ${journeeId}` }]
+            .sort((a, b) => a.id - b.id);
+        }
+      });
+      
       if (date.trim() === '') {
-        // SUPPRESSION : Si date vide, supprimer la ligne
-        const { error } = await supabase
-          .from('system_settings')
-          .delete()
-          .eq('setting_key', `Journee_defense_${journeeId}`);
-        
-        if (error) throw error;
-        
-        // IMPORTANT : Supprimer vraiment de l'état local
-        setJourneesDefense(prev => prev.filter(j => j.id !== journeeId));
-        
-        showMessage('info', `Défense ${journeeId} supprimée de la base de données`);
+        showMessage('info', `Défense ${journeeId} marquée comme sans date`);
       } else {
-        // SAUVEGARDE : Si date non vide, upsert normal
-        const { error } = await supabase
-          .from('system_settings')
-          .upsert({
-            setting_key: `Journee_defense_${journeeId}`,
-            setting_value: date,
-            description: `Journée de défense des TFH ${journeeId}`,
-            updated_at: new Date().toISOString()
-          }, { onConflict: 'setting_key' });
-        
-        if (error) throw error;
-        
-        // Mettre à jour l'état local
-        setJourneesDefense(prev => {
-          const existing = prev.find(j => j.id === journeeId);
-          if (existing) {
-            return prev.map(j => j.id === journeeId ? { ...j, date } : j);
-          } else {
-            return [...prev, { id: journeeId, date, libelle: `Défense TFH ${journeeId}` }]
-              .sort((a, b) => a.id - b.id); // Trier par ID
-          }
-        });
-        
         showMessage('info', `Date de la défense ${journeeId} sauvegardée`);
       }
     } catch (err) {
@@ -644,51 +636,71 @@ export default function ParametresTab() {
       setSavingDefenses(false);
     }
   };
+  
+  // 2. Nouvelle fonction pour supprimer définitivement une défense
+  const deleteJourneeDefense = async (journeeId: number) => {
+    if (!confirm(`Voulez-vous vraiment supprimer définitivement la défense ${journeeId} ?`)) {
+      return;
+    }
+    
+    setSavingDefenses(true);
+    try {
+      // 1. Supprimer de la base de données
+      const { error } = await supabase
+        .from('system_settings')
+        .delete()
+        .eq('setting_key', `Journee_defense_${journeeId}`);
+      
+      if (error) throw error;
+      
+      // 2. Supprimer de l'état local
+      setJourneesDefense(prev => prev.filter(j => j.id !== journeeId));
+      
+      showMessage('info', `Défense ${journeeId} supprimée définitivement`);
+    } catch (err) {
+      console.error('Erreur suppression défense:', err);
+      showMessage('error', 'Erreur lors de la suppression');
+    } finally {
+      setSavingDefenses(false);
+    }
+  };
 
-  // NOUVEAU : Sauvegarder toutes les défenses
+  // Sauvegarder toutes les défenses
   const saveAllDefenses = async () => {
     setSavingDefenses(true);
     try {
-      // Préparer les opérations d'upsert et delete
-      const upserts: any[] = [];
-      const deletes: string[] = [];
+      // Sauvegarder toutes les défenses existantes
+      const upserts = journeesDefense.map(journee => ({
+        setting_key: `Journee_defense_${journee.id}`,
+        setting_value: journee.date, // Peut être vide
+        description: `Journée de défense des TFH ${journee.id}`,
+        updated_at: new Date().toISOString()
+      }));
       
-      journeesDefense.forEach(journee => {
-        if (journee.date.trim() === '') {
-          deletes.push(`Journee_defense_${journee.id}`);
-        } else {
-          upserts.push({
-            setting_key: `Journee_defense_${journee.id}`,
-            setting_value: journee.date,
-            description: `Journée de défense des TFH ${journee.id}`,
-            updated_at: new Date().toISOString()
-          });
-        }
-      });
+      // Exécuter les upserts
+      const { error } = await supabase
+        .from('system_settings')
+        .upsert(upserts, { onConflict: 'setting_key' });
       
-      // Exécuter les suppressions si nécessaire
-      if (deletes.length > 0) {
-        const { error: deleteError } = await supabase
-          .from('system_settings')
-          .delete()
-          .in('setting_key', deletes);
-        
-        if (deleteError) throw deleteError;
+      if (error) throw error;
+      
+      // Nettoyer les défenses sans date de la base (optionnel)
+      const { error: deleteError } = await supabase
+        .from('system_settings')
+        .delete()
+        .in('setting_key', journeesDefense
+          .filter(j => j.date.trim() === '')
+          .map(j => `Journee_defense_${j.id}`)
+        );
+      
+      if (deleteError) {
+        console.warn('Avertissement suppression défenses vides:', deleteError);
       }
       
-      // Exécuter les upserts si nécessaire
-      if (upserts.length > 0) {
-        const { error: upsertError } = await supabase
-          .from('system_settings')
-          .upsert(upserts, { onConflict: 'setting_key' });
-        
-        if (upsertError) throw upsertError;
-      }
+      // Recharger pour avoir l'état à jour
+      await loadJourneesDefense();
       
-      // Nettoyer les journées sans date de l'état local
-      setJourneesDefense(prev => prev.filter(j => j.date.trim() !== ''));
-      
-      showMessage('info', `${upserts.length} défense(s) sauvegardée(s)`);
+      showMessage('info', `${journeesDefense.filter(j => j.date.trim() !== '').length} défense(s) sauvegardée(s)`);
     } catch (err) {
       console.error('Erreur sauvegarde globale des défenses:', err);
       showMessage('error', 'Erreur lors de la sauvegarde globale');
@@ -713,11 +725,29 @@ export default function ParametresTab() {
     ]);
   };
 
-  // NOUVEAU : Effacer toutes les dates de défense
-  const clearAllDefenseDates = () => {
-    if (confirm('Voulez-vous effacer toutes les dates de défense ?')) {
-      setJourneesDefense([]);
-      showMessage('info', 'Toutes les dates de défense ont été effacées localement. N\'oubliez pas de sauvegarder.');
+  // Effacer toutes les dates de défense
+  const clearAllDefenseDates = async () => {
+    if (confirm('Voulez-vous effacer toutes les dates de défense ? Les défenses sans date seront supprimées de la base.')) {
+      setSavingDefenses(true);
+      try {
+        // Supprimer toutes les défenses de la base
+        const { error } = await supabase
+          .from('system_settings')
+          .delete()
+          .like('setting_key', 'Journee_defense_%');
+        
+        if (error) throw error;
+        
+        // Vider l'état local
+        setJourneesDefense([]);
+        
+        showMessage('info', 'Toutes les défenses ont été supprimées.');
+      } catch (err) {
+        console.error('Erreur suppression défenses:', err);
+        showMessage('error', 'Erreur lors de la suppression');
+      } finally {
+        setSavingDefenses(false);
+      }
     }
   };
 
@@ -1343,7 +1373,7 @@ export default function ParametresTab() {
                           </td>
                         </tr>
                       ) : (
-                        journeesDefense.map((journee) => (
+                        {journeesDefense.map((journee) => (
                           <tr key={journee.id} className="hover:bg-gray-50 transition-colors">
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center justify-center">
@@ -1390,9 +1420,9 @@ export default function ParametresTab() {
                               <div className="flex gap-2">
                                 <button
                                   onClick={() => saveJourneeDefense(journee.id, journee.date)}
-                                  disabled={!journee.date || savingDefenses}
+                                  disabled={savingDefenses}
                                   className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                                    journee.date && !savingDefenses
+                                    !savingDefenses
                                       ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' 
                                       : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                   }`}
@@ -1400,7 +1430,7 @@ export default function ParametresTab() {
                                   {savingDefenses ? '...' : 'Sauvegarder'}
                                 </button>
                                 <button
-                                  onClick={() => removeJourneeDefense(journee.id)}
+                                  onClick={() => deleteJourneeDefense(journee.id)}
                                   disabled={savingDefenses}
                                   className="px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded text-xs font-medium disabled:opacity-50"
                                 >
@@ -1409,7 +1439,7 @@ export default function ParametresTab() {
                               </div>
                             </td>
                           </tr>
-                        ))
+                        ))})
                       )}
                     </tbody>
                   </table>
