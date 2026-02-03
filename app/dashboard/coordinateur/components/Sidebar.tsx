@@ -55,11 +55,10 @@ export default function Sidebar({
     {
       id: 'presences' as TabType,
       name: 'Présences',
-      icon: <span className="text-fuchsia-600 font-bold">✓</span>,
-      // Couleur fuchsia pour l'icône
-      activeClass: 'bg-gray-50 text-gray-700 border border-gray-200',
+      icon: <span className="font-bold">✓</span>,
+      activeClass: 'bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-200',
       iconClass: 'bg-fuchsia-100 text-fuchsia-600',
-      countClass: 'bg-gray-100 text-gray-700',
+      countClass: 'bg-fuchsia-100 text-fuchsia-700',
       showCount: false
     },
     {
