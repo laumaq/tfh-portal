@@ -18,6 +18,7 @@ export function useCoordinateurData() {
   const [coordinateurs, setCoordinateurs] = useState<Coordinateur[]>([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<string[]>([]);
+  const [currentCoordinateur, setCurrentCoordinateur] = useState<{nom: string, prenom: string} | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -95,6 +96,23 @@ export function useCoordinateurData() {
       ).sort();
       setCategories(uniqueCategories);
 
+      const loadCurrentCoordinateur = async () => {
+        const userId = localStorage.getItem('userId');
+        if (userId) {
+          const { data } = await supabase
+            .from('coordinateurs')
+            .select('nom, prenom')
+            .eq('id', userId)
+            .single();
+          
+          if (data) {
+            setCurrentCoordinateur(data);
+          }
+        }
+      };
+
+      await loadCurrentCoordinateur();
+
     } catch (err) {
       console.error('Erreur chargement données:', err);
     } finally {
@@ -127,7 +145,8 @@ export function useCoordinateurData() {
     categories,
     loading,
     refreshData,
-    updateEleveLocal
+    updateEleveLocal,
+    currentCoordinateur
   };
 
 }
