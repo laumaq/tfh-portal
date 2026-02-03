@@ -73,8 +73,8 @@ export default function CoordinateurDashboard() {
             guides={guides}
             onTabChange={setActiveTab}
             userName={userName}
-            coordinateurNom={currentCoordinateur?.nom || ''}
-            coordinateurPrenom={currentCoordinateur?.prenom || ''}
+            coordinateurNom={coordinateurs[0]?.nom || ''}
+            coordinateurPrenom={coordinateurs[0]?.prenom || ''}
           />
         );
         
@@ -230,6 +230,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
