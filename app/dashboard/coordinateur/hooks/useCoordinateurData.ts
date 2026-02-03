@@ -146,8 +146,7 @@ export function useCoordinateurData() {
     categories,
     loading,
     refreshData,
-    updateEleveLocal,
-    currentCoordinateur
+    updateEleveLocal
   };
 
 }
