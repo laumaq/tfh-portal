@@ -269,7 +269,56 @@ export default function EleveDashboard() {
             )}
           </div>
 
-          {/* Section Objectif Général */}
+
+          <div className="border-t pt-6">
+            <h3 className="text-lg font-semibold text-gray-700 mb-3">Convocations à venir</h3>
+            <div className="space-y-4">
+              {eleve.sessions && eleve.sessions.length > 0 ? (
+                eleve.sessions.map(session => {
+                  const statut = session.statut || '';
+                  const estConvoque = statut.startsWith('Oui');
+                  const message = getMessagePourEleve(statut);
+                  
+                  return (
+                    <div key={session.index} className="border rounded-lg overflow-hidden">
+                      <div className={`flex justify-between items-center p-3 ${estConvoque ? 'bg-orange-50' : 'bg-gray-50'}`}>
+                        <div>
+                          <span className="font-medium">{session.nom}</span>
+                          <span className="text-sm text-gray-500 ml-2">
+                            ({session.date_debut.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })})
+                          </span>
+                        </div>
+                          <span className={
+                            estConvoque 
+                              ? 'text-orange-600 font-medium' 
+                              : statut.startsWith('Non')
+                              ? 'text-green-600 font-medium'
+                              : 'text-gray-500'
+                          }>
+                            {estConvoque ? 'Convoqué·e' : statut.startsWith('Non') ? 'Non convoqué·e' : '—'}
+                          </span>
+                      </div>
+                      
+                      {statut && statut !== '' && !statut.startsWith('Non') && (
+                        <div className="p-3 border-t bg-white">
+                          <p className="text-sm text-gray-700">
+                            {message}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-center text-gray-500 py-6">
+                  <p className="mb-2">Aucune session à venir planifiée.</p>
+                  <p className="text-sm">Tes prochaines convocations apparaîtront ici.</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+                    {/* Section Objectif Général */}
           {objectifGeneral && (
             <div className="border-t pt-6">
               <div className="flex items-center gap-2 mb-3">
@@ -344,59 +393,13 @@ export default function EleveDashboard() {
               </div>
             </div>
           )}
-          <div className="border-t pt-6">
-            <h3 className="text-lg font-semibold text-gray-700 mb-3">Convocations à venir</h3>
-            <div className="space-y-4">
-              {eleve.sessions && eleve.sessions.length > 0 ? (
-                eleve.sessions.map(session => {
-                  const statut = session.statut || '';
-                  const estConvoque = statut.startsWith('Oui');
-                  const message = getMessagePourEleve(statut);
-                  
-                  return (
-                    <div key={session.index} className="border rounded-lg overflow-hidden">
-                      <div className={`flex justify-between items-center p-3 ${estConvoque ? 'bg-orange-50' : 'bg-gray-50'}`}>
-                        <div>
-                          <span className="font-medium">{session.nom}</span>
-                          <span className="text-sm text-gray-500 ml-2">
-                            ({session.date_debut.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })})
-                          </span>
-                        </div>
-                          <span className={
-                            estConvoque 
-                              ? 'text-orange-600 font-medium' 
-                              : statut.startsWith('Non')
-                              ? 'text-green-600 font-medium'
-                              : 'text-gray-500'
-                          }>
-                            {estConvoque ? 'Convoqué·e' : statut.startsWith('Non') ? 'Non convoqué·e' : '—'}
-                          </span>
-                      </div>
-                      
-                      {statut && statut !== '' && !statut.startsWith('Non') && (
-                        <div className="p-3 border-t bg-white">
-                          <p className="text-sm text-gray-700">
-                            {message}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="text-center text-gray-500 py-6">
-                  <p className="mb-2">Aucune session à venir planifiée.</p>
-                  <p className="text-sm">Tes prochaines convocations apparaîtront ici.</p>
-                </div>
-              )}
-            </div>
-          </div>
-
+          
         </div>
       </div>
     </div>
   );
 }
+
 
 
 
