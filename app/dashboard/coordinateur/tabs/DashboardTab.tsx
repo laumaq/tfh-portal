@@ -11,13 +11,17 @@ interface DashboardTabProps {
   guides: Guide[];
   onTabChange: (tab: TabType) => void;
   userName: string;
+  coordinateurNom: string; 
+  coordinateurPrenom: string;
 }
 
 export default function DashboardTab({ 
   eleves, 
   guides, 
   onTabChange,
-  userName 
+  userName,
+  coordinateurNom,
+  coordinateurPrenom 
 }: DashboardTabProps) {
   const tabs = [
     {
@@ -126,7 +130,7 @@ export default function DashboardTab({
     <div className="p-6">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-800 mb-2">Tableau de bord Coordinateur</h1>
-        <p className="text-gray-600">Bienvenue {userName}. Gestion complète du système TFH Portal.</p>
+        <p className="text-gray-600">Bienvenue {coordinateurPrenom} {coordinateurNom}. Voici votre panneau de gestion des TFH.</p>
       </div>
 
       {/* Cartes de navigation */}
