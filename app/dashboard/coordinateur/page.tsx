@@ -35,6 +35,7 @@ export default function CoordinateurDashboard() {
     lecteursExternes, 
     mediateurs, 
     coordinateurs, 
+    currentCoordinateur,
     categories,
     loading, 
     refreshData 
@@ -73,8 +74,8 @@ export default function CoordinateurDashboard() {
             guides={guides}
             onTabChange={setActiveTab}
             userName={userName}
-            coordinateurNom={coordinateurs[0]?.nom || ''}
-            coordinateurPrenom={coordinateurs[0]?.prenom || ''}
+            coordinateurNom={currentCoordinateur?.nom || ''}
+            coordinateurPrenom={currentCoordinateur?.prenom || ''}
           />
         );
         
@@ -230,6 +231,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
