@@ -191,27 +191,6 @@ export default function Sidebar({
                 </div>
               </div>
             </button>
-              <div className={`
-                p-2 rounded-lg
-                ${activeTab === tab.id 
-                  ? `bg-${tab.color}-100 text-${tab.color}-600` 
-                  : 'bg-gray-100 text-gray-600'
-                }
-              `}>
-                {tab.icon}
-              </div>
-              
-              <div className="flex-1 text-left">
-                <div className="font-medium flex items-center justify-between">
-                  <span>{tab.name}</span>
-                  {tab.showCount && tab.count !== undefined && (
-                    <span className={`text-xs px-2 py-0.5 rounded-full bg-${tab.color}-100 text-${tab.color}-700`}>
-                      {tab.count}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </button>
           ))}
         </nav>
 
