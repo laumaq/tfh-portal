@@ -142,6 +142,7 @@ export function useCoordinateurData() {
     lecteursExternes,
     mediateurs,
     coordinateurs,
+    currentCoordinateur,
     categories,
     loading,
     refreshData,
