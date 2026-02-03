@@ -34,7 +34,7 @@ interface DisplaySettings {
 export default function ParametresTab() {
   // État des sections dépliables
   const [expandedSections, setExpandedSections] = useState({
-    fonctionnels: true,
+    fonctionnels: false,
     affichage: false,
     annee: false
   });
@@ -65,6 +65,9 @@ export default function ParametresTab() {
   const [loadingJournees, setLoadingJournees] = useState(false);
   const [saving, setSaving] = useState(false);
   const [hasLoadedJournees, setHasLoadedJournees] = useState(false);
+    // Objectif général TFH
+  const [objectifGeneral, setObjectifGeneral] = useState('');
+  const [savingObjectif, setSavingObjectif] = useState(false);
 
   // Messages temporaires
   const showMessage = (type: 'info' | 'error', text: string) => {
@@ -98,6 +101,17 @@ export default function ParametresTab() {
           settings[setting.setting_key] = setting.setting_value === 'true';
         });
         setDisplaySettings(prev => ({ ...prev, ...settings }));
+      }
+
+      // Charger l'objectif général
+      const { data: objectifData } = await supabase
+        .from('system_settings')
+        .select('*')
+        .eq('setting_key', 'objectif_general_tfh')
+        .single();
+      
+      if (objectifData) {
+        setObjectifGeneral(objectifData.setting_value || '');
       }
     } catch (err) {
       console.error('Erreur chargement paramètres:', err);
@@ -255,10 +269,19 @@ export default function ParametresTab() {
 
   // Toggle d'une section
   const toggleSection = (section: keyof typeof expandedSections) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
+    setExpandedSections(prev => {
+      // Créer un nouvel objet avec toutes les sections repliées
+      const newState = {
+        fonctionnels: false,
+        affichage: false,
+        annee: false
+      };
+      
+      // Basculer l'état de la section cliquée
+      newState[section] = !prev[section];
+      
+      return newState;
+    });
   };
 
   // Gestion du paramètre fonctionnel
@@ -284,6 +307,37 @@ export default function ParametresTab() {
       showMessage('error', 'Erreur lors de la mise à jour');
     } finally {
       setLoadingSettings(false);
+    }
+  };
+
+  // Sauvegarder l'objectif général
+  const saveObjectifGeneral = async () => {
+    if (objectifGeneral.trim() === '') {
+      showMessage('error', 'L\'objectif ne peut pas être vide');
+      return;
+    }
+  
+    setSavingObjectif(true);
+    try {
+      const { error } = await supabase
+        .from('system_settings')
+        .upsert({
+          setting_key: 'objectif_general_tfh',
+          setting_value: objectifGeneral,
+          description: 'Objectif général pour tous les élèves TFH',
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'setting_key'
+        });
+      
+      if (error) throw error;
+      
+      showMessage('info', 'Objectif général sauvegardé avec succès !');
+    } catch (err) {
+      console.error('Erreur sauvegarde objectif:', err);
+      showMessage('error', 'Erreur lors de la sauvegarde');
+    } finally {
+      setSavingObjectif(false);
     }
   };
 
@@ -521,6 +575,46 @@ export default function ParametresTab() {
                       {lecteurInterneEnabled ? 'Activé' : 'Désactivé'}
                     </span>
                   </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="border border-green-200 rounded-lg p-6 mb-4">
+              <h4 className="text-md font-medium text-gray-700 mb-4 flex items-center gap-2">
+                <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">🎯</span>
+                Objectif général TFH
+              </h4>
+              
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="objectif-general" className="block text-sm font-medium text-gray-700 mb-2">
+                    Objectif pédagogique pour tous les élèves
+                  </label>
+                  <textarea
+                    id="objectif-general"
+                    value={objectifGeneral}
+                    onChange={(e) => setObjectifGeneral(e.target.value)}
+                    className="w-full h-32 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Exemple : Développer une approche critique et méthodique du travail de recherche..."
+                  />
+                  <p className="text-xs text-gray-500 mt-2">
+                    Cet objectif sera visible par tous les utilisateurs selon leurs droits d'accès.
+                  </p>
+                </div>
+                
+                <div className="flex justify-end">
+                  <button
+                    onClick={saveObjectifGeneral}
+                    disabled={savingObjectif || objectifGeneral.trim() === ''}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
+                      objectifGeneral.trim() !== '' && !savingObjectif
+                        ? 'bg-green-600 text-white hover:bg-green-700'
+                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
+                    <Save className="w-4 h-4" />
+                    {savingObjectif ? 'Sauvegarde...' : 'Sauvegarder l\'objectif'}
+                  </button>
                 </div>
               </div>
             </div>
