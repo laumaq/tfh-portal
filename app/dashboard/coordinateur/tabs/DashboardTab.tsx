@@ -119,39 +119,41 @@ export default function DashboardTab({
 
       {/* Cartes de navigation */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        <div
-          key={tab.id}
-          onClick={() => onTabChange(tab.id)}
-          className={`
-            bg-white rounded-xl shadow-sm border p-6 cursor-pointer
-            transition-all hover:shadow-md hover:-translate-y-1
-            ${tab.borderColor}
-            group
-          `}
-        >
-          <div className="flex items-start gap-4 mb-4">
-            <div className={`p-3 rounded-lg ${tab.iconBg}`}>
-              {tab.icon}
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-gray-800 mb-1">{tab.name}</h3>
-              <p className="text-sm text-gray-500">{tab.description}</p>
-            </div>
-            {tab.showCount && tab.count !== undefined && (
-              <div className={`text-lg font-bold ${tab.countColor}`}>
-                {tab.count}
+        {tabs.map((tab) => (
+          <div
+            key={tab.id}
+            onClick={() => onTabChange(tab.id)}
+            className={`
+              bg-white rounded-xl shadow-sm border p-6 cursor-pointer
+              transition-all hover:shadow-md hover:-translate-y-1
+              ${tab.borderColor}
+              group
+            `}
+          >
+            <div className="flex items-start gap-4 mb-4">
+              <div className={`p-3 rounded-lg ${tab.iconBg}`}>
+                {tab.icon}
               </div>
-            )}
-          </div>
-          <div className="pt-4 border-t border-gray-100">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Accéder à la section</span>
-              <div className={`p-1 rounded-full ${tab.chevronColor}`}>
-                <ChevronRight className="w-4 h-4" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-800 mb-1">{tab.name}</h3>
+                <p className="text-sm text-gray-500">{tab.description}</p>
+              </div>
+              {tab.showCount && tab.count !== undefined && (
+                <div className={`text-lg font-bold ${tab.countColor}`}>
+                  {tab.count}
+                </div>
+              )}
+            </div>
+            <div className="pt-4 border-t border-gray-100">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Accéder à la section</span>
+                <div className={`p-1 rounded-full ${tab.chevronColor}`}>
+                  <ChevronRight className="w-4 h-4" />
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        ))}
       </div>
 
       {/* Statistiques rapides */}
