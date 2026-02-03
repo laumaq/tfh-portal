@@ -21,64 +21,92 @@ export default function DashboardTab({
 }: DashboardTabProps) {
   const tabs = [
     {
-      id: 'dashboard' as TabType,
-      name: 'Tableau de bord',
-      icon: <Shield className="w-5 h-5" />,
-      color: 'blue',
-      showCount: false
-    },
-    {
       id: 'convocations' as TabType,
       name: 'Convocations',
       icon: <FileText className="w-5 h-5" />,
-      color: 'purple',
+      bgColor: 'bg-purple-50',
+      borderColor: 'border-purple-200 hover:border-purple-300',
+      iconBg: 'bg-purple-100 text-purple-600 group-hover:bg-purple-200',
+      countColor: 'text-purple-600',
+      chevronColor: 'bg-purple-50 text-purple-600',
       showCount: true,
-      count: eleves.length
+      count: eleves.length,
+      description: 'Gestion des convocations'
     },
     {
       id: 'defenses' as TabType,
       name: 'Défenses',
       icon: <UserCheck className="w-5 h-5" />,
-      color: 'green',
+      bgColor: 'bg-green-50',
+      borderColor: 'border-green-200 hover:border-green-300',
+      iconBg: 'bg-green-100 text-green-600 group-hover:bg-green-200',
+      countColor: 'text-green-600',
+      chevronColor: 'bg-green-50 text-green-600',
       showCount: true,
-      count: eleves.filter(e => e.date_defense).length
+      count: eleves.filter(e => e.date_defense).length,
+      description: 'Planification des soutenances'
     },
     {
       id: 'calendrier' as TabType,
       name: 'Calendrier',
       icon: <Calendar className="w-5 h-5" />,
-      color: 'orange',
-      showCount: false
+      bgColor: 'bg-orange-50',
+      borderColor: 'border-orange-200 hover:border-orange-300',
+      iconBg: 'bg-orange-100 text-orange-600 group-hover:bg-orange-200',
+      countColor: 'text-orange-600',
+      chevronColor: 'bg-orange-50 text-orange-600',
+      showCount: false,
+      description: 'Planning & détection de conflits'
     },
     {
       id: 'gestion-utilisateurs' as TabType,
       name: 'Utilisateurs',
       icon: <Users className="w-5 h-5" />,
-      color: 'indigo',
+      bgColor: 'bg-indigo-50',
+      borderColor: 'border-indigo-200 hover:border-indigo-300',
+      iconBg: 'bg-indigo-100 text-indigo-600 group-hover:bg-indigo-200',
+      countColor: 'text-indigo-600',
+      chevronColor: 'bg-indigo-50 text-indigo-600',
       showCount: true,
-      count: eleves.length + guides.length
+      count: eleves.length + guides.length,
+      description: 'Gestion des comptes utilisateurs'
     },
     {
       id: 'parametres' as TabType,
       name: 'Paramètres',
       icon: <Settings className="w-5 h-5" />,
-      color: 'gray',
-      showCount: false
+      bgColor: 'bg-sky-50',
+      borderColor: 'border-sky-200 hover:border-sky-300',
+      iconBg: 'bg-sky-100 text-sky-600 group-hover:bg-sky-200',
+      countColor: 'text-sky-600',
+      chevronColor: 'bg-sky-50 text-sky-600',
+      showCount: false,
+      description: 'Configuration système'
     },
     {
       id: 'stats' as TabType,
       name: 'Statistiques',
       icon: <BarChart className="w-5 h-5" />,
-      color: 'emerald',
-      showCount: false
+      bgColor: 'bg-emerald-50',
+      borderColor: 'border-emerald-200 hover:border-emerald-300',
+      iconBg: 'bg-emerald-100 text-emerald-600 group-hover:bg-emerald-200',
+      countColor: 'text-emerald-600',
+      chevronColor: 'bg-emerald-50 text-emerald-600',
+      showCount: false,
+      description: 'Analyses et métriques'
     },
     {
       id: 'controle' as TabType,
       name: 'Contrôle',
       icon: <Shield className="w-5 h-5" />,
-      color: 'red',
+      bgColor: 'bg-red-50',
+      borderColor: 'border-red-200 hover:border-red-300',
+      iconBg: 'bg-red-100 text-red-600 group-hover:bg-red-200',
+      countColor: 'text-red-600',
+      chevronColor: 'bg-red-50 text-red-600',
       showCount: true,
-      count: guides.length
+      count: guides.length,
+      description: 'Suivi des performances des guides'
     }
   ];
 
@@ -91,49 +119,39 @@ export default function DashboardTab({
 
       {/* Cartes de navigation */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        {tabs.filter(t => t.id !== 'dashboard').map((tab) => (
-          <div
-            key={tab.id}
-            onClick={() => onTabChange(tab.id)}
-            className={`
-              bg-white rounded-xl shadow-sm border p-6 cursor-pointer
-              transition-all hover:shadow-md hover:-translate-y-1
-              border-${tab.color}-200 hover:border-${tab.color}-300
-              group
-            `}
-          >
-            <div className="flex items-start gap-4 mb-4">
-              <div className={`p-3 rounded-lg bg-${tab.color}-100 text-${tab.color}-600 group-hover:bg-${tab.color}-200`}>
-                {tab.icon}
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-gray-800 mb-1">{tab.name}</h3>
-                <p className="text-sm text-gray-500">
-                  {tab.id === 'convocations' && 'Gestion des convocations'}
-                  {tab.id === 'defenses' && 'Planification des soutenances'}
-                  {tab.id === 'calendrier' && 'Planning & détection de conflits'}
-                  {tab.id === 'gestion-utilisateurs' && 'Gestion des comptes utilisateurs'}
-                  {tab.id === 'parametres' && 'Configuration système'}
-                  {tab.id === 'stats' && 'Analyses et métriques'}
-                  {tab.id === 'controle' && 'Suivi des performances des guides'}
-                </p>
-              </div>
-              {tab.showCount && tab.count !== undefined && (
-                <div className={`text-lg font-bold text-${tab.color}-600`}>
-                  {tab.count}
-                </div>
-              )}
+        <div
+          key={tab.id}
+          onClick={() => onTabChange(tab.id)}
+          className={`
+            bg-white rounded-xl shadow-sm border p-6 cursor-pointer
+            transition-all hover:shadow-md hover:-translate-y-1
+            ${tab.borderColor}
+            group
+          `}
+        >
+          <div className="flex items-start gap-4 mb-4">
+            <div className={`p-3 rounded-lg ${tab.iconBg}`}>
+              {tab.icon}
             </div>
-            <div className="pt-4 border-t border-gray-100">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Accéder à la section</span>
-                <div className={`p-1 rounded-full bg-${tab.color}-50 text-${tab.color}-600`}>
-                  <ChevronRight className="w-4 h-4" />
-                </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-gray-800 mb-1">{tab.name}</h3>
+              <p className="text-sm text-gray-500">{tab.description}</p>
+            </div>
+            {tab.showCount && tab.count !== undefined && (
+              <div className={`text-lg font-bold ${tab.countColor}`}>
+                {tab.count}
+              </div>
+            )}
+          </div>
+          <div className="pt-4 border-t border-gray-100">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600">Accéder à la section</span>
+              <div className={`p-1 rounded-full ${tab.chevronColor}`}>
+                <ChevronRight className="w-4 h-4" />
               </div>
             </div>
           </div>
-        ))}
+        </div>
       </div>
 
       {/* Statistiques rapides */}
