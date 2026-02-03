@@ -142,7 +142,7 @@ export default function ParametresTab() {
         .from('system_settings')
         .select('*')
         .like('setting_key', 'Journee_%')
-        .not('setting_key', 'like', 'Journee_defense_%') // EXCLURE les défenses
+        .not('setting_key', 'like', 'Journee_defense_%') 
         .order('setting_key');
       
       if (error) throw error;
