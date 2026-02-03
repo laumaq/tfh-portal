@@ -96,20 +96,18 @@ export default function Sidebar({
       id: 'parametres' as TabType,
       name: 'Paramètres',
       icon: <Settings className="w-5 h-5" />,
-      // SANS COULEUR - tout en gris
-      activeClass: 'bg-gray-50 text-gray-700 border border-gray-200',
-      iconClass: 'bg-gray-100 text-gray-600', // Icône grise
-      countClass: 'bg-gray-100 text-gray-700', // Compteur gris
+      activeClass: 'bg-sky-50 text-sky-700 border border-sky-200',
+      iconClass: 'bg-sky-100 text-sky-600',
+      countClass: 'bg-sky-100 text-sky-700',
       showCount: false
     },
     {
       id: 'stats' as TabType,
       name: 'Statistiques',
       icon: <BarChart className="w-5 h-5" />,
-      // À MOITIÉ - seulement fond coloré
-      activeClass: 'bg-emerald-50 text-gray-700 border border-gray-200', // Fond coloré, texte gris
-      iconClass: 'bg-gray-100 text-gray-600', // Icône grise
-      countClass: 'bg-gray-100 text-gray-700', // Compteur gris
+      activeClass: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+      iconClass: 'bg-emerald-100 text-emerald-600',
+      countClass: 'bg-emerald-100 text-emerald-700',
       showCount: false
     },
     {
