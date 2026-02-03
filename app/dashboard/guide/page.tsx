@@ -31,7 +31,7 @@ interface Eleve {
   lecteur_externe_prenom?: string;
   mediateur_nom?: string;
   mediateur_prenom?: string;
-
+  objectif_particulier: string | null;
 }
 
 interface Guide {
@@ -73,6 +73,11 @@ export default function GuideDashboard() {
   const [categories, setCategories] = useState<string[]>([]);
   const [lecteurInterneEnabled, setLecteurInterneEnabled] = useState(false);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
+  // Modal d'objectif
+  const [showObjectifModal, setShowObjectifModal] = useState(false);
+  const [selectedEleveForObjectif, setSelectedEleveForObjectif] = useState<Eleve | null>(null);
+  const [objectifParticulier, setObjectifParticulier] = useState('');
+  const [savingObjectif, setSavingObjectif] = useState(false);
   const [displaySettings, setDisplaySettings] = useState({
     lecteur_interne_voir_eleves: true,
     lecteur_interne_voir_guides: true,
@@ -473,9 +478,57 @@ const loadSystemSettings = async () => {
       loadData(userGuideId);
     }
   };
-
-  // Fonction pour obtenir la couleur d'une convocation
-
+  
+  // Ouvrir le modal d'objectif
+  const openObjectifModal = (eleve: Eleve) => {
+    setSelectedEleveForObjectif(eleve);
+    setObjectifParticulier(eleve.objectif_particulier || '');
+    setShowObjectifModal(true);
+  };
+  
+  // Sauvegarder l'objectif
+  const saveObjectifParticulier = async () => {
+    if (!selectedEleveForObjectif) return;
+  
+    setSavingObjectif(true);
+    try {
+      const { error } = await supabase
+        .from('eleves')
+        .update({ 
+          objectif_particulier: objectifParticulier.trim() || null 
+        })
+        .eq('id', selectedEleveForObjectif.id);
+  
+      if (error) throw error;
+  
+      // Mettre à jour l'état local
+      const updatedEleves = eleves.map(eleve => 
+        eleve.id === selectedEleveForObjectif.id 
+          ? { ...eleve, objectif_particulier: objectifParticulier.trim() || null }
+          : eleve
+      );
+      setEleves(updatedEleves);
+  
+      // Fermer le modal
+      setShowObjectifModal(false);
+      setSelectedEleveForObjectif(null);
+      
+      alert('Objectif sauvegardé avec succès !');
+      
+    } catch (err) {
+      console.error('Erreur sauvegarde objectif:', err);
+      alert('Erreur lors de la sauvegarde');
+    } finally {
+      setSavingObjectif(false);
+    }
+  };
+  
+  // Fermer le modal
+  const closeObjectifModal = () => {
+    setShowObjectifModal(false);
+    setSelectedEleveForObjectif(null);
+    setObjectifParticulier('');
+  };
 
   // Fonction pour obtenir le label court
   const getShortLabel = (value: string) => {
@@ -589,6 +642,7 @@ const loadSystemSettings = async () => {
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Problématique</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Objectif</th>
                     {/* En-têtes dynamiques des sessions */}
                     {sessions.map(session => (
                       <th key={session.index} className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
@@ -620,6 +674,39 @@ const loadSystemSettings = async () => {
                             {eleve.problematique || '-'}
                           </div>
                         )}
+                      </td>
+
+                      <td className="px-4 py-3 text-sm">
+                        <div className="space-y-1">
+                          <button
+                            onClick={() => openObjectifModal(eleve)}
+                            className={`flex items-center justify-center gap-1 w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                              eleve.objectif_particulier
+                                ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                            title={eleve.objectif_particulier || "Cliquer pour définir un objectif"}
+                          >
+                            <span className={`text-lg ${eleve.objectif_particulier ? 'text-green-600' : 'text-gray-400'}`}>
+                              🎯
+                            </span>
+                            <span className="text-xs">
+                              {eleve.objectif_particulier 
+                                ? (eleve.objectif_particulier.length > 20 
+                                    ? eleve.objectif_particulier.substring(0, 20) + '...' 
+                                    : eleve.objectif_particulier)
+                                : 'Définir'}
+                            </span>
+                          </button>
+                          
+                          {eleve.objectif_particulier && (
+                            <div className="text-xs text-gray-500 text-center">
+                              {eleve.objectif_particulier.length > 100 
+                                ? `${Math.ceil(eleve.objectif_particulier.length / 100)} paragraphe(s)` 
+                                : 'Objectif défini'}
+                            </div>
+                          )}
+                        </div>
                       </td>
                       
                       {/* Toutes les sessions détectées */}
@@ -1138,9 +1225,96 @@ const loadSystemSettings = async () => {
           </p>
         </div>
       </div>
+
+      {/* Modal d'objectif particulier */}
+      {showObjectifModal && selectedEleveForObjectif && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
+            {/* En-tête */}
+            <div className="px-6 py-4 border-b">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-800">
+                    🎯 Objectif particulier
+                  </h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {selectedEleveForObjectif.prenom} {selectedEleveForObjectif.nom} - {selectedEleveForObjectif.classe}
+                  </p>
+                </div>
+                <button
+                  onClick={closeObjectifModal}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+      
+            {/* Contenu */}
+            <div className="px-6 py-4 flex-1 overflow-y-auto">
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Objectif spécifique pour cet élève :
+                </label>
+                <textarea
+                  value={objectifParticulier}
+                  onChange={(e) => setObjectifParticulier(e.target.value)}
+                  className="w-full h-48 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                  placeholder="Définir un objectif pédagogique spécifique pour cet élève..."
+                  autoFocus
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  Cet objectif n'est visible que par vous (guide) et l'administration.
+                </p>
+              </div>
+      
+              {selectedEleveForObjectif.problematique && (
+                <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Problématique de l'élève :</h4>
+                  <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                    {selectedEleveForObjectif.problematique}
+                  </p>
+                </div>
+              )}
+            </div>
+      
+            {/* Pied de page */}
+            <div className="px-6 py-4 border-t bg-gray-50 rounded-b-lg">
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={closeObjectifModal}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium"
+                  disabled={savingObjectif}
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={saveObjectifParticulier}
+                  disabled={savingObjectif}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
+                    !savingObjectif
+                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                      : 'bg-blue-400 text-white cursor-not-allowed'
+                  }`}
+                >
+                  {savingObjectif ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Sauvegarde...
+                    </>
+                  ) : (
+                    'Sauvegarder l\'objectif'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
 
 
 
