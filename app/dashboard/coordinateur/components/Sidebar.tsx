@@ -76,10 +76,9 @@ export default function Sidebar({
       id: 'calendrier' as TabType,
       name: 'Calendrier',
       icon: <Calendar className="w-5 h-5" />,
-      // À MOITIÉ - seulement icône colorée
-      activeClass: 'bg-gray-50 text-gray-700 border border-gray-200',
-      iconClass: 'bg-orange-100 text-orange-600', // Icône colorée
-      countClass: 'bg-gray-100 text-gray-700', // Compteur gris
+      activeClass: 'bg-orange-50 text-orange-700 border border-orange-200',
+      iconClass: 'bg-orange-100 text-orange-600',
+      countClass: 'bg-orange-100 text-orange-700',
       showCount: false
     },
     {
