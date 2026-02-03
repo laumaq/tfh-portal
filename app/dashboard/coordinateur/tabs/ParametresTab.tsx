@@ -1448,7 +1448,6 @@ export default function ParametresTab() {
                             </td>
                           </tr>
                         ))
-                      )})
                       )}
                     </tbody>
                   </table>
