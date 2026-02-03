@@ -1425,6 +1425,3 @@ export default function ParametresTab() {
     </div>
   );
 }
-    </div>
-  );
-}
