@@ -642,7 +642,7 @@ const loadSystemSettings = async () => {
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nom</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Problématique</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Objectif</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Objectif particulier</th>
                     {/* En-têtes dynamiques des sessions */}
                     {sessions.map(session => (
                       <th key={session.index} className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
@@ -1314,6 +1314,7 @@ const loadSystemSettings = async () => {
     </div>
   );
 }
+
 
 
 
