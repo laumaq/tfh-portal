@@ -206,7 +206,7 @@ export default function CoordinateurDashboard() {
                    activeTab === 'convocations' ? 'Convocations' : 
                    activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
                 </h1>
-                <p className="text-xs text-gray-500">TFH Portal</p>
+                <p className="text-xs text-gray-500">Portail TFH</p>
               </div>
               <div className="w-10"></div>
             </div>
@@ -231,6 +231,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
