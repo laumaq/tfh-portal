@@ -73,6 +73,7 @@ export default function GuideDashboard() {
   const [categories, setCategories] = useState<string[]>([]);
   const [lecteurInterneEnabled, setLecteurInterneEnabled] = useState(false);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const [objectifGeneral, setObjectifGeneral] = useState<string>('');
   // Modal d'objectif
   const [showObjectifModal, setShowObjectifModal] = useState(false);
   const [selectedEleveForObjectif, setSelectedEleveForObjectif] = useState<Eleve | null>(null);
@@ -256,43 +257,54 @@ export default function GuideDashboard() {
     }
   };
 
-const loadSystemSettings = async () => {
-  try {
-    // Charger le paramètre d'activation de l'onglet
-    const { data: enabledData, error: enabledError } = await supabase
-      .from('system_settings')
-      .select('setting_value')
-      .eq('setting_key', 'guide_lecteur_interne_enabled')
-      .single();
-    
-    if (!enabledError && enabledData) {
-      setLecteurInterneEnabled(enabledData.setting_value === 'true');
-    }
-
-    // Charger les paramètres d'affichage pour les guides
-    const { data: displayData, error: displayError } = await supabase
+  const loadSystemSettings = async () => {
+    try {
+      // Charger le paramètre d'activation de l'onglet
+      const { data: enabledData, error: enabledError } = await supabase
         .from('system_settings')
-        .select('setting_key, setting_value')
-        .in('setting_key', [
-          'lecteur_interne_voir_eleves',
-          'lecteur_interne_voir_guides',
-          'lecteur_interne_voir_lecteurs_externes',
-          'lecteur_interne_voir_mediateurs'
-        ]);
-  
-      if (!displayError && displayData) {
-        const settings: any = {};
-        displayData.forEach(setting => {
-          settings[setting.setting_key] = setting.setting_value === 'true';
-        });
-        setDisplaySettings(prev => ({ ...prev, ...settings }));
+        .select('setting_value')
+        .eq('setting_key', 'guide_lecteur_interne_enabled')
+        .single();
+      
+      if (!enabledError && enabledData) {
+        setLecteurInterneEnabled(enabledData.setting_value === 'true');
       }
-    } catch (err) {
-      console.error('Erreur chargement paramètres:', err);
-    } finally {
-      setSettingsLoaded(true);
-    }
-  };
+  
+      // Charger l'objectif général
+      const { data: objectifData, error: objectifError } = await supabase
+        .from('system_settings')
+        .select('setting_value')
+        .eq('setting_key', 'objectif_general_tfh')
+        .single();
+      
+      if (!objectifError && objectifData) {
+        setObjectifGeneral(objectifData.setting_value || '');
+      }
+  
+      // Charger les paramètres d'affichage pour les guides
+      const { data: displayData, error: displayError } = await supabase
+          .from('system_settings')
+          .select('setting_key, setting_value')
+          .in('setting_key', [
+            'lecteur_interne_voir_eleves',
+            'lecteur_interne_voir_guides',
+            'lecteur_interne_voir_lecteurs_externes',
+            'lecteur_interne_voir_mediateurs'
+          ]);
+    
+        if (!displayError && displayData) {
+          const settings: any = {};
+          displayData.forEach(setting => {
+            settings[setting.setting_key] = setting.setting_value === 'true';
+          });
+          setDisplaySettings(prev => ({ ...prev, ...settings }));
+        }
+      } catch (err) {
+        console.error('Erreur chargement paramètres:', err);
+      } finally {
+        setSettingsLoaded(true);
+      }
+    };
   
   const calculateColspan = (isProgrammed: boolean) => {
     let count = 0;
@@ -615,7 +627,61 @@ const loadSystemSettings = async () => {
         {/* Contenu selon l'onglet */}
         {activeTab === 'guide' ? (
           <>
-            {/* Légende des couleurs */}
+            {/* Objectif général (uniquement dans l'onglet Guide) */}
+            {objectifGeneral ? (
+              <div className="bg-white rounded-lg shadow p-6 mb-6 border border-blue-200">
+                <div className="mb-3">
+                  <h2 className="text-lg font-semibold text-blue-800 flex items-center gap-2">
+                    <span className="text-xl">🎯</span>
+                    Objectifs actuels des élèves et échéances
+                  </h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Tenez compte de ces objectifs afin de déterminer si vous devez ou non convoquer vos élèves 
+                    à venir travailler à la prochaine session de journées TFH.
+                  </p>
+                </div>
+                
+                <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 mt-1">
+                      <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
+                        <span className="text-blue-600 text-sm font-bold">!</span>
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm text-blue-800 whitespace-pre-wrap">
+                        {objectifGeneral}
+                      </p>
+                      <div className="mt-2 pt-2 border-t border-blue-100">
+                        <p className="text-xs text-blue-600">
+                          Objectif général défini par l'administration - visible par tous les guides
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg shadow p-6 mb-6 border border-gray-200">
+                <div className="mb-3">
+                  <h2 className="text-lg font-semibold text-gray-700 flex items-center gap-2">
+                    <span className="text-xl">🎯</span>
+                    Objectifs actuels des élèves
+                  </h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Aucun objectif général n'a été défini par l'administration pour le moment.
+                  </p>
+                </div>
+                
+                <div className="bg-gray-50 border border-gray-100 rounded-lg p-4 text-center">
+                  <p className="text-sm text-gray-500">
+                    Les objectifs généraux peuvent être définis dans les paramètres du système par les coordinateurs.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Légende des couleurs - DÉPLACÉE APRÈS l'objectif général */}
             <div className="bg-white rounded-lg shadow p-6 mb-6">
               <p className="text-sm font-medium text-gray-700 mb-2">Légende des convocations:</p>
               <div className="flex flex-wrap gap-2">
@@ -632,6 +698,7 @@ const loadSystemSettings = async () => {
                 ))}
               </div>
             </div>
+
 
             {/* Tableau des élèves assignés */}
             <div className="bg-white rounded-lg shadow overflow-x-auto">
@@ -1314,6 +1381,7 @@ const loadSystemSettings = async () => {
     </div>
   );
 }
+
 
 
 
