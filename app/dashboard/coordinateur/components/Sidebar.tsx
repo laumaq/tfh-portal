@@ -42,6 +42,16 @@ export default function Sidebar({
       showCount: false
     },
     {
+      id: 'liste-tfh' as TabType,
+      name: 'Liste des TFH',
+      icon: <BookOpen className="w-5 h-5" />, // Icône appropriée pour "liste de travaux"
+      activeClass: 'bg-violet-50 text-violet-700 border border-violet-200',
+      iconClass: 'bg-violet-100 text-violet-600',
+      countClass: 'bg-violet-100 text-violet-700',
+      showCount: true,
+      count: elevesCount // Même compte que les élèves
+    },
+    {
       id: 'convocations' as TabType,
       name: 'Convocations',
       icon: <FileText className="w-5 h-5" />,
