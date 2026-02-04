@@ -656,11 +656,6 @@ export default function GuideDashboard() {
                           </div>
                         </div>
                       </div>
-                      <div className="mt-3 pt-2 border-t border-blue-50">
-                        <p className="text-xs text-blue-600">
-                          Objectif général défini par l'administration
-                        </p>
-                      </div>
                     </>
                   ) : (
                     <>
@@ -704,17 +699,9 @@ export default function GuideDashboard() {
                         <div className="text-sm font-medium">
                           {getShortLabel(opt.label)}
                         </div>
-                        <div className="text-xs opacity-80">
-                          {opt.label.replace('l\'élève ', '')}
-                        </div>
                       </div>
                     </div>
                   ))}
-                </div>
-                <div className="mt-4 pt-3 border-t border-gray-100">
-                  <p className="text-xs text-gray-500">
-                    Sélectionnez le statut approprié pour chaque élève et session
-                  </p>
                 </div>
               </div>
             </div>
@@ -1401,13 +1388,3 @@ export default function GuideDashboard() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
