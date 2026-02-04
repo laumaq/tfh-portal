@@ -678,9 +678,6 @@ export default function GuideDashboard() {
                   <span className="text-xl">📋</span>
                   Légende des convocations
                 </h2>
-                <p className="text-sm text-gray-600 mb-4">
-                  Codes couleurs pour évaluer l'avancement des élèves :
-                </p>
                 <div className="space-y-2">
                   {CONVOCATION_OPTIONS.filter(opt => opt.value).map((opt) => (
                     <div 
@@ -1388,3 +1385,4 @@ export default function GuideDashboard() {
     </div>
   );
 }
+
