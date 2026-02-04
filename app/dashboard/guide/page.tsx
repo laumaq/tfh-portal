@@ -627,70 +627,95 @@ export default function GuideDashboard() {
         {/* Contenu selon l'onglet */}
         {activeTab === 'guide' ? (
           <>
-            {/* Objectif général (uniquement dans l'onglet Guide) */}
-            {objectifGeneral ? (
-              <div className="bg-white rounded-lg shadow p-6 mb-6 border border-blue-200">
+            {/* Objectif général et légende - côte à côte sur desktop */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              
+              {/* Objectif général */}
+              <div className="bg-white rounded-lg shadow p-4 md:p-6 border border-blue-200 h-full">
                 <div className="mb-3">
-                  <h2 className="text-lg font-semibold text-blue-800 flex items-center gap-2">
+                  <h2 className="text-lg font-semibold text-blue-800 flex items-center gap-2 mb-2">
                     <span className="text-xl">🎯</span>
-                    Objectifs actuels des élèves et échéances
+                    Objectifs et échéances
                   </h2>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Tenez compte de ces objectifs afin de déterminer si vous devez ou non convoquer vos élèves 
-                    à venir travailler à la prochaine session de journées TFH.
-                  </p>
+                  {objectifGeneral ? (
+                    <>
+                      <p className="text-sm text-gray-600 mb-3">
+                        Tenez compte de ces objectifs pour décider des convocations à la prochaine session TFH.
+                      </p>
+                      <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
+                        <div className="flex items-start gap-2">
+                          <div className="flex-shrink-0 mt-0.5">
+                            <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center">
+                              <span className="text-blue-600 text-xs font-bold">!</span>
+                            </div>
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm text-blue-800 whitespace-pre-wrap">
+                              {objectifGeneral}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="mt-3 pt-2 border-t border-blue-50">
+                        <p className="text-xs text-blue-600">
+                          Objectif général défini par l'administration
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm text-gray-600 mb-3">
+                        Aucun objectif général n'a été défini pour le moment.
+                      </p>
+                      <div className="bg-gray-50 border border-gray-100 rounded-lg p-4 text-center">
+                        <p className="text-sm text-gray-500">
+                          Les objectifs généraux seront définis par les coordinateurs.
+                        </p>
+                      </div>
+                    </>
+                  )}
                 </div>
-                
-                <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 mt-1">
-                      <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
-                        <span className="text-blue-600 text-sm font-bold">!</span>
+              </div>
+
+              {/* Légende des convocations */}
+              <div className="bg-white rounded-lg shadow p-4 md:p-6 border border-gray-200 h-full">
+                <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2 mb-3">
+                  <span className="text-xl">📋</span>
+                  Légende des convocations
+                </h2>
+                <p className="text-sm text-gray-600 mb-4">
+                  Codes couleurs pour évaluer l'avancement des élèves :
+                </p>
+                <div className="space-y-2">
+                  {CONVOCATION_OPTIONS.filter(opt => opt.value).map((opt) => (
+                    <div 
+                      key={opt.value} 
+                      className={`${opt.color} px-3 py-2 rounded-lg flex items-center gap-3`}
+                    >
+                      <div className="flex-shrink-0">
+                        <div className="w-3 h-3 rounded-full" style={{
+                          backgroundColor: opt.color.includes('green') ? '#10B981' :
+                                         opt.color.includes('yellow') ? '#F59E0B' :
+                                         opt.color.includes('orange') ? '#F97316' :
+                                         opt.color.includes('red') ? '#EF4444' : '#6B7280'
+                        }}></div>
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-sm font-medium">
+                          {getShortLabel(opt.label)}
+                        </div>
+                        <div className="text-xs opacity-80">
+                          {opt.label.replace('l\'élève ', '')}
+                        </div>
                       </div>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-sm text-blue-800 whitespace-pre-wrap">
-                        {objectifGeneral}
-                      </p>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              </div>
-            ) : (
-              <div className="bg-white rounded-lg shadow p-6 mb-6 border border-gray-200">
-                <div className="mb-3">
-                  <h2 className="text-lg font-semibold text-gray-700 flex items-center gap-2">
-                    <span className="text-xl">🎯</span>
-                    Objectifs actuels des élèves
-                  </h2>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Aucun objectif général n'a été défini par l'administration pour le moment.
+                <div className="mt-4 pt-3 border-t border-gray-100">
+                  <p className="text-xs text-gray-500">
+                    Sélectionnez le statut approprié pour chaque élève et session
                   </p>
                 </div>
-                
-                <div className="bg-gray-50 border border-gray-100 rounded-lg p-4 text-center">
-                  <p className="text-sm text-gray-500">
-                    Les objectifs généraux peuvent être définis dans les paramètres du système par les coordinateurs.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Légende des couleurs - DÉPLACÉE APRÈS l'objectif général */}
-            <div className="bg-white rounded-lg shadow p-6 mb-6">
-              <p className="text-sm font-medium text-gray-700 mb-2">Légende des convocations:</p>
-              <div className="flex flex-wrap gap-2">
-                {CONVOCATION_OPTIONS.filter(opt => opt.value).map((opt) => (
-                  <div key={opt.value} className={`${opt.color} px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1`}>
-                    <div className="w-2 h-2 rounded-full" style={{
-                      backgroundColor: opt.color.includes('green') ? '#10B981' :
-                                     opt.color.includes('yellow') ? '#F59E0B' :
-                                     opt.color.includes('orange') ? '#F97316' :
-                                     opt.color.includes('red') ? '#EF4444' : '#6B7280'
-                    }}></div>
-                    {getShortLabel(opt.label)}
-                  </div>
-                ))}
               </div>
             </div>
 
@@ -1376,6 +1401,7 @@ export default function GuideDashboard() {
     </div>
   );
 }
+
 
 
 
