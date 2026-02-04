@@ -652,11 +652,6 @@ export default function GuideDashboard() {
                       <p className="text-sm text-blue-800 whitespace-pre-wrap">
                         {objectifGeneral}
                       </p>
-                      <div className="mt-2 pt-2 border-t border-blue-100">
-                        <p className="text-xs text-blue-600">
-                          Objectif général défini par l'administration - visible par tous les guides
-                        </p>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -1381,6 +1376,7 @@ export default function GuideDashboard() {
     </div>
   );
 }
+
 
 
 
