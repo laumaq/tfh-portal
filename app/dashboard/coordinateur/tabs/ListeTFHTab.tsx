@@ -1,25 +1,22 @@
-// Fichier : ./tabs/ListeTFHTab.tsx - Version avec refresh callback
+// Fichier : ./tabs/ListeTFHTab.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
 import { Eleve } from '../types';
-import { ExternalLink, Edit, Save, X, ChevronDown, RefreshCw } from 'lucide-react';
-import { updateEleveField } from '../utils/supabaseClient';
+import { ExternalLink, Edit, ChevronDown, Trash2 } from 'lucide-react';
 
 interface ListeTFHTabProps {
   eleves: Eleve[];
-  onRefresh?: () => void; // ← Ajouter cette prop optionnelle
+  onUpdate: (eleveId: string, field: string, value: string) => Promise<void>;
+  onRefresh: () => void;
 }
 
-export default function ListeTFHTab({ eleves, onRefresh }: ListeTFHTabProps) {
+export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTabProps) {
   // États pour la gestion
   const [editingMode, setEditingMode] = useState(false);
   const [filteredClass, setFilteredClass] = useState<string>('all');
-  const [elevesFiltres, setElevesFiltres] = useState<Eleve[]>([]);
-  const [editingCell, setEditingCell] = useState<{id: string, field: string} | null>(null);
-  const [editValue, setEditValue] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-  const [showSavedMessage, setShowSavedMessage] = useState(false);
+  const [isProcessing, setIsProcessing] = useState<string | null>(null); // ID de l'élève en cours de traitement
+  const [localEleves, setLocalEleves] = useState<Eleve[]>(eleves);
   
   // Extraire toutes les classes uniques
   const classesUniques = Array.from(new Set(eleves.map(e => e.classe || '').filter(c => c))).sort();
@@ -32,111 +29,78 @@ export default function ListeTFHTab({ eleves, onRefresh }: ListeTFHTabProps) {
     return a.nom.localeCompare(b.nom);
   });
 
-  // Filtrer les élèves par classe sélectionnée
+  // Synchroniser les données locales
   useEffect(() => {
-    if (filteredClass === 'all') {
-      setElevesFiltres(elevesTries);
-    } else {
-      setElevesFiltres(elevesTries.filter(e => e.classe === filteredClass));
-    }
-  }, [eleves, filteredClass]);
+    setLocalEleves(elevesTries);
+  }, [eleves]);
+
+  // Filtrer les élèves par classe sélectionnée
+  const elevesFiltres = filteredClass === 'all' 
+    ? localEleves 
+    : localEleves.filter(e => e.classe === filteredClass);
 
   // Fonction pour formater le nom complet
   const formatNomComplet = (eleve: Eleve) => {
     return `${eleve.nom.toUpperCase()} ${eleve.prenom}`;
   };
 
-  // Fonction pour gérer le clic sur une cellule
-  const handleCellClick = (eleveId: string, field: string, currentValue: string) => {
+  // Fonction de mise à jour instantanée
+  const handleInstantUpdate = async (eleveId: string, field: string, value: string) => {
     if (!editingMode) return;
-    setEditingCell({ id: eleveId, field });
-    setEditValue(currentValue || '');
-  };
-
-  // Fonction pour sauvegarder une modification
-  const handleSave = async (eleveId: string) => {
-    if (!editingCell || !editValue.trim()) return;
     
-    setIsSaving(true);
     try {
-      const success = await updateEleveField(eleveId, editingCell.field, editValue.trim());
+      setIsProcessing(eleveId);
       
-      if (success) {
-        // Montrer le message de succès
-        setShowSavedMessage(true);
-        setTimeout(() => setShowSavedMessage(false), 2000);
-        
-        // Rafraîchir les données parent si disponible
-        if (onRefresh) {
-          setTimeout(() => onRefresh(), 100);
-        }
-      }
+      // Mise à jour locale IMMÉDIATE
+      setLocalEleves(prev => prev.map(eleve => 
+        eleve.id === eleveId 
+          ? { ...eleve, [field]: value === '' ? null : value }
+          : eleve
+      ));
       
-      setEditingCell(null);
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour:', error);
-      alert('Erreur lors de la sauvegarde. Vérifiez la console.');
+      // Mise à jour en base de données
+      await onUpdate(eleveId, field, value === '' ? '' : value);
+      
+    } catch (err) {
+      console.error('Erreur lors de la mise à jour:', err);
+      // Recharger les données en cas d'erreur
+      onRefresh();
     } finally {
-      setIsSaving(false);
+      setIsProcessing(null);
     }
   };
 
-  // Fonction pour annuler l'édition
-  const handleCancel = () => {
-    setEditingCell(null);
+  // Fonction pour effacer un champ
+  const handleClearField = (eleveId: string, field: string) => {
+    handleInstantUpdate(eleveId, field, '');
   };
 
-  // Fonction pour rendre les sources avec tooltip et édition
-  const renderSources = (eleve: Eleve, index: number) => {
+  // Fonction pour rendre les sources avec édition instantanée
+  const renderSources = (eleve: Eleve) => {
     const sourceFields = ['source_1', 'source_2', 'source_3', 'source_4', 'source_5'];
     
     return sourceFields.map((field, idx) => {
       const source = eleve[field as keyof Eleve] as string;
-      const isEditing = editingMode && editingCell?.id === eleve.id && editingCell.field === field;
-      
-      if (isEditing) {
-        return (
-          <div key={idx} className="py-1">
-            <div className="flex items-center gap-1">
-              <input
-                type="text"
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                className="flex-1 px-2 py-1 text-xs border rounded"
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleSave(eleve.id);
-                  if (e.key === 'Escape') handleCancel();
-                }}
-              />
-              <button
-                onClick={() => handleSave(eleve.id)}
-                disabled={isSaving}
-                className="p-1 text-green-600 hover:bg-green-50 rounded disabled:opacity-50"
-                title="Sauvegarder"
-              >
-                <Save className="w-3 h-3" />
-              </button>
-              <button
-                onClick={handleCancel}
-                className="p-1 text-red-600 hover:bg-red-50 rounded"
-                title="Annuler"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </div>
-          </div>
-        );
-      }
+      const isProcessingField = isProcessing === eleve.id;
       
       if (!source || source.trim() === '') {
         return (
-          <div 
-            key={idx} 
-            className={`py-0.5 ${editingMode ? 'cursor-pointer hover:bg-gray-50 px-1 rounded min-h-[24px]' : ''}`}
-            onClick={() => editingMode && handleCellClick(eleve.id, field, '')}
-          >
-            <div className="text-gray-400 text-xs">-</div>
+          <div key={idx} className="py-0.5 group">
+            <div className="flex items-center justify-between gap-2">
+              <input
+                type="text"
+                placeholder={`Source ${idx + 1}`}
+                value=""
+                onChange={(e) => handleInstantUpdate(eleve.id, field, e.target.value)}
+                className={`flex-1 text-xs border rounded px-2 py-1 ${editingMode ? 'border-gray-300' : 'border-transparent bg-transparent'} ${isProcessingField ? 'opacity-50' : ''}`}
+                disabled={!editingMode || isProcessingField}
+              />
+              {editingMode && (
+                <div className="w-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {/* Espace réservé pour l'alignement */}
+                </div>
+              )}
+            </div>
           </div>
         );
       }
@@ -144,110 +108,105 @@ export default function ListeTFHTab({ eleves, onRefresh }: ListeTFHTabProps) {
       const isUrl = source.startsWith('http://') || source.startsWith('https://');
       const displayText = source.length > 40 ? `${source.substring(0, 37)}...` : source;
       
-      if (isUrl) {
-        return (
-          <div 
-            key={idx} 
-            className={`py-0.5 ${editingMode ? 'cursor-pointer hover:bg-gray-50 px-1 rounded' : ''}`}
-            onClick={() => editingMode && handleCellClick(eleve.id, field, source)}
-          >
-            <a
-              href={source}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:text-blue-800 hover:underline flex items-start gap-1 group"
-              title={source}
-              onClick={(e) => editingMode ? e.preventDefault() : null}
-            >
-              <ExternalLink className="w-3 h-3 flex-shrink-0 mt-0.5" />
-              <span className="truncate text-xs">{displayText}</span>
-            </a>
-          </div>
-        );
-      }
-
       return (
-        <div 
-          key={idx} 
-          className={`py-0.5 ${editingMode ? 'cursor-pointer hover:bg-gray-50 px-1 rounded' : ''}`}
-          onClick={() => editingMode && handleCellClick(eleve.id, field, source)}
-          title={source.length > 40 ? source : undefined}
-        >
-          <div className="text-gray-700 text-xs truncate">{displayText}</div>
+        <div key={idx} className="py-0.5 group">
+          <div className="flex items-center justify-between gap-2">
+            {isUrl ? (
+              <a
+                href={source}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+                title={source}
+              >
+                <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                <input
+                  type="text"
+                  value={source}
+                  onChange={(e) => handleInstantUpdate(eleve.id, field, e.target.value)}
+                  className={`flex-1 text-xs border rounded px-2 py-1 ${editingMode ? 'border-gray-300' : 'border-transparent bg-transparent'} ${isProcessingField ? 'opacity-50' : ''}`}
+                  disabled={!editingMode || isProcessingField}
+                  title={source}
+                />
+              </a>
+            ) : (
+              <input
+                type="text"
+                value={source}
+                onChange={(e) => handleInstantUpdate(eleve.id, field, e.target.value)}
+                className={`flex-1 text-xs border rounded px-2 py-1 ${editingMode ? 'border-gray-300' : 'border-transparent bg-transparent'} ${isProcessingField ? 'opacity-50' : ''}`}
+                disabled={!editingMode || isProcessingField}
+                title={source.length > 40 ? source : undefined}
+              />
+            )}
+            
+            {editingMode && source && (
+              <button
+                onClick={() => handleClearField(eleve.id, field)}
+                className="w-6 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                title="Effacer"
+                disabled={isProcessingField}
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            )}
+          </div>
         </div>
       );
     });
   };
 
   // Fonction pour rendre une cellule éditable
-  const renderEditableCell = (eleve: Eleve, field: keyof Eleve, value: string, isWide = false) => {
-    const isEditing = editingMode && editingCell?.id === eleve.id && editingCell.field === field;
+  const renderEditableCell = (eleve: Eleve, field: keyof Eleve, value: string, isTextarea = false) => {
+    const isProcessingField = isProcessing === eleve.id;
+    const displayValue = value || '';
     
-    if (isEditing) {
+    if (isTextarea) {
       return (
-        <div className="flex flex-col gap-1">
-          {field === 'problematique' || field === 'thematique' ? (
-            <textarea
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              className={`flex-1 px-2 py-1 text-xs border rounded ${isWide ? 'min-h-[60px]' : 'min-h-[40px]'}`}
-              autoFocus
-              rows={field === 'problematique' ? 3 : 2}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && e.ctrlKey) handleSave(eleve.id);
-                if (e.key === 'Escape') handleCancel();
-              }}
-            />
-          ) : (
-            <input
-              type="text"
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              className="flex-1 px-2 py-1 text-xs border rounded"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSave(eleve.id);
-                if (e.key === 'Escape') handleCancel();
-              }}
-            />
+        <div className="relative group">
+          <textarea
+            value={displayValue}
+            onChange={(e) => handleInstantUpdate(eleve.id, field, e.target.value)}
+            className={`w-full text-xs border rounded px-2 py-1 min-h-[60px] ${editingMode ? 'border-gray-300' : 'border-transparent bg-transparent'} ${isProcessingField ? 'opacity-50' : ''}`}
+            disabled={!editingMode || isProcessingField}
+            placeholder={field === 'problematique' ? 'Problématique...' : 'Thématique...'}
+            title={displayValue}
+          />
+          {editingMode && displayValue && (
+            <button
+              onClick={() => handleClearField(eleve.id, field)}
+              className="absolute top-1 right-1 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+              title="Effacer"
+              disabled={isProcessingField}
+            >
+              <Trash2 className="w-3 h-3" />
+            </button>
           )}
-          <div className="flex gap-1 justify-end">
-            <button
-              onClick={() => handleSave(eleve.id)}
-              disabled={isSaving}
-              className="px-2 py-0.5 text-xs bg-green-100 text-green-700 hover:bg-green-200 rounded disabled:opacity-50"
-            >
-              {isSaving ? '...' : 'Sauvegarder'}
-            </button>
-            <button
-              onClick={handleCancel}
-              className="px-2 py-0.5 text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 rounded"
-            >
-              Annuler
-            </button>
-          </div>
         </div>
       );
     }
     
-    const displayValue = value || '-';
-    let displayText = displayValue;
-    
-    if (field === 'problematique' || field === 'thematique') {
-      displayText = displayValue.length > 80 ? `${displayValue.substring(0, 77)}...` : displayValue;
-    } else if (field === 'categorie') {
-      displayText = displayValue.length > 30 ? `${displayValue.substring(0, 27)}...` : displayValue;
-    }
-    
     return (
-      <div 
-        className={`${editingMode ? 'cursor-pointer hover:bg-gray-50 px-2 py-1.5 rounded min-h-[40px] flex items-start' : ''}`}
-        onClick={() => editingMode && handleCellClick(eleve.id, field, value)}
-        title={((field === 'problematique' || field === 'thematique' || field === 'categorie') && displayValue.length > 80) ? displayValue : undefined}
-      >
-        <div className={`text-xs ${field === 'problematique' ? 'line-clamp-3' : ''} ${field === 'thematique' ? 'line-clamp-2' : ''}`}>
-          {displayText}
-        </div>
+      <div className="relative group">
+        <input
+          type="text"
+          value={displayValue}
+          onChange={(e) => handleInstantUpdate(eleve.id, field, e.target.value)}
+          className={`w-full text-xs border rounded px-2 py-1 ${editingMode ? 'border-gray-300' : 'border-transparent bg-transparent'} ${isProcessingField ? 'opacity-50' : ''}`}
+          disabled={!editingMode || isProcessingField}
+          placeholder={field === 'classe' ? 'Classe...' : field === 'categorie' ? 'Catégorie...' : ''}
+          title={displayValue}
+        />
+        {editingMode && displayValue && (
+          <button
+            onClick={() => handleClearField(eleve.id, field)}
+            className="absolute top-1 right-1 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+            title="Effacer"
+            disabled={isProcessingField}
+          >
+            <Trash2 className="w-3 h-3" />
+          </button>
+        )}
       </div>
     );
   };
@@ -265,17 +224,6 @@ export default function ListeTFHTab({ eleves, onRefresh }: ListeTFHTabProps) {
           </div>
           
           <div className="flex flex-wrap items-center gap-4">
-            {/* Bouton de rafraîchissement */}
-            {onRefresh && (
-              <button
-                onClick={onRefresh}
-                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-                title="Rafraîchir les données"
-              >
-                <RefreshCw className="w-4 h-4" />
-              </button>
-            )}
-            
             {/* Filtre par classe */}
             <div className="flex items-center gap-2">
               <label htmlFor="classFilter" className="text-sm font-medium text-gray-700">
@@ -305,11 +253,8 @@ export default function ListeTFHTab({ eleves, onRefresh }: ListeTFHTabProps) {
                 <input
                   type="checkbox"
                   checked={editingMode}
-                  onChange={(e) => {
-                    setEditingMode(e.target.checked);
-                    setEditingCell(null);
-                  }}
-                  className="w-4 h-4 text-violet-600 border-gray-300 rounded focus:ring-violet-500"
+                  onChange={(e) => setEditingMode(e.target.checked)}
+                  className="w-5 h-5 text-violet-600 border-gray-300 rounded focus:ring-violet-500"
                 />
                 <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
                   <Edit className="w-4 h-4" />
@@ -325,10 +270,13 @@ export default function ListeTFHTab({ eleves, onRefresh }: ListeTFHTabProps) {
           </div>
         </div>
 
-        {/* Message de sauvegarde réussie */}
-        {showSavedMessage && (
-          <div className="mb-4 p-3 bg-green-50 text-green-700 rounded-lg text-sm animate-pulse">
-            ✓ Modification sauvegardée avec succès
+        {/* Indicateur de traitement */}
+        {isProcessing && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-700 flex items-center gap-2">
+              <span className="animate-spin">⟳</span>
+              Mise à jour en cours...
+            </p>
           </div>
         )}
 
@@ -337,10 +285,10 @@ export default function ListeTFHTab({ eleves, onRefresh }: ListeTFHTabProps) {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
+                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
                   Classe
                 </th>
-                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-44">
+                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
                   Élève
                 </th>
                 <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
@@ -352,7 +300,7 @@ export default function ListeTFHTab({ eleves, onRefresh }: ListeTFHTabProps) {
                 <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-64">
                   Sources
                 </th>
-                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
                   Catégorie
                 </th>
               </tr>
@@ -374,18 +322,22 @@ export default function ListeTFHTab({ eleves, onRefresh }: ListeTFHTabProps) {
                   
                   {/* Thématique */}
                   <td className="px-3 py-3">
-                    {renderEditableCell(eleve, 'thematique', eleve.thematique || '')}
+                    <div className="text-sm">
+                      {renderEditableCell(eleve, 'thematique', eleve.thematique || '', true)}
+                    </div>
                   </td>
                   
                   {/* Problématique */}
                   <td className="px-3 py-3">
-                    {renderEditableCell(eleve, 'problematique', eleve.problematique || '', true)}
+                    <div className="text-sm">
+                      {renderEditableCell(eleve, 'problematique', eleve.problematique || '', true)}
+                    </div>
                   </td>
                   
                   {/* Sources */}
                   <td className="px-3 py-3">
-                    <div className="space-y-0.5">
-                      {renderSources(eleve, 1)}
+                    <div className="text-sm space-y-1">
+                      {renderSources(eleve)}
                     </div>
                   </td>
                   
@@ -424,11 +376,11 @@ export default function ListeTFHTab({ eleves, onRefresh }: ListeTFHTabProps) {
             <div className="mt-2 text-sm text-blue-700">
               <ul className="list-disc pl-5 space-y-1">
                 <li><strong>Filtre classe</strong> : Sélectionnez une classe pour afficher seulement ses TFH</li>
-                <li><strong>Mode édition</strong> : Activez pour modifier thématique, problématique, sources et catégorie</li>
-                <li><strong>Cliquez sur un champ</strong> en mode édition pour le modifier</li>
-                <li><strong>Sources</strong> : Les URLs sont cliquables, les textes longs sont tronqués (survolez pour voir en entier)</li>
-                <li><strong>Appuyez sur Entrée</strong> pour sauvegarder, Ctrl+Entrée dans les textareas, Échap pour annuler</li>
-                {onRefresh && <li><strong>Bouton rafraîchir</strong> : Met à jour les données depuis la base</li>}
+                <li><strong>Mode édition</strong> : Activez pour modifier tous les champs</li>
+                <li><strong>Édition instantanée</strong> : Les modifications sont sauvegardées automatiquement</li>
+                <li><strong>Effacer un champ</strong> : Survolez un champ et cliquez sur l'icône 🗑️ pour le vider</li>
+                <li><strong>Sources</strong> : Les URLs sont cliquables et s'ouvrent dans un nouvel onglet</li>
+                <li><strong>Indicateur</strong> : Un message apparaît pendant la mise à jour en base</li>
               </ul>
             </div>
           </div>
