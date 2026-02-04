@@ -85,6 +85,7 @@ export default function CoordinateurDashboard() {
           <ListeTFHTab
             eleves={eleves}
             onRefresh={refreshData}
+            onUpdate={handleUpdate}
           />
         );
             
@@ -240,6 +241,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
