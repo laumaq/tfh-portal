@@ -14,6 +14,7 @@ import CalendrierTab from './tabs/CalendrierTab';
 import ParametresTab from './tabs/ParametresTab';
 import StatsTab from './tabs/StatsTab';
 import ControleTab from './tabs/ControleTab';
+import ListeTFHTab from './tabs/ListeTFHTab';
 import GestionUtilisateursTab from './tabs/GestionUtilisateursTab';
 import { useCoordinateurData } from './hooks/useCoordinateurData';
 import { useElevesOperations } from './hooks/useElevesOperations';
@@ -79,6 +80,13 @@ export default function CoordinateurDashboard() {
           />
         );
         
+      case 'liste-tfh':
+        return (
+          <ListeTFHTab
+            eleves={eleves}
+          />
+        );
+            
       case 'convocations':
         return (
           <ConvocationsTab
@@ -231,6 +239,7 @@ export default function CoordinateurDashboard() {
     </div>
   );
 }
+
 
 
 
