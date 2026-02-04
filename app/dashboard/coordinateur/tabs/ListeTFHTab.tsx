@@ -124,7 +124,7 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
                   type="text"
                   value={source}
                   onChange={(e) => handleInstantUpdate(eleve.id, field, e.target.value)}
-                  className={`flex-1 text-xs border rounded px-2 py-1 ${editingMode ? 'border-gray-300' : 'border-transparent bg-transparent'} ${isProcessingField ? 'opacity-50' : ''}`}
+                  className={`w-full text-xs border rounded px-2 py-1 min-h-[100px] ${editingMode ? 'border-gray-300' : 'border-transparent bg-transparent'} ${isProcessingField ? 'opacity-50' : ''}`}
                   disabled={!editingMode || isProcessingField}
                   title={source}
                 />
@@ -285,21 +285,21 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
                   Classe
                 </th>
-                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
+                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-44">
                   Élève
                 </th>
                 <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
                   Thématique
                 </th>
-                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-64">
+                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-80">
                   Problématique
-                </th>
-                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-64">
+                </th> {/* ← Changé de w-64 à w-80 */}
+                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-56">
                   Sources
-                </th>
+                </th> {/* ← Changé de w-64 à w-56 */}
                 <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
                   Catégorie
                 </th>
@@ -307,7 +307,7 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {elevesFiltres.map((eleve) => (
-                <tr key={eleve.id} className="hover:bg-gray-50">
+                <tr key={eleve.id} className="hover:bg-gray-50 h-24">
                   {/* Classe */}
                   <td className="px-3 py-3 whitespace-nowrap">
                     {renderEditableCell(eleve, 'classe', eleve.classe || '')}
