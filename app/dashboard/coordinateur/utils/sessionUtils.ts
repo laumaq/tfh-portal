@@ -24,6 +24,7 @@ export async function getJourneesFromSupabase(supabase: any): Promise<Journee[]>
     .from('system_settings')
     .select('*')
     .like('setting_key', 'Journee_%')
+    .not('setting_key', 'like', 'Journee_defense_%')
     .order('setting_key');
 
   if (error) {
