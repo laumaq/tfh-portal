@@ -162,15 +162,20 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
     const displayValue = value || '';
     
     if (isTextarea) {
+      // Hauteur différente selon le champ
+      const minHeight = field === 'problematique' ? 'min-h-[120px]' : 'min-h-[80px]';
+      const rows = field === 'problematique' ? 6 : 4; // ← Augmenter les rows
+      
       return (
         <div className="relative group">
           <textarea
             value={displayValue}
             onChange={(e) => handleInstantUpdate(eleve.id, field, e.target.value)}
-            className={`w-full text-xs border rounded px-2 py-1 min-h-[60px] ${editingMode ? 'border-gray-300' : 'border-transparent bg-transparent'} ${isProcessingField ? 'opacity-50' : ''}`}
+            className={`w-full text-xs border rounded px-2 py-1 ${minHeight} ${editingMode ? 'border-gray-300' : 'border-transparent bg-transparent'} ${isProcessingField ? 'opacity-50' : ''}`}
             disabled={!editingMode || isProcessingField}
             placeholder={field === 'problematique' ? 'Problématique...' : 'Thématique...'}
             title={displayValue}
+            rows={rows} // ← AJOUTER CETTE PROPRIÉTÉ
           />
           {editingMode && displayValue && (
             <button
@@ -296,14 +301,14 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
                 </th>
                 <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-80">
                   Problématique
-                </th> {/* ← Changé de w-64 à w-80 */}
+                </th> 
                 <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-56">
                   Sources
-                </th> {/* ← Changé de w-64 à w-56 */}
+                </th> 
                 <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
                   Catégorie
                 </th>
-              </tr>
+              </tr>  
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {elevesFiltres.map((eleve) => (
@@ -328,7 +333,7 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
                   </td>
                   
                   {/* Problématique */}
-                  <td className="px-3 py-4">
+                  <td className="px-3 py-3">
                     <div className="text-sm">
                       {renderEditableCell(eleve, 'problematique', eleve.problematique || '', true)}
                     </div>
