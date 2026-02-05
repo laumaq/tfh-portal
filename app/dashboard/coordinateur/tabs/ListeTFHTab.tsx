@@ -328,7 +328,7 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
                   </td>
                   
                   {/* Problématique */}
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-4">
                     <div className="text-sm">
                       {renderEditableCell(eleve, 'problematique', eleve.problematique || '', true)}
                     </div>
