@@ -307,7 +307,7 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {elevesFiltres.map((eleve) => (
-                <tr key={eleve.id} className="hover:bg-gray-50 h-24">
+                <tr key={eleve.id} className="hover:bg-gray-50">
                   {/* Classe */}
                   <td className="px-3 py-3 whitespace-nowrap">
                     {renderEditableCell(eleve, 'classe', eleve.classe || '')}
