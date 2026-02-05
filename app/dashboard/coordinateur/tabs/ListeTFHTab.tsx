@@ -157,25 +157,22 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
   };
 
   // Fonction pour rendre une cellule éditable
-  const renderEditableCell = (eleve: Eleve, field: keyof Eleve, value: string, isTextarea = false) => {
+  const renderEditableCell = (eleve: Eleve, field: keyof Eleve, value: string) => {
     const isProcessingField = isProcessing === eleve.id;
     const displayValue = value || '';
     
-    if (isTextarea) {
-      // Hauteur différente selon le champ
-      const minHeight = field === 'problematique' ? 'min-h-[120px]' : 'min-h-[80px]';
-      const rows = field === 'problematique' ? 6 : 4; // ← Augmenter les rows
-      
+    // Cas spécial pour problématique (textarea)
+    if (field === 'problematique') {
       return (
         <div className="relative group">
           <textarea
             value={displayValue}
             onChange={(e) => handleInstantUpdate(eleve.id, field, e.target.value)}
-            className={`w-full text-xs border rounded px-2 py-1 ${minHeight} ${editingMode ? 'border-gray-300' : 'border-transparent bg-transparent'} ${isProcessingField ? 'opacity-50' : ''}`}
+            className={`w-full text-xs border rounded px-2 py-1 min-h-[120px] ${editingMode ? 'border-gray-300' : 'border-transparent bg-transparent'} ${isProcessingField ? 'opacity-50' : ''}`}
             disabled={!editingMode || isProcessingField}
-            placeholder={field === 'problematique' ? 'Problématique...' : 'Thématique...'}
+            placeholder="Problématique..."
             title={displayValue}
-            rows={rows} // ← AJOUTER CETTE PROPRIÉTÉ
+            rows={6}
           />
           {editingMode && displayValue && (
             <button
@@ -191,6 +188,7 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
       );
     }
     
+    // Pour tous les autres champs (classe, thématique, catégorie) - input simple
     return (
       <div className="relative group">
         <input
@@ -199,7 +197,11 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
           onChange={(e) => handleInstantUpdate(eleve.id, field, e.target.value)}
           className={`w-full text-xs border rounded px-2 py-1 ${editingMode ? 'border-gray-300' : 'border-transparent bg-transparent'} ${isProcessingField ? 'opacity-50' : ''}`}
           disabled={!editingMode || isProcessingField}
-          placeholder={field === 'classe' ? 'Classe...' : field === 'categorie' ? 'Catégorie...' : ''}
+          placeholder={
+            field === 'classe' ? 'Classe...' : 
+            field === 'thematique' ? 'Thématique...' : 
+            field === 'categorie' ? 'Catégorie...' : ''
+          }
           title={displayValue}
         />
         {editingMode && displayValue && (
@@ -328,7 +330,7 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
                   {/* Thématique */}
                   <td className="px-3 py-3">
                     <div className="text-sm">
-                      {renderEditableCell(eleve, 'thematique', eleve.thematique || '', true)}
+                      {renderEditableCell(eleve, 'thematique', eleve.thematique || '')}
                     </div>
                   </td>
                   
