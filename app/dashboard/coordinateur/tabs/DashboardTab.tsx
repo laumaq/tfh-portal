@@ -3,7 +3,7 @@
 import { Eleve, Guide, TabType } from '../types';
 import { 
   Shield, FileText, UserCheck, Calendar, 
-  Users, Settings, BarChart, ChevronRight 
+  Users, Settings, BarChart, ChevronRight, BookOpen 
 } from 'lucide-react';
 
 interface DashboardTabProps {
@@ -24,6 +24,19 @@ export default function DashboardTab({
   coordinateurPrenom 
 }: DashboardTabProps) {
   const tabs = [
+    {
+      id: 'liste-tfh' as TabType,
+      name: 'Liste des TFH',
+      icon: <BookOpen className="w-5 h-5" />, // Assurez-vous d'importer BookOpen
+      bgColor: 'bg-violet-50',
+      borderColor: 'border-violet-200 hover:border-violet-300',
+      iconBg: 'bg-violet-100 text-violet-600 group-hover:bg-violet-200',
+      countColor: 'text-violet-600',
+      chevronColor: 'bg-violet-50 text-violet-600',
+      showCount: true,
+      count: eleves.length,
+      description: 'Vue complète des travaux par classe'
+    },
     {
       id: 'convocations' as TabType,
       name: 'Convocations',
