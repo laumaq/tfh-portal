@@ -50,13 +50,13 @@ export default function ConvocationsTab({
     setLocalEleves(eleves);
   }, [eleves]);
 
-  // Charger les sessions
+  // Charger les sessions 
   useEffect(() => {
     const chargerSessions = async () => {
       setLoadingSessions(true);
       try {
-        const journeesData = await getJourneesFromSupabase(supabase);
-        const sessionsDetectees = detecterSessions(journeesData);
+        // Utiliser getSessionsFromSupabase qui exclut déjà les défenses
+        const sessionsDetectees = await getSessionsFromSupabase(supabase);
         setSessions(sessionsDetectees);
       } catch (error) {
         console.error('Erreur lors du chargement des sessions:', error);
