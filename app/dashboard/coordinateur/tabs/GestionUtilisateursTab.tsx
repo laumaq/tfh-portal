@@ -4,7 +4,7 @@
 import { useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import * as XLSX from 'xlsx';
-import { Plus, Upload, Trash2, UserPlus, AlertTriangle, Check } from 'lucide-react';
+import { Plus, Upload, Trash2, UserPlus, AlertTriangle, Check, Lock, Unlock, CheckCircle, XCircle } from 'lucide-react';
 import { Eleve, Guide, LecteurExterne, Mediateur, Coordinateur } from '../types';
 
 interface GestionUtilisateursTabProps {
@@ -25,6 +25,13 @@ interface NewUser {
   email: string;
   initiale: string;
   categorie: string;
+}
+
+interface DeletePasswordModalState {
+  isOpen: boolean;
+  userId: string | null;
+  userName: string;
+  userType: UserType | null;
 }
 
 export default function GestionUtilisateursTab({
@@ -51,6 +58,12 @@ export default function GestionUtilisateursTab({
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [deletePasswordModal, setDeletePasswordModal] = useState<DeletePasswordModalState>({
+    isOpen: false,
+    userId: null,
+    userName: '',
+    userType: null
+  });
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -123,7 +136,8 @@ export default function GestionUtilisateursTab({
               classe: newUser.classe,
               categorie: newUser.categorie || null,
               initiale: initialeEleve,
-              guide_id: null
+              guide_id: null,
+              mot_de_passe: null // Initialisé à null
             }]);
 
           if (eleveError) throw eleveError;
@@ -145,7 +159,8 @@ export default function GestionUtilisateursTab({
               nom: newUser.nom,
               prenom: newUser.prenom,
               initiale: initialeGuide,
-              email: newUser.email || null
+              email: newUser.email || null,
+              mot_de_passe: null // Initialisé à null
             }]);
 
           if (guideError) throw guideError;
@@ -164,7 +179,8 @@ export default function GestionUtilisateursTab({
             .insert([{
               nom: newUser.nom,
               prenom: newUser.prenom,
-              email: newUser.email || null
+              email: newUser.email || null,
+              mot_de_passe: null // Initialisé à null
             }]);
 
           if (lecteurError) throw lecteurError;
@@ -183,7 +199,8 @@ export default function GestionUtilisateursTab({
             .insert([{
               nom: newUser.nom,
               prenom: newUser.prenom,
-              email: newUser.email || null
+              email: newUser.email || null,
+              mot_de_passe: null // Initialisé à null
             }]);
 
           if (mediateurError) throw mediateurError;
@@ -204,7 +221,8 @@ export default function GestionUtilisateursTab({
             .insert([{
               nom: newUser.nom,
               prenom: newUser.prenom,
-              initiale: initialeCoord
+              initiale: initialeCoord,
+              mot_de_passe: null // Initialisé à null
             }]);
 
           if (coordError) {
@@ -271,6 +289,117 @@ export default function GestionUtilisateursTab({
     }
   };
 
+  const handleDeletePassword = async () => {
+    if (!deletePasswordModal.userId || !deletePasswordModal.userType) return;
+
+    setLoading(true);
+    setSuccessMessage('');
+    setErrorMessage('');
+
+    try {
+      let tableName = '';
+      switch (deletePasswordModal.userType) {
+        case 'eleves':
+          tableName = 'eleves';
+          break;
+        case 'guides':
+          tableName = 'guides';
+          break;
+        case 'lecteurs-externes':
+          tableName = 'lecteurs_externes';
+          break;
+        case 'mediateurs':
+          tableName = 'mediateurs';
+          break;
+        case 'coordinateurs':
+          tableName = 'coordinateurs';
+          break;
+      }
+
+      const { error } = await supabase
+        .from(tableName)
+        .update({ mot_de_passe: null })
+        .eq('id', deletePasswordModal.userId);
+
+      if (error) throw error;
+
+      setSuccessMessage(`Mot de passe supprimé pour ${deletePasswordModal.userName}`);
+      clearMessages();
+      setDeletePasswordModal({
+        isOpen: false,
+        userId: null,
+        userName: '',
+        userType: null
+      });
+      onRefresh();
+    } catch (err) {
+      console.error('Erreur suppression mot de passe:', err);
+      setErrorMessage('Erreur lors de la suppression du mot de passe');
+      clearMessages();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openDeletePasswordModal = (userId: string, userName: string, userType: UserType) => {
+    setDeletePasswordModal({
+      isOpen: true,
+      userId,
+      userName,
+      userType
+    });
+  };
+
+  const closeDeletePasswordModal = () => {
+    setDeletePasswordModal({
+      isOpen: false,
+      userId: null,
+      userName: '',
+      userType: null
+    });
+  };
+
+  // Fonction pour vérifier si l'utilisateur a un mot de passe (s'est connecté)
+  const hasPassword = (user: any): boolean => {
+    return user.mot_de_passe !== null && user.mot_de_passe !== '';
+  };
+
+  // Fonction pour rendre l'indicateur de connexion
+  const renderConnectionStatus = (user: any) => {
+    const connected = hasPassword(user);
+    
+    return (
+      <div className="flex items-center gap-2">
+        {connected ? (
+          <button
+            className="p-1.5 bg-green-100 text-green-700 rounded-full hover:bg-green-200 transition-colors"
+            title="Utilisateur connecté"
+          >
+            <CheckCircle className="w-4 h-4" />
+          </button>
+        ) : (
+          <button
+            className="p-1.5 bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition-colors"
+            title="Utilisateur non connecté"
+          >
+            <XCircle className="w-4 h-4" />
+          </button>
+        )}
+        <button
+          onClick={() => openDeletePasswordModal(
+            user.id,
+            user.prenom ? `${user.prenom} ${user.nom}` : user.nom,
+            selectedUserType
+          )}
+          className="p-1.5 bg-gray-100 text-gray-600 rounded-full hover:bg-gray-200 transition-colors"
+          title="Supprimer le mot de passe"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
+    );
+  };
+
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -328,7 +457,8 @@ export default function GestionUtilisateursTab({
               classe: values[2] || '',
               initiale: (values[1] || '').charAt(0).toUpperCase(),
               categorie: values[3] || null,
-              guide_id: null
+              guide_id: null,
+              mot_de_passe: null // Toujours null à l'import
             };
             return eleve;
           }).filter(e => e.nom && e.prenom && e.classe);
@@ -347,7 +477,8 @@ export default function GestionUtilisateursTab({
             const guideData: any = {
               nom: values[0] || '',
               prenom: values[1] || '',
-              initiale: (values[1] || '').charAt(0).toUpperCase()
+              initiale: (values[1] || '').charAt(0).toUpperCase(),
+              mot_de_passe: null // Toujours null à l'import
             };
             return guideData;
           }).filter(g => g.nom && g.prenom);
@@ -366,7 +497,8 @@ export default function GestionUtilisateursTab({
             return {
               nom: values[0] || '',
               prenom: values[1] || '',
-              email: values[2] || null
+              email: values[2] || null,
+              mot_de_passe: null // Toujours null à l'import
             };
           }).filter(l => l.nom && l.prenom);
 
@@ -384,7 +516,8 @@ export default function GestionUtilisateursTab({
             return {
               nom: values[0] || '',
               prenom: values[1] || '',
-              email: values[2] || null
+              email: values[2] || null,
+              mot_de_passe: null // Toujours null à l'import
             };
           }).filter(m => m.nom && m.prenom);
 
@@ -401,7 +534,8 @@ export default function GestionUtilisateursTab({
             const values = row.split(',').map(v => v.trim());
             const coordData: any = {
               nom: values[0] || '',
-              prenom: values[1] || ''
+              prenom: values[1] || '',
+              mot_de_passe: null // Toujours null à l'import
             };
             
             if (values[1]) {
@@ -730,7 +864,8 @@ export default function GestionUtilisateursTab({
               Liste des {getUserTypeLabel().toLowerCase()} ({getCurrentUserCount()})
             </h3>
             <span className="text-sm text-gray-500">
-              Cliquez sur ✕ pour supprimer
+              <CheckCircle className="w-4 h-4 inline text-green-600 mr-1" /> = Connecté
+              <XCircle className="w-4 h-4 inline text-red-600 mr-1 ml-3" /> = Non connecté
             </span>
           </div>
         </div>
@@ -751,7 +886,7 @@ export default function GestionUtilisateursTab({
                       Prénom
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Catégorie
+                      Connecté
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       Actions
@@ -767,14 +902,14 @@ export default function GestionUtilisateursTab({
                       Prénom
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Initiale
+                      Connecté
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       Actions
                     </th>
                   </>
                 )}
-                {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && (
+                {selectedUserType === 'lecteurs-externes' && (
                   <>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       Nom
@@ -784,6 +919,28 @@ export default function GestionUtilisateursTab({
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       Email
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Connecté
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </>
+                )}
+                {selectedUserType === 'mediateurs' && (
+                  <>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Nom
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Prénom
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Email
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Connecté
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       Actions
@@ -799,7 +956,7 @@ export default function GestionUtilisateursTab({
                       Prénom
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Initiale
+                      Connecté
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       Actions
@@ -822,14 +979,14 @@ export default function GestionUtilisateursTab({
                       <td className="px-4 py-3 text-sm text-gray-900">
                         {user.prenom}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
-                        {user.categorie || '-'}
+                      <td className="px-4 py-3">
+                        {renderConnectionStatus(user)}
                       </td>
                       <td className="px-4 py-3">
                         <button
                           onClick={() => handleDeleteUser(user.id, user.nom, user.prenom)}
                           className="px-3 py-1 bg-red-50 text-red-700 hover:bg-red-100 rounded text-sm transition-colors flex items-center gap-1"
-                          title="Supprimer"
+                          title="Supprimer l'utilisateur"
                         >
                           ✕
                         </button>
@@ -844,21 +1001,21 @@ export default function GestionUtilisateursTab({
                       <td className="px-4 py-3 text-sm text-gray-900">
                         {user.prenom}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-900">
-                        {user.initiale}.
+                      <td className="px-4 py-3">
+                        {renderConnectionStatus(user)}
                       </td>
                       <td className="px-4 py-3">
                         <button
                           onClick={() => handleDeleteUser(user.id, user.nom)}
                           className="px-3 py-1 bg-red-50 text-red-700 hover:bg-red-100 rounded text-sm transition-colors flex items-center gap-1"
-                          title="Supprimer"
+                          title="Supprimer l'utilisateur"
                         >
                           ✕
                         </button>
                       </td>
                     </>
                   )}
-                  {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && (
+                  {selectedUserType === 'lecteurs-externes' && (
                     <>
                       <td className="px-4 py-3 text-sm font-medium text-gray-900">
                         {user.nom}
@@ -870,10 +1027,38 @@ export default function GestionUtilisateursTab({
                         {user.email || '-'}
                       </td>
                       <td className="px-4 py-3">
+                        {renderConnectionStatus(user)}
+                      </td>
+                      <td className="px-4 py-3">
                         <button
                           onClick={() => handleDeleteUser(user.id, user.nom, user.prenom)}
                           className="px-3 py-1 bg-red-50 text-red-700 hover:bg-red-100 rounded text-sm transition-colors flex items-center gap-1"
-                          title="Supprimer"
+                          title="Supprimer l'utilisateur"
+                        >
+                          ✕
+                        </button>
+                      </td>
+                    </>
+                  )}
+                  {selectedUserType === 'mediateurs' && (
+                    <>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                        {user.nom}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {user.prenom}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500">
+                        {user.email || '-'}
+                      </td>
+                      <td className="px-4 py-3">
+                        {renderConnectionStatus(user)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => handleDeleteUser(user.id, user.nom, user.prenom)}
+                          className="px-3 py-1 bg-red-50 text-red-700 hover:bg-red-100 rounded text-sm transition-colors flex items-center gap-1"
+                          title="Supprimer l'utilisateur"
                         >
                           ✕
                         </button>
@@ -888,14 +1073,14 @@ export default function GestionUtilisateursTab({
                       <td className="px-4 py-3 text-sm text-gray-900">
                         {user.prenom}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-900">
-                        {user.initiale}.
+                      <td className="px-4 py-3">
+                        {renderConnectionStatus(user)}
                       </td>
                       <td className="px-4 py-3">
                         <button
                           onClick={() => handleDeleteUser(user.id, user.nom, user.prenom)}
                           className="px-3 py-1 bg-red-50 text-red-700 hover:bg-red-100 rounded text-sm transition-colors flex items-center gap-1"
-                          title="Supprimer"
+                          title="Supprimer l'utilisateur"
                         >
                           ✕
                         </button>
@@ -1025,6 +1210,55 @@ export default function GestionUtilisateursTab({
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
               >
                 Confirmer ({clearConfirmations.length}/3)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmation pour suppression de mot de passe */}
+      {deletePasswordModal.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="px-6 py-4 border-b bg-yellow-50">
+              <h3 className="text-lg font-semibold text-yellow-800">
+                🔐 Supprimer le mot de passe
+              </h3>
+            </div>
+            
+            <div className="p-6">
+              <div className="mb-4">
+                <p className="text-gray-700 mb-3">
+                  Vous êtes sur le point de supprimer le mot de passe de <strong>{deletePasswordModal.userName}</strong>.
+                </p>
+                
+                <p className="text-sm text-gray-600 mb-4">
+                  Cette action permettra à l'utilisateur de créer un nouveau mot de passe lors de sa prochaine connexion.
+                  Elle est utile si l'utilisateur a oublié son mot de passe.
+                </p>
+                
+                <div className="bg-blue-50 border border-blue-200 rounded p-3 mb-4">
+                  <p className="text-sm text-blue-800">
+                    <strong>⚠️ Attention :</strong> L'utilisateur devra réinitialiser son mot de passe pour pouvoir se reconnecter.
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
+              <button
+                onClick={closeDeletePasswordModal}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm"
+                disabled={loading}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleDeletePassword}
+                className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={loading}
+              >
+                {loading ? 'Suppression...' : 'Supprimer le mot de passe'}
               </button>
             </div>
           </div>
