@@ -22,27 +22,27 @@ export function useCoordinateurData() {
 
   const loadData = useCallback(async () => {
     try {
-      // Charger les guides
+      // Charger les guides - AVEC mot_de_passe
       const { data: guidesData, error: guidesError } = await supabase
         .from('guides')
-        .select('id, nom, prenom, initiale')
+        .select('id, nom, prenom, initiale, email, mot_de_passe') // ← AJOUTÉ
         .order('nom', { ascending: true });
       
       if (guidesError) throw guidesError;
       setGuides(guidesData || []);
 
-      // Charger les lecteurs externes
+      // Charger les lecteurs externes - AVEC mot_de_passe
       const { data: lecteursExternesData, error: lecteursError } = await supabase
         .from('lecteurs_externes')
-        .select('id, nom, prenom, email');
+        .select('id, nom, prenom, email, mot_de_passe'); // ← AJOUTÉ
 
       if (lecteursError) throw lecteursError;
       setLecteursExternes(lecteursExternesData || []);
 
-      // Charger les médiateurs
+      // Charger les médiateurs - AVEC mot_de_passe
       const { data: mediateursData, error: mediateursError } = await supabase
         .from('mediateurs')
-        .select('id, nom, prenom, email');
+        .select('id, nom, prenom, email, mot_de_passe'); // ← AJOUTÉ
 
       if (mediateursError) {
         setMediateurs([]);
@@ -50,10 +50,10 @@ export function useCoordinateurData() {
         setMediateurs(mediateursData || []);
       }
 
-      // Charger les coordinateurs
+      // Charger les coordinateurs - AVEC mot_de_passe
       const { data: coordinateursData, error: coordinateursError } = await supabase
         .from('coordinateurs')
-        .select('id, nom, prenom, initiale');
+        .select('id, nom, prenom, initiale, mot_de_passe'); // ← AJOUTÉ
 
       if (coordinateursError) {
         setCoordinateurs([]);
@@ -61,7 +61,7 @@ export function useCoordinateurData() {
         setCoordinateurs(coordinateursData || []);
       }
 
-      // Charger les élèves avec jointures
+      // Charger les élèves avec jointures (déjà avec *)
       const { data: elevesData, error: elevesError } = await supabase
         .from('eleves')
         .select(`
@@ -101,7 +101,7 @@ export function useCoordinateurData() {
         if (userId) {
           const { data } = await supabase
             .from('coordinateurs')
-            .select('nom, prenom')
+            .select('nom, prenom, mot_de_passe') // ← AJOUTÉ mot_de_passe ici aussi
             .eq('id', userId)
             .single();
           
@@ -148,5 +148,4 @@ export function useCoordinateurData() {
     refreshData,
     updateEleveLocal
   };
-
 }
