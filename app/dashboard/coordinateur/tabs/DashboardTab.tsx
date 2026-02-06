@@ -1,10 +1,14 @@
 'use client';
 
 import { Eleve, Guide, TabType } from '../types';
+import { detecterSessions, Journee, getJourneesFromSupabase } from '../utils/sessionUtils';
+import { supabase } from '@/lib/supabase';
+import { useState, useEffect } from 'react';
 import { 
   Shield, FileText, UserCheck, Calendar, 
   Users, Settings, BarChart, ChevronRight, BookOpen 
 } from 'lucide-react';
+
 
 interface DashboardTabProps {
   eleves: Eleve[];
@@ -23,6 +27,39 @@ export default function DashboardTab({
   coordinateurNom,
   coordinateurPrenom 
 }: DashboardTabProps) {
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [journees, setJournees] = useState<Journee[]>([]);
+
+  // Charger les journées et sessions
+  useEffect(() => {
+    const loadSessions = async () => {
+      try {
+        const journees = await getJourneesFromSupabase(supabase);
+        setJournees(journees);
+        const detectedSessions = detecterSessions(journees);
+        setSessions(detectedSessions);
+      } catch (error) {
+        console.error('Erreur chargement sessions:', error);
+      }
+    };
+    
+    loadSessions();
+  }, []);
+  
+  // Fonction pour trouver la prochaine session
+  const getProchaineSession = () => {
+    const maintenant = new Date();
+    
+    // Trouver la première session dont la date de fin est aujourd'hui ou dans le futur
+    const prochaineSession = sessions.find(session => {
+      const finSession = new Date(session.date_fin);
+      // Ajouter 1 jour pour inclure la journée même
+      finSession.setHours(23, 59, 59, 999);
+      return finSession >= maintenant;
+    });
+    
+    return prochaineSession;
+  };
   
   // Calcul des statistiques pour l'aperçu du système
   const calculateSystemOverview = () => {
@@ -41,18 +78,29 @@ export default function DashboardTab({
     
     // 4. Convoqués à la prochaine session (trouve la prochaine session avec des convocations)
     const getProchainesConvocations = () => {
-      // Chercher la première session qui a des convocations "Oui"
-      for (let i = 1; i <= 20; i++) {
-        const sessionKey = `session_${i}_convoque` as keyof Eleve;
-        const convocations = eleves.filter(e => e[sessionKey] === 'Oui');
-        if (convocations.length > 0) {
-          return {
-            session: i,
-            count: convocations.length
-          };
-        }
+      // Utiliser la prochaine session détectée
+      const prochaineSession = getProchaineSession();
+      
+      if (!prochaineSession) {
+        return null;
       }
-      return null;
+      
+      // Extraire l'index de la session (ex: "session_1" -> 1)
+      const sessionIndex = parseInt(prochaineSession.id.split('_')[1]);
+      
+      // Compter les élèves convoqués à cette session
+      const convocations = eleves.filter(e => {
+        const sessionKey = `session_${sessionIndex}_convoque` as keyof Eleve;
+        const valeur = e[sessionKey];
+        return valeur && valeur.startsWith('Oui');
+      });
+      
+      return {
+        session: sessionIndex,
+        sessionNom: prochaineSession.nom,
+        count: convocations.length,
+        totalSessions: sessions.length
+      };
     };
     
     const prochainesConvocations = getProchainesConvocations();
@@ -251,24 +299,30 @@ export default function DashboardTab({
           
           {/* Défenses/Problématiques/Thématiques */}
           <div className="p-5 bg-purple-50 rounded-xl border border-purple-100">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-3xl font-bold text-purple-700">
-                {getDefensesText().split('/')[0].trim()}
-                <span className="text-lg font-normal text-purple-600">/</span>
-                {getDefensesText().split('/')[1].trim()}
+            <div className="text-center mb-2">
+              <div className="text-2xl md:text-3xl font-bold text-purple-700">
+                {stats.defensesProgrammees > 0 ? stats.defensesProgrammees : 
+                 stats.avecProblematique > 0 ? stats.avecProblematique : 
+                 stats.avecThematique}
+                <span className="font-normal text-purple-600 mx-1">/</span>
+                {stats.defensesProgrammees > 0 ? stats.avecProblematique : 
+                 stats.avecProblematique > 0 ? stats.avecThematique : 
+                 stats.elevesTotal}
               </div>
-              <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                <FileText className="w-5 h-5 text-purple-600" />
+              <div className="text-xs text-purple-600 mt-1">
+                {stats.defensesProgrammees > 0 ? 'défenses / problématiques' : 
+                 stats.avecProblematique > 0 ? 'problématiques / thématiques' : 
+                 'thématiques / élèves'}
               </div>
             </div>
-            <div className="text-sm font-medium text-purple-800 mb-1">
+            <div className="text-sm font-medium text-purple-800 mb-1 text-center">
               {stats.defensesProgrammees > 0 ? 'Défenses programmées' : 
-               stats.avecProblematique > 0 ? 'Problématiques définies' : 
+               stats.avecProblématique > 0 ? 'Problématiques définies' : 
                'Thématiques définies'}
             </div>
-            <div className="text-xs text-purple-600">
+            <div className="text-xs text-purple-600 text-center">
               {stats.defensesProgrammees > 0 ? (
-                `${stats.defensesProgrammees} soutenances à venir`
+                `${Math.round((stats.defensesProgrammees / stats.elevesTotal) * 100)}% des élèves`
               ) : stats.avecProblematique > 0 ? (
                 `${Math.round((stats.avecProblematique / stats.elevesTotal) * 100)}% ont une problématique`
               ) : (
@@ -279,22 +333,22 @@ export default function DashboardTab({
           
           {/* Convoqués prochaine session */}
           <div className="p-5 bg-orange-50 rounded-xl border border-orange-100">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-3xl font-bold text-orange-700">
+            <div className="text-center mb-2">
+              <div className="text-2xl md:text-3xl font-bold text-orange-700">
                 {stats.prochainesConvocations ? `${stats.prochainesConvocations.count}` : '0'}
-                <span className="text-lg font-normal text-orange-600">/</span>
+                <span className="font-normal text-orange-600 mx-1">/</span>
                 {stats.elevesTotal}
               </div>
-              <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-orange-600" />
+              <div className="text-xs text-orange-600 mt-1">
+                convoqués / élèves total
               </div>
             </div>
-            <div className="text-sm font-medium text-orange-800 mb-1">
+            <div className="text-sm font-medium text-orange-800 mb-1 text-center">
               {stats.prochainesConvocations ? 
-                `Session ${stats.prochainesConvocations.session} - Convoqués` : 
+                `${stats.prochainesConvocations.sessionNom}` : 
                 'Aucune convocation à venir'}
             </div>
-            <div className="text-xs text-orange-600">
+            <div className="text-xs text-orange-600 text-center">
               {stats.prochainesConvocations ? (
                 `${Math.round((stats.prochainesConvocations.count / stats.elevesTotal) * 100)}% des élèves`
               ) : (
@@ -302,8 +356,6 @@ export default function DashboardTab({
               )}
             </div>
           </div>
-        </div>
-      </div>
 
       {/* Cartes de navigation */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
@@ -342,33 +394,6 @@ export default function DashboardTab({
             </div>
           </div>
         ))}
-      </div>
-
-      {/* Ancienne section statistiques rapides (optionnelle - à supprimer ou garder selon votre préférence) */}
-      <div className="bg-white rounded-xl shadow-sm border p-6">
-        <h3 className="font-semibold text-gray-800 mb-4">Statistiques rapides</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
-            <div className="text-2xl font-bold text-blue-700">{eleves.length}</div>
-            <div className="text-sm text-blue-600">Élèves total</div>
-          </div>
-          <div className="p-4 bg-green-50 rounded-lg border border-green-100">
-            <div className="text-2xl font-bold text-green-700">{guides.length}</div>
-            <div className="text-sm text-green-600">Guides total</div>
-          </div>
-          <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
-            <div className="text-2xl font-bold text-purple-700">
-              {eleves.filter(e => e.date_defense).length}
-            </div>
-            <div className="text-sm text-purple-600">Défenses programmées</div>
-          </div>
-          <div className="p-4 bg-orange-50 rounded-lg border border-orange-100">
-            <div className="text-2xl font-bold text-orange-700">
-              {eleves.filter(e => e.convocation_mars?.startsWith('Oui')).length}
-            </div>
-            <div className="text-sm text-orange-600">Convoqués mars</div>
-          </div>
-        </div>
       </div>
     </div>
   );
