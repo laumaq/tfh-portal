@@ -45,18 +45,14 @@ export default function ConvocationsTab({
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(true);
 
-  // Synchroniser les données locales avec les données parent
-  useEffect(() => {
-    setLocalEleves(eleves);
-  }, [eleves]);
-
   // Charger les sessions 
   useEffect(() => {
     const chargerSessions = async () => {
       setLoadingSessions(true);
       try {
-        // Utiliser getSessionsFromSupabase qui exclut déjà les défenses
-        const sessionsDetectees = await getSessionsFromSupabase(supabase);
+        // Récupérer les journées et détecter les sessions
+        const journeesData = await getJourneesFromSupabase(supabase);
+        const sessionsDetectees = detecterSessions(journeesData);
         setSessions(sessionsDetectees);
       } catch (error) {
         console.error('Erreur lors du chargement des sessions:', error);
