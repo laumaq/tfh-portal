@@ -361,7 +361,7 @@ export default function GestionUtilisateursTab({
 
   // Fonction pour vérifier si l'utilisateur a un mot de passe (s'est connecté)
   const hasPassword = (user: any): boolean => {
-    return user.mot_de_passe !== null && user.mot_de_passe !== '';
+    return user.mot_de_passe !== null && user.mot_de_passe !== undefined && user.mot_de_passe !== '';
   };
 
   // Fonction pour rendre l'indicateur de connexion
