@@ -356,6 +356,8 @@ export default function DashboardTab({
               )}
             </div>
           </div>
+        </div> {/* Fermeture du grid grid-cols-1 */}
+      </div> {/* Fermeture du bg-white rounded-xl shadow-sm border p-6 mb-8 */}
 
       {/* Cartes de navigation */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
