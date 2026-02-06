@@ -23,11 +23,70 @@ export default function DashboardTab({
   coordinateurNom,
   coordinateurPrenom 
 }: DashboardTabProps) {
+  
+  // Calcul des statistiques pour l'aperçu du système
+  const calculateSystemOverview = () => {
+    // 1. Élèves connectés
+    const elevesConnected = eleves.filter(e => e.mot_de_passe && e.mot_de_passe !== '').length;
+    const elevesTotal = eleves.length;
+    
+    // 2. Guides connectés
+    const guidesConnected = guides.filter(g => g.mot_de_passe && g.mot_de_passe !== '').length;
+    const guidesTotal = guides.length;
+    
+    // 3. Défenses / Problématiques / Thématiques
+    const defensesProgrammees = eleves.filter(e => e.date_defense).length;
+    const avecProblematique = eleves.filter(e => e.problematique && e.problematique.trim() !== '').length;
+    const avecThematique = eleves.filter(e => e.thematique && e.thematique.trim() !== '').length;
+    
+    // 4. Convoqués à la prochaine session (trouve la prochaine session avec des convocations)
+    const getProchainesConvocations = () => {
+      // Chercher la première session qui a des convocations "Oui"
+      for (let i = 1; i <= 20; i++) {
+        const sessionKey = `session_${i}_convoque` as keyof Eleve;
+        const convocations = eleves.filter(e => e[sessionKey] === 'Oui');
+        if (convocations.length > 0) {
+          return {
+            session: i,
+            count: convocations.length
+          };
+        }
+      }
+      return null;
+    };
+    
+    const prochainesConvocations = getProchainesConvocations();
+    
+    return {
+      elevesConnected,
+      elevesTotal,
+      guidesConnected,
+      guidesTotal,
+      defensesProgrammees,
+      avecProblematique,
+      avecThematique,
+      prochainesConvocations
+    };
+  };
+  
+  const stats = calculateSystemOverview();
+  
+  // Fonction pour formater le texte selon les conditions demandées
+  const getDefensesText = () => {
+    if (stats.defensesProgrammees > 0) {
+      return `${stats.defensesProgrammees} défenses programmées / ${stats.avecProblematique} problématiques`;
+    } else if (stats.avecProblematique > 0) {
+      return `${stats.avecProblematique} problématiques / ${stats.avecThematique} thématiques`;
+    } else {
+      return `${stats.avecThematique} thématiques / ${stats.elevesTotal} élèves`;
+    }
+  };
+  
   const tabs = [
     {
       id: 'liste-tfh' as TabType,
       name: 'Liste des TFH',
-      icon: <BookOpen className="w-5 h-5" />, // Assurez-vous d'importer BookOpen
+      icon: <BookOpen className="w-5 h-5" />,
       bgColor: 'bg-violet-50',
       borderColor: 'border-violet-200 hover:border-violet-300',
       iconBg: 'bg-violet-100 text-violet-600 group-hover:bg-violet-200',
@@ -146,6 +205,106 @@ export default function DashboardTab({
         <p className="text-gray-600">Bienvenue {coordinateurPrenom} {coordinateurNom}. Voici votre panneau de gestion des TFH.</p>
       </div>
 
+      {/* Aperçu du système - AU-DESSUS des boutons comme demandé */}
+      <div className="bg-white rounded-xl shadow-sm border p-6 mb-8">
+        <h3 className="font-semibold text-gray-800 mb-6 text-lg">Aperçu du système</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Élèves */}
+          <div className="p-5 bg-blue-50 rounded-xl border border-blue-100">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-3xl font-bold text-blue-700">
+                {stats.elevesConnected}/{stats.elevesTotal}
+              </div>
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <Users className="w-5 h-5 text-blue-600" />
+              </div>
+            </div>
+            <div className="text-sm font-medium text-blue-800 mb-1">Élèves connectés</div>
+            <div className="text-xs text-blue-600">
+              {stats.elevesConnected === stats.elevesTotal ? (
+                <span className="text-green-600 font-medium">✓ Tous connectés</span>
+              ) : (
+                `${Math.round((stats.elevesConnected / stats.elevesTotal) * 100)}% ont accédé au portail`
+              )}
+            </div>
+          </div>
+          
+          {/* Guides */}
+          <div className="p-5 bg-green-50 rounded-xl border border-green-100">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-3xl font-bold text-green-700">
+                {stats.guidesConnected}/{stats.guidesTotal}
+              </div>
+              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                <UserCheck className="w-5 h-5 text-green-600" />
+              </div>
+            </div>
+            <div className="text-sm font-medium text-green-800 mb-1">Guides connectés</div>
+            <div className="text-xs text-green-600">
+              {stats.guidesConnected === stats.guidesTotal ? (
+                <span className="text-green-600 font-medium">✓ Tous connectés</span>
+              ) : (
+                `${Math.round((stats.guidesConnected / stats.guidesTotal) * 100)}% ont accédé au portail`
+              )}
+            </div>
+          </div>
+          
+          {/* Défenses/Problématiques/Thématiques */}
+          <div className="p-5 bg-purple-50 rounded-xl border border-purple-100">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-3xl font-bold text-purple-700">
+                {getDefensesText().split('/')[0].trim()}
+                <span className="text-lg font-normal text-purple-600">/</span>
+                {getDefensesText().split('/')[1].trim()}
+              </div>
+              <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                <FileText className="w-5 h-5 text-purple-600" />
+              </div>
+            </div>
+            <div className="text-sm font-medium text-purple-800 mb-1">
+              {stats.defensesProgrammees > 0 ? 'Défenses programmées' : 
+               stats.avecProblematique > 0 ? 'Problématiques définies' : 
+               'Thématiques définies'}
+            </div>
+            <div className="text-xs text-purple-600">
+              {stats.defensesProgrammees > 0 ? (
+                `${stats.defensesProgrammees} soutenances à venir`
+              ) : stats.avecProblematique > 0 ? (
+                `${Math.round((stats.avecProblematique / stats.elevesTotal) * 100)}% ont une problématique`
+              ) : (
+                `${Math.round((stats.avecThematique / stats.elevesTotal) * 100)}% ont une thématique`
+              )}
+            </div>
+          </div>
+          
+          {/* Convoqués prochaine session */}
+          <div className="p-5 bg-orange-50 rounded-xl border border-orange-100">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-3xl font-bold text-orange-700">
+                {stats.prochainesConvocations ? `${stats.prochainesConvocations.count}` : '0'}
+                <span className="text-lg font-normal text-orange-600">/</span>
+                {stats.elevesTotal}
+              </div>
+              <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                <Calendar className="w-5 h-5 text-orange-600" />
+              </div>
+            </div>
+            <div className="text-sm font-medium text-orange-800 mb-1">
+              {stats.prochainesConvocations ? 
+                `Session ${stats.prochainesConvocations.session} - Convoqués` : 
+                'Aucune convocation à venir'}
+            </div>
+            <div className="text-xs text-orange-600">
+              {stats.prochainesConvocations ? (
+                `${Math.round((stats.prochainesConvocations.count / stats.elevesTotal) * 100)}% des élèves`
+              ) : (
+                'Toutes les sessions sont terminées'
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Cartes de navigation */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         {tabs.map((tab) => (
@@ -185,17 +344,17 @@ export default function DashboardTab({
         ))}
       </div>
 
-      {/* Statistiques rapides */}
+      {/* Ancienne section statistiques rapides (optionnelle - à supprimer ou garder selon votre préférence) */}
       <div className="bg-white rounded-xl shadow-sm border p-6">
-        <h3 className="font-semibold text-gray-800 mb-4">Aperçu rapide du système</h3>
+        <h3 className="font-semibold text-gray-800 mb-4">Statistiques rapides</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
             <div className="text-2xl font-bold text-blue-700">{eleves.length}</div>
-            <div className="text-sm text-blue-600">Élèves</div>
+            <div className="text-sm text-blue-600">Élèves total</div>
           </div>
           <div className="p-4 bg-green-50 rounded-lg border border-green-100">
             <div className="text-2xl font-bold text-green-700">{guides.length}</div>
-            <div className="text-sm text-green-600">Guides</div>
+            <div className="text-sm text-green-600">Guides total</div>
           </div>
           <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
             <div className="text-2xl font-bold text-purple-700">
