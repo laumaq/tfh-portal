@@ -76,6 +76,8 @@ export interface Eleve {
   journee_18_present?: boolean | null;
   journee_19_present?: boolean | null;
   journee_20_present?: boolean | null;
+
+  mot_de_passe?: string | null;
 }
 
 export interface Guide {
@@ -84,6 +86,7 @@ export interface Guide {
   prenom: string; 
   initiale: string;
   email?: string;
+  mot_de_passe?: string | null;
 }
 
 export interface LecteurExterne {
@@ -91,6 +94,7 @@ export interface LecteurExterne {
   nom: string;
   prenom: string;
   email: string;
+  mot_de_passe?: string | null;
 }
 
 export interface Mediateur {
@@ -98,6 +102,7 @@ export interface Mediateur {
   nom: string;
   prenom: string;
   email: string;
+  mot_de_passe?: string | null;
 }
 
 export interface Coordinateur {
@@ -105,6 +110,7 @@ export interface Coordinateur {
   nom: string;
   prenom: string;
   initiale: string;
+  mot_de_passe?: string | null;
 }
 
 export interface DefenseEvent {
