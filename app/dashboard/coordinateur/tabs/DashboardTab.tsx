@@ -92,7 +92,7 @@ export default function DashboardTab({
       const convocations = eleves.filter(e => {
         const sessionKey = `session_${sessionIndex}_convoque` as keyof Eleve;
         const valeur = e[sessionKey];
-        return valeur && valeur.startsWith('Oui');
+        return valeur && typeof valeur === 'string' && valeur.startsWith('Oui');
       });
       
       return {
