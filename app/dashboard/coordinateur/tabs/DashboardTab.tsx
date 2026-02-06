@@ -317,7 +317,7 @@ export default function DashboardTab({
             </div>
             <div className="text-sm font-medium text-purple-800 mb-1 text-center">
               {stats.defensesProgrammees > 0 ? 'Défenses programmées' : 
-               stats.avecProblématique > 0 ? 'Problématiques définies' : 
+               stats.avecProblematique > 0 ? 'Problématiques définies' : 
                'Thématiques définies'}
             </div>
             <div className="text-xs text-purple-600 text-center">
