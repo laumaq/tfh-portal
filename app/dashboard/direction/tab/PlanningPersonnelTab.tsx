@@ -425,4 +425,18 @@ export default function PlanningPersonnelTab({ guideId, eleves }: PlanningPerson
           <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full flex items-center gap-1">
             <User className="w-3 h-3" /> Guide
           </span>
-          <span className="px-2 py-1 bg-purple-
+          <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full flex items-center gap-1">
+            <FileText className="w-3 h-3" /> Lecteur interne
+          </span>
+          <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full flex items-center gap-1">
+            <Users className="w-3 h-3" /> Guide & Lecteur interne
+          </span>
+        </div>
+        <p className="text-xs text-gray-600 mt-3">
+          Ce planning affiche uniquement les TFH où vous êtes impliqué comme guide ou lecteur interne.
+          Les défenses sans date/heure définie n'apparaissent pas.
+        </p>
+      </div>
+    </div>
+  );
+}
