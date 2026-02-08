@@ -83,6 +83,60 @@ export default function LoginPage() {
           return;
         }
       }
+
+      // 2. VÉRIFIER LA DIRECTION
+      const { data: directionData, error: directionError } = await supabase
+        .from('direction')
+        .select(`
+          id,
+          guide_id,
+          guides:guide_id (
+            id,
+            nom,
+            initiale,
+            mot_de_passe
+          )
+        `)
+        .ilike('guides.nom', nomNormalized)
+        .ilike('guides.initiale', initialeNormalized)
+        .maybeSingle();
+      
+      if (!directionError && directionData && directionData.guides) {
+        const guide = directionData.guides;
+        const storedPassword = guide.mot_de_passe;
+        
+        // CAS 1: PREMIÈRE CONNEXION (NULL ou chaîne vide)
+        if (!storedPassword || storedPassword === '') {
+          console.log("Première connexion direction - enregistrement du mot de passe");
+          
+          await supabase
+            .from('guides')
+            .update({ mot_de_passe: password })
+            .eq('id', guide.id);
+          
+          localStorage.setItem('userType', 'direction');
+          localStorage.setItem('userId', guide.id);
+          localStorage.setItem('userDirectionId', directionData.id); // Optionnel : stocker l'ID direction
+          localStorage.setItem('userName', `${guide.nom} ${guide.initiale}.`);
+          router.push('/dashboard/direction');
+          return;
+        }
+      
+        // CAS 2: MOT DE PASSE EXISTANT
+        if (guide.mot_de_passe === password) {
+          localStorage.setItem('userType', 'direction');
+          localStorage.setItem('userId', guide.id);
+          localStorage.setItem('userDirectionId', directionData.id);
+          localStorage.setItem('userName', `${guide.nom} ${guide.initiale}.`);
+          router.push('/dashboard/direction');
+          return;
+        } else {
+          setError('Mot de passe incorrect');
+          setLoading(false);
+          return;
+        }
+      }
+
   
       // 2. VÉRIFIER LES GUIDES
       const { data: guideData, error: guideError } = await supabase
@@ -309,6 +363,7 @@ export default function LoginPage() {
     </div>
   );
 }
+
 
 
 
