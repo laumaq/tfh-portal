@@ -1,4 +1,4 @@
-// app/page.tsx - Page de connexion avec médiateurs et lecteurs externes
+// app/page.tsx - Page de connexion principale
 'use client';
 
 import { useState } from 'react';
@@ -14,6 +14,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +46,7 @@ export default function LoginPage() {
         
         // CAS 1: PREMIÈRE CONNEXION (NULL ou chaîne vide)
         if (storedPassword === null || storedPassword === '') {
-          console.log("Première connexion - enregistrement du mot de passe");
+          console.log("Première connexion coordinateur - enregistrement du mot de passe");
           
           // Enregistrer le mot de passe
           const { error: updateError } = await supabase
@@ -83,8 +84,8 @@ export default function LoginPage() {
           return;
         }
       }
-
-      // 2. VÉRIFIER LA DIRECTION
+  
+      // 2. VÉRIFIER LA DIRECTION (AJOUTER CETTE SECTION AVANT LES GUIDES)
       const { data: directionData, error: directionError } = await supabase
         .from('direction')
         .select(`
@@ -100,7 +101,7 @@ export default function LoginPage() {
         .ilike('guides.nom', nomNormalized)
         .ilike('guides.initiale', initialeNormalized)
         .maybeSingle();
-      
+  
       if (!directionError && directionData && directionData.guides) {
         const guide = directionData.guides;
         const storedPassword = guide.mot_de_passe;
@@ -116,12 +117,12 @@ export default function LoginPage() {
           
           localStorage.setItem('userType', 'direction');
           localStorage.setItem('userId', guide.id);
-          localStorage.setItem('userDirectionId', directionData.id); // Optionnel : stocker l'ID direction
+          localStorage.setItem('userDirectionId', directionData.id);
           localStorage.setItem('userName', `${guide.nom} ${guide.initiale}.`);
           router.push('/dashboard/direction');
           return;
         }
-      
+  
         // CAS 2: MOT DE PASSE EXISTANT
         if (guide.mot_de_passe === password) {
           localStorage.setItem('userType', 'direction');
@@ -136,9 +137,8 @@ export default function LoginPage() {
           return;
         }
       }
-
   
-      // 2. VÉRIFIER LES GUIDES
+      // 3. VÉRIFIER LES GUIDES NORMALS (SEULEMENT APRÈS AVOIR VÉRIFIÉ LA DIRECTION)
       const { data: guideData, error: guideError } = await supabase
         .from('guides')
         .select('*')
@@ -179,7 +179,7 @@ export default function LoginPage() {
         }
       }
   
-      // 3. VÉRIFIER LES ÉLÈVES
+      // 4. VÉRIFIER LES ÉLÈVES
       const { data: eleveData, error: eleveError } = await supabase
         .from('eleves')
         .select('*')
@@ -220,7 +220,7 @@ export default function LoginPage() {
         }
       }
   
-      // 4. VÉRIFIER LES MÉDIATEURS
+      // 5. VÉRIFIER LES MÉDIATEURS
       const { data: mediateurData, error: mediateurError } = await supabase
         .from('mediateurs')
         .select('*')
@@ -363,6 +363,7 @@ export default function LoginPage() {
     </div>
   );
 }
+
 
 
 
