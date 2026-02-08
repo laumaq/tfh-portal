@@ -78,6 +78,14 @@ export default function DirectionDashboard() {
             coordinateurPrenom={currentGuide?.initiale || ''}
           />
         );
+
+      case 'interface-guide':
+        return (
+          <InterfaceGuideTab
+            guideId={currentGuide?.id || ''}
+            onRefresh={refreshData}
+          />
+        );
       
       case 'lecteur-interne':
         return (
@@ -210,6 +218,7 @@ export default function DirectionDashboard() {
   // Définir les onglets disponibles pour la direction
   const directionTabs: TabType[] = [
     'dashboard',
+    'interface-guide', 
     'lecteur-interne',
     'planning-personnel',
     'liste-tfh',
