@@ -7,7 +7,7 @@ import {
   BarChart3, TrendingUp, Users, BookOpen, UserCheck, Eye, 
   CheckCircle, XCircle, AlertCircle, Download, Filter, RefreshCw
 } from 'lucide-react';
-import { Eleve } from '../types';
+import { Eleve } from '../../../coordinateur/types';
 
 interface StatsData {
   totalEleves: number;
