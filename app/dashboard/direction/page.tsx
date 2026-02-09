@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import LoadingSpinner from '../coordinateur/components/LoadingSpinner';
-import DashboardTab from './tabs/DashboardTab';
+import DashboardTabDirection from './tabs/DashboardTab';
 import ListeTFHTab from './tabs/ListeTFHTab';
 import ConvocationsTab from './tabs/ConvocationsTab';
 import PresencesTab from './tabs/PresencesTab';
@@ -67,13 +67,13 @@ export default function DirectionDashboard() {
     switch (activeTab) {
       case 'dashboard':
         return (
-          <DashboardTab 
+          <DashboardTabDirection 
             eleves={eleves}
             guides={guides}
             onTabChange={setActiveTab}
             userName={userName}
-            coordinateurNom={currentGuide?.nom || ''}
-            coordinateurPrenom={currentGuide?.initiale || ''}
+            guideNom={currentGuide?.nom || ''}
+            guidePrenom={currentGuide?.initiale || ''}
           />
         );
 
