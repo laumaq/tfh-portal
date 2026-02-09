@@ -28,7 +28,6 @@ export default function DirectionDashboard() {
   const [editingModeConvocations, setEditingModeConvocations] = useState(false);
   const [editingModeDefenses, setEditingModeDefenses] = useState(false);
 
-  // Définir les onglets disponibles UNE SEULE FOIS (plutôt que 2 fois)
   const directionTabs: DirectionTabType[] = [
     'dashboard',
     'interface-guide',
@@ -43,10 +42,6 @@ export default function DirectionDashboard() {
     'controle'
   ];
   
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [userName, setUserName] = useState('');
-  const [editingModeConvocations, setEditingModeConvocations] = useState(false);
-  const [editingModeDefenses, setEditingModeDefenses] = useState(false);
 
   // Utiliser les hooks custom (nous créerons useDirectionData ensuite)
   const { 
