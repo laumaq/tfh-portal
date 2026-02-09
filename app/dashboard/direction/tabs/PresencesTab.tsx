@@ -1,4 +1,4 @@
-// app/dashboard/direction/tabs/PresencesTabDirection.tsx
+// app/dashboard/direction/tabs/PresencesTab.tsx - Version corrigée
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -8,8 +8,16 @@ import { detecterSessions, getJourneesFromSupabase, type Session } from '../../c
 import { supabase } from '@/lib/supabase';
 import * as XLSX from 'xlsx';
 
+// Définir un type étendu qui inclut les relations
+interface EleveWithRelations extends Eleve {
+  guide?: { id: string; nom: string; prenom: string };
+  lecteur_interne?: { id: string; nom: string; prenom: string };
+  lecteur_externe?: { id: string; nom: string; prenom: string };
+  mediateur?: { id: string; nom: string; prenom: string };
+}
+
 interface PresencesTabDirectionProps {
-  eleves: Eleve[];
+  eleves: EleveWithRelations[];
   onRefresh: () => void;
   canEdit?: (eleve: Eleve) => boolean;
 }
@@ -24,7 +32,7 @@ export default function PresencesTabDirection({
   const [sessions, setSessions] = useState<Session[]>([]);
   const [journees, setJournees] = useState<any[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(true);
-  const [localEleves, setLocalEleves] = useState<Eleve[]>(eleves);
+  const [localEleves, setLocalEleves] = useState<EleveWithRelations[]>(eleves);
   const [userId, setUserId] = useState<string | null>(null);
   const [userGuideId, setUserGuideId] = useState<string | null>(null);
 
@@ -65,14 +73,14 @@ export default function PresencesTabDirection({
 
   // CORRECTION : Fonction pour vérifier si la direction peut voir cet élève
   // Maintenant que vous chargez TOUS les élèves dans useDirectionData
-  const canAccessEleve = (eleve: Eleve): boolean => {
+  const canAccessEleve = (eleve: EleveWithRelations): boolean => {
     // Avec votre modification dans useDirectionData qui charge tous les élèves
     // pour le dashboard, vous pouvez accéder à tous les élèves
     return true;
   };
 
   // CORRECTION : Fonction pour vérifier si l'utilisateur est impliqué avec cet élève
-  const isUserInvolved = (eleve: Eleve): boolean => {
+  const isUserInvolved = (eleve: EleveWithRelations): boolean => {
     if (!userGuideId) return false;
     
     // Vérifier si l'utilisateur est guide OU lecteur interne pour cet élève
@@ -83,9 +91,9 @@ export default function PresencesTabDirection({
   };
 
   // Fonction pour vérifier si un élève est convoqué à une session
-  const estConvoquePourSession = (eleve: Eleve, session: Session): boolean => {
+  const estConvoquePourSession = (eleve: EleveWithRelations, session: Session): boolean => {
     const sessionNum = parseInt(session.id.split('_')[1]);
-    const columnName = `session_${sessionNum}_convoque` as keyof Eleve;
+    const columnName = `session_${sessionNum}_convoque` as keyof EleveWithRelations;
     const valeur = (eleve as any)[columnName];
     
     // Convoqué si la valeur commence par "Oui"
@@ -130,7 +138,7 @@ export default function PresencesTabDirection({
   };
 
   // CORRECTION : Fonction pour obtenir le rôle de la direction pour un élève
-  const getRoleForEleve = (eleve: Eleve) => {
+  const getRoleForEleve = (eleve: EleveWithRelations) => {
     if (!userGuideId) return <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">-</span>;
     
     const isGuide = eleve.guide?.id === userGuideId;
@@ -148,7 +156,7 @@ export default function PresencesTabDirection({
   };
 
   // CORRECTION : Fonction pour déterminer le rôle textuel
-  const getRoleText = (eleve: Eleve): string => {
+  const getRoleText = (eleve: EleveWithRelations): string => {
     if (!userGuideId) return '-';
     
     const isGuide = eleve.guide?.id === userGuideId;
