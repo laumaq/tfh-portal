@@ -182,12 +182,7 @@ export default function DirectionDashboard() {
 
       case 'controle':
         return (
-          <ControleTab
-            eleves={eleves}
-            guides={guides}
-            // Limiter aux conflits concernant les TFH de la direction
-            filterByGuideId={currentGuide?.id}
-          />
+          <ControleTab />
         );
         
       default:
