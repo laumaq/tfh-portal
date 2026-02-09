@@ -118,7 +118,7 @@ export default function LoginPage() {
       let foundGuide = null;
       
       if (allDirections && !directionError) {
-        for (const dir of allDirections) {
+        for (const dir of allDirections as any[]) {
           if (dir.guides && 
               dir.guides.nom.toUpperCase() === nomNormalized && 
               dir.guides.initiale.toUpperCase() === initialeNormalized) {
@@ -396,6 +396,7 @@ export default function LoginPage() {
     </div>
   );
 }
+
 
 
 
