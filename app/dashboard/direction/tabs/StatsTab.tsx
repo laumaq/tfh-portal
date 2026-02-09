@@ -1,4 +1,5 @@
-// app/dashboard/coordinateur/tabs/StatsTab.tsx
+// app/dashboard/direction/tabs/StatsTab.tsx
+  
 'use client';
 
 import { useState, useEffect } from 'react';
