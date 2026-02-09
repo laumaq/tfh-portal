@@ -12,7 +12,7 @@ export type {
   DisplaySettings
 } from '../../coordinateur/types';
 
-export { Guide } from '../../coordinateur/types';
+export type { Guide } from '../../coordinateur/types';
 
 // 2. Ensuite définir tes types spécifiques
 export type DirectionTabType = 
