@@ -25,6 +25,7 @@ export default function DirectionDashboard() {
   const [activeTab, setActiveTab] = useState<DirectionTabType>('dashboard');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [userName, setUserName] = useState('');
+  const [allEleves, setAllEleves] = useState<Eleve[]>([]);
 
   // Utiliser les hooks custom
   const { 
@@ -37,6 +38,46 @@ export default function DirectionDashboard() {
     loading, 
     refreshData 
   } = useDirectionData(activeTab === 'dashboard');
+
+  const loadAllEleves = async () => {
+    try {
+      const { data: elevesData, error: elevesError } = await supabase
+        .from('eleves')
+        .select(`
+          *,
+          guide:guides!guide_id (nom, prenom),
+          lecteur_interne:guides!lecteur_interne_id (nom, prenom),
+          lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
+          mediateur:mediateurs!mediateur_id (nom, prenom)
+        `)
+        .order('classe', { ascending: true })
+        .order('nom', { ascending: true });
+
+      if (!elevesError && elevesData) {
+        const formattedEleves: Eleve[] = elevesData.map(eleve => ({
+          ...eleve,
+          guide_nom: eleve.guide?.nom || '-',
+          guide_prenom: eleve.guide?.prenom || '-',
+          lecteur_interne_nom: eleve.lecteur_interne?.nom || '-',
+          lecteur_interne_prenom: eleve.lecteur_interne?.prenom || '-',
+          lecteur_externe_nom: eleve.lecteur_externe?.nom || '-',
+          lecteur_externe_prenom: eleve.lecteur_externe?.prenom || '-',
+          mediateur_nom: eleve.mediateur?.nom || '-',
+          mediateur_prenom: eleve.mediateur?.prenom || '-'
+        }));
+        setAllEleves(formattedEleves);
+      }
+    } catch (err) {
+      console.error('Erreur chargement tous les élèves:', err);
+    }
+  };
+
+  // Charger tous les élèves quand on active le tab "liste-tfh"
+  useEffect(() => {
+    if (activeTab === 'liste-tfh') {
+      loadAllEleves();
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     const userType = localStorage.getItem('userType');
@@ -96,8 +137,11 @@ export default function DirectionDashboard() {
       case 'liste-tfh':
         return (
           <ListeTFHTab
-            eleves={allEleves}
-            onRefresh={refreshData}
+            eleves={activeTab === 'liste-tfh' ? allEleves : eleves}
+            onRefresh={() => {
+              refreshData();
+              loadAllEleves(); 
+            }}
           />
         );
             
