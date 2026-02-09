@@ -1,5 +1,4 @@
-//app/dashboard/direction/hooks/useDirectionData.ts
-
+// app/dashboard/direction/hooks/useDirectionData.ts - Version modifiée
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -11,7 +10,7 @@ import {
   Mediateur 
 } from '../../coordinateur/types';
 
-export function useDirectionData() {
+export function useDirectionData(forDashboard: boolean = false) { // <-- Nouveau paramètre
   const [eleves, setEleves] = useState<Eleve[]>([]);
   const [guides, setGuides] = useState<Guide[]>([]);
   const [lecteursExternes, setLecteursExternes] = useState<LecteurExterne[]>([]);
@@ -50,24 +49,46 @@ export function useDirectionData() {
       
       setCurrentGuide(guideData);
 
-      // 2. Charger les élèves où la direction est guide OU lecteur interne
-      const { data: elevesData, error: elevesError } = await supabase
-        .from('eleves')
-        .select(`
-          *,
-          guide:guides!guide_id (nom, prenom),
-          lecteur_interne:guides!lecteur_interne_id (nom, prenom),
-          lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
-          mediateur:mediateurs!mediateur_id (nom, prenom)
-        `)
-        .or(`guide_id.eq.${userId},lecteur_interne_id.eq.${userId}`)
-        .order('classe', { ascending: true })
-        .order('nom', { ascending: true });
+      // 2. Charger les élèves - DIFFÉRENCE ICI !
+      let elevesQuery;
+      
+      if (forDashboard) {
+        // Pour le dashboard: charger TOUS les élèves (comme coordinateur)
+        elevesQuery = supabase
+          .from('eleves')
+          .select(`
+            *,
+            guide:guides!guide_id (nom, prenom),
+            lecteur_interne:guides!lecteur_interne_id (nom, prenom),
+            lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
+            mediateur:mediateurs!mediateur_id (nom, prenom)
+          `)
+          .order('classe', { ascending: true })
+          .order('nom', { ascending: true });
+      } else {
+        // Pour les autres tabs: charger seulement les élèves de la direction
+        elevesQuery = supabase
+          .from('eleves')
+          .select(`
+            *,
+            guide:guides!guide_id (nom, prenom),
+            lecteur_interne:guides!lecteur_interne_id (nom, prenom),
+            lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
+            mediateur:mediateurs!mediateur_id (nom, prenom)
+          `)
+          .or(`guide_id.eq.${userId},lecteur_interne_id.eq.${userId}`)
+          .order('classe', { ascending: true })
+          .order('nom', { ascending: true });
+      }
+
+      const { data: elevesData, error: elevesError } = await elevesQuery;
 
       if (elevesError) {
         console.error('Erreur chargement élèves direction:', elevesError);
         throw elevesError;
       }
+
+      console.log(`📊 Chargement élèves direction: ${forDashboard ? 'TOUS' : 'FILTRÉS'} - ${elevesData?.length || 0} élèves`);
 
       const elevesFormatted: Eleve[] = (elevesData || []).map(eleve => ({
         ...eleve,
@@ -112,7 +133,7 @@ export function useDirectionData() {
         setMediateurs(mediateursData || []);
       }
 
-      // 6. Extraire les catégories uniques des élèves de la direction
+      // 6. Extraire les catégories uniques
       const uniqueCategories = Array.from(
         new Set(elevesFormatted.map(e => e.categorie).filter(Boolean))
       ).sort();
@@ -120,7 +141,6 @@ export function useDirectionData() {
 
     } catch (err) {
       console.error('Erreur chargement données direction:', err);
-      // Réinitialiser les données en cas d'erreur
       setEleves([]);
       setGuides([]);
       setLecteursExternes([]);
@@ -130,7 +150,7 @@ export function useDirectionData() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [forDashboard]); // <-- Ajouter forDashboard comme dépendance
 
   useEffect(() => {
     loadData();
@@ -141,14 +161,12 @@ export function useDirectionData() {
     loadData();
   };
 
-  // Fonction pour mettre à jour localement un élève
   const updateEleveLocal = (updatedEleve: Eleve) => {
     setEleves(prev => prev.map(e => 
       e.id === updatedEleve.id ? updatedEleve : e
     ));
   };
 
-  // Fonction pour vérifier si la direction peut éditer cet élève
   const canEditEleve = (eleve: Eleve): boolean => {
     const userId = localStorage.getItem('userId');
     if (!userId || !eleve) return false;
