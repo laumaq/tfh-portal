@@ -1,7 +1,8 @@
 // app/dashboard/coordinateur/tabs/DashboardTabDirection.tsx
 'use client';
 
-import { Eleve, Guide, TabType } from '../../coordinateur/types';
+import { Eleve, Guide } from '../types'; 
+import { DirectionTabType } from '../types';
 import { detecterSessions, Journee, getJourneesFromSupabase } from '../../coordinateur/utils/sessionUtils';
 import { supabase } from '@/lib/supabase';
 import { useState, useEffect } from 'react';
@@ -14,7 +15,7 @@ import {
 interface DashboardTabProps {
   eleves: Eleve[];
   guides: Guide[];
-  onTabChange: (tab: TabType) => void;
+  onTabChange: (tab: DirectionTabType) => void;  
   userName: string;
   guideNom: string; 
   guidePrenom: string;
