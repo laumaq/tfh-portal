@@ -68,19 +68,31 @@ export default function DashboardTabDirection({
   
   // Calcul des statistiques globales comme les coordinateurs
   const calculateGlobalOverview = () => {
+    console.log('🔍 Calcul des statistiques...');
+    
     // 1. Élèves connectés - vérifier si mot_de_passe n'est pas null ou vide
-    const elevesConnected = eleves.filter(e => 
-      e.mot_de_passe !== null && e.mot_de_passe !== undefined && e.mot_de_passe.trim() !== ''
-    ).length;
+    const elevesConnected = eleves.filter(e => {
+      const hasPassword = e.mot_de_passe !== null && 
+                         e.mot_de_passe !== undefined && 
+                         e.mot_de_passe !== '';
+      console.log(`Élève ${e.nom}: mot_de_passe = "${e.mot_de_passe}", hasPassword = ${hasPassword}`);
+      return hasPassword;
+    }).length;
     
     const elevesTotal = eleves.length;
     
-    // 2. Guides connectés - MÊME LOGIQUE
-    const guidesConnected = guides.filter(g => 
-      g.mot_de_passe !== null && g.mot_de_passe !== undefined && g.mot_de_passe.trim() !== ''
-    ).length;
+    // 2. Guides connectés - même logique
+    const guidesConnected = guides.filter(g => {
+      const hasPassword = g.mot_de_passe !== null && 
+                         g.mot_de_passe !== undefined && 
+                         g.mot_de_passe !== '';
+      console.log(`Guide ${g.nom}: mot_de_passe = "${g.mot_de_passe}", hasPassword = ${hasPassword}`);
+      return hasPassword;
+    }).length;
     
     const guidesTotal = guides.length;
+    
+    console.log(`📊 Résultats: ${elevesConnected}/${elevesTotal} élèves, ${guidesConnected}/${guidesTotal} guides`);
     
     // 3. Défenses / Problématiques / Thématiques
     const defensesProgrammees = eleves.filter(e => e.date_defense).length;
