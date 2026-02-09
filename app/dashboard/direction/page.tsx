@@ -15,15 +15,20 @@ import StatsTab from './tabs/StatsTab';
 import ControleTab from './tabs/ControleTab';
 import LecteurInterneTab from './tabs/LecteurInterneTab';
 import PlanningPersonnelTab from './tabs/PlanningPersonnelTab';
+import InterfaceGuideTab from './tabs/InterfaceGuideTab';
 import { useDirectionData } from './hooks/useDirectionData';
 import { useElevesOperations } from '../coordinateur/hooks/useElevesOperations';
-import { TabType } from '../coordinateur/types';
-
-type DirectionTabType = TabType | 'interface-guide' | 'lecteur-interne' | 'planning-personnel';
+import { DirectionTabType } from './types';
 
 export default function DirectionDashboard() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<DirectionTabType>('dashboard');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [userName, setUserName] = useState('');
+  const [editingModeConvocations, setEditingModeConvocations] = useState(false);
+  const [editingModeDefenses, setEditingModeDefenses] = useState(false);
+
+  // Définir les onglets disponibles UNE SEULE FOIS (plutôt que 2 fois)
   const directionTabs: DirectionTabType[] = [
     'dashboard',
     'interface-guide',
@@ -37,6 +42,7 @@ export default function DirectionDashboard() {
     'stats',
     'controle'
   ];
+  
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [userName, setUserName] = useState('');
   const [editingModeConvocations, setEditingModeConvocations] = useState(false);
@@ -227,21 +233,6 @@ export default function DirectionDashboard() {
         );
     }
   };
-
-  // Définir les onglets disponibles pour la direction
-  const directionTabs: TabType[] = [
-    'dashboard',
-    'interface-guide', 
-    'lecteur-interne',
-    'planning-personnel',
-    'liste-tfh',
-    'convocations',
-    'presences',
-    'defenses',
-    'calendrier',
-    'stats',
-    'controle'
-  ];
 
   return (
     <div className="min-h-screen bg-gray-50">
