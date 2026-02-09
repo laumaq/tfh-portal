@@ -143,18 +143,14 @@ export default function DirectionDashboard() {
         return (
           <PresencesTab
             eleves={eleves}
-            editingMode={editingModeConvocations}
-            onSetEditingMode={setEditingModeConvocations}
-            onPresenceUpdate={handlePresenceUpdate}
             onRefresh={refreshData}
-            // Restreindre l'édition aux TFH où la direction est guide ou lecteur interne
             canEdit={(eleve) => 
               eleve.guide_id === currentGuide?.id || 
               eleve.lecteur_interne_id === currentGuide?.id
             }
           />
         );
-
+      
       case 'defenses': 
         return (
           <DefensesTab
@@ -162,19 +158,14 @@ export default function DirectionDashboard() {
             guides={guides}
             lecteursExternes={lecteursExternes}
             mediateurs={mediateurs}
-            editingMode={editingModeDefenses}
-            onUpdate={handleUpdate}
-            onSelectUpdate={handleSelectUpdate}
             onRefresh={refreshData}
-            onSetEditingMode={setEditingModeDefenses}
-            // Restreindre l'édition aux TFH où la direction est guide ou lecteur interne
             canEdit={(eleve) => 
               eleve.guide_id === currentGuide?.id || 
               eleve.lecteur_interne_id === currentGuide?.id
             }
           />
         );
-
+        
       case 'calendrier':
         return (
           <CalendrierTab
