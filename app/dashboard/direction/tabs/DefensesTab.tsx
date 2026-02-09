@@ -2,9 +2,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Eleve, Guide, LecteurExterne, Mediateur } from '../../../coordinateur/types'; // Chemin corrigé
-import { formatDateForInput, add50Minutes } from '../../../coordinateur/utils/dateUtils'; // Chemin corrigé
-import { getCategoryColor } from '../../../coordinateur/utils/categoryUtils'; // Chemin corrigé
+import { Eleve, Guide, LecteurExterne, Mediateur } from '../../coordinateur/types'; // Chemin corrigé
+import { formatDateForInput, add50Minutes } from '../../coordinateur/utils/dateUtils'; // Chemin corrigé
+import { getCategoryColor } from '../../coordinateur/utils/categoryUtils'; // Chemin corrigé
 
 interface DefensesTabDirectionProps {
   eleves: Eleve[];
