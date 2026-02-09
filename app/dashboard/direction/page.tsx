@@ -22,6 +22,13 @@ import { DirectionTabType } from './types';
 import { Eleve } from '../coordinateur/types';
 import { supabase } from '@/lib/supabase';
 
+interface EleveWithRelations extends Eleve {
+  guide?: { id: string; nom: string; prenom: string };
+  lecteur_interne?: { id: string; nom: string; prenom: string };
+  lecteur_externe?: { id: string; nom: string; prenom: string };
+  mediateur?: { id: string; nom: string; prenom: string };
+}
+
 export default function DirectionDashboard() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<DirectionTabType>('dashboard');
@@ -163,12 +170,15 @@ export default function DirectionDashboard() {
       case 'presences':
         return (
           <PresencesTab
-            eleves={eleves}
+            eleves={eleves as EleveWithRelations[]}
             onRefresh={refreshData}
-            canEdit={(eleve) => 
-              eleve.guide_id === currentGuide?.id || 
-              eleve.lecteur_interne_id === currentGuide?.id
-            }
+            canEdit={(eleve) => {
+              const eleveWithRelations = eleve as EleveWithRelations;
+              return (
+                eleveWithRelations.guide?.id === currentGuide?.id || 
+                eleveWithRelations.lecteur_interne?.id === currentGuide?.id
+              );
+            }}
           />
         );
       
