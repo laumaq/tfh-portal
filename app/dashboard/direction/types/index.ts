@@ -1,4 +1,4 @@
-// Réexporter les types de base depuis coordinateur
+// 1. D'abord réexporter tous les types
 export type {
   Eleve,
   Guide,
@@ -13,7 +13,7 @@ export type {
   DisplaySettings
 } from '../../coordinateur/types';
 
-// Types spécifiques à la direction
+// 2. Ensuite définir tes types spécifiques
 export type DirectionTabType = 
   | 'dashboard'
   | 'interface-guide'
@@ -29,7 +29,7 @@ export type DirectionTabType =
 
 export type DirectionUserType = 'direction';
 
-// Interface pour les membres de la direction
+// 3. Maintenant tu peux utiliser Guide car il est déjà réexporté
 export interface DirectionMember extends Guide {
   direction_id: string;
   added_at: string;
