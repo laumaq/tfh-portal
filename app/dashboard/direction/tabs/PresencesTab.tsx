@@ -60,7 +60,7 @@ export default function PresencesTabDirection({
 
   // Fonction pour vérifier si la direction peut voir cet élève
   const canAccessEleve = (eleve: Eleve): boolean => {
-    true;
+    return true;
   };
 
   // Fonction pour vérifier si un élève est convoqué à une session
