@@ -8,7 +8,7 @@ import {
   Guide, 
   LecteurExterne, 
   Mediateur 
-} from '../types';
+} from '../../coordinateur/types';
 
 export function useDirectionData() {
   const [eleves, setEleves] = useState<Eleve[]>([]);
