@@ -2,8 +2,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Eleve } from '../../../coordinateur/types'; // Chemin corrigé
-import { ExternalLink, ChevronDown } from 'lucide-react'; // Retiré Edit et Trash2
+import { Eleve } from '../../coordinateur/types'; 
+import { ExternalLink, ChevronDown } from 'lucide-react'; 
 
 interface ListeTFHTabProps {
   eleves: Eleve[];
