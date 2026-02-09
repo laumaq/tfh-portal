@@ -172,8 +172,6 @@ export default function DirectionDashboard() {
             eleves={eleves}
             categories={categories}
             onRefresh={refreshData}
-            // Optionnel : filtrer pour voir seulement les TFH pertinents
-            filterByGuideId={currentGuide?.id}
           />
         );
 
