@@ -96,7 +96,7 @@ export default function DirectionDashboard() {
       case 'liste-tfh':
         return (
           <ListeTFHTab
-            eleves={eleves}
+            eleves={allEleves}
             onRefresh={refreshData}
           />
         );
