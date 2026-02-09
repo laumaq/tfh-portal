@@ -1,6 +1,7 @@
-// 1. D'abord réexporter tous les types
+// 1. Réexporter tous les types AVEC 'export type'
 export type {
   Eleve,
+  Guide,  // Garde Guide ici
   LecteurExterne,
   Mediateur,
   DefenseEvent,
@@ -12,9 +13,7 @@ export type {
   DisplaySettings
 } from '../../coordinateur/types';
 
-export type { Guide } from '../../coordinateur/types';
-
-// 2. Ensuite définir tes types spécifiques
+// 2. Types spécifiques direction
 export type DirectionTabType = 
   | 'dashboard'
   | 'interface-guide'
@@ -30,8 +29,20 @@ export type DirectionTabType =
 
 export type DirectionUserType = 'direction';
 
-// 3. Maintenant tu peux utiliser Guide car il est déjà réexporté
-export interface DirectionMember extends Guide {
+// 3. SUPPRIME DirectionMember pour l'instant, ou redéfinis-le complètement
+// export interface DirectionMember extends Guide {
+//   direction_id: string;
+//   added_at: string;
+// }
+
+// OU redéfinis complètement :
+export interface DirectionMember {
+  id: string;
+  nom: string;
+  prenom: string; 
+  initiale: string;
+  email?: string;
+  mot_de_passe?: string | null;
   direction_id: string;
   added_at: string;
 }
