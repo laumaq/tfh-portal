@@ -3,8 +3,8 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { getJourneesFromSupabase, detecterSessions } from '../../../coordinateur/utils/sessionUtils';
-import { getConvocationColor, getConvocationLabelShort } from '../../../coordinateur/utils/convocationUtils';
+import { getJourneesFromSupabase, detecterSessions } from '../../coordinateur/utils/sessionUtils';
+import { getConvocationColor, getConvocationLabelShort } from '../../coordinateur/utils/convocationUtils';
 import { Eleve } from '../../../coordinateur/types';
 
 interface InterfaceGuideTabProps {
