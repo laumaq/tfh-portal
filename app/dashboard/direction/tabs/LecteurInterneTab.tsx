@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Eleve } from '../../../coordinateur/types';
+import { Eleve } from '../../coordinateur/types';
 
 interface LecteurInterneTabProps {
   eleves: Eleve[];
