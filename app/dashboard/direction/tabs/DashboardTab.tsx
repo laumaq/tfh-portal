@@ -9,8 +9,7 @@ import { useState, useEffect } from 'react';
 import { 
   FileText, UserCheck, Calendar, 
   BarChart, ChevronRight, BookOpen,
-  Users, Shield, Bell, CalendarDays,
-  TrendingUp, Target, CheckCircle, AlertCircle
+  Users, Shield, Bell, CalendarDays
 } from 'lucide-react';
 
 interface DashboardTabProps {
@@ -41,13 +40,16 @@ export default function DashboardTabDirection({
         setJournees(journees);
         const detectedSessions = detecterSessions(journees);
         setSessions(detectedSessions);
+        console.log('📊 Sessions chargées:', detectedSessions);
+        console.log('📊 Nombre d\'élèves:', eleves.length);
+        console.log('📊 Nombre de guides:', guides.length);
       } catch (error) {
         console.error('Erreur chargement sessions:', error);
       }
     };
     
     loadSessions();
-  }, []);
+  }, [eleves, guides]);
   
   // Fonction pour trouver la prochaine session
   const getProchaineSession = () => {
@@ -60,6 +62,7 @@ export default function DashboardTabDirection({
       return finSession >= maintenant;
     });
     
+    console.log('📊 Prochaine session trouvée:', prochaineSession);
     return prochaineSession;
   };
   
@@ -102,137 +105,43 @@ export default function DashboardTabDirection({
       };
     };
     
-    // 5. Présences dernière session
-    const getDernieresPresences = () => {
-      if (eleves.length === 0) return null;
-      
-      // Trouver la dernière session passée
-      const maintenant = new Date();
-      const sessionsPassees = sessions.filter(s => {
-        const finSession = new Date(s.date_fin);
-        finSession.setHours(23, 59, 59, 999);
-        return finSession < maintenant;
-      });
-      
-      if (sessionsPassees.length === 0) return null;
-      
-      const derniereSession = sessionsPassees[sessionsPassees.length - 1];
-      const sessionIndex = parseInt(derniereSession.id.split('_')[1]);
-      
-      // Compter les présences totales
-      let presents = 0;
-      let absents = 0;
-      let convoques = 0;
-      
-      eleves.forEach(eleve => {
-        const sessionKey = `session_${sessionIndex}_convoque` as keyof Eleve;
-        const convoque = eleve[sessionKey];
-        
-        if (convoque && typeof convoque === 'string' && convoque.startsWith('Oui')) {
-          convoques++;
-          
-          // Vérifier la présence pour chaque journée de cette session
-          let trouve = false;
-          for (let jour = 1; jour <= 20; jour++) {
-            const presenceKey = `journee_${jour}_present` as keyof Eleve;
-            const present = eleve[presenceKey];
-            
-            if (present === 'Oui' || present === true) {
-              presents++;
-              trouve = true;
-              break;
-            } else if (present === 'Non' || present === false) {
-              absents++;
-              trouve = true;
-              break;
-            }
-          }
-          
-          // Si pas de présence enregistrée mais convoqué
-          if (!trouve) {
-            absents++; // Considéré comme absent
-          }
-        }
-      });
-      
-      return {
-        sessionNom: derniereSession.nom,
-        presents,
-        absents,
-        convoques,
-        tauxPresence: convoques > 0 ? Math.round((presents / convoques) * 100) : 0
-      };
-    };
-
-    // 6. État des guides
-    const guidesAvecEleves = guides.filter(g => 
-      eleves.some(e => e.guide_id === g.id)
-    ).length;
-    
-    const guidesSansEleves = guidesTotal - guidesAvecEleves;
-    
-    // 7. État des lecteurs internes
-    const lecteursInternes = guides.filter(g => 
-      eleves.some(e => e.lecteur_interne_id === g.id)
-    );
-    
-    return {
-      // Global
+    console.log('📊 Statistiques calculées:', {
       elevesConnected,
       elevesTotal,
       guidesConnected,
       guidesTotal,
-      
-      // Progression TFH
       defensesProgrammees,
       avecProblematique,
       avecThematique,
-      
-      // Sessions
-      prochainesConvocations: getProchainesConvocations(),
-      dernieresPresences: getDernieresPresences(),
-      
-      // Distribution
-      guidesAvecEleves,
-      guidesSansEleves,
-      lecteursInternesCount: lecteursInternes.length
+      prochainesConvocations: getProchainesConvocations()
+    });
+    
+    return {
+      elevesConnected,
+      elevesTotal,
+      guidesConnected,
+      guidesTotal,
+      defensesProgrammees,
+      avecProblematique,
+      avecThematique,
+      prochainesConvocations: getProchainesConvocations()
     };
   };
   
   const stats = calculateGlobalOverview();
   
-  // Déterminer le statut principal à afficher
-  const getPrincipalStatut = () => {
+  // Fonction pour formater le texte selon les conditions demandées
+  const getDefensesText = () => {
     if (stats.defensesProgrammees > 0) {
-      return {
-        type: 'défenses',
-        count: stats.defensesProgrammees,
-        label: 'Défenses programmées',
-        icon: <UserCheck className="w-5 h-5" />,
-        color: 'bg-green-100 text-green-800 border-green-200'
-      };
+      return `${stats.defensesProgrammees} défenses programmées / ${stats.avecProblematique} problématiques`;
     } else if (stats.avecProblematique > 0) {
-      return {
-        type: 'problématiques',
-        count: stats.avecProblematique,
-        label: 'Problématiques définies',
-        icon: <Target className="w-5 h-5" />,
-        color: 'bg-purple-100 text-purple-800 border-purple-200'
-      };
+      return `${stats.avecProblematique} problématiques / ${stats.avecThematique} thématiques`;
     } else {
-      return {
-        type: 'thématiques',
-        count: stats.avecThematique,
-        label: 'Thématiques définies',
-        icon: <BookOpen className="w-5 h-5" />,
-        color: 'bg-blue-100 text-blue-800 border-blue-200'
-      };
+      return `${stats.avecThematique} thématiques / ${stats.elevesTotal} élèves`;
     }
   };
   
-  const principalStatut = getPrincipalStatut();
-  
-  // Onglets spécifiques à la direction (avec vue globale)
+  // Onglets spécifiques à la direction
   const directionTabs = [
     {
       id: 'dashboard' as DirectionTabType,
@@ -268,7 +177,7 @@ export default function DashboardTabDirection({
       countColor: 'text-violet-600',
       chevronColor: 'bg-violet-50 text-violet-600',
       showCount: true,
-      count: stats.lecteursInternesCount,
+      count: eleves.length,
       description: 'Gestion des évaluations comme lecteur'
     },
     {
@@ -293,7 +202,7 @@ export default function DashboardTabDirection({
       countColor: 'text-indigo-600',
       chevronColor: 'bg-indigo-50 text-indigo-600',
       showCount: true,
-      count: stats.elevesTotal,
+      count: eleves.length,
       description: 'Tous les TFH - Vue d\'ensemble'
     },
     {
@@ -312,7 +221,7 @@ export default function DashboardTabDirection({
     {
       id: 'presences' as DirectionTabType,
       name: 'Présences',
-      icon: <CheckCircle className="w-5 h-5" />,
+      icon: <span className="font-bold">✓</span>,
       bgColor: 'bg-fuchsia-50',
       borderColor: 'border-fuchsia-200 hover:border-fuchsia-300',
       iconBg: 'bg-fuchsia-100 text-fuchsia-600 group-hover:bg-fuchsia-200',
@@ -368,7 +277,7 @@ export default function DashboardTabDirection({
       countColor: 'text-red-600',
       chevronColor: 'bg-red-50 text-red-600',
       showCount: true,
-      count: stats.guidesTotal,
+      count: guides.length,
       description: 'Suivi qualité des guides'
     }
   ];
@@ -376,30 +285,21 @@ export default function DashboardTabDirection({
   return (
     <div className="p-6">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">Tableau de bord Direction - Vue Globale</h1>
+        <h1 className="text-2xl font-bold text-gray-800 mb-2">Tableau de bord Direction</h1>
         <p className="text-gray-600">
-          Bienvenue {guidePrenom} {guideNom}. Vue d'ensemble de tous les TFH.
+          Bienvenue {guidePrenom} {guideNom}. Voici votre panneau de gestion des TFH.
         </p>
         <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200 max-w-md">
           <p className="text-sm text-blue-800">
             <span className="font-semibold">Statut :</span> Membre de la direction - 
-            Accès complet à tous les TFH et statistiques globales.
+            Accès complet à tous les TFH.
           </p>
         </div>
       </div>
 
-      {/* Aperçu global du système - Identique aux coordinateurs */}
+      {/* Aperçu du système - 4 cadres identiques aux coordinateurs */}
       <div className="bg-white rounded-xl shadow-sm border p-6 mb-8">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="font-semibold text-gray-800 text-lg">Aperçu global du système</h3>
-          <div className={`px-3 py-1 rounded-full text-sm font-medium ${principalStatut.color}`}>
-            <div className="flex items-center gap-1">
-              {principalStatut.icon}
-              <span>{principalStatut.label}</span>
-            </div>
-          </div>
-        </div>
-        
+        <h3 className="font-semibold text-gray-800 mb-6 text-lg">Aperçu du système</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Élèves */}
           <div className="p-5 bg-blue-50 rounded-xl border border-blue-100">
@@ -441,28 +341,33 @@ export default function DashboardTabDirection({
             </div>
           </div>
           
-          {/* Progression TFH */}
+          {/* Défenses/Problématiques/Thématiques */}
           <div className="p-5 bg-purple-50 rounded-xl border border-purple-100">
             <div className="text-center mb-2">
               <div className="text-2xl md:text-3xl font-bold text-purple-700">
-                {principalStatut.count}
+                {stats.defensesProgrammees > 0 ? stats.defensesProgrammees : 
+                 stats.avecProblematique > 0 ? stats.avecProblematique : 
+                 stats.avecThematique}
                 <span className="font-normal text-purple-600 mx-1">/</span>
-                {principalStatut.type === 'défenses' ? stats.avecProblematique :
-                 principalStatut.type === 'problématiques' ? stats.avecThematique :
+                {stats.defensesProgrammees > 0 ? stats.avecProblematique : 
+                 stats.avecProblematique > 0 ? stats.avecThematique : 
                  stats.elevesTotal}
               </div>
               <div className="text-xs text-purple-600 mt-1">
-                {principalStatut.type} / {principalStatut.type === 'défenses' ? 'problématiques' :
-                principalStatut.type === 'problématiques' ? 'thématiques' : 'élèves'}
+                {stats.defensesProgrammees > 0 ? 'défenses / problématiques' : 
+                 stats.avecProblematique > 0 ? 'problématiques / thématiques' : 
+                 'thématiques / élèves'}
               </div>
             </div>
             <div className="text-sm font-medium text-purple-800 mb-1 text-center">
-              {principalStatut.label}
+              {stats.defensesProgrammees > 0 ? 'Défenses programmées' : 
+               stats.avecProblematique > 0 ? 'Problématiques définies' : 
+               'Thématiques définies'}
             </div>
             <div className="text-xs text-purple-600 text-center">
-              {principalStatut.type === 'défenses' ? (
+              {stats.defensesProgrammees > 0 ? (
                 `${Math.round((stats.defensesProgrammees / stats.elevesTotal) * 100)}% des élèves`
-              ) : principalStatut.type === 'problématiques' ? (
+              ) : stats.avecProblematique > 0 ? (
                 `${Math.round((stats.avecProblematique / stats.elevesTotal) * 100)}% ont une problématique`
               ) : (
                 `${Math.round((stats.avecThematique / stats.elevesTotal) * 100)}% ont une thématique`
@@ -470,7 +375,7 @@ export default function DashboardTabDirection({
             </div>
           </div>
           
-          {/* Sessions */}
+          {/* Convoqués prochaine session */}
           <div className="p-5 bg-orange-50 rounded-xl border border-orange-100">
             <div className="text-center mb-2">
               <div className="text-2xl md:text-3xl font-bold text-orange-700">
@@ -492,76 +397,6 @@ export default function DashboardTabDirection({
                 `${Math.round((stats.prochainesConvocations.count / stats.elevesTotal) * 100)}% des élèves`
               ) : (
                 'Toutes les sessions sont terminées'
-              )}
-            </div>
-          </div>
-        </div>
-        
-        {/* Deuxième ligne de statistiques */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-          {/* Distribution guides */}
-          <div className="p-5 bg-indigo-50 rounded-xl border border-indigo-100">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-2xl font-bold text-indigo-700">
-                {stats.guidesAvecEleves}/{stats.guidesTotal}
-              </div>
-              <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-indigo-600" />
-              </div>
-            </div>
-            <div className="text-sm font-medium text-indigo-800 mb-1">Guides actifs</div>
-            <div className="text-xs text-indigo-600">
-              {stats.guidesSansEleves === 0 ? (
-                <span className="text-green-600 font-medium">✓ Tous les guides ont des élèves</span>
-              ) : (
-                `${stats.guidesSansEleves} guide(s) sans élève assigné`
-              )}
-            </div>
-          </div>
-          
-          {/* Présences dernière session */}
-          <div className="p-5 bg-emerald-50 rounded-xl border border-emerald-100">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-2xl font-bold text-emerald-700">
-                {stats.dernieresPresences ? 
-                  `${stats.dernieresPresences.presents}/${stats.dernieresPresences.convoques}` : 
-                  '0/0'}
-              </div>
-              <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
-                <CheckCircle className="w-5 h-5 text-emerald-600" />
-              </div>
-            </div>
-            <div className="text-sm font-medium text-emerald-800 mb-1">
-              {stats.dernieresPresences ? 'Présents dernière session' : 'Données présence'}
-            </div>
-            <div className="text-xs text-emerald-600">
-              {stats.dernieresPresences ? (
-                <span>
-                  {stats.dernieresPresences.sessionNom}<br/>
-                  {stats.dernieresPresences.tauxPresence}% de présence
-                </span>
-              ) : (
-                'Aucune donnée disponible'
-              )}
-            </div>
-          </div>
-          
-          {/* Lecteurs internes */}
-          <div className="p-5 bg-violet-50 rounded-xl border border-violet-100">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-2xl font-bold text-violet-700">
-                {stats.lecteursInternesCount}
-              </div>
-              <div className="w-10 h-10 bg-violet-100 rounded-full flex items-center justify-center">
-                <BookOpen className="w-5 h-5 text-violet-600" />
-              </div>
-            </div>
-            <div className="text-sm font-medium text-violet-800 mb-1">Lecteurs internes</div>
-            <div className="text-xs text-violet-600">
-              {stats.lecteursInternesCount > 0 ? (
-                `${stats.lecteursInternesCount} guide(s) avec rôle lecteur`
-              ) : (
-                'Aucun lecteur interne assigné'
               )}
             </div>
           </div>
