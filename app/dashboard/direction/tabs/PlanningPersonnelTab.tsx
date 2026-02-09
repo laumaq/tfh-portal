@@ -396,18 +396,6 @@ export default function PlanningPersonnelTab({ guideId, eleves }: PlanningPerson
                             </div>
                           )}
                           
-                          {/* Boutons d'action */}
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => {
-                                // Navigation vers l'élève dans la liste des TFH
-                                window.open(`#eleve-${defense.id}`, '_blank');
-                              }}
-                              className="flex-1 px-3 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded text-sm font-medium"
-                            >
-                              Voir fiche
-                            </button>
-                          </div>
                         </div>
                       </div>
                     </div>
