@@ -1,4 +1,4 @@
-// app/dashboard/coordinateur/tabs/PresencesTabDirection.tsx
+// app/dashboard/direction/tabs/PresencesTabDirection.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -11,7 +11,7 @@ import * as XLSX from 'xlsx';
 interface PresencesTabDirectionProps {
   eleves: Eleve[];
   onRefresh: () => void;
-  canEdit?: (eleve: Eleve) => boolean; // Optionnel : fonction pour vérifier les droits
+  canEdit?: (eleve: Eleve) => boolean;
 }
 
 export default function PresencesTabDirection({
@@ -26,11 +26,16 @@ export default function PresencesTabDirection({
   const [loadingSessions, setLoadingSessions] = useState(true);
   const [localEleves, setLocalEleves] = useState<Eleve[]>(eleves);
   const [userId, setUserId] = useState<string | null>(null);
+  const [userGuideId, setUserGuideId] = useState<string | null>(null);
 
   // Récupérer l'ID de l'utilisateur connecté
   useEffect(() => {
     const id = localStorage.getItem('userId');
     setUserId(id);
+    
+    // IMPORTANT : Dans votre système, l'ID utilisateur est l'ID du guide
+    // Car les membres direction sont dans la table direction qui référence guides(id)
+    setUserGuideId(id); // Le guide_id de l'utilisateur = son ID utilisateur
   }, []);
 
   // Synchroniser localEleves avec eleves parent
@@ -58,9 +63,23 @@ export default function PresencesTabDirection({
     chargerSessions();
   }, []);
 
-  // Fonction pour vérifier si la direction peut voir cet élève
+  // CORRECTION : Fonction pour vérifier si la direction peut voir cet élève
+  // Maintenant que vous chargez TOUS les élèves dans useDirectionData
   const canAccessEleve = (eleve: Eleve): boolean => {
+    // Avec votre modification dans useDirectionData qui charge tous les élèves
+    // pour le dashboard, vous pouvez accéder à tous les élèves
     return true;
+  };
+
+  // CORRECTION : Fonction pour vérifier si l'utilisateur est impliqué avec cet élève
+  const isUserInvolved = (eleve: Eleve): boolean => {
+    if (!userGuideId) return false;
+    
+    // Vérifier si l'utilisateur est guide OU lecteur interne pour cet élève
+    const isGuide = eleve.guide?.id === userGuideId;
+    const isLecteurInterne = eleve.lecteur_interne?.id === userGuideId;
+    
+    return isGuide || isLecteurInterne;
   };
 
   // Fonction pour vérifier si un élève est convoqué à une session
@@ -110,16 +129,35 @@ export default function PresencesTabDirection({
     return session.nom.replace('Session ', '');
   };
 
-  // Fonction pour obtenir le rôle de la direction pour un élève
+  // CORRECTION : Fonction pour obtenir le rôle de la direction pour un élève
   const getRoleForEleve = (eleve: Eleve) => {
-    if (eleve.guide_id === userId && eleve.lecteur_interne_id === userId) {
+    if (!userGuideId) return <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">-</span>;
+    
+    const isGuide = eleve.guide?.id === userGuideId;
+    const isLecteurInterne = eleve.lecteur_interne?.id === userGuideId;
+    
+    if (isGuide && isLecteurInterne) {
       return <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">Guide & Lecteur</span>;
-    } else if (eleve.guide_id === userId) {
+    } else if (isGuide) {
       return <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Guide</span>;
-    } else if (eleve.lecteur_interne_id === userId) {
+    } else if (isLecteurInterne) {
       return <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">Lecteur interne</span>;
     }
+    
     return <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">-</span>;
+  };
+
+  // CORRECTION : Fonction pour déterminer le rôle textuel
+  const getRoleText = (eleve: Eleve): string => {
+    if (!userGuideId) return '-';
+    
+    const isGuide = eleve.guide?.id === userGuideId;
+    const isLecteurInterne = eleve.lecteur_interne?.id === userGuideId;
+    
+    if (isGuide && isLecteurInterne) return 'Guide & Lecteur';
+    if (isGuide) return 'Guide';
+    if (isLecteurInterne) return 'Lecteur interne';
+    return '-';
   };
 
   // Export functions
@@ -132,9 +170,7 @@ export default function PresencesTabDirection({
     const headers = ['Classe', 'Nom', 'Prénom', 'Rôle', ...getJourneesToDisplay().map(j => j.nom)];
     
     const data = elevesToExport.map(eleve => {
-      const role = eleve.guide_id === userId ? 
-                  (eleve.lecteur_interne_id === userId ? 'Guide & Lecteur' : 'Guide') : 
-                  'Lecteur interne';
+      const role = getRoleText(eleve);
       
       const row = [
         eleve.classe,
@@ -173,9 +209,7 @@ export default function PresencesTabDirection({
     const headers = ['Classe', 'Nom', 'Prénom', 'Rôle', ...getJourneesToDisplay().map(j => j.nom)];
     
     const data = elevesToExport.map(eleve => {
-      const role = eleve.guide_id === userId ? 
-                  (eleve.lecteur_interne_id === userId ? 'Guide & Lecteur' : 'Guide') : 
-                  'Lecteur interne';
+      const role = getRoleText(eleve);
       
       return [
         eleve.classe,
@@ -218,7 +252,7 @@ export default function PresencesTabDirection({
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800 mb-2">Présences</h1>
         <p className="text-gray-600">
-          Vue des présences pour les TFH sous votre responsabilité
+          Vue des présences pour tous les TFH
         </p>
       </div>
 
@@ -441,7 +475,7 @@ export default function PresencesTabDirection({
                         {eleve.nom} {eleve.prenom}
                       </td>
                       
-                      {/* Rôle de la direction */}
+                      {/* CORRECTION : Rôle de la direction */}
                       <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">
                         {getRoleForEleve(eleve)}
                       </td>
