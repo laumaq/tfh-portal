@@ -1,4 +1,5 @@
-// app/dashboard/coordinateur/tabs/ConvocationsTabDirection.tsx
+// app/dashboard/direction/tabs/ConvocationsTab.tsx
+
 'use client';
 
 import { supabase } from '@/lib/supabase';
