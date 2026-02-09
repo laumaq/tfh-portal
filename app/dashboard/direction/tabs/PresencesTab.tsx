@@ -2,9 +2,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Eleve } from '../types';
-import { getPresenceStyles } from '../utils/convocationUtils';
-import { detecterSessions, getJourneesFromSupabase, type Session } from '../utils/sessionUtils';
+import { Eleve } from '../../coordinateur/types';
+import { getPresenceStyles } from '../../coordinateur/utils/convocationUtils';
+import { detecterSessions, getJourneesFromSupabase, type Session } from '../../coordinateur/utils/sessionUtils';
 import { supabase } from '@/lib/supabase';
 import * as XLSX from 'xlsx';
 
