@@ -111,7 +111,7 @@ export default function ConvocationsTabDirection({
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800 mb-2">Convocations</h1>
         <p className="text-gray-600">
-          Vue des convocations pour les TFH sous votre responsabilité
+          Vue des convocations pour les TFH
         </p>
       </div>
 
