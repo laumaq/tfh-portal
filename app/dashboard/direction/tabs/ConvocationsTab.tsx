@@ -63,13 +63,7 @@ export default function ConvocationsTabDirection({
 
   // Fonction pour vérifier si la direction peut voir/éditer cet élève
   const canAccessEleve = (eleve: Eleve): boolean => {
-    // Si une fonction canEdit est fournie, l'utiliser
-    if (canEdit) return canEdit(eleve);
-    
-    // Sinon, vérifier si la direction est guide ou lecteur interne de cet élève
-    if (!userId) return false;
-    
-    return eleve.guide_id === userId || eleve.lecteur_interne_id === userId;
+    return true;
   };
 
   // Fonction pour vérifier si un élève est convoqué à une session
@@ -226,10 +220,9 @@ export default function ConvocationsTabDirection({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
           </div>
-          <h3 className="text-lg font-medium text-gray-700 mb-2">Aucun TFH accessible</h3>
+          <h3 className="text-lg font-medium text-gray-700 mb-2">Aucun TFH trouvé</h3>
           <p className="text-gray-500 max-w-md mx-auto">
-            Vous n'avez pas d'élèves assignés comme guide ou lecteur interne.
-            Les convocations ne seront visibles que pour les TFH sous votre responsabilité.
+            Aucun TFH n'a été trouvé dans le système.
           </p>
         </div>
       ) : (
@@ -351,7 +344,7 @@ export default function ConvocationsTabDirection({
           <div className="text-sm text-yellow-700">
             <p className="font-medium mb-1">Informations sur les droits d'accès :</p>
             <ul className="list-disc pl-4 space-y-1">
-              <li>Vous ne voyez que les TFH où vous êtes assigné comme guide ou lecteur interne</li>
+              <li>Vous avez accès à la liste complète des convocations</li>
               <li>Les convocations sont en lecture seule pour la direction</li>
               <li>Pour modifier les convocations, contactez un coordinateur</li>
             </ul>
