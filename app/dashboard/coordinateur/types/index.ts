@@ -32,6 +32,7 @@ export interface Eleve {
   source_3?: string;
   source_4?: string;
   source_5?: string;
+  objectif_particulier?: string | null;
   
   // Nouveau système de sessions - STRINGS
   session_1_convoque?: string;
