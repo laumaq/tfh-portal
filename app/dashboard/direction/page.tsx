@@ -36,7 +36,7 @@ export default function DirectionDashboard() {
     currentGuide,
     loading, 
     refreshData 
-  } = useDirectionData();
+  } = useDirectionData(activeTab === 'dashboard');
 
   useEffect(() => {
     const userType = localStorage.getItem('userType');
