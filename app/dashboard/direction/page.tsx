@@ -20,6 +20,7 @@ import InterfaceGuideTab from './tabs/InterfaceGuideTab';
 import { useDirectionData } from './hooks/useDirectionData';
 import { DirectionTabType } from './types';
 import { Eleve } from '../coordinateur/types';
+import { supabase } from '@/lib/supabase';
 
 export default function DirectionDashboard() {
   const router = useRouter();
