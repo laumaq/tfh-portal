@@ -122,6 +122,7 @@ export default function DashboardTabDirection({
       prochainesConvocations: getProchainesConvocations()
     });
     
+    
     return {
       elevesConnected,
       elevesTotal,
@@ -287,6 +288,21 @@ export default function DashboardTabDirection({
       description: 'Suivi qualité des guides'
     }
   ];
+
+  console.log('🔍 DEBUG Guides:', {
+    total: guides.length,
+    avecMotDePasse: guides.filter(g => g.mot_de_passe).length,
+    avecMotDePasseNonNull: guides.filter(g => g.mot_de_passe !== null).length,
+    avecMotDePasseNonVide: guides.filter(g => g.mot_de_passe && g.mot_de_passe.trim() !== '').length,
+    premierGuide: guides[0] ? {
+      nom: guides[0].nom,
+      initiale: guides[0].initiale,
+      mot_de_passe: guides[0].mot_de_passe,
+      isNull: guides[0].mot_de_passe === null,
+      isEmpty: guides[0].mot_de_passe === '',
+      hasValue: guides[0].mot_de_passe && guides[0].mot_de_passe.trim() !== ''
+    } : 'aucun guide'
+  });
 
   return (
     <div className="p-6">
