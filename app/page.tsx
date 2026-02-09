@@ -98,6 +98,17 @@ export default function LoginPage() {
 
       
       // 2. VÉRIFIER LA DIRECTION
+      console.log('🔍 Test Supabase - table direction existe?');
+
+      // Test simple sans jointure d'abord
+      const { data: simpleDirections, error: simpleError } = await supabase
+        .from('direction')
+        .select('id, guide_id');
+
+      console.log('🔍 Directions simples (sans jointure):', simpleDirections);
+      console.log('🔍 Erreur simple:', simpleError);
+
+      // Maintenant avec jointure
       const { data: allDirections, error: directionError } = await supabase
         .from('direction')
         .select(`
@@ -110,17 +121,20 @@ export default function LoginPage() {
             mot_de_passe
           )
         `);
-      
+
       console.log('🔍 TOUTES les directions:', allDirections);
-      
+      console.log('🔍 Erreur direction:', directionError);
+
       // Chercher manuellement le guide
       let foundDirection = null;
       let foundGuide = null;
-      
+
       if (allDirections && !directionError) {
         for (const dir of allDirections as any[]) {
           if (dir.guides && 
+              dir.guides.nom && 
               dir.guides.nom.toUpperCase() === nomNormalized && 
+              dir.guides.initiale && 
               dir.guides.initiale.toUpperCase() === initialeNormalized) {
             foundDirection = dir;
             foundGuide = dir.guides;
@@ -128,16 +142,16 @@ export default function LoginPage() {
           }
         }
       }
-      
+
       console.log('🔍 Direction trouvée:', foundDirection);
       console.log('🔍 Guide trouvé:', foundGuide);
-      
+
       if (foundDirection && foundGuide) {
         console.log('✅ UTILISATEUR EST DIRECTION !');
         const guide = foundGuide;
         const storedPassword = guide.mot_de_passe;
         
-        // CAS 1: PREMIÈRE CONNEXION
+        // CAS 1: PREMIÈRE CONNEXION (NULL ou chaîne vide)
         if (!storedPassword || storedPassword === '') {
           console.log("Première connexion direction - enregistrement du mot de passe");
           
@@ -153,7 +167,7 @@ export default function LoginPage() {
           router.push('/dashboard/direction');
           return;
         }
-      
+
         // CAS 2: MOT DE PASSE EXISTANT
         if (guide.mot_de_passe === password) {
           localStorage.setItem('userType', 'direction');
@@ -168,7 +182,6 @@ export default function LoginPage() {
           return;
         }
       }
-
 
       
       // 3. VÉRIFIER LES GUIDES NORMALS (SEULEMENT APRÈS AVOIR VÉRIFIÉ LA DIRECTION)
@@ -396,6 +409,7 @@ export default function LoginPage() {
     </div>
   );
 }
+
 
 
 
