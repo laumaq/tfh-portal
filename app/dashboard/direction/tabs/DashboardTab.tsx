@@ -68,12 +68,18 @@ export default function DashboardTabDirection({
   
   // Calcul des statistiques globales comme les coordinateurs
   const calculateGlobalOverview = () => {
-    // 1. Élèves connectés
-    const elevesConnected = eleves.filter(e => e.mot_de_passe && e.mot_de_passe !== '').length;
+    // 1. Élèves connectés - vérifier si mot_de_passe n'est pas null ou vide
+    const elevesConnected = eleves.filter(e => 
+      e.mot_de_passe !== null && e.mot_de_passe !== undefined && e.mot_de_passe.trim() !== ''
+    ).length;
+    
     const elevesTotal = eleves.length;
     
-    // 2. Guides connectés (incluant la direction)
-    const guidesConnected = guides.filter(g => g.mot_de_passe && g.mot_de_passe !== '').length;
+    // 2. Guides connectés - MÊME LOGIQUE
+    const guidesConnected = guides.filter(g => 
+      g.mot_de_passe !== null && g.mot_de_passe !== undefined && g.mot_de_passe.trim() !== ''
+    ).length;
+    
     const guidesTotal = guides.length;
     
     // 3. Défenses / Problématiques / Thématiques
