@@ -10,12 +10,12 @@ import { CONVOCATION_OPTIONS } from '../../coordinateur/constants';
 import { 
   getConvocationColor, 
   getConvocationLabelShort 
-} from '../utils/../coordinateur/convocationUtils';
+} from '../../coordinateur/utils/convocationUtils';
 import { 
   getJourneesFromSupabase, 
   detecterSessions,
   type Session 
-} from '../utils/../coordinateur/sessionUtils';
+} from '../../coordinateur/utils/sessionUtils';
 
 interface ConvocationsTabDirectionProps {
   eleves: Eleve[];
