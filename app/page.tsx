@@ -111,11 +111,12 @@ export default function LoginPage() {
         `)
         .ilike('guides.nom', nomNormalized)
         .ilike('guides.initiale', initialeNormalized)
-        .returns<DirectionData>() 
-        .maybeSingle();
+        .maybeSingle();  
+
+      const directionDataTyped = directionData as DirectionData | null;
   
-      if (!directionError && directionData && directionData.guides) {
-        const guide = directionData.guides;
+      if (!directionError && directionDataTyped && directionDataTyped.guides) {
+        const guide = directionDataTyped.guides;
         const storedPassword = guide.mot_de_passe;
         
         // CAS 1: PREMIÈRE CONNEXION (NULL ou chaîne vide)
@@ -375,6 +376,7 @@ export default function LoginPage() {
     </div>
   );
 }
+
 
 
 
