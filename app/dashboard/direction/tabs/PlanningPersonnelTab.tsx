@@ -2,8 +2,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Eleve } from '../../../coordinateur/types';
-import { getJourneesFromSupabase, detecterSessions } from '../../../coordinateur/utils/sessionUtils';
+import { Eleve } from '../../coordinateur/types';
+import { getJourneesFromSupabase, detecterSessions } from '../../coordinateur/utils/sessionUtils';
 import { supabase } from '@/lib/supabase';
 import { 
   Calendar, 
