@@ -97,55 +97,56 @@ export default function LoginPage() {
       }
 
       
-      // 2. VÉRIFIER LA DIRECTION
+      // 2. VÉRIFIER LA DIRECTION - Version corrigée
       console.log('🔍 Test Supabase - table direction existe?');
-
-      // Test simple sans jointure d'abord
-      const { data: simpleDirections, error: simpleError } = await supabase
-        .from('direction')
-        .select('id, guide_id');
-
-      console.log('🔍 Directions simples (sans jointure):', simpleDirections);
-      console.log('🔍 Erreur simple:', simpleError);
-
-      // Maintenant avec jointure
+      
+      // Récupérer d'abord toutes les directions
       const { data: allDirections, error: directionError } = await supabase
         .from('direction')
-        .select(`
-          id,
-          guide_id,
-          guides:guide_id (
-            id,
-            nom,
-            initiale,
-            mot_de_passe
-          )
-        `);
-
-      console.log('🔍 TOUTES les directions:', allDirections);
+        .select('*');
+      
+      console.log('🔍 TOUTES les directions (sans jointure):', allDirections);
       console.log('🔍 Erreur direction:', directionError);
-
-      // Chercher manuellement le guide
+      
+      if (directionError) {
+        console.error('Erreur lors de la récupération des directions:', directionError);
+      }
+      
+      // Récupérer tous les guides pour les matcher
+      const { data: allGuides, error: guidesError } = await supabase
+        .from('guides')
+        .select('*');
+      
+      console.log('🔍 TOUS les guides:', allGuides?.length);
+      
       let foundDirection = null;
       let foundGuide = null;
-
-      if (allDirections && !directionError) {
-        for (const dir of allDirections as any[]) {
-          if (dir.guides && 
-              dir.guides.nom && 
-              dir.guides.nom.toUpperCase() === nomNormalized && 
-              dir.guides.initiale && 
-              dir.guides.initiale.toUpperCase() === initialeNormalized) {
+      
+      if (allDirections && allGuides) {
+        // Chercher manuellement la correspondance
+        for (const dir of allDirections) {
+          // Trouver le guide correspondant
+          const guide = allGuides.find(g => g.id === dir.guide_id);
+          
+          if (guide && 
+              guide.nom && 
+              guide.nom.toUpperCase() === nomNormalized && 
+              guide.initiale && 
+              guide.initiale.toUpperCase() === initialeNormalized) {
             foundDirection = dir;
-            foundGuide = dir.guides;
+            foundGuide = guide;
+            console.log('✅ CORRESPONDANCE TROUVÉE:', {
+              direction: dir,
+              guide: guide
+            });
             break;
           }
         }
       }
-
+      
       console.log('🔍 Direction trouvée:', foundDirection);
       console.log('🔍 Guide trouvé:', foundGuide);
-
+      
       if (foundDirection && foundGuide) {
         console.log('✅ UTILISATEUR EST DIRECTION !');
         const guide = foundGuide;
@@ -167,7 +168,7 @@ export default function LoginPage() {
           router.push('/dashboard/direction');
           return;
         }
-
+      
         // CAS 2: MOT DE PASSE EXISTANT
         if (guide.mot_de_passe === password) {
           localStorage.setItem('userType', 'direction');
@@ -182,7 +183,6 @@ export default function LoginPage() {
           return;
         }
       }
-
       
       // 3. VÉRIFIER LES GUIDES NORMALS (SEULEMENT APRÈS AVOIR VÉRIFIÉ LA DIRECTION)
       const { data: guideData, error: guideError } = await supabase
@@ -409,6 +409,7 @@ export default function LoginPage() {
     </div>
   );
 }
+
 
 
 
