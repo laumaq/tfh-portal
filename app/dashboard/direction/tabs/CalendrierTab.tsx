@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo  } from 'react';
-import CalendarDisplay from '../../../coordinateur/components/CalendarDisplay';
-import ConflictDisplay from '../../../coordinateur/components/ConflictDisplay';
-import { Eleve, DefenseEvent, Conflict } from '../../../coordinateur/types';
-import { getCategoryColor } from '../../../coordinateur/utils/categoryUtils';
+import CalendarDisplay from '../../coordinateur/components/CalendarDisplay';
+import ConflictDisplay from '../../coordinateur/components/ConflictDisplay';
+import { Eleve, DefenseEvent, Conflict } from '../../coordinateur/types';
+import { getCategoryColor } from '../../coordinateur/utils/categoryUtils';
 
 interface CalendrierTabProps {
   eleves: Eleve[];
