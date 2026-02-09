@@ -4,8 +4,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
-import Sidebar from '../coordinateur/components/Sidebar';
-import Header from '../coordinateur/components/Header';
 import LoadingSpinner from '../coordinateur/components/LoadingSpinner';
 import DashboardTab from './direction/tabs/DashboardTab';
 import ListeTFHTab from './direction/tabs/ListeTFHTab';
