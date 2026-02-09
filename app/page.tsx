@@ -130,7 +130,7 @@ export default function LoginPage() {
           
           localStorage.setItem('userType', 'direction');
           localStorage.setItem('userId', guide.id);
-          localStorage.setItem('userDirectionId', directionData.id);
+          localStorage.setItem('userDirectionId', directionDataTyped.id);
           localStorage.setItem('userName', `${guide.nom} ${guide.initiale}.`);
           router.push('/dashboard/direction');
           return;
@@ -140,7 +140,7 @@ export default function LoginPage() {
         if (guide.mot_de_passe === password) {
           localStorage.setItem('userType', 'direction');
           localStorage.setItem('userId', guide.id);
-          localStorage.setItem('userDirectionId', directionData.id);
+          localStorage.setItem('userDirectionId', directionDataTyped.id);
           localStorage.setItem('userName', `${guide.nom} ${guide.initiale}.`);
           router.push('/dashboard/direction');
           return;
@@ -376,6 +376,7 @@ export default function LoginPage() {
     </div>
   );
 }
+
 
 
 
