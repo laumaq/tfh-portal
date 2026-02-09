@@ -4,8 +4,8 @@
 import { supabase } from '@/lib/supabase';
 import React from 'react';
 import { useState, useEffect } from 'react';
-import { Eleve, Guide } from '../coordinateur/types';
-import { CONVOCATION_OPTIONS } from '../coordinateur/constants';
+import { Eleve, Guide } from '../../coordinateur/types';
+import { CONVOCATION_OPTIONS } from '../../coordinateur/constants';
 import { 
   getConvocationColor, 
   getConvocationLabelShort 
