@@ -131,14 +131,7 @@ export default function DirectionDashboard() {
           <ConvocationsTab
             eleves={eleves}
             guides={guides}
-            editingMode={editingModeConvocations}
-            editingCell={editingCell}
-            onUpdate={handleUpdate}
-            onSelectUpdate={handleSelectUpdate}
             onRefresh={refreshData}
-            onSetEditingCell={setEditingCell}
-            onSetEditingMode={setEditingModeConvocations}
-            // Restreindre l'édition aux TFH où la direction est guide ou lecteur interne
             canEdit={(eleve) => 
               eleve.guide_id === currentGuide?.id || 
               eleve.lecteur_interne_id === currentGuide?.id
