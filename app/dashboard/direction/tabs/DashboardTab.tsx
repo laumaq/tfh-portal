@@ -197,7 +197,7 @@ export default function DashboardTabDirection({
   // Onglets spécifiques à la direction
   const directionTabs = [
     {
-      id: 'dashboard' as TabType,
+      id: 'dashboard' as DirectionTabType,
       name: 'Tableau de bord',
       icon: <CalendarDays className="w-5 h-5" />,
       bgColor: 'bg-blue-50',
@@ -209,7 +209,7 @@ export default function DashboardTabDirection({
       description: 'Vue générale de vos responsabilités'
     },
     {
-      id: 'lecteur-interne' as TabType,
+      id: 'lecteur-interne' as DirectionTabType,
       name: 'Lecteur interne',
       icon: <BookOpen className="w-5 h-5" />,
       bgColor: 'bg-violet-50',
@@ -222,7 +222,7 @@ export default function DashboardTabDirection({
       description: 'TFH à évaluer comme lecteur'
     },
     {
-      id: 'planning-personnel' as TabType,
+      id: 'planning-personnel' as DirectionTabType,
       name: 'Planning personnel',
       icon: <Calendar className="w-5 h-5" />,
       bgColor: 'bg-orange-50',
@@ -234,7 +234,7 @@ export default function DashboardTabDirection({
       description: 'Votre agenda et disponibilités'
     },
     {
-      id: 'liste-tfh' as TabType,
+      id: 'liste-tfh' as DirectionTabType,
       name: 'Liste des TFH',
       icon: <Users className="w-5 h-5" />,
       bgColor: 'bg-indigo-50',
@@ -247,7 +247,7 @@ export default function DashboardTabDirection({
       description: 'Tous les TFH sous votre responsabilité'
     },
     {
-      id: 'convocations' as TabType,
+      id: 'convocations' as DirectionTabType,
       name: 'Convocations',
       icon: <Bell className="w-5 h-5" />,
       bgColor: 'bg-purple-50',
@@ -260,7 +260,7 @@ export default function DashboardTabDirection({
       description: 'Convocations de vos élèves'
     },
     {
-      id: 'presences' as TabType,
+      id: 'presences' as DirectionTabType,
       name: 'Présences',
       icon: <span className="font-bold">✓</span>,
       bgColor: 'bg-fuchsia-50',
@@ -272,7 +272,7 @@ export default function DashboardTabDirection({
       description: 'Présences/absences de vos élèves'
     },
     {
-      id: 'defenses' as TabType,
+      id: 'defenses' as DirectionTabType,
       name: 'Défenses',
       icon: <UserCheck className="w-5 h-5" />,
       bgColor: 'bg-green-50',
@@ -285,7 +285,7 @@ export default function DashboardTabDirection({
       description: 'Soutenances de vos élèves'
     },
     {
-      id: 'calendrier' as TabType,
+      id: 'calendrier' as DirectionTabType,
       name: 'Calendrier',
       icon: <Calendar className="w-5 h-5" />,
       bgColor: 'bg-amber-50',
@@ -297,7 +297,7 @@ export default function DashboardTabDirection({
       description: 'Planning global des TFH'
     },
     {
-      id: 'stats' as TabType,
+      id: 'stats' as DirectionTabType,
       name: 'Statistiques',
       icon: <BarChart className="w-5 h-5" />,
       bgColor: 'bg-emerald-50',
@@ -309,7 +309,7 @@ export default function DashboardTabDirection({
       description: 'Analyses de progression'
     },
     {
-      id: 'controle' as TabType,
+      id: 'controle' as DirectionTabType,
       name: 'Contrôle',
       icon: <Shield className="w-5 h-5" />,
       bgColor: 'bg-red-50',
