@@ -95,9 +95,10 @@ export default function LoginPage() {
           return;
         }
       }
-  
-      // 2. VÉRIFIER LA DIRECTION (AJOUTER CETTE SECTION AVANT LES GUIDES)
-      const { data: directionData, error: directionError } = await supabase
+
+      
+      // 2. VÉRIFIER LA DIRECTION
+      const { data: allDirections, error: directionError } = await supabase
         .from('direction')
         .select(`
           id,
@@ -108,26 +109,35 @@ export default function LoginPage() {
             initiale,
             mot_de_passe
           )
-        `)
-        .ilike('guides.nom', nomNormalized)
-        .ilike('guides.initiale', initialeNormalized)
-        .maybeSingle();  
-
-      const directionDataTyped = directionData as DirectionData | null;
-
-      console.log('🔍 DIRECTION - Résultat requête:');
-      console.log('- directionData:', directionData);
-      console.log('- directionError:', directionError);
-      console.log('- directionDataTyped:', directionDataTyped);
-      console.log('- directionDataTyped?.guides:', directionDataTyped?.guides);
-
-  
-      if (!directionError && directionDataTyped && directionDataTyped.guides) {
+        `);
+      
+      console.log('🔍 TOUTES les directions:', allDirections);
+      
+      // Chercher manuellement le guide
+      let foundDirection = null;
+      let foundGuide = null;
+      
+      if (allDirections && !directionError) {
+        for (const dir of allDirections) {
+          if (dir.guides && 
+              dir.guides.nom.toUpperCase() === nomNormalized && 
+              dir.guides.initiale.toUpperCase() === initialeNormalized) {
+            foundDirection = dir;
+            foundGuide = dir.guides;
+            break;
+          }
+        }
+      }
+      
+      console.log('🔍 Direction trouvée:', foundDirection);
+      console.log('🔍 Guide trouvé:', foundGuide);
+      
+      if (foundDirection && foundGuide) {
         console.log('✅ UTILISATEUR EST DIRECTION !');
-        const guide = directionDataTyped.guides;
+        const guide = foundGuide;
         const storedPassword = guide.mot_de_passe;
         
-        // CAS 1: PREMIÈRE CONNEXION (NULL ou chaîne vide)
+        // CAS 1: PREMIÈRE CONNEXION
         if (!storedPassword || storedPassword === '') {
           console.log("Première connexion direction - enregistrement du mot de passe");
           
@@ -138,17 +148,17 @@ export default function LoginPage() {
           
           localStorage.setItem('userType', 'direction');
           localStorage.setItem('userId', guide.id);
-          localStorage.setItem('userDirectionId', directionDataTyped.id);
+          localStorage.setItem('userDirectionId', foundDirection.id);
           localStorage.setItem('userName', `${guide.nom} ${guide.initiale}.`);
           router.push('/dashboard/direction');
           return;
         }
-  
+      
         // CAS 2: MOT DE PASSE EXISTANT
         if (guide.mot_de_passe === password) {
           localStorage.setItem('userType', 'direction');
           localStorage.setItem('userId', guide.id);
-          localStorage.setItem('userDirectionId', directionDataTyped.id);
+          localStorage.setItem('userDirectionId', foundDirection.id);
           localStorage.setItem('userName', `${guide.nom} ${guide.initiale}.`);
           router.push('/dashboard/direction');
           return;
@@ -158,7 +168,9 @@ export default function LoginPage() {
           return;
         }
       }
-  
+
+
+      
       // 3. VÉRIFIER LES GUIDES NORMALS (SEULEMENT APRÈS AVOIR VÉRIFIÉ LA DIRECTION)
       const { data: guideData, error: guideError } = await supabase
         .from('guides')
@@ -384,6 +396,7 @@ export default function LoginPage() {
     </div>
   );
 }
+
 
 
 
