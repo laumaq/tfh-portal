@@ -19,6 +19,7 @@ import PlanningPersonnelTab from './tabs/PlanningPersonnelTab';
 import InterfaceGuideTab from './tabs/InterfaceGuideTab';
 import { useDirectionData } from './hooks/useDirectionData';
 import { DirectionTabType } from './types';
+import { Eleve } from '../coordinateur/types';
 
 export default function DirectionDashboard() {
   const router = useRouter();
