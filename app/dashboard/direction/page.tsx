@@ -123,7 +123,6 @@ export default function DirectionDashboard() {
           <ListeTFHTab
             eleves={eleves}
             onRefresh={refreshData}
-            onUpdate={handleUpdate}
           />
         );
             
