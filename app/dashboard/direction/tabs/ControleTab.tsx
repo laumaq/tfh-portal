@@ -8,8 +8,8 @@ import {
   AlertCircle, TrendingUp, Filter, Download, RefreshCw,
   ChevronUp, ChevronDown
 } from 'lucide-react';
-import { getJourneesFromSupabase, detecterSessions } from '../../../coordinateur/utils/sessionUtils';
-import { Guide, Eleve } from '../../../coordinateur/types';
+import { getJourneesFromSupabase, detecterSessions } from '../../coordinateur/utils/sessionUtils';
+import { Guide, Eleve } from '../../coordinateur/types';
 
 interface GuideStats {
   id: string;
