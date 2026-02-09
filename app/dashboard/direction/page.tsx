@@ -177,10 +177,7 @@ export default function DirectionDashboard() {
 
       case 'stats':
         return (
-          <StatsTab
-            eleves={eleves}
-            guides={guides}
-          />
+          <StatsTab />
         );
 
       case 'controle':
