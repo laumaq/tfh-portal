@@ -1,7 +1,6 @@
 // 1. D'abord réexporter tous les types
 export type {
   Eleve,
-  Guide,
   LecteurExterne,
   Mediateur,
   DefenseEvent,
@@ -12,6 +11,8 @@ export type {
   JourneeTFH,
   DisplaySettings
 } from '../../coordinateur/types';
+
+export { Guide } from '../../coordinateur/types';
 
 // 2. Ensuite définir tes types spécifiques
 export type DirectionTabType = 
