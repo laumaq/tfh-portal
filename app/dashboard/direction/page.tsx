@@ -19,9 +19,24 @@ import { useDirectionData } from './hooks/useDirectionData';
 import { useElevesOperations } from '../coordinateur/hooks/useElevesOperations';
 import { TabType } from '../coordinateur/types';
 
+type DirectionTabType = TabType | 'interface-guide' | 'lecteur-interne' | 'planning-personnel';
+
 export default function DirectionDashboard() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<TabType>('dashboard');
+  const [activeTab, setActiveTab] = useState<DirectionTabType>('dashboard');
+  const directionTabs: DirectionTabType[] = [
+    'dashboard',
+    'interface-guide',
+    'lecteur-interne', 
+    'planning-personnel',
+    'liste-tfh',
+    'convocations',
+    'presences',
+    'defenses',
+    'calendrier',
+    'stats',
+    'controle'
+  ];
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [userName, setUserName] = useState('');
   const [editingModeConvocations, setEditingModeConvocations] = useState(false);
