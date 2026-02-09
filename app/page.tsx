@@ -7,6 +7,17 @@ import { supabase } from '@/lib/supabase';
 import Image from 'next/image';
 import logo from '@/app/components/Logotypebaseline_NB.png'; // Chemin vers votre logo
 
+type DirectionData = {
+  id: string;
+  guide_id: string;
+  guides: {
+    id: string;
+    nom: string;
+    initiale: string;
+    mot_de_passe: string | null;
+  };
+};
+
 export default function LoginPage() {
   const [nom, setNom] = useState('');
   const [initiale, setInitiale] = useState('');
@@ -100,6 +111,7 @@ export default function LoginPage() {
         `)
         .ilike('guides.nom', nomNormalized)
         .ilike('guides.initiale', initialeNormalized)
+        .returns<DirectionData>() 
         .maybeSingle();
   
       if (!directionError && directionData && directionData.guides) {
@@ -363,6 +375,7 @@ export default function LoginPage() {
     </div>
   );
 }
+
 
 
 
