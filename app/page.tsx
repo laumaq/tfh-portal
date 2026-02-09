@@ -114,8 +114,16 @@ export default function LoginPage() {
         .maybeSingle();  
 
       const directionDataTyped = directionData as DirectionData | null;
+
+      console.log('🔍 DIRECTION - Résultat requête:');
+      console.log('- directionData:', directionData);
+      console.log('- directionError:', directionError);
+      console.log('- directionDataTyped:', directionDataTyped);
+      console.log('- directionDataTyped?.guides:', directionDataTyped?.guides);
+
   
       if (!directionError && directionDataTyped && directionDataTyped.guides) {
+        console.log('✅ UTILISATEUR EST DIRECTION !');
         const guide = directionDataTyped.guides;
         const storedPassword = guide.mot_de_passe;
         
@@ -376,6 +384,7 @@ export default function LoginPage() {
     </div>
   );
 }
+
 
 
 
