@@ -1,4 +1,4 @@
-// app/dashboard/direction/hooks/useDirectionData.ts - Version modifiée
+// app/dashboard/direction/hooks/useDirectionData.ts - Version corrigée
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -49,11 +49,15 @@ export function useDirectionData(forDashboard: boolean = false, activeTab?: stri
       
       setCurrentGuide(guideData);
 
-      // 2. Charger les élèves - LOGIQUE MODIFIÉE
+      // 2. Charger les élèves - LOGIQUE SIMPLIFIÉE
       let elevesQuery;
       
-      // Si c'est pour le dashboard OU pour presences, charger TOUS les élèves
-      if (forDashboard || activeTab === 'presences' || activeTab === 'liste-tfh') {
+      // La direction doit voir TOUS les élèves pour les tabs presences, liste-tfh, et dashboard
+      // Pour les autres tabs, montrer seulement ceux où elle est impliquée
+      const tabsWithAllEleves = ['dashboard', 'presences', 'liste-tfh'];
+      
+      if (tabsWithAllEleves.includes(activeTab || '')) {
+        // Charger TOUS les élèves pour ces tabs
         elevesQuery = supabase
           .from('eleves')
           .select(`
@@ -65,6 +69,8 @@ export function useDirectionData(forDashboard: boolean = false, activeTab?: stri
           `)
           .order('classe', { ascending: true })
           .order('nom', { ascending: true });
+        
+        console.log(`📊 Chargement de TOUS les élèves pour le tab: ${activeTab}`);
       } else {
         // Pour les autres tabs: charger seulement les élèves de la direction
         elevesQuery = supabase
@@ -79,6 +85,8 @@ export function useDirectionData(forDashboard: boolean = false, activeTab?: stri
           .or(`guide_id.eq.${userId},lecteur_interne_id.eq.${userId}`)
           .order('classe', { ascending: true })
           .order('nom', { ascending: true });
+        
+        console.log(`📊 Chargement FILTRÉ des élèves pour le tab: ${activeTab}`);
       }
 
       const { data: elevesData, error: elevesError } = await elevesQuery;
@@ -88,7 +96,7 @@ export function useDirectionData(forDashboard: boolean = false, activeTab?: stri
         throw elevesError;
       }
 
-      console.log(`📊 Chargement élèves direction: ${forDashboard ? 'TOUS' : 'FILTRÉS'} - ${elevesData?.length || 0} élèves`);
+      console.log(`📊 ${elevesData?.length || 0} élèves chargés`);
 
       const elevesFormatted: Eleve[] = (elevesData || []).map(eleve => ({
         ...eleve,
@@ -150,7 +158,7 @@ export function useDirectionData(forDashboard: boolean = false, activeTab?: stri
     } finally {
       setLoading(false);
     }
-  }, [forDashboard]); // <-- Ajouter forDashboard comme dépendance
+  }, [forDashboard, activeTab]); // <-- AJOUTEZ activeTab comme dépendance
 
   useEffect(() => {
     loadData();
