@@ -98,7 +98,11 @@ export default function GestionUtilisateursTab({
   };
 
   const getCurrentUserCount = () => {
-    return getCurrentUsers().length;
+    if (selectedUserType === 'direction') {
+      // Pour la direction, compter seulement ceux qui sont dans la direction
+      return directionMembers.length;
+    }
+    return getCurrentUsers().length;  
   };
 
   const handleAddUser = async () => {
