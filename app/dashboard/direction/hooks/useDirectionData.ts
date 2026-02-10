@@ -10,7 +10,7 @@ import {
   Mediateur 
 } from '../../coordinateur/types';
 
-export function useDirectionData(forDashboard: boolean = false) { // <-- Nouveau paramètre
+export function useDirectionData(forDashboard: boolean = false, activeTab?: string) { 
   const [eleves, setEleves] = useState<Eleve[]>([]);
   const [guides, setGuides] = useState<Guide[]>([]);
   const [lecteursExternes, setLecteursExternes] = useState<LecteurExterne[]>([]);
@@ -49,17 +49,17 @@ export function useDirectionData(forDashboard: boolean = false) { // <-- Nouveau
       
       setCurrentGuide(guideData);
 
-      // 2. Charger les élèves - DIFFÉRENCE ICI !
+      // 2. Charger les élèves - LOGIQUE MODIFIÉE
       let elevesQuery;
       
-      if (forDashboard) {
-        // Pour le dashboard: charger TOUS les élèves (comme coordinateur)
+      // Si c'est pour le dashboard OU pour presences, charger TOUS les élèves
+      if (forDashboard || activeTab === 'presences' || activeTab === 'liste-tfh') {
         elevesQuery = supabase
           .from('eleves')
           .select(`
             *,
-            guide:guides!guide_id (nom, prenom),
-            lecteur_interne:guides!lecteur_interne_id (nom, prenom),
+            guide:guides!guide_id (id, nom, prenom),
+            lecteur_interne:guides!lecteur_interne_id (id, nom, prenom),
             lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
             mediateur:mediateurs!mediateur_id (nom, prenom)
           `)
@@ -71,8 +71,8 @@ export function useDirectionData(forDashboard: boolean = false) { // <-- Nouveau
           .from('eleves')
           .select(`
             *,
-            guide:guides!guide_id (nom, prenom),
-            lecteur_interne:guides!lecteur_interne_id (nom, prenom),
+            guide:guides!guide_id (id, nom, prenom),
+            lecteur_interne:guides!lecteur_interne_id (id, nom, prenom),
             lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
             mediateur:mediateurs!mediateur_id (nom, prenom)
           `)
