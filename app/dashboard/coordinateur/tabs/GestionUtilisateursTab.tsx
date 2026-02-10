@@ -1184,6 +1184,7 @@ export default function GestionUtilisateursTab({
                       </td>
                     </>
                   )}
+
                   {selectedUserType === 'coordinateurs' && (
                     <>
                       <td className="px-4 py-3 text-sm font-medium text-gray-900">
@@ -1205,7 +1206,8 @@ export default function GestionUtilisateursTab({
                         </button>
                       </td>
                     </>
-
+                  )}
+                  
                   {selectedUserType === 'direction' && (
                     <>
                       <td className="px-4 py-3 text-sm font-medium text-gray-900">
@@ -1233,6 +1235,7 @@ export default function GestionUtilisateursTab({
                       </td>
                     </>
                   )}
+                  
                 </tr>
               ))}
             </tbody>
