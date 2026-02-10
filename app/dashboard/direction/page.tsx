@@ -1,4 +1,4 @@
-// app/dashboard/direction/page.tsx - CORRECTION
+// app/dashboard/direction/page.tsx - Version simplifiée
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -20,7 +20,6 @@ import InterfaceGuideTab from './tabs/InterfaceGuideTab';
 import { useDirectionData } from './hooks/useDirectionData';
 import { DirectionTabType } from './types';
 import { Eleve } from '../coordinateur/types';
-import { supabase } from '@/lib/supabase';
 
 // Définir un type étendu qui inclut les relations
 interface EleveWithRelations extends Eleve {
@@ -35,9 +34,8 @@ export default function DirectionDashboard() {
   const [activeTab, setActiveTab] = useState<DirectionTabType>('dashboard');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [userName, setUserName] = useState('');
-  const [allEleves, setAllEleves] = useState<Eleve[]>([]);
 
-  // Utiliser les hooks custom - MAINTENANT AVEC activeTab
+  // Utiliser les hooks custom - PLUS SIMPLE MAINTENANT
   const { 
     eleves, 
     guides, 
@@ -47,48 +45,7 @@ export default function DirectionDashboard() {
     currentGuide,
     loading, 
     refreshData 
-  } = useDirectionData(activeTab === 'dashboard', activeTab); // <-- AJOUT activeTab
-
-  // Fonction pour charger TOUS les élèves pour le tab "liste-tfh"
-  const loadAllEleves = async () => {
-    try {
-      const { data: elevesData, error: elevesError } = await supabase
-        .from('eleves')
-        .select(`
-          *,
-          guide:guides!guide_id (nom, prenom),
-          lecteur_interne:guides!lecteur_interne_id (nom, prenom),
-          lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
-          mediateur:mediateurs!mediateur_id (nom, prenom)
-        `)
-        .order('classe', { ascending: true })
-        .order('nom', { ascending: true });
-
-      if (!elevesError && elevesData) {
-        const formattedEleves: Eleve[] = elevesData.map(eleve => ({
-          ...eleve,
-          guide_nom: eleve.guide?.nom || '-',
-          guide_prenom: eleve.guide?.prenom || '-',
-          lecteur_interne_nom: eleve.lecteur_interne?.nom || '-',
-          lecteur_interne_prenom: eleve.lecteur_interne?.prenom || '-',
-          lecteur_externe_nom: eleve.lecteur_externe?.nom || '-',
-          lecteur_externe_prenom: eleve.lecteur_externe?.prenom || '-',
-          mediateur_nom: eleve.mediateur?.nom || '-',
-          mediateur_prenom: eleve.mediateur?.prenom || '-'
-        }));
-        setAllEleves(formattedEleves);
-      }
-    } catch (err) {
-      console.error('Erreur chargement tous les élèves:', err);
-    }
-  };
-
-  // Charger tous les élèves quand on active le tab "liste-tfh"
-  useEffect(() => {
-    if (activeTab === 'liste-tfh') {
-      loadAllEleves();
-    }
-  }, [activeTab]);
+  } = useDirectionData(); // <-- Plus de paramètres
 
   useEffect(() => {
     const userType = localStorage.getItem('userType');
@@ -121,23 +78,30 @@ export default function DirectionDashboard() {
         );
 
       case 'interface-guide':
+        // Ici on peut filtrer : seulement les élèves où l'utilisateur est guide
+        const elevesGuide = eleves.filter(e => e.guide_id === currentGuide?.id);
         return (
           <InterfaceGuideTab
+            eleves={elevesGuide}
             guideId={currentGuide?.id || ''}
             onRefresh={refreshData}
           />
         );
       
       case 'lecteur-interne':
+        // Ici on filtre : seulement les élèves où l'utilisateur est lecteur interne
+        const elevesLecteur = eleves.filter(e => e.lecteur_interne_id === currentGuide?.id);
         return (
           <LecteurInterneTab
-            eleves={eleves.filter(e => e.lecteur_interne_id === currentGuide?.id)}
+            eleves={elevesLecteur}
             guideId={currentGuide?.id || ''}
             onRefresh={refreshData}
           />
         );
       
       case 'planning-personnel':
+        // Pour le planning personnel, on peut montrer tous les élèves
+        // OU filtrer selon les besoins
         return (
           <PlanningPersonnelTab
             guideId={currentGuide?.id || ''}
@@ -146,17 +110,16 @@ export default function DirectionDashboard() {
         );
         
       case 'liste-tfh':
+        // Liste complète des TFH
         return (
           <ListeTFHTab
-            eleves={activeTab === 'liste-tfh' ? allEleves : eleves}
-            onRefresh={() => {
-              refreshData();
-              loadAllEleves(); 
-            }}
+            eleves={eleves}
+            onRefresh={refreshData}
           />
         );
             
       case 'convocations':
+        // Convocations - tous les élèves
         return (
           <ConvocationsTab
             eleves={eleves}
@@ -170,9 +133,10 @@ export default function DirectionDashboard() {
         );
 
       case 'presences':
+        // Présences - tous les élèves
         return (
           <PresencesTab
-            eleves={eleves as EleveWithRelations[]} // <-- MAINTENANT eleves CONTIENT TOUS LES ÉLÈVES
+            eleves={eleves as EleveWithRelations[]}
             onRefresh={refreshData}
             canEdit={(eleve) => {
               const eleveWithRelations = eleve as EleveWithRelations;
@@ -185,6 +149,7 @@ export default function DirectionDashboard() {
         );
       
       case 'defenses': 
+        // Défenses - tous les élèves
         return (
           <DefensesTab
             eleves={eleves}
@@ -200,6 +165,7 @@ export default function DirectionDashboard() {
         );
         
       case 'calendrier':
+        // Calendrier - tous les élèves
         return (
           <CalendrierTab
             eleves={eleves}
@@ -209,11 +175,13 @@ export default function DirectionDashboard() {
         );
 
       case 'stats':
+        // Statistiques - utilise les données complètes
         return (
           <StatsTab />
         );
 
       case 'controle':
+        // Contrôle - utilise les données complètes
         return (
           <ControleTab />
         );
@@ -242,7 +210,7 @@ export default function DirectionDashboard() {
         <Sidebar 
           activeTab={activeTab}
           onTabChange={setActiveTab}
-          elevesCount={eleves.length} // <-- MAINTENANT eleves EST TOUJOURS PLEIN
+          elevesCount={eleves.length} // <-- Maintenant toujours le compte TOTAL
           isMenuOpen={isMenuOpen}
           onMenuToggle={() => setIsMenuOpen(!isMenuOpen)}
           userName={userName}
