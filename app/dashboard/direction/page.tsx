@@ -78,8 +78,6 @@ export default function DirectionDashboard() {
         );
 
       case 'interface-guide':
-        // Ici on peut filtrer : seulement les élèves où l'utilisateur est guide
-        const elevesGuide = eleves.filter(e => e.guide_id === currentGuide?.id);
         return (
           <InterfaceGuideTab
             guideId={currentGuide?.id || ''}
