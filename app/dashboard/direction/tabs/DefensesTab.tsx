@@ -9,7 +9,7 @@ import { getCategoryColor } from '../../coordinateur/utils/categoryUtils';
 interface DefensesTabDirectionProps {
   eleves: Eleve[];
   guides: Guide[];
-  lecteursExternes: LecteurExternes[];
+  lecteursExternes: LecteurExterne[];;
   mediateurs: Mediateur[];
   onRefresh: () => void;
   canEdit?: (eleve: Eleve) => boolean; // Fonction pour vérifier les droits d'édition (non de visualisation)
