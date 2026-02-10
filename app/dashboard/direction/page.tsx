@@ -1,4 +1,4 @@
-// app/dashboard/direction/page.tsx - Version mise à jour
+// app/dashboard/direction/page.tsx - CORRECTION
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -22,6 +22,7 @@ import { DirectionTabType } from './types';
 import { Eleve } from '../coordinateur/types';
 import { supabase } from '@/lib/supabase';
 
+// Définir un type étendu qui inclut les relations
 interface EleveWithRelations extends Eleve {
   guide?: { id: string; nom: string; prenom: string };
   lecteur_interne?: { id: string; nom: string; prenom: string };
@@ -36,7 +37,7 @@ export default function DirectionDashboard() {
   const [userName, setUserName] = useState('');
   const [allEleves, setAllEleves] = useState<Eleve[]>([]);
 
-  // Utiliser les hooks custom
+  // Utiliser les hooks custom - MAINTENANT AVEC activeTab
   const { 
     eleves, 
     guides, 
@@ -46,8 +47,9 @@ export default function DirectionDashboard() {
     currentGuide,
     loading, 
     refreshData 
-  } = useDirectionData(activeTab === 'dashboard');
+  } = useDirectionData(activeTab === 'dashboard', activeTab); // <-- AJOUT activeTab
 
+  // Fonction pour charger TOUS les élèves pour le tab "liste-tfh"
   const loadAllEleves = async () => {
     try {
       const { data: elevesData, error: elevesError } = await supabase
@@ -170,7 +172,7 @@ export default function DirectionDashboard() {
       case 'presences':
         return (
           <PresencesTab
-            eleves={eleves as EleveWithRelations[]}
+            eleves={eleves as EleveWithRelations[]} // <-- MAINTENANT eleves CONTIENT TOUS LES ÉLÈVES
             onRefresh={refreshData}
             canEdit={(eleve) => {
               const eleveWithRelations = eleve as EleveWithRelations;
@@ -240,7 +242,7 @@ export default function DirectionDashboard() {
         <Sidebar 
           activeTab={activeTab}
           onTabChange={setActiveTab}
-          elevesCount={eleves.length}
+          elevesCount={eleves.length} // <-- MAINTENANT eleves EST TOUJOURS PLEIN
           isMenuOpen={isMenuOpen}
           onMenuToggle={() => setIsMenuOpen(!isMenuOpen)}
           userName={userName}
