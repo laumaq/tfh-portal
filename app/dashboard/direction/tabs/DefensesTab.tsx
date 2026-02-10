@@ -1,18 +1,18 @@
-// app/dashboard/direction/tabs/DefensesTab.tsx
+// app/dashboard/direction/tabs/DefensesTab.tsx - Version corrigée
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Eleve, Guide, LecteurExterne, Mediateur } from '../../coordinateur/types'; // Chemin corrigé
-import { formatDateForInput, add50Minutes } from '../../coordinateur/utils/dateUtils'; // Chemin corrigé
-import { getCategoryColor } from '../../coordinateur/utils/categoryUtils'; // Chemin corrigé
+import { Eleve, Guide, LecteurExterne, Mediateur } from '../../coordinateur/types';
+import { formatDateForInput, add50Minutes } from '../../coordinateur/utils/dateUtils';
+import { getCategoryColor } from '../../coordinateur/utils/categoryUtils';
 
 interface DefensesTabDirectionProps {
   eleves: Eleve[];
   guides: Guide[];
-  lecteursExternes: LecteurExterne[];
+  lecteursExternes: LecteurExternes[];
   mediateurs: Mediateur[];
   onRefresh: () => void;
-  canEdit?: (eleve: Eleve) => boolean; // Optionnel : fonction pour vérifier les droits
+  canEdit?: (eleve: Eleve) => boolean; // Fonction pour vérifier les droits d'édition (non de visualisation)
 }
 
 export default function DefensesTabDirection({
@@ -25,6 +25,7 @@ export default function DefensesTabDirection({
 }: DefensesTabDirectionProps) {
   const [localEleves, setLocalEleves] = useState<Eleve[]>(eleves);
   const [userId, setUserId] = useState<string | null>(null);
+  const [filterMode, setFilterMode] = useState<'all' | 'mine'>('all'); // <-- NOUVEAU : filtre pour voir toutes les défenses ou seulement celles où on est impliqué
 
   // Récupérer l'ID de l'utilisateur connecté
   useEffect(() => {
@@ -37,15 +38,20 @@ export default function DefensesTabDirection({
     setLocalEleves(eleves);
   }, [eleves]);
 
-  // Fonction pour vérifier si la direction peut voir cet élève
-  const canAccessEleve = (eleve: Eleve): boolean => {
-    // Si une fonction canEdit est fournie, l'utiliser
-    if (canEdit) return canEdit(eleve);
-    
-    // Sinon, vérifier si la direction est guide ou lecteur interne de cet élève
+  // Fonction pour vérifier si la direction EST IMPLIQUÉE avec cet élève (pour l'édition)
+  const isUserInvolved = (eleve: Eleve): boolean => {
     if (!userId) return false;
-    
     return eleve.guide_id === userId || eleve.lecteur_interne_id === userId;
+  };
+
+  // Fonction pour vérifier si la direction peut VOIR cet élève
+  // La direction voit TOUS les élèves, mais peut filtrer avec le bouton
+  const canAccessEleve = (eleve: Eleve): boolean => {
+    if (filterMode === 'all') {
+      return true; // Voir TOUS les élèves
+    } else {
+      return isUserInvolved(eleve); // Voir seulement les élèves impliqués
+    }
   };
 
   const getCategoryStyle = (categorie: string) => {
@@ -57,11 +63,13 @@ export default function DefensesTabDirection({
     };
   };
 
-  // Filtrer les élèves selon les droits d'accès
+  // Filtrer les élèves selon le mode de filtre
   const accessibleEleves = localEleves.filter(eleve => canAccessEleve(eleve));
 
   // Fonction pour obtenir le rôle de la direction pour un élève
   const getRoleForEleve = (eleve: Eleve) => {
+    if (!userId) return <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">-</span>;
+    
     if (eleve.guide_id === userId && eleve.lecteur_interne_id === userId) {
       return <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">Guide & Lecteur</span>;
     } else if (eleve.guide_id === userId) {
@@ -74,6 +82,7 @@ export default function DefensesTabDirection({
 
   // Calculer les statistiques
   const calculateStats = () => {
+    const totalAll = localEleves.length; // Total de tous les élèves
     const totalAccessible = accessibleEleves.length;
     const withDateDefense = accessibleEleves.filter(e => e.date_defense).length;
     const withCompleteJury = accessibleEleves.filter(e => 
@@ -82,7 +91,8 @@ export default function DefensesTabDirection({
     const withMediateur = accessibleEleves.filter(e => e.mediateur_id).length;
 
     return {
-      totalAccessible,
+      totalAll, // Total de tous les élèves
+      totalAccessible, // Total selon le filtre actuel
       withDateDefense,
       withCompleteJury,
       withMediateur,
@@ -98,26 +108,56 @@ export default function DefensesTabDirection({
     <div className="space-y-6">
       {/* En-tête */}
       <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-4">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-4">
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Boutons de filtre */}
+            <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setFilterMode('all')}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  filterMode === 'all'
+                    ? 'bg-white text-gray-800 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                👁️ Toutes les défenses
+              </button>
+              <button
+                onClick={() => setFilterMode('mine')}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  filterMode === 'mine'
+                    ? 'bg-white text-gray-800 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                🎯 Mes défenses
+              </button>
+            </div>
+            
+            {/* Note sur les droits d'accès */}
             <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
               <span className="text-sm text-blue-700">
-                👁️ Vue défenses - Lecture seule
+                📋 Visualisation seule - Pas de droits d'édition
               </span>
             </div>
           </div>
           
           <span className="text-sm text-gray-500">
-            ({accessibleEleves.length} élève{accessibleEleves.length > 1 ? 's' : ''} accessible{accessibleEleves.length > 1 ? 's' : ''})
+            {filterMode === 'all' 
+              ? `(${stats.totalAccessible} élève${stats.totalAccessible > 1 ? 's' : ''} au total)`
+              : `(${stats.totalAccessible} élève${stats.totalAccessible > 1 ? 's' : ''} sous ma responsabilité)`
+            }
           </span>
         </div>
         
         {/* Statistiques */}
         <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div className="text-center">
               <div className="text-xl font-bold text-gray-800">{stats.totalAccessible}</div>
-              <div className="text-sm text-gray-600">TFH accessibles</div>
+              <div className="text-sm text-gray-600">
+                {filterMode === 'all' ? 'TFH total' : 'Mes TFH'}
+              </div>
             </div>
             <div className="text-center">
               <div className="text-xl font-bold text-gray-800">
@@ -137,6 +177,14 @@ export default function DefensesTabDirection({
               </div>
               <div className="text-sm text-gray-600">Avec médiateur</div>
             </div>
+            <div className="text-center">
+              <div className="text-xl font-bold text-gray-800">
+                {filterMode === 'all' ? localEleves.length - stats.totalAccessible : stats.totalAccessible}
+              </div>
+              <div className="text-sm text-gray-600">
+                {filterMode === 'all' ? 'TFH non-accessibles' : 'TFH accessibles'}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -149,11 +197,24 @@ export default function DefensesTabDirection({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
           </div>
-          <h3 className="text-lg font-medium text-gray-700 mb-2">Aucun TFH accessible</h3>
+          <h3 className="text-lg font-medium text-gray-700 mb-2">
+            {filterMode === 'all' 
+              ? 'Aucun TFH trouvé' 
+              : 'Aucun TFH sous votre responsabilité'}
+          </h3>
           <p className="text-gray-500 max-w-md mx-auto">
-            Vous n'avez pas d'élèves assignés comme guide ou lecteur interne.
-            Les défenses ne seront visibles que pour les TFH sous votre responsabilité.
+            {filterMode === 'all' 
+              ? 'Aucun TFH n\'a été trouvé dans le système.' 
+              : 'Vous n\'êtes pas impliqué en tant que guide ou lecteur interne pour aucun TFH.'}
           </p>
+          {filterMode === 'mine' && (
+            <button
+              onClick={() => setFilterMode('all')}
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+            >
+              Voir toutes les défenses
+            </button>
+          )}
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow overflow-x-auto">
@@ -307,7 +368,9 @@ export default function DefensesTabDirection({
         <ul className="text-sm text-gray-600 space-y-1">
           <li>• <span className="px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">Guide</span> : Vous êtes le guide de cet élève</li>
           <li>• <span className="px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded-full">Lecteur interne</span> : Vous êtes lecteur interne pour cet élève</li>
+          <li>• <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">Guide & Lecteur</span> : Vous êtes guide ET lecteur interne</li>
           <li>• Les heures de défense incluent automatiquement +50 minutes pour la durée</li>
+          <li>• Utilisez les boutons en haut pour filtrer entre toutes les défenses et vos défenses</li>
           <li>• Pour modifier les données, contactez un coordinateur</li>
         </ul>
       </div>
@@ -321,10 +384,10 @@ export default function DefensesTabDirection({
           <div className="text-sm text-yellow-700">
             <p className="font-medium mb-1">Droits d'accès :</p>
             <ul className="list-disc pl-4 space-y-1">
-              <li>Vous ne voyez que les TFH où vous êtes impliqué (guide ou lecteur interne)</li>
+              <li>Mode <strong>"Toutes les défenses"</strong> : Vous voyez tous les TFH du système</li>
+              <li>Mode <strong>"Mes défenses"</strong> : Vous ne voyez que les TFH où vous êtes impliqué</li>
               <li>Toutes les données sont en lecture seule pour la direction</li>
               <li>Pour modifier les dates, heures ou membres du jury, contactez un coordinateur</li>
-              <li>Les catégories sont colorées pour faciliter la visualisation</li>
             </ul>
           </div>
         </div>
