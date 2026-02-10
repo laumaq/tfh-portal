@@ -13,10 +13,11 @@ interface GestionUtilisateursTabProps {
   lecteursExternes: LecteurExterne[];
   mediateurs: Mediateur[];
   coordinateurs: Coordinateur[];
+  directionMembers?: any[]; 
   onRefresh: () => void;
 }
 
-type UserType = 'eleves' | 'guides' | 'lecteurs-externes' | 'mediateurs' | 'coordinateurs';
+type UserType = 'eleves' | 'guides' | 'lecteurs-externes' | 'mediateurs' | 'coordinateurs' | 'direction';
 
 interface NewUser {
   nom: string;
@@ -56,6 +57,8 @@ export default function GestionUtilisateursTab({
   const [showClearConfirmations, setShowClearConfirmations] = useState(false);
   const [clearConfirmations, setClearConfirmations] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [directionMembers, setDirectionMembers] = useState<any[]>([]);
+  const [directionGuides, setDirectionGuides] = useState<any[]>([]);
   const [successMessage, setSuccessMessage] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [deletePasswordModal, setDeletePasswordModal] = useState<DeletePasswordModalState>({
@@ -87,6 +90,8 @@ export default function GestionUtilisateursTab({
         return mediateurs;
       case 'coordinateurs':
         return coordinateurs;
+      case 'direction':
+        return directionGuides;
       default:
         return [];
     }
@@ -255,6 +260,92 @@ export default function GestionUtilisateursTab({
     }
   };
 
+  const loadDirectionData = useCallback(async () => {
+    try {
+      // Charger tous les guides
+      const { data: guidesData, error: guidesError } = await supabase
+        .from('guides')
+        .select('*')
+        .order('nom', { ascending: true });
+      
+      if (guidesError) throw guidesError;
+      
+      // Charger les membres de la direction
+      const { data: directionData, error: directionError } = await supabase
+        .from('direction')
+        .select('guide_id');
+      
+      if (directionError) throw directionError;
+      
+      const directionGuideIds = directionData?.map(d => d.guide_id) || [];
+      
+      // Créer un tableau avec tous les guides et info direction
+      const guidesWithDirection = (guidesData || []).map(guide => ({
+        ...guide,
+        isInDirection: directionGuideIds.includes(guide.id)
+      }));
+      
+      setDirectionGuides(guidesWithDirection);
+      setDirectionMembers(directionGuideIds);
+      
+    } catch (err) {
+      console.error('Erreur chargement direction:', err);
+      setDirectionGuides([]);
+      setDirectionMembers([]);
+    }
+  }, []);
+
+  const handleDirectionToggle = async (guideId: string, isCurrentlyInDirection: boolean) => {
+    setLoading(true);
+    try {
+      if (isCurrentlyInDirection) {
+        // Retirer de la direction
+        const { error } = await supabase
+          .from('direction')
+          .delete()
+          .eq('guide_id', guideId);
+        
+        if (error) throw error;
+        
+        setDirectionMembers(prev => prev.filter(id => id !== guideId));
+        setDirectionGuides(prev => prev.map(g => 
+          g.id === guideId ? { ...g, isInDirection: false } : g
+        ));
+        
+        setSuccessMessage('Guide retiré de la direction');
+      } else {
+        // Ajouter à la direction
+        const { error } = await supabase
+          .from('direction')
+          .insert([{ guide_id: guideId }]);
+        
+        if (error) {
+          if (error.code === '23505') {
+            // Contrainte UNIQUE violation (déjà dans la direction)
+            setErrorMessage('Ce guide est déjà dans la direction');
+          } else {
+            throw error;
+          }
+        } else {
+          setDirectionMembers(prev => [...prev, guideId]);
+          setDirectionGuides(prev => prev.map(g => 
+            g.id === guideId ? { ...g, isInDirection: true } : g
+          ));
+          
+          setSuccessMessage('Guide ajouté à la direction');
+        }
+      }
+      clearMessages();
+    } catch (err) {
+      console.error('Erreur mise à jour direction:', err);
+      setErrorMessage('Erreur lors de la mise à jour de la direction');
+      clearMessages();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  
   const handleDeleteUser = async (id: string, nom: string, prenom?: string) => {
     const fullName = prenom ? `${prenom} ${nom}` : nom;
     
@@ -619,6 +710,7 @@ export default function GestionUtilisateursTab({
       case 'lecteurs-externes': return 'Lecteurs externes';
       case 'mediateurs': return 'Médiateurs';
       case 'coordinateurs': return 'Coordinateurs';
+      case 'direction': return 'Membres direction'; // <-- Nouveau
       default: return '';
     }
   };
@@ -679,7 +771,12 @@ export default function GestionUtilisateursTab({
             </label>
             <select
               value={selectedUserType}
-              onChange={(e) => setSelectedUserType(e.target.value as UserType)}
+              onChange={(e) => {
+                setSelectedUserType(e.target.value as UserType);
+                if (e.target.value === 'direction') {
+                  loadDirectionData();
+                }
+              }}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="eleves">Élève</option>
@@ -687,6 +784,7 @@ export default function GestionUtilisateursTab({
               <option value="lecteurs-externes">Lecteur externe</option>
               <option value="mediateurs">Médiateur</option>
               <option value="coordinateurs">Coordinateur</option>
+              <option value="direction">Direction</option>
             </select>
           </div>
           
@@ -694,166 +792,170 @@ export default function GestionUtilisateursTab({
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Import / Suppression
             </label>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowMassImport(true)}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-sm transition-colors"
-              >
-                <Upload className="w-4 h-4" />
-                Importer CSV
-              </button>
-              {(selectedUserType === 'eleves' || selectedUserType === 'guides') && (
+            {selectedUserType !== 'direction' && (
+              <div className="flex gap-2">
                 <button
-                  onClick={() => setShowClearConfirmations(true)}
-                  className="flex items-center justify-center gap-2 px-3 py-2 bg-red-50 text-red-700 hover:bg-red-100 rounded-lg text-sm transition-colors"
+                  onClick={() => setShowMassImport(true)}
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-sm transition-colors"
                 >
-                  <Trash2 className="w-4 h-4" />
-                  Tout supprimer
+                  <Upload className="w-4 h-4" />
+                  Importer CSV
                 </button>
-              )}
-            </div>
+                {(selectedUserType === 'eleves' || selectedUserType === 'guides') && (
+                  <button
+                    onClick={() => setShowClearConfirmations(true)}
+                    className="flex items-center justify-center gap-2 px-3 py-2 bg-red-50 text-red-700 hover:bg-red-100 rounded-lg text-sm transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Tout supprimer
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
         
         {/* Formulaire d'ajout */}
-        <div className="border rounded-lg p-4 bg-gray-50">
-          <h3 className="text-sm font-medium text-gray-700 mb-4 flex items-center gap-2">
-            <UserPlus className="w-4 h-4" />
-            Ajouter un {getUserTypeLabel().toLowerCase()}
-          </h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-            {selectedUserType === 'eleves' && (
-              <>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Nom *
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Nom"
-                    value={newUser.nom}
-                    onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
-                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Prénom *
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Prénom"
-                    value={newUser.prenom}
-                    onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
-                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Classe *
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Classe"
-                    value={newUser.classe}
-                    onChange={(e) => setNewUser({...newUser, classe: e.target.value})}
-                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-              </>
-            )}
+        {selectedUserType !== 'direction' && (
+          <div className="border rounded-lg p-4 bg-gray-50">
+            <h3 className="text-sm font-medium text-gray-700 mb-4 flex items-center gap-2">
+              <UserPlus className="w-4 h-4" />
+              Ajouter un {getUserTypeLabel().toLowerCase()}
+            </h3>
             
-            {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && (
-              <>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Nom *
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Nom"
-                    value={newUser.nom}
-                    onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
-                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Prénom *
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Prénom"
-                    value={newUser.prenom}
-                    onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
-                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    placeholder="Email"
-                    value={newUser.email}
-                    onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-              </>
-            )}
-            
-            {(selectedUserType === 'guides' || selectedUserType === 'coordinateurs') && (
-              <>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Nom *
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Nom"
-                    value={newUser.nom}
-                    onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
-                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Prénom *
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Prénom"
-                    value={newUser.prenom}
-                    onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
-                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-              </>
-            )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+              {selectedUserType === 'eleves' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Nom *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Nom"
+                      value={newUser.nom}
+                      onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Prénom *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Prénom"
+                      value={newUser.prenom}
+                      onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Classe *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Classe"
+                      value={newUser.classe}
+                      onChange={(e) => setNewUser({...newUser, classe: e.target.value})}
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                </>
+              )}
+              
+              {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Nom *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Nom"
+                      value={newUser.nom}
+                      onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Prénom *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Prénom"
+                      value={newUser.prenom}
+                      onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      placeholder="Email"
+                      value={newUser.email}
+                      onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                </>
+              )}
+              
+              {(selectedUserType === 'guides' || selectedUserType === 'coordinateurs') && (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Nom *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Nom"
+                      value={newUser.nom}
+                      onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Prénom *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Prénom"
+                      value={newUser.prenom}
+                      onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+  
+            {/* Bouton Ajouter */}
+            <button
+              onClick={handleAddUser}
+              disabled={loading}
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full md:w-auto"
+            >
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Ajout en cours...
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4" />
+                  Ajouter
+                </>
+              )}
+            </button>
           </div>
-
-          {/* Bouton Ajouter */}
-          <button
-            onClick={handleAddUser}
-            disabled={loading}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full md:w-auto"
-          >
-            {loading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                Ajout en cours...
-              </>
-            ) : (
-              <>
-                <Plus className="w-4 h-4" />
-                Ajouter
-              </>
-            )}
-          </button>
-        </div>
+        )}
       </div>
 
       {/* Liste des utilisateurs */}
@@ -960,6 +1062,23 @@ export default function GestionUtilisateursTab({
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       Actions
+                    </th>
+                  </>
+                )}
+
+                {selectedUserType === 'direction' && (
+                  <>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Nom
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Prénom
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Connecté
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Membre direction
                     </th>
                   </>
                 )}
@@ -1084,6 +1203,33 @@ export default function GestionUtilisateursTab({
                         >
                           ✕
                         </button>
+                      </td>
+                    </>
+
+                  {selectedUserType === 'direction' && (
+                    <>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                        {user.nom}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {user.prenom}
+                      </td>
+                      <td className="px-4 py-3">
+                        {renderConnectionStatus(user)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <label className="flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={user.isInDirection || false}
+                            onChange={(e) => handleDirectionToggle(user.id, e.target.checked)}
+                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                            disabled={loading}
+                          />
+                          <span className="ml-2 text-sm text-gray-700">
+                            {user.isInDirection ? 'Membre' : 'Non membre'}
+                          </span>
+                        </label>
                       </td>
                     </>
                   )}
