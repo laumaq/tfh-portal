@@ -1,4 +1,4 @@
-// app/dashboard/direction/hooks/useDirectionData.ts - Version corrigée
+// app/dashboard/direction/hooks/useDirectionData.ts - Version simplifiée
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -10,7 +10,7 @@ import {
   Mediateur 
 } from '../../coordinateur/types';
 
-export function useDirectionData(forDashboard: boolean = false, activeTab?: string) { 
+export function useDirectionData() { // <-- SUPPRIMEZ les paramètres
   const [eleves, setEleves] = useState<Eleve[]>([]);
   const [guides, setGuides] = useState<Guide[]>([]);
   const [lecteursExternes, setLecteursExternes] = useState<LecteurExterne[]>([]);
@@ -49,55 +49,25 @@ export function useDirectionData(forDashboard: boolean = false, activeTab?: stri
       
       setCurrentGuide(guideData);
 
-      // 2. Charger les élèves - LOGIQUE MODIFIÉE
-      let elevesQuery;
-      
-      // Définir quels tabs ont besoin de TOUS les élèves
-      const tabsWithAllEleves = ['dashboard', 'presences', 'liste-tfh', 'convocations', 'defenses', 'calendrier', 'stats', 'controle'];
-      
-      // La direction doit voir TOUS les élèves pour la plupart des tabs
-      // Seuls les tabs spécifiques comme "interface-guide" ou "lecteur-interne" peuvent être filtrés
-      if (tabsWithAllEleves.includes(activeTab || '')) {
-        // Charger TOUS les élèves pour ces tabs
-        elevesQuery = supabase
-          .from('eleves')
-          .select(`
-            *,
-            guide:guides!guide_id (id, nom, prenom),
-            lecteur_interne:guides!lecteur_interne_id (id, nom, prenom),
-            lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
-            mediateur:mediateurs!mediateur_id (nom, prenom)
-          `)
-          .order('classe', { ascending: true })
-          .order('nom', { ascending: true });
-        
-        console.log(`📊 Chargement de TOUS les élèves pour le tab: ${activeTab || 'default'}`);
-      } else {
-        // Pour les tabs spécifiques: charger seulement les élèves de la direction
-        elevesQuery = supabase
-          .from('eleves')
-          .select(`
-            *,
-            guide:guides!guide_id (id, nom, prenom),
-            lecteur_interne:guides!lecteur_interne_id (id, nom, prenom),
-            lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
-            mediateur:mediateurs!mediateur_id (nom, prenom)
-          `)
-          .or(`guide_id.eq.${userId},lecteur_interne_id.eq.${userId}`)
-          .order('classe', { ascending: true })
-          .order('nom', { ascending: true });
-        
-        console.log(`📊 Chargement FILTRÉ des élèves pour le tab: ${activeTab || 'default'}`);
-      }
-
-      const { data: elevesData, error: elevesError } = await elevesQuery;
+      // 2. TOUJOURS charger TOUS les élèves pour la direction
+      const { data: elevesData, error: elevesError } = await supabase
+        .from('eleves')
+        .select(`
+          *,
+          guide:guides!guide_id (id, nom, prenom),
+          lecteur_interne:guides!lecteur_interne_id (id, nom, prenom),
+          lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
+          mediateur:mediateurs!mediateur_id (nom, prenom)
+        `)
+        .order('classe', { ascending: true })
+        .order('nom', { ascending: true });
 
       if (elevesError) {
         console.error('Erreur chargement élèves direction:', elevesError);
         throw elevesError;
       }
 
-      console.log(`📊 ${elevesData?.length || 0} élèves chargés`);
+      console.log(`📊 Direction: ${elevesData?.length || 0} élèves chargés (TOUS)`);
 
       const elevesFormatted: Eleve[] = (elevesData || []).map(eleve => ({
         ...eleve,
@@ -159,7 +129,7 @@ export function useDirectionData(forDashboard: boolean = false, activeTab?: stri
     } finally {
       setLoading(false);
     }
-  }, [forDashboard, activeTab]);
+  }, []); // <-- Pas de dépendances, se charge une fois
 
   useEffect(() => {
     loadData();
@@ -184,12 +154,12 @@ export function useDirectionData(forDashboard: boolean = false, activeTab?: stri
   };
 
   return {
-    eleves,
-    guides,
-    lecteursExternes,
-    mediateurs,
-    categories,
-    currentGuide,
+    eleves,          // TOUS les élèves
+    guides,          // TOUS les guides
+    lecteursExternes, // TOUS les lecteurs externes
+    mediateurs,      // TOUS les médiateurs
+    categories,      // TOUTES les catégories
+    currentGuide,    // Le guide courant (membre direction)
     loading,
     refreshData,
     updateEleveLocal,
