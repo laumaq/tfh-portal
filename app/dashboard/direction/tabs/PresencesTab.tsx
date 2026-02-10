@@ -19,7 +19,7 @@ interface EleveWithRelations extends Eleve {
 interface PresencesTabDirectionProps {
   eleves: EleveWithRelations[];
   onRefresh: () => void;
-  canEdit?: (eleve: Eleve) => boolean;
+  canEdit?: (eleve: EleveWithRelations) => boolean; 
 }
 
 export default function PresencesTabDirection({
