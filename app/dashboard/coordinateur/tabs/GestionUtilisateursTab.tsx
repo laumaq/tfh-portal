@@ -1,7 +1,7 @@
 // app/dashboard/coordinateur/tabs/GestionUtilisateursTab.tsx
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import * as XLSX from 'xlsx';
 import { Plus, Upload, Trash2, UserPlus, AlertTriangle, Check, Lock, Unlock, CheckCircle, XCircle } from 'lucide-react';
