@@ -279,11 +279,20 @@ export default function GestionUtilisateursTab({
       
       const directionGuideIds = directionData?.map(d => d.guide_id) || [];
       
+      console.log('Membres direction chargés:', directionGuideIds.length);
+      
       // Créer un tableau avec tous les guides et info direction
       const guidesWithDirection = (guidesData || []).map(guide => ({
         ...guide,
         isInDirection: directionGuideIds.includes(guide.id)
       }));
+      
+      // Trier : membres direction en premier
+      guidesWithDirection.sort((a, b) => {
+        if (a.isInDirection && !b.isInDirection) return -1;
+        if (!a.isInDirection && b.isInDirection) return 1;
+        return 0;
+      });
       
       setDirectionGuides(guidesWithDirection);
       setDirectionMembers(directionGuideIds);
@@ -295,25 +304,21 @@ export default function GestionUtilisateursTab({
     }
   }, []);
 
-  const handleDirectionToggle = async (guideId: string, isCurrentlyInDirection: boolean) => {
+  const handleDirectionToggle = async (guideId: string, newCheckedValue: boolean) => {
     setLoading(true);
     try {
-      if (isCurrentlyInDirection) {
-        // Retirer de la direction
-        const { error } = await supabase
-          .from('direction')
-          .delete()
-          .eq('guide_id', guideId);
-        
-        if (error) throw error;
-        
-        setDirectionMembers(prev => prev.filter(id => id !== guideId));
-        setDirectionGuides(prev => prev.map(g => 
-          g.id === guideId ? { ...g, isInDirection: false } : g
-        ));
-        
-        setSuccessMessage('Guide retiré de la direction');
-      } else {
+      const isCurrentlyInDirection = directionMembers.includes(guideId);
+      
+      // Si la nouvelle valeur est true mais qu'il est déjà dans la direction, ou
+      // si la nouvelle valeur est false mais qu'il n'est pas dans la direction,
+      // c'est incohérent
+      if (newCheckedValue === isCurrentlyInDirection) {
+        // L'état est déjà cohérent, pas besoin de changement
+        setLoading(false);
+        return;
+      }
+      
+      if (newCheckedValue) {
         // Ajouter à la direction
         const { error } = await supabase
           .from('direction')
@@ -334,6 +339,21 @@ export default function GestionUtilisateursTab({
           
           setSuccessMessage('Guide ajouté à la direction');
         }
+      } else {
+        // Retirer de la direction
+        const { error } = await supabase
+          .from('direction')
+          .delete()
+          .eq('guide_id', guideId);
+        
+        if (error) throw error;
+        
+        setDirectionMembers(prev => prev.filter(id => id !== guideId));
+        setDirectionGuides(prev => prev.map(g => 
+          g.id === guideId ? { ...g, isInDirection: false } : g
+        ));
+        
+        setSuccessMessage('Guide retiré de la direction');
       }
       clearMessages();
     } catch (err) {
