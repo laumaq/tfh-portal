@@ -82,7 +82,6 @@ export default function DirectionDashboard() {
         const elevesGuide = eleves.filter(e => e.guide_id === currentGuide?.id);
         return (
           <InterfaceGuideTab
-            eleves={elevesGuide}
             guideId={currentGuide?.id || ''}
             onRefresh={refreshData}
           />
