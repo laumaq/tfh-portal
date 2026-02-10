@@ -5,7 +5,7 @@ import { Eleve, Guide } from '../types';
 import { DirectionTabType } from '../types';
 import { detecterSessions, Journee, getJourneesFromSupabase } from '../../coordinateur/utils/sessionUtils';
 import { supabase } from '@/lib/supabase';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   FileText, UserCheck, Calendar, 
   BarChart, ChevronRight, BookOpen,
