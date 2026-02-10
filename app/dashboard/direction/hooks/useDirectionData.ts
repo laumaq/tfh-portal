@@ -49,13 +49,14 @@ export function useDirectionData(forDashboard: boolean = false, activeTab?: stri
       
       setCurrentGuide(guideData);
 
-      // 2. Charger les élèves - LOGIQUE SIMPLIFIÉE
+      // 2. Charger les élèves - LOGIQUE MODIFIÉE
       let elevesQuery;
       
-      // La direction doit voir TOUS les élèves pour les tabs presences, liste-tfh, et dashboard
-      // Pour les autres tabs, montrer seulement ceux où elle est impliquée
-      const tabsWithAllEleves = ['dashboard', 'presences', 'liste-tfh'];
+      // Définir quels tabs ont besoin de TOUS les élèves
+      const tabsWithAllEleves = ['dashboard', 'presences', 'liste-tfh', 'convocations', 'defenses', 'calendrier', 'stats', 'controle'];
       
+      // La direction doit voir TOUS les élèves pour la plupart des tabs
+      // Seuls les tabs spécifiques comme "interface-guide" ou "lecteur-interne" peuvent être filtrés
       if (tabsWithAllEleves.includes(activeTab || '')) {
         // Charger TOUS les élèves pour ces tabs
         elevesQuery = supabase
@@ -70,9 +71,9 @@ export function useDirectionData(forDashboard: boolean = false, activeTab?: stri
           .order('classe', { ascending: true })
           .order('nom', { ascending: true });
         
-        console.log(`📊 Chargement de TOUS les élèves pour le tab: ${activeTab}`);
+        console.log(`📊 Chargement de TOUS les élèves pour le tab: ${activeTab || 'default'}`);
       } else {
-        // Pour les autres tabs: charger seulement les élèves de la direction
+        // Pour les tabs spécifiques: charger seulement les élèves de la direction
         elevesQuery = supabase
           .from('eleves')
           .select(`
@@ -86,7 +87,7 @@ export function useDirectionData(forDashboard: boolean = false, activeTab?: stri
           .order('classe', { ascending: true })
           .order('nom', { ascending: true });
         
-        console.log(`📊 Chargement FILTRÉ des élèves pour le tab: ${activeTab}`);
+        console.log(`📊 Chargement FILTRÉ des élèves pour le tab: ${activeTab || 'default'}`);
       }
 
       const { data: elevesData, error: elevesError } = await elevesQuery;
@@ -158,7 +159,7 @@ export function useDirectionData(forDashboard: boolean = false, activeTab?: stri
     } finally {
       setLoading(false);
     }
-  }, [forDashboard, activeTab]); // <-- AJOUTEZ activeTab comme dépendance
+  }, [forDashboard, activeTab]);
 
   useEffect(() => {
     loadData();
