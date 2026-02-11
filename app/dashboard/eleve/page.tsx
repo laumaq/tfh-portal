@@ -32,6 +32,7 @@ export default function EleveDashboard() {
   // Objectifs
   const [objectifGeneral, setObjectifGeneral] = useState('');
   const [objectifParticulier, setObjectifParticulier] = useState('');
+  const [autorisationModification, setAutorisationModification] = useState(true);
   const [sessions, setSessions] = useState<Array<{
     index: number;
     nom: string;
@@ -135,6 +136,17 @@ export default function EleveDashboard() {
       if (objectifGeneralData) {
         setObjectifGeneral(objectifGeneralData.setting_value || '');
       }
+
+      // Après le chargement de l'objectif général
+      const { data: autorisationData } = await supabase
+        .from('system_settings')
+        .select('setting_value')
+        .eq('setting_key', 'autorisation_modification_problematique')
+        .single();
+      
+      if (autorisationData) {
+        setAutorisationModification(autorisationData.setting_value === 'true');
+      }
       
       // L'objectif particulier est déjà dans les données élève
       setObjectifParticulier(data.objectif_particulier || '');
@@ -226,14 +238,21 @@ export default function EleveDashboard() {
           <div className="border-t pt-6">
             <div className="flex justify-between items-center mb-3">
               <h3 className="text-lg font-semibold text-gray-700">Problématique</h3>
-              {!editingProblematique && (
-                <button
-                  onClick={() => setEditingProblematique(true)}
-                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                >
-                  Modifier
-                </button>
-              )}
+                {!editingProblematique && (
+                  autorisationModification ? (
+                    <button
+                      onClick={() => setEditingProblematique(true)}
+                      className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      Modifier
+                    </button>
+                  ) : (
+                    <span className="text-sm text-gray-400 italic flex items-center gap-1">
+                      <span className="text-xs">🔒</span>
+                      Demandez à un coordinateur pour modifier
+                    </span>
+                  )
+                )}
             </div>
             
             {editingProblematique ? (
@@ -399,6 +418,7 @@ export default function EleveDashboard() {
     </div>
   );
 }
+
 
 
 
