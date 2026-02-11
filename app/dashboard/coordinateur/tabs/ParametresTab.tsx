@@ -35,6 +35,7 @@ interface DisplaySettings {
   mediateur_voir_guides: boolean;
   mediateur_voir_lecteurs_internes: boolean;
   mediateur_voir_lecteurs_externes: boolean;
+  autorisation_modification_problematique: boolean; 
 }
 
 export default function ParametresTab() {
@@ -65,6 +66,7 @@ export default function ParametresTab() {
     mediateur_voir_guides: true,
     mediateur_voir_lecteurs_internes: true,
     mediateur_voir_lecteurs_externes: true,
+    autorisation_modification_problematique: true,
   });
 
   // Paramètres de l'année TFH
@@ -448,6 +450,7 @@ export default function ParametresTab() {
       'mediateur_voir_guides': 'Les médiateurs voient-ils les noms/prénoms des guides ?',
       'mediateur_voir_lecteurs_internes': 'Les médiateurs voient-ils les noms/prénoms des lecteurs internes ?',
       'mediateur_voir_lecteurs_externes': 'Les médiateurs voient-ils les noms/prénoms des lecteurs externes ?',
+      'autorisation_modification_problematique': 'Autoriser les élèves à modifier leur problématique', 
     };
     
     return descriptions[key] || 'Paramètre d\'affichage';
@@ -849,6 +852,32 @@ export default function ParametresTab() {
                     </span>
                   </label>
                 </div>
+
+                <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg mt-4">
+                  <div>
+                    <h5 className="font-medium text-gray-800 mb-1">Modification des problématiques par les élèves</h5>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Autorise les élèves à modifier leur problématique de recherche
+                    </p>
+                  </div>
+                  <label className="flex items-center cursor-pointer">
+                    <div className="relative">
+                      <input
+                        type="checkbox"
+                        className="sr-only"
+                        checked={displaySettings.autorisation_modification_problematique}
+                        onChange={(e) => saveDisplaySetting('autorisation_modification_problematique', e.target.checked)}
+                        disabled={loadingSettings}
+                      />
+                      <div className={`block w-14 h-8 rounded-full ${displaySettings.autorisation_modification_problematique ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
+                      <div className={`absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${displaySettings.autorisation_modification_problematique ? 'transform translate-x-6' : ''}`}></div>
+                    </div>
+                    <span className="ml-3 text-sm font-medium text-gray-700">
+                      {displaySettings.autorisation_modification_problematique ? 'Activé' : 'Désactivé'}
+                    </span>
+                  </label>
+                </div>                
+                
               </div>
             </div>
 
