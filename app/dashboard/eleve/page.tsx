@@ -92,6 +92,7 @@ export default function EleveDashboard() {
       
       loadPhasePreparatoire();
       loadEleve(userId);
+      loadDisplaySettings();
     }
   }, [router]);
 
@@ -213,6 +214,8 @@ export default function EleveDashboard() {
       
       // L'objectif particulier est déjà dans les données élève
       setObjectifParticulier(data.objectif_particulier || '');
+
+      await loadDisplaySettings();
       
     } catch (err) {
       console.error('Erreur chargement élève:', err);
@@ -233,7 +236,11 @@ export default function EleveDashboard() {
         data.forEach(setting => {
           settings[setting.setting_key] = setting.setting_value === 'true';
         });
+        
+        // Mettre à jour l'état existant avec les paramètres
         setEleve(prev => prev ? { ...prev, displaySettings: settings } : null);
+        
+        console.log('Paramètres d\'affichage chargés:', settings); // Debug
       }
     } catch (err) {
       console.error('Erreur chargement paramètres affichage:', err);
@@ -963,4 +970,5 @@ export default function EleveDashboard() {
     </div>
   );
 }
+
 
