@@ -163,7 +163,7 @@ export default function EleveDashboard() {
       const { data: settingsData } = await supabase
         .from('system_settings')
         .select('setting_key, setting_value')
-        .in('setting_key', ['eleves_eleves_voir_guides', 'eleves_eleves_voir_defenses']);
+        .in('setting_key', ['eleves_voir_guides', 'eleves_voir_defenses']);
       
       const displaySettings: any = {};
       if (settingsData) {
@@ -988,6 +988,7 @@ export default function EleveDashboard() {
     </div>
   );
 }
+
 
 
 
