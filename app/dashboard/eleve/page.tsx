@@ -172,11 +172,27 @@ export default function EleveDashboard() {
         });
         console.log('Paramètres d\'affichage chargés:', displaySettings);
       }
+
+      // Fonction pour formater l'heure au format xxhyy
+      const formatHeure = (heure: string): string => {
+        if (!heure) return '';
+        
+        // Si l'heure est au format HH:MM:SS
+        const match = heure.match(/^(\d{1,2}):(\d{2})/);
+        if (match) {
+          const heures = match[1];
+          const minutes = match[2];
+          return `${heures}h${minutes}`;
+        }
+        
+        // Si c'est déjà dans un autre format, retourner tel quel
+        return heure;
+      };
       
       // EXTRAIRE LES DONNÉES DE DÉFENSE
       const defenseData = {
         date: data.date_defense || '',
-        heure: data.heure_defense || '',
+        heure: data.heure_defense ? formatHeure(data.heure_defense) : '',
         localisation: data.localisation_defense || '',
         mediateur_nom: data.mediateur?.nom || '',
         mediateur_prenom: data.mediateur?.prenom || '',
@@ -988,6 +1004,7 @@ export default function EleveDashboard() {
     </div>
   );
 }
+
 
 
 
