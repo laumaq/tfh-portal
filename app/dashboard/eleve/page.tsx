@@ -12,6 +12,12 @@ interface EleveInfo {
   prenom: string;
   classe: string;
   problematique: string;
+  thematique: string;
+  source_1: string;
+  source_2: string;
+  source_3: string;
+  source_4: string;
+  source_5: string;
   categorie: string;
   guide_nom: string;
   guide_initiale: string;
@@ -27,8 +33,28 @@ interface EleveInfo {
 export default function EleveDashboard() {
   const [eleve, setEleve] = useState<EleveInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [phasePreparatoire, setPhasePreparatoire] = useState(false);
+  
+  // États pour la problématique
   const [editingProblematique, setEditingProblematique] = useState(false);
   const [newProblematique, setNewProblematique] = useState('');
+  
+  // États pour la thématique
+  const [editingThematique, setEditingThematique] = useState(false);
+  const [newThematique, setNewThematique] = useState('');
+  
+  // États pour les sources
+  const [editingSource1, setEditingSource1] = useState(false);
+  const [newSource1, setNewSource1] = useState('');
+  const [editingSource2, setEditingSource2] = useState(false);
+  const [newSource2, setNewSource2] = useState('');
+  const [editingSource3, setEditingSource3] = useState(false);
+  const [newSource3, setNewSource3] = useState('');
+  const [editingSource4, setEditingSource4] = useState(false);
+  const [newSource4, setNewSource4] = useState('');
+  const [editingSource5, setEditingSource5] = useState(false);
+  const [newSource5, setNewSource5] = useState('');
+  
   // Objectifs
   const [objectifGeneral, setObjectifGeneral] = useState('');
   const [objectifParticulier, setObjectifParticulier] = useState('');
@@ -49,9 +75,26 @@ export default function EleveDashboard() {
         return;
       }
       
+      loadPhasePreparatoire();
       loadEleve(userId);
     }
   }, [router]);
+
+  const loadPhasePreparatoire = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('setting_value')
+        .eq('setting_key', 'phase_preparatoire')
+        .single();
+      
+      if (data) {
+        setPhasePreparatoire(data.setting_value === 'true');
+      }
+    } catch (err) {
+      console.error('Erreur chargement phase préparatoire:', err);
+    }
+  };
 
   const loadEleve = async (eleveId: string) => {
     try {
@@ -73,13 +116,6 @@ export default function EleveDashboard() {
       // Charger les sessions séparément
       const journeesData = await getJourneesFromSupabase(supabase);
       const sessionsDetectees = detecterSessions(journeesData);
-      
-      // DEBUG: Vérifier la première session
-      if (sessionsDetectees.length > 0) {
-        console.log('Première session:', sessionsDetectees[0]);
-        console.log('date_debut type:', typeof sessionsDetectees[0].date_debut);
-        console.log('date_debut value:', sessionsDetectees[0].date_debut);
-      }
       
       // Ajouter les sessions aux données élève
       const sessionsAvecDates = sessionsDetectees.map(session => {
@@ -115,7 +151,13 @@ export default function EleveDashboard() {
         nom: data.nom,
         prenom: data.prenom,
         classe: data.classe,
-        problematique: data.problematique,
+        problematique: data.problematique || '',
+        thematique: data.thematique || '',
+        source_1: data.source_1 || '',
+        source_2: data.source_2 || '',
+        source_3: data.source_3 || '',
+        source_4: data.source_4 || '',
+        source_5: data.source_5 || '',
         categorie: data.categorie,
         guide_nom: data.guide?.nom || '-',
         guide_initiale: data.guide?.initiale || '-',
@@ -125,6 +167,12 @@ export default function EleveDashboard() {
       
       setEleve(eleveFormate);
       setNewProblematique(data.problematique || '');
+      setNewThematique(data.thematique || '');
+      setNewSource1(data.source_1 || '');
+      setNewSource2(data.source_2 || '');
+      setNewSource3(data.source_3 || '');
+      setNewSource4(data.source_4 || '');
+      setNewSource5(data.source_5 || '');
       
       // Charger l'objectif général depuis system_settings
       const { data: objectifGeneralData } = await supabase
@@ -169,6 +217,46 @@ export default function EleveDashboard() {
 
       loadEleve(eleve.id);
       setEditingProblematique(false);
+    } catch (err) {
+      console.error('Erreur sauvegarde:', err);
+    }
+  };
+
+  const handleSaveThematique = async () => {
+    if (!eleve) return;
+
+    try {
+      await supabase
+        .from('eleves')
+        .update({ thematique: newThematique })
+        .eq('id', eleve.id);
+
+      loadEleve(eleve.id);
+      setEditingThematique(false);
+    } catch (err) {
+      console.error('Erreur sauvegarde:', err);
+    }
+  };
+
+  const handleSaveSource = async (sourceField: string, value: string) => {
+    if (!eleve) return;
+
+    try {
+      await supabase
+        .from('eleves')
+        .update({ [sourceField]: value })
+        .eq('id', eleve.id);
+
+      loadEleve(eleve.id);
+      
+      // Désactiver l'édition pour ce champ
+      switch(sourceField) {
+        case 'source_1': setEditingSource1(false); break;
+        case 'source_2': setEditingSource2(false); break;
+        case 'source_3': setEditingSource3(false); break;
+        case 'source_4': setEditingSource4(false); break;
+        case 'source_5': setEditingSource5(false); break;
+      }
     } catch (err) {
       console.error('Erreur sauvegarde:', err);
     }
@@ -232,27 +320,87 @@ export default function EleveDashboard() {
               {eleve.categorie && (
                 <p><span className="font-medium">Catégorie:</span> {eleve.categorie}</p>
               )}
+              {phasePreparatoire && (
+                <div className="mt-2">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                    🚧 Phase préparatoire
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="border-t pt-6">
+          {/* SECTION THÉMATIQUE (affichée en premier en phase préparatoire) */}
+          {phasePreparatoire && (
+            <div className="border-t pt-6">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-lg font-semibold text-gray-700">Thématique</h3>
+                {!editingThematique && autorisationModification && (
+                  <button
+                    onClick={() => setEditingThematique(true)}
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    {eleve.thematique ? 'Modifier' : 'Ajouter'}
+                  </button>
+                )}
+              </div>
+              
+              {editingThematique ? (
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    value={newThematique}
+                    onChange={(e) => setNewThematique(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500"
+                    placeholder="Ex: Transition écologique, Intelligence artificielle, Inégalités sociales..."
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSaveThematique}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    >
+                      Enregistrer
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingThematique(false);
+                        setNewThematique(eleve.thematique || '');
+                      }}
+                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                    >
+                      Annuler
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  {eleve.thematique || (
+                    <span className="text-gray-400 italic">Aucune thématique définie</span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* SECTION PROBLÉMATIQUE */}
+          <div className={`${phasePreparatoire ? '' : 'border-t'} pt-6`}>
             <div className="flex justify-between items-center mb-3">
               <h3 className="text-lg font-semibold text-gray-700">Problématique</h3>
-                {!editingProblematique && (
-                  autorisationModification ? (
-                    <button
-                      onClick={() => setEditingProblematique(true)}
-                      className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                    >
-                      Modifier
-                    </button>
-                  ) : (
-                    <span className="text-sm text-gray-400 italic flex items-center gap-1">
-                      <span className="text-xs">🔒</span>
-                      Demandez à un coordinateur pour modifier
-                    </span>
-                  )
-                )}
+              {!editingProblematique && (
+                autorisationModification ? (
+                  <button
+                    onClick={() => setEditingProblematique(true)}
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    {eleve.problematique ? 'Modifier' : 'Ajouter'}
+                  </button>
+                ) : (
+                  <span className="text-sm text-gray-400 italic flex items-center gap-1">
+                    <span className="text-xs">🔒</span>
+                    Demandez à un coordinateur pour modifier
+                  </span>
+                )
+              )}
             </div>
             
             {editingProblematique ? (
@@ -288,25 +436,269 @@ export default function EleveDashboard() {
             )}
           </div>
 
+          {/* SECTION SOURCES (phase préparatoire uniquement) */}
+          {phasePreparatoire && (
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-semibold text-gray-700 mb-4">Sources documentaires</h3>
+              <div className="space-y-4">
+                {/* Source 1 */}
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-sm font-medium text-gray-600">Source 1</label>
+                    {!editingSource1 && autorisationModification && (
+                      <button
+                        onClick={() => setEditingSource1(true)}
+                        className="text-xs text-blue-600 hover:text-blue-700"
+                      >
+                        {eleve.source_1 ? 'Modifier' : 'Ajouter'}
+                      </button>
+                    )}
+                  </div>
+                  {editingSource1 ? (
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        value={newSource1}
+                        onChange={(e) => setNewSource1(e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500"
+                        placeholder="Titre de la source, lien, référence..."
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleSaveSource('source_1', newSource1)}
+                          className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+                        >
+                          Enregistrer
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingSource1(false);
+                            setNewSource1(eleve.source_1 || '');
+                          }}
+                          className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300"
+                        >
+                          Annuler
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-gray-50 rounded-lg p-3 text-sm">
+                      {eleve.source_1 || <span className="text-gray-400 italic">Aucune source</span>}
+                    </div>
+                  )}
+                </div>
 
-          <div className="border-t pt-6">
-            <h3 className="text-lg font-semibold text-gray-700 mb-3">Convocations à venir</h3>
-            <div className="space-y-4">
-              {eleve.sessions && eleve.sessions.length > 0 ? (
-                eleve.sessions.map(session => {
-                  const statut = session.statut || '';
-                  const estConvoque = statut.startsWith('Oui');
-                  const message = getMessagePourEleve(statut);
-                  
-                  return (
-                    <div key={session.index} className="border rounded-lg overflow-hidden">
-                      <div className={`flex justify-between items-center p-3 ${estConvoque ? 'bg-orange-50' : 'bg-gray-50'}`}>
-                        <div>
-                          <span className="font-medium">{session.nom}</span>
-                          <span className="text-sm text-gray-500 ml-2">
-                            ({session.date_debut.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })})
-                          </span>
-                        </div>
+                {/* Source 2 */}
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-sm font-medium text-gray-600">Source 2</label>
+                    {!editingSource2 && autorisationModification && (
+                      <button
+                        onClick={() => setEditingSource2(true)}
+                        className="text-xs text-blue-600 hover:text-blue-700"
+                      >
+                        {eleve.source_2 ? 'Modifier' : 'Ajouter'}
+                      </button>
+                    )}
+                  </div>
+                  {editingSource2 ? (
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        value={newSource2}
+                        onChange={(e) => setNewSource2(e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500"
+                        placeholder="Titre de la source, lien, référence..."
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleSaveSource('source_2', newSource2)}
+                          className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+                        >
+                          Enregistrer
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingSource2(false);
+                            setNewSource2(eleve.source_2 || '');
+                          }}
+                          className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300"
+                        >
+                          Annuler
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-gray-50 rounded-lg p-3 text-sm">
+                      {eleve.source_2 || <span className="text-gray-400 italic">Aucune source</span>}
+                    </div>
+                  )}
+                </div>
+
+                {/* Source 3 */}
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-sm font-medium text-gray-600">Source 3</label>
+                    {!editingSource3 && autorisationModification && (
+                      <button
+                        onClick={() => setEditingSource3(true)}
+                        className="text-xs text-blue-600 hover:text-blue-700"
+                      >
+                        {eleve.source_3 ? 'Modifier' : 'Ajouter'}
+                      </button>
+                    )}
+                  </div>
+                  {editingSource3 ? (
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        value={newSource3}
+                        onChange={(e) => setNewSource3(e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500"
+                        placeholder="Titre de la source, lien, référence..."
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleSaveSource('source_3', newSource3)}
+                          className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+                        >
+                          Enregistrer
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingSource3(false);
+                            setNewSource3(eleve.source_3 || '');
+                          }}
+                          className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300"
+                        >
+                          Annuler
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-gray-50 rounded-lg p-3 text-sm">
+                      {eleve.source_3 || <span className="text-gray-400 italic">Aucune source</span>}
+                    </div>
+                  )}
+                </div>
+
+                {/* Source 4 */}
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-sm font-medium text-gray-600">Source 4</label>
+                    {!editingSource4 && autorisationModification && (
+                      <button
+                        onClick={() => setEditingSource4(true)}
+                        className="text-xs text-blue-600 hover:text-blue-700"
+                      >
+                        {eleve.source_4 ? 'Modifier' : 'Ajouter'}
+                      </button>
+                    )}
+                  </div>
+                  {editingSource4 ? (
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        value={newSource4}
+                        onChange={(e) => setNewSource4(e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500"
+                        placeholder="Titre de la source, lien, référence..."
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleSaveSource('source_4', newSource4)}
+                          className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+                        >
+                          Enregistrer
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingSource4(false);
+                            setNewSource4(eleve.source_4 || '');
+                          }}
+                          className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300"
+                        >
+                          Annuler
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-gray-50 rounded-lg p-3 text-sm">
+                      {eleve.source_4 || <span className="text-gray-400 italic">Aucune source</span>}
+                    </div>
+                  )}
+                </div>
+
+                {/* Source 5 */}
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-sm font-medium text-gray-600">Source 5</label>
+                    {!editingSource5 && autorisationModification && (
+                      <button
+                        onClick={() => setEditingSource5(true)}
+                        className="text-xs text-blue-600 hover:text-blue-700"
+                      >
+                        {eleve.source_5 ? 'Modifier' : 'Ajouter'}
+                      </button>
+                    )}
+                  </div>
+                  {editingSource5 ? (
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        value={newSource5}
+                        onChange={(e) => setNewSource5(e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500"
+                        placeholder="Titre de la source, lien, référence..."
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleSaveSource('source_5', newSource5)}
+                          className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+                        >
+                          Enregistrer
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingSource5(false);
+                            setNewSource5(eleve.source_5 || '');
+                          }}
+                          className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300"
+                        >
+                          Annuler
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-gray-50 rounded-lg p-3 text-sm">
+                      {eleve.source_5 || <span className="text-gray-400 italic">Aucune source</span>}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SECTION CONVOCATIONS (masquée en phase préparatoire) */}
+          {!phasePreparatoire && (
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-semibold text-gray-700 mb-3">Convocations à venir</h3>
+              <div className="space-y-4">
+                {eleve.sessions && eleve.sessions.length > 0 ? (
+                  eleve.sessions.map(session => {
+                    const statut = session.statut || '';
+                    const estConvoque = statut.startsWith('Oui');
+                    const message = getMessagePourEleve(statut);
+                    
+                    return (
+                      <div key={session.index} className="border rounded-lg overflow-hidden">
+                        <div className={`flex justify-between items-center p-3 ${estConvoque ? 'bg-orange-50' : 'bg-gray-50'}`}>
+                          <div>
+                            <span className="font-medium">{session.nom}</span>
+                            <span className="text-sm text-gray-500 ml-2">
+                              ({session.date_debut.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })})
+                            </span>
+                          </div>
                           <span className={
                             estConvoque 
                               ? 'text-orange-600 font-medium' 
@@ -316,28 +708,29 @@ export default function EleveDashboard() {
                           }>
                             {estConvoque ? 'Convoqué·e' : statut.startsWith('Non') ? 'Non convoqué·e' : '—'}
                           </span>
-                      </div>
-                      
-                      {statut && statut !== '' && !statut.startsWith('Non') && (
-                        <div className="p-3 border-t bg-white">
-                          <p className="text-sm text-gray-700">
-                            {message}
-                          </p>
                         </div>
-                      )}
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="text-center text-gray-500 py-6">
-                  <p className="mb-2">Aucune session à venir planifiée.</p>
-                  <p className="text-sm">Tes prochaines convocations apparaîtront ici.</p>
-                </div>
-              )}
+                        
+                        {statut && statut !== '' && !statut.startsWith('Non') && (
+                          <div className="p-3 border-t bg-white">
+                            <p className="text-sm text-gray-700">
+                              {message}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center text-gray-500 py-6">
+                    <p className="mb-2">Aucune session à venir planifiée.</p>
+                    <p className="text-sm">Tes prochaines convocations apparaîtront ici.</p>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
-                    {/* Section Objectif Général */}
+          {/* Section Objectif Général */}
           {objectifGeneral && (
             <div className="border-t pt-6">
               <div className="flex items-center gap-2 mb-3">
@@ -418,16 +811,3 @@ export default function EleveDashboard() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
