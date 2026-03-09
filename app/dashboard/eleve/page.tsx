@@ -500,13 +500,19 @@ export default function EleveDashboard() {
         </div>
 
         <div className="bg-white rounded-lg shadow-lg p-8 space-y-6">
+          {/* Dans la section des informations de l'élève */}
           <div>
             <h2 className="text-2xl font-semibold text-gray-800 mb-4">
               {eleve.prenom} {eleve.nom}
             </h2>
             <div className="space-y-2 text-gray-600">
               <p><span className="font-medium">Classe:</span> {eleve.classe}</p>
-              <p><span className="font-medium">Guide:</span> {eleve.guide_nom} {eleve.guide_initiale}.</p>
+              
+              {/* Afficher le guide uniquement si autorisé */}
+              {eleve.displaySettings?.eleves_voir_guides && (
+                <p><span className="font-medium">Guide:</span> {eleve.guide_nom} {eleve.guide_initiale}.</p>
+              )}
+              
               {eleve.categorie && (
                 <p><span className="font-medium">Catégorie:</span> {eleve.categorie}</p>
               )}
@@ -1004,6 +1010,7 @@ export default function EleveDashboard() {
     </div>
   );
 }
+
 
 
 
