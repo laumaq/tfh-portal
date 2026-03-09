@@ -36,6 +36,8 @@ interface DisplaySettings {
   mediateur_voir_lecteurs_internes: boolean;
   mediateur_voir_lecteurs_externes: boolean;
   autorisation_modification_problematique: boolean; 
+  eleves_voir_guides: boolean;
+  eleves_voir_defenses: boolean;
 }
 
 export default function ParametresTab() {
@@ -68,6 +70,8 @@ export default function ParametresTab() {
     mediateur_voir_lecteurs_internes: true,
     mediateur_voir_lecteurs_externes: true,
     autorisation_modification_problematique: true,
+    eleves_voir_guides: true,
+    eleves_voir_defenses: true,
   });
 
   // Paramètres de l'année TFH
@@ -490,6 +494,8 @@ export default function ParametresTab() {
       'mediateur_voir_lecteurs_internes': 'Les médiateurs voient-ils les noms/prénoms des lecteurs internes ?',
       'mediateur_voir_lecteurs_externes': 'Les médiateurs voient-ils les noms/prénoms des lecteurs externes ?',
       'autorisation_modification_problematique': 'Autoriser les élèves à modifier leur problématique', 
+      'eleves_voir_guides': 'Les élèves voient-ils les informations de leur guide (nom, prénom) ?',
+      'eleves_voir_defenses': 'Les élèves voient-ils les informations de leur défense (date, heure, lieu, médiateur, lecteurs) ?',
     };
     
     return descriptions[key] || 'Paramètre d\'affichage';
@@ -1025,6 +1031,43 @@ export default function ParametresTab() {
         {expandedSections.affichage && (
           <div className="px-6 pb-6 pt-2 border-t">
             <div className="space-y-6">
+
+              {/* NOUVELLE SECTION: Vue Élève */}
+              <div className="border rounded-lg p-6">
+                <h4 className="text-md font-medium text-gray-700 mb-4 flex items-center gap-2">
+                  <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs">🎓</span>
+                  Vue Élève
+                  <span className="text-sm font-normal text-gray-500 ml-2">(que voient les élèves ?)</span>
+                </h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <ToggleSetting
+                    label="Voir les guides (noms & prénoms)"
+                    checked={displaySettings.eleves_voir_guides}
+                    onChange={(checked) => saveDisplaySetting('eleves_voir_guides', checked)}
+                  />
+                  <ToggleSetting
+                    label="Voir les informations de défense"
+                    checked={displaySettings.eleves_voir_defenses}
+                    onChange={(checked) => saveDisplaySetting('eleves_voir_defenses', checked)}
+                  />
+                </div>
+                
+                {/* Sous-informations pour la défense */}
+                {displaySettings.eleves_voir_defenses && (
+                  <div className="mt-3 p-3 bg-yellow-50 rounded-lg text-xs text-yellow-700">
+                    <p className="font-medium mb-1">Les élèves verront pour leur défense :</p>
+                    <ul className="list-disc list-inside space-y-0.5">
+                      <li>Date et heure de la défense</li>
+                      <li>Localisation / salle</li>
+                      <li>Nom du médiateur (si autorisé)</li>
+                      <li>Nom du lecteur interne (si autorisé)</li>
+                      <li>Nom du lecteur externe (si autorisé)</li>
+                    </ul>
+                  </div>
+                )}
+              </div>
+              
               <div className="border rounded-lg p-6">
                 <h4 className="text-md font-medium text-gray-700 mb-4 flex items-center gap-2">
                   <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">👁️</span>
