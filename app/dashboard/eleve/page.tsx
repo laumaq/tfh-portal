@@ -163,9 +163,9 @@ export default function EleveDashboard() {
       
       // EXTRAIRE LES DONNÉES DE DÉFENSE DE LA TABLE ELEVES
       const defenseData = {
-        date: data.defense_date || '',
-        heure: data.defense_heure || '',
-        localisation: data.defense_localisation || '',
+        date: data.date_defense || '',
+        heure: data.heure_defense || '',
+        localisation: data.localisation_defense || '',
         mediateur_nom: data.mediateur?.nom || '',
         mediateur_prenom: data.mediateur?.prenom || '',
         lecteur_interne_nom: data.lecteur_interne?.nom || '',
@@ -985,6 +985,7 @@ export default function EleveDashboard() {
     </div>
   );
 }
+
 
 
 
