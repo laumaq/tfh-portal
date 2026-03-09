@@ -92,7 +92,6 @@ export default function EleveDashboard() {
       
       loadPhasePreparatoire();
       loadEleve(userId);
-      loadDisplaySettings();
     }
   }, [router]);
 
@@ -140,7 +139,6 @@ export default function EleveDashboard() {
         const columnName = `session_${index}_convoque`;
         const statut = (data as any)[columnName] as string | undefined;
         
-        // Vérifier que date_debut est un Date valide
         const dateDebut = session.date_debut instanceof Date 
           ? session.date_debut 
           : new Date(session.date_debut);
@@ -153,20 +151,33 @@ export default function EleveDashboard() {
         };
       });
       
-      // Filtrer les sessions à venir (date >= aujourd'hui)
+      // Filtrer les sessions à venir
       const aujourdhui = new Date();
-      aujourdhui.setHours(0, 0, 0, 0); // Normaliser à minuit
+      aujourdhui.setHours(0, 0, 0, 0);
       
       const sessionsAVenir = sessionsAvecDates.filter(session => 
         session.date_debut >= aujourdhui
       );
       
-      // EXTRAIRE LES DONNÉES DE DÉFENSE DE LA TABLE ELEVES
-      // CORRECTION : Utiliser les bons noms de colonnes
+      // CHARGER D'ABORD LES PARAMÈTRES D'AFFICHAGE
+      const { data: settingsData } = await supabase
+        .from('system_settings')
+        .select('setting_key, setting_value')
+        .in('setting_key', ['eleves_voir_guides', 'eleves_voir_defenses']);
+      
+      const displaySettings: any = {};
+      if (settingsData) {
+        settingsData.forEach(setting => {
+          displaySettings[setting.setting_key] = setting.setting_value === 'true';
+        });
+        console.log('Paramètres d\'affichage chargés:', displaySettings);
+      }
+      
+      // EXTRAIRE LES DONNÉES DE DÉFENSE
       const defenseData = {
-        date: data.date_defense || '',           // Changé de defense_date à date_defense
-        heure: data.heure_defense || '',         // Changé de defense_heure à heure_defense
-        localisation: data.localisation_defense || '', // Changé de defense_localisation à localisation_defense
+        date: data.date_defense || '',
+        heure: data.heure_defense || '',
+        localisation: data.localisation_defense || '',
         mediateur_nom: data.mediateur?.nom || '',
         mediateur_prenom: data.mediateur?.prenom || '',
         lecteur_interne_nom: data.lecteur_interne?.nom || '',
@@ -175,7 +186,9 @@ export default function EleveDashboard() {
         lecteur_externe_prenom: data.lecteur_externe?.prenom || ''
       };
       
-      // Formater les données
+      console.log('Données de défense extraites:', defenseData); // Debug
+      
+      // Formater TOUTES les données en une seule fois
       const eleveFormate: EleveInfo = {
         id: data.id,
         nom: data.nom,
@@ -191,13 +204,14 @@ export default function EleveDashboard() {
         categorie: data.categorie,
         guide_nom: data.guide?.nom || '-',
         guide_initiale: data.guide?.initiale || '-',
-        // Utiliser sessionsAVenir (filtré et avec dates)
         sessions: sessionsAVenir,
-        // AJOUTER LES DONNÉES DE DÉFENSE
-        defense: defenseData
+        defense: defenseData,
+        displaySettings: displaySettings // Inclure directement ici
       };
       
       setEleve(eleveFormate);
+      console.log('État élève final:', eleveFormate); // Debug
+      
       setNewProblematique(data.problematique || '');
       setNewThematique(data.thematique || '');
       setNewSource1(data.source_1 || '');
@@ -206,7 +220,7 @@ export default function EleveDashboard() {
       setNewSource4(data.source_4 || '');
       setNewSource5(data.source_5 || '');
       
-      // Charger l'objectif général depuis system_settings
+      // Charger l'objectif général
       const { data: objectifGeneralData } = await supabase
         .from('system_settings')
         .select('setting_value')
@@ -217,7 +231,7 @@ export default function EleveDashboard() {
         setObjectifGeneral(objectifGeneralData.setting_value || '');
       }
   
-      // Après le chargement de l'objectif général
+      // Charger l'autorisation de modification
       const { data: autorisationData } = await supabase
         .from('system_settings')
         .select('setting_value')
@@ -228,10 +242,8 @@ export default function EleveDashboard() {
         setAutorisationModification(autorisationData.setting_value === 'true');
       }
       
-      // L'objectif particulier est déjà dans les données élève
+      // Objectif particulier
       setObjectifParticulier(data.objectif_particulier || '');
-  
-      await loadDisplaySettings();
       
     } catch (err) {
       console.error('Erreur chargement élève:', err);
@@ -239,29 +251,8 @@ export default function EleveDashboard() {
       setLoading(false);
     }
   };
+  
 
-  const loadDisplaySettings = async () => {
-    try {
-      const { data } = await supabase
-        .from('system_settings')
-        .select('setting_key, setting_value')
-        .in('setting_key', ['eleves_voir_guides', 'eleves_voir_defenses']);
-      
-      if (data) {
-        const settings: any = {};
-        data.forEach(setting => {
-          settings[setting.setting_key] = setting.setting_value === 'true';
-        });
-        
-        // Mettre à jour l'état existant avec les paramètres
-        setEleve(prev => prev ? { ...prev, displaySettings: settings } : null);
-        
-        console.log('Paramètres d\'affichage chargés:', settings); // Debug
-      }
-    } catch (err) {
-      console.error('Erreur chargement paramètres affichage:', err);
-    }
-  };
 
   const handleSaveProblematique = async () => {
     if (!eleve) return;
@@ -339,7 +330,18 @@ export default function EleveDashboard() {
   };
 
   const DefenseSection = ({ eleve }: { eleve: EleveInfo }) => {
-    if (!eleve.displaySettings?.voir_defenses || !eleve.defense) {
+    // Ajoutez des logs pour déboguer
+    console.log('DefenseSection - displaySettings:', eleve.displaySettings);
+    console.log('DefenseSection - defense:', eleve.defense);
+    console.log('DefenseSection - date défense:', eleve.defense?.date);
+    
+    if (!eleve.displaySettings?.voir_defenses) {
+      console.log('DefenseSection: masqué car voir_defenses = false');
+      return null;
+    }
+    
+    if (!eleve.defense || !eleve.defense.date) {
+      console.log('DefenseSection: masqué car pas de données de défense');
       return null;
     }
   
@@ -986,6 +988,7 @@ export default function EleveDashboard() {
     </div>
   );
 }
+
 
 
 
