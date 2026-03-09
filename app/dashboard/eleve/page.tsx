@@ -161,6 +161,19 @@ export default function EleveDashboard() {
         session.date_debut >= aujourdhui
       );
       
+      // EXTRAIRE LES DONNÉES DE DÉFENSE DE LA TABLE ELEVES
+      const defenseData = {
+        date: data.defense_date || '',
+        heure: data.defense_heure || '',
+        localisation: data.defense_localisation || '',
+        mediateur_nom: data.mediateur?.nom || '',
+        mediateur_prenom: data.mediateur?.prenom || '',
+        lecteur_interne_nom: data.lecteur_interne?.nom || '',
+        lecteur_interne_initiale: data.lecteur_interne?.initiale || '',
+        lecteur_externe_nom: data.lecteur_externe?.nom || '',
+        lecteur_externe_prenom: data.lecteur_externe?.prenom || ''
+      };
+      
       // Formater les données
       const eleveFormate: EleveInfo = {
         id: data.id,
@@ -178,7 +191,9 @@ export default function EleveDashboard() {
         guide_nom: data.guide?.nom || '-',
         guide_initiale: data.guide?.initiale || '-',
         // Utiliser sessionsAVenir (filtré et avec dates)
-        sessions: sessionsAVenir
+        sessions: sessionsAVenir,
+        // AJOUTER LES DONNÉES DE DÉFENSE
+        defense: defenseData
       };
       
       setEleve(eleveFormate);
@@ -200,7 +215,7 @@ export default function EleveDashboard() {
       if (objectifGeneralData) {
         setObjectifGeneral(objectifGeneralData.setting_value || '');
       }
-
+  
       // Après le chargement de l'objectif général
       const { data: autorisationData } = await supabase
         .from('system_settings')
@@ -214,7 +229,7 @@ export default function EleveDashboard() {
       
       // L'objectif particulier est déjà dans les données élève
       setObjectifParticulier(data.objectif_particulier || '');
-
+  
       await loadDisplaySettings();
       
     } catch (err) {
@@ -970,5 +985,6 @@ export default function EleveDashboard() {
     </div>
   );
 }
+
 
 
