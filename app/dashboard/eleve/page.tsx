@@ -28,6 +28,21 @@ interface EleveInfo {
     date_debut: Date; 
     statut: string;
   }>;
+  defense?: {
+    date: string;
+    heure: string;
+    localisation: string;
+    mediateur_nom?: string;
+    mediateur_prenom?: string;
+    lecteur_interne_nom?: string;
+    lecteur_interne_initiale?: string;
+    lecteur_externe_nom?: string;
+    lecteur_externe_prenom?: string;
+  };
+  displaySettings?: {
+    voir_guides: boolean;
+    voir_defenses: boolean;
+  };
 }
 
 export default function EleveDashboard() {
@@ -206,6 +221,25 @@ export default function EleveDashboard() {
     }
   };
 
+  const loadDisplaySettings = async () => {
+    try {
+      const { data } = await supabase
+        .from('system_settings')
+        .select('setting_key, setting_value')
+        .in('setting_key', ['eleves_voir_guides', 'eleves_voir_defenses']);
+      
+      if (data) {
+        const settings: any = {};
+        data.forEach(setting => {
+          settings[setting.setting_key] = setting.setting_value === 'true';
+        });
+        setEleve(prev => prev ? { ...prev, displaySettings: settings } : null);
+      }
+    } catch (err) {
+      console.error('Erreur chargement paramètres affichage:', err);
+    }
+  };
+
   const handleSaveProblematique = async () => {
     if (!eleve) return;
 
@@ -280,6 +314,119 @@ export default function EleveDashboard() {
         return statut;
     }
   };
+
+  const DefenseSection = ({ eleve }: { eleve: EleveInfo }) => {
+    if (!eleve.displaySettings?.voir_defenses || !eleve.defense) {
+      return null;
+    }
+  
+    return (
+      <div className="border-t pt-6">
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-2xl">⚖️</span>
+          <h3 className="text-lg font-semibold text-gray-700">Ma défense TFH</h3>
+          {eleve.defense.date && (
+            <span className="ml-2 px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+              À venir
+            </span>
+          )}
+        </div>
+  
+        <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-6 border border-purple-100">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Date et heure */}
+            {eleve.defense.date && (
+              <div className="flex items-start gap-3">
+                <div className="mt-1">
+                  <span className="text-purple-500 text-xl">📅</span>
+                </div>
+                <div>
+                  <p className="text-sm text-purple-600 font-medium">Date et heure</p>
+                  <p className="text-gray-800">
+                    {new Date(eleve.defense.date).toLocaleDateString('fr-FR', {
+                      weekday: 'long',
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric'
+                    })}
+                    {eleve.defense.heure && ` à ${eleve.defense.heure}`}
+                  </p>
+                </div>
+              </div>
+            )}
+  
+            {/* Localisation */}
+            {eleve.defense.localisation && (
+              <div className="flex items-start gap-3">
+                <div className="mt-1">
+                  <span className="text-purple-500 text-xl">📍</span>
+                </div>
+                <div>
+                  <p className="text-sm text-purple-600 font-medium">Lieu</p>
+                  <p className="text-gray-800">{eleve.defense.localisation}</p>
+                </div>
+              </div>
+            )}
+  
+            {/* Médiateur */}
+            {eleve.displaySettings?.voir_guides && eleve.defense.mediateur_nom && (
+              <div className="flex items-start gap-3">
+                <div className="mt-1">
+                  <span className="text-purple-500 text-xl">⚖️</span>
+                </div>
+                <div>
+                  <p className="text-sm text-purple-600 font-medium">Médiateur·trice</p>
+                  <p className="text-gray-800">
+                    {eleve.defense.mediateur_prenom} {eleve.defense.mediateur_nom}
+                  </p>
+                </div>
+              </div>
+            )}
+  
+            {/* Lecteur interne */}
+            {eleve.defense.lecteur_interne_nom && (
+              <div className="flex items-start gap-3">
+                <div className="mt-1">
+                  <span className="text-purple-500 text-xl">📖</span>
+                </div>
+                <div>
+                  <p className="text-sm text-purple-600 font-medium">Lecteur·rice interne</p>
+                  <p className="text-gray-800">
+                    {eleve.defense.lecteur_interne_nom} {eleve.defense.lecteur_interne_initiale}.
+                  </p>
+                </div>
+              </div>
+            )}
+  
+            {/* Lecteur externe */}
+            {eleve.defense.lecteur_externe_nom && (
+              <div className="flex items-start gap-3">
+                <div className="mt-1">
+                  <span className="text-purple-500 text-xl">👁️</span>
+                </div>
+                <div>
+                  <p className="text-sm text-purple-600 font-medium">Lecteur·rice externe</p>
+                  <p className="text-gray-800">
+                    {eleve.defense.lecteur_externe_prenom} {eleve.defense.lecteur_externe_nom}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+  
+          {/* Message si pas de défense programmée */}
+          {!eleve.defense.date && (
+            <div className="text-center py-4">
+              <p className="text-gray-500">Aucune défense programmée pour le moment.</p>
+              <p className="text-sm text-gray-400 mt-1">
+                Les informations apparaîtront ici quand une date sera fixée.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
   
   const handleLogout = () => {
     if (typeof window !== 'undefined') {
@@ -287,6 +434,8 @@ export default function EleveDashboard() {
     }
     router.push('/');
   };
+
+  
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Chargement...</div>;
@@ -381,6 +530,9 @@ export default function EleveDashboard() {
               )}
             </div>
           )}
+
+          {/* Section Défense */}
+          <DefenseSection eleve={eleve} />
 
           {/* SECTION PROBLÉMATIQUE */}
           <div className={`${phasePreparatoire ? '' : 'border-t'} pt-6`}>
@@ -811,3 +963,4 @@ export default function EleveDashboard() {
     </div>
   );
 }
+
