@@ -40,8 +40,8 @@ interface EleveInfo {
     lecteur_externe_prenom?: string;
   };
   displaySettings?: {
-    voir_guides: boolean;
-    voir_defenses: boolean;
+    eleves_voir_guides: boolean;
+    eleves_voir_defenses: boolean;
   };
 }
 
@@ -163,7 +163,7 @@ export default function EleveDashboard() {
       const { data: settingsData } = await supabase
         .from('system_settings')
         .select('setting_key, setting_value')
-        .in('setting_key', ['eleves_voir_guides', 'eleves_voir_defenses']);
+        .in('setting_key', ['eleves_eleves_voir_guides', 'eleves_eleves_voir_defenses']);
       
       const displaySettings: any = {};
       if (settingsData) {
@@ -335,8 +335,8 @@ export default function EleveDashboard() {
     console.log('DefenseSection - defense:', eleve.defense);
     console.log('DefenseSection - date défense:', eleve.defense?.date);
     
-    if (!eleve.displaySettings?.voir_defenses) {
-      console.log('DefenseSection: masqué car voir_defenses = false');
+    if (!eleve.displaySettings?.eleves_voir_defenses) {
+      console.log('DefenseSection: masqué car eleves_voir_defenses = false');
       return null;
     }
     
@@ -394,7 +394,7 @@ export default function EleveDashboard() {
             )}
   
             {/* Médiateur */}
-            {eleve.displaySettings?.voir_guides && eleve.defense.mediateur_nom && (
+            {eleve.displaySettings?.eleves_voir_guides && eleve.defense.mediateur_nom && (
               <div className="flex items-start gap-3">
                 <div className="mt-1">
                   <span className="text-purple-500 text-xl">⚖️</span>
@@ -988,6 +988,7 @@ export default function EleveDashboard() {
     </div>
   );
 }
+
 
 
 
