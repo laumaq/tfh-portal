@@ -1129,10 +1129,6 @@ export default function LecteurExterneDashboard() {
                         const isBusy = isTimeSlotBusy(eleve);
                         const isSelected = selectedEleves.includes(eleve.id);
                         const isCurrentlyAssigned = eleve.lecteur_externe_id === userLecteurExterneId;
-
-                        if (eleve.id === '34f64a57-2087-47a6-ae9c-487acb8c3fa3') {
-                            isBusy && !isCurrentlyAssigned ? 'bg-gray-100 opacity-60' : 'normal');
-                        }
                         
                         return (
                           <tr 
