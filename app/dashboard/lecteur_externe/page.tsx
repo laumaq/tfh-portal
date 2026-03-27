@@ -176,6 +176,7 @@ export default function LecteurExterneDashboard() {
         `)
         .not('categorie', 'is', null)
         .not('categorie', 'eq', '')
+        .is('lecteur_externe_id', null)  // ✅ NOUVEAU : Exclure les TFH qui ont déjà un lecteur externe
         .order('date_defense', { ascending: true, nullsFirst: true })
         .order('heure_defense', { ascending: true, nullsFirst: true })
         .order('classe', { ascending: true })
@@ -226,27 +227,6 @@ export default function LecteurExterneDashboard() {
       setSelectedEleves(preSelected);
 
       generateBusySlots(elevesFormatted, lecteurExterneId);
-
-      // Après avoir fait setElevesDisponibles(allElevesFormatted);
-      console.log('=== DIAGNOSTIC ÉLÈVE EDOUARD ===');
-      console.log('Nombre total d\'élèves chargés:', allElevesFormatted.length);
-      
-      const edouard = allElevesFormatted.find(e => e.id === '34f64a57-2087-47a6-ae9c-487acb8c3fa3');
-      console.log('Élève Edouard dans allElevesFormatted:', edouard);
-      console.log('Catégorie d\'Edouard:', edouard?.categorie);
-      console.log('Type de catégorie:', typeof edouard?.categorie);
-      console.log('Date défense d\'Edouard:', edouard?.date_defense);
-      console.log('Localisation d\'Edouard:', edouard?.localisation_defense);
-      
-      // Vérifier si la catégorie est dans la liste des catégories uniques
-      console.log('Catégories uniques:', uniqueCategories);
-      console.log('La catégorie d\'Edouard est-elle dans uniqueCategories?', 
-        uniqueCategories.includes(edouard?.categorie || ''));
-      
-      // Vérifier si la date est dans la liste des dates uniques  
-      console.log('Dates uniques:', uniqueDates);
-      console.log('La date d\'Edouard est-elle dans uniqueDates?',
-        uniqueDates.includes(edouard?.date_defense || ''));
 
     } catch (err) {
       console.error('Erreur chargement des données:', err);
@@ -436,7 +416,8 @@ export default function LecteurExterneDashboard() {
     const slotKey = `${eleve.date_defense}_${eleve.heure_defense.substring(0, 5)}`;
     const busyElevesIds = busySlots.get(slotKey) || [];
     
-    if (busyElevesIds.includes(eleve.id)) {
+    // ✅ NE PAS compter le TFH lui-même s'il est déjà assigné à l'utilisateur courant
+    if (busyElevesIds.includes(eleve.id) && eleve.lecteur_externe_id === userLecteurExterneId) {
       return false;
     }
     
@@ -467,19 +448,11 @@ export default function LecteurExterneDashboard() {
   };
 
   const filteredElevesDisponibles = elevesDisponibles.filter(eleve => {
-    if (eleve.id === '34f64a57-2087-47a6-ae9c-487acb8c3fa3') {
-      console.log('=== FILTRAGE ÉLÈVE EDOUARD ===');
-      console.log('Élève:', `${eleve.prenom} ${eleve.nom}`);
-      console.log('Catégorie:', eleve.categorie);
-      console.log('Date:', eleve.date_defense);
-      console.log('Localisation:', eleve.localisation_defense);
-      console.log('selectedMultipleCategories:', selectedMultipleCategories);
-      console.log('selectedMultipleDates:', selectedMultipleDates);
-      console.log('selectedMultipleLocations:', selectedMultipleLocations);
-      console.log('Catégorie dans selectedMultipleCategories?', selectedMultipleCategories.includes(eleve.categorie));
-      console.log('Date dans selectedMultipleDates?', eleve.date_defense && selectedMultipleDates.includes(eleve.date_defense));
-      console.log('Localisation dans selectedMultipleLocations?', eleve.localisation_defense && selectedMultipleLocations.includes(eleve.localisation_defense));
+    if (eleve.lecteur_externe_id !== null) {
+      console.log('TFH exclu car déjà attribué:', `${eleve.prenom} ${eleve.nom}`, 'lecteur_externe_id:', eleve.lecteur_externe_id);
+      return false;
     }
+    
     if (selectedMultipleCategories.length > 0 && !selectedMultipleCategories.includes(eleve.categorie)) {
       return false;
     }
@@ -496,22 +469,7 @@ export default function LecteurExterneDashboard() {
   });
 
   const sortedElevesDisponibles = sortEleves(filteredElevesDisponibles);
-  // Après const sortedElevesDisponibles = sortEleves(filteredElevesDisponibles);
-  console.log('=== APRÈS TRI ===');
-  console.log('filteredElevesDisponibles count:', filteredElevesDisponibles.length);
-  console.log('sortedElevesDisponibles count:', sortedElevesDisponibles.length);
   
-  const edouardInFiltered = filteredElevesDisponibles.find(e => e.id === '34f64a57-2087-47a6-ae9c-487acb8c3fa3');
-  const edouardInSorted = sortedElevesDisponibles.find(e => e.id === '34f64a57-2087-47a6-ae9c-487acb8c3fa3');
-  
-  console.log('Edouard dans filteredElevesDisponibles?', !!edouardInFiltered);
-  console.log('Edouard dans sortedElevesDisponibles?', !!edouardInSorted);
-  console.log('Position d\'Edouard dans sortedElevesDisponibles:', 
-    edouardInSorted ? sortedElevesDisponibles.indexOf(edouardInSorted) : -1);
-  
-  // Vérifiez quelques élèves autour pour le debugging
-  console.log('Quelques élèves dans sortedElevesDisponibles (premiers 5):', 
-    sortedElevesDisponibles.slice(0, 5).map(e => `${e.prenom} ${e.nom} - ${e.date_defense} ${e.heure_defense}`));
   
   const handleToggleSelection = async (eleveId: string) => {
     const eleve = elevesDisponibles.find(e => e.id === eleveId);
@@ -1173,14 +1131,6 @@ export default function LecteurExterneDashboard() {
                         const isCurrentlyAssigned = eleve.lecteur_externe_id === userLecteurExterneId;
 
                         if (eleve.id === '34f64a57-2087-47a6-ae9c-487acb8c3fa3') {
-                          console.log('=== RENDU LIGNE EDOUARD ===');
-                          console.log('Nom:', `${eleve.prenom} ${eleve.nom}`);
-                          console.log('isBusy:', isBusy);
-                          console.log('isSelected:', isSelected);
-                          console.log('isCurrentlyAssigned:', isCurrentlyAssigned);
-                          console.log('lecteur_externe_id:', eleve.lecteur_externe_id);
-                          console.log('userLecteurExterneId:', userLecteurExterneId);
-                          console.log('classe CSS appliquée:', 
                             isBusy && !isCurrentlyAssigned ? 'bg-gray-100 opacity-60' : 'normal');
                         }
                         
