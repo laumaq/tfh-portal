@@ -1357,9 +1357,7 @@ export default function LecteurExterneDashboard() {
                       {displaySettings.lecteur_externe_voir_mediateurs && (
                         <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Médiateur</th>
                       )}
-                      {displaySettings.lecteur_externe_voir_eleves && (
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
-                      )}
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1416,22 +1414,20 @@ export default function LecteurExterneDashboard() {
                             {eleve.mediateur_prenom} {eleve.mediateur_nom}
                           </td>
                         )}
-                        {displaySettings.lecteur_externe_voir_eleves && (
-                          <td className="px-4 py-3 text-sm">
-                            <button
-                              onClick={async () => {
-                                await supabase
-                                  .from('eleves')
-                                  .update({ lecteur_externe_id: null })
-                                  .eq('id', eleve.id);
-                                await loadData(userLecteurExterneId);
-                              }}
-                              className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
-                            >
-                              Désélectionner
-                            </button>
-                          </td>
-                        )}
+                        <td className="px-4 py-3 text-sm">
+                          <button
+                            onClick={async () => {
+                              await supabase
+                                .from('eleves')
+                                .update({ lecteur_externe_id: null })
+                                .eq('id', eleve.id);
+                              await loadData(userLecteurExterneId);
+                            }}
+                            className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
+                          >
+                            Désélectionner
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
