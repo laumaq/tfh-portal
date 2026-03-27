@@ -350,10 +350,11 @@ export default function LecteurExterneDashboard() {
       if (eleve.date_defense && eleve.heure_defense) {
         const slotKey = `${eleve.date_defense}_${eleve.heure_defense.substring(0, 5)}`;
         const currentIds = slotsMap.get(slotKey) || [];
+        // Inclure tous les TFH de ce créneau
         slotsMap.set(slotKey, [...currentIds, eleve.id]);
       }
     });
-
+  
     setBusySlots(slotsMap);
   };
 
@@ -416,12 +417,14 @@ export default function LecteurExterneDashboard() {
     const slotKey = `${eleve.date_defense}_${eleve.heure_defense.substring(0, 5)}`;
     const busyElevesIds = busySlots.get(slotKey) || [];
     
-    // ✅ NE PAS compter le TFH lui-même s'il est déjà assigné à l'utilisateur courant
+    // ✅ Si c'est son propre TFH, ce n'est pas un conflit
     if (busyElevesIds.includes(eleve.id) && eleve.lecteur_externe_id === userLecteurExterneId) {
       return false;
     }
     
-    return busyElevesIds.length > 0;
+    // ✅ Vérifier s'il y a d'autres TFH sur ce créneau (hors le sien)
+    const otherBusyIds = busyElevesIds.filter(id => id !== eleve.id);
+    return otherBusyIds.length > 0;
   };
 
   const sortEleves = (eleves: Eleve[]): Eleve[] => {
@@ -448,8 +451,8 @@ export default function LecteurExterneDashboard() {
   };
 
   const filteredElevesDisponibles = elevesDisponibles.filter(eleve => {
-    if (eleve.lecteur_externe_id !== null) {
-      console.log('TFH exclu car déjà attribué:', `${eleve.prenom} ${eleve.nom}`, 'lecteur_externe_id:', eleve.lecteur_externe_id);
+    if (eleve.lecteur_externe_id !== null && eleve.lecteur_externe_id !== userLecteurExterneId) {
+      console.log('TFH exclu car déjà attribué à un autre lecteur:', `${eleve.prenom} ${eleve.nom}`);
       return false;
     }
     
@@ -473,7 +476,9 @@ export default function LecteurExterneDashboard() {
   
   const handleToggleSelection = async (eleveId: string) => {
     const eleve = elevesDisponibles.find(e => e.id === eleveId);
-    if (eleve && isTimeSlotBusy(eleve)) {
+    
+    // Vérifier les conflits de créneaux (sauf pour ses propres TFH)
+    if (eleve && isTimeSlotBusy(eleve) && eleve.lecteur_externe_id !== userLecteurExterneId) {
       const busySlotKey = `${eleve.date_defense}_${eleve.heure_defense!.substring(0, 5)}`;
       const busyElevesIds = busySlots.get(busySlotKey) || [];
       const busyEleves = elevesDisponibles.filter(e => busyElevesIds.includes(e.id));
@@ -482,32 +487,44 @@ export default function LecteurExterneDashboard() {
       alert(`Vous avez déjà une défense à ce créneau horaire !\n\nCréneau occupé par: ${busyNames}`);
       return;
     }
-
-    const newSelectedEleves = selectedEleves.includes(eleveId)
-      ? selectedEleves.filter(id => id !== eleveId)
-      : [...selectedEleves, eleveId];
+  
+    const isCurrentlySelected = selectedEleves.includes(eleveId);
+    let newSelectedEleves: string[];
+    
+    if (isCurrentlySelected) {
+      // Désélectionner : retirer de la liste
+      newSelectedEleves = selectedEleves.filter(id => id !== eleveId);
+    } else {
+      // Sélectionner : ajouter à la liste
+      newSelectedEleves = [...selectedEleves, eleveId];
+    }
     
     setSelectedEleves(newSelectedEleves);
-
+  
     try {
-      await supabase
-        .from('eleves')
-        .update({ lecteur_externe_id: null })
-        .eq('lecteur_externe_id', userLecteurExterneId);
-
-      if (newSelectedEleves.length > 0) {
+      // ✅ Mettre à jour uniquement les TFH modifiés, sans tout écraser
+      if (isCurrentlySelected) {
+        // Désélectionner : supprimer le lecteur_externe_id de ce TFH
+        await supabase
+          .from('eleves')
+          .update({ lecteur_externe_id: null })
+          .eq('id', eleveId);
+      } else {
+        // Sélectionner : attribuer le lecteur_externe_id à ce TFH
         await supabase
           .from('eleves')
           .update({ lecteur_externe_id: userLecteurExterneId })
-          .in('id', newSelectedEleves);
+          .eq('id', eleveId);
       }
-
+  
+      // Recharger les données pour mettre à jour l'affichage
       await loadData(userLecteurExterneId);
       
     } catch (err) {
-      console.error('Erreur lors de la sauvegarde automatique:', err);
+      console.error('Erreur lors de la sauvegarde:', err);
+      // Restaurer l'état précédent
       setSelectedEleves(selectedEleves);
-      alert('Erreur lors de l\'enregistrement automatique');
+      alert('Erreur lors de l\'enregistrement');
     }
   };
 
@@ -1340,6 +1357,9 @@ export default function LecteurExterneDashboard() {
                       {displaySettings.lecteur_externe_voir_mediateurs && (
                         <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Médiateur</th>
                       )}
+                      {displaySettings.lecteur_externe_voir_eleves && (
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -1394,6 +1414,22 @@ export default function LecteurExterneDashboard() {
                         {displaySettings.lecteur_externe_voir_mediateurs && (
                           <td className="px-4 py-3 text-sm whitespace-nowrap">
                             {eleve.mediateur_prenom} {eleve.mediateur_nom}
+                          </td>
+                        )}
+                        {displaySettings.lecteur_externe_voir_eleves && (
+                          <td className="px-4 py-3 text-sm">
+                            <button
+                              onClick={async () => {
+                                await supabase
+                                  .from('eleves')
+                                  .update({ lecteur_externe_id: null })
+                                  .eq('id', eleve.id);
+                                await loadData(userLecteurExterneId);
+                              }}
+                              className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
+                            >
+                              Désélectionner
+                            </button>
                           </td>
                         )}
                       </tr>
