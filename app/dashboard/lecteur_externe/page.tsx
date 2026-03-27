@@ -176,7 +176,7 @@ export default function LecteurExterneDashboard() {
         `)
         .not('categorie', 'is', null)
         .not('categorie', 'eq', '')
-        .is('lecteur_externe_id', null)  // ✅ NOUVEAU : Exclure les TFH qui ont déjà un lecteur externe
+        .or(`lecteur_externe_id.is.null,lecteur_externe_id.eq.${lecteurExterneId}`)
         .order('date_defense', { ascending: true, nullsFirst: true })
         .order('heure_defense', { ascending: true, nullsFirst: true })
         .order('classe', { ascending: true })
