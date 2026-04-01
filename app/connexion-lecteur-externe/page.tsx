@@ -18,13 +18,41 @@ export default function LoginLecteurExternePage() {
   const [isNewUser, setIsNewUser] = useState<boolean | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
   const [welcomeMessage, setWelcomeMessage] = useState('');
+  const [checkingAccess, setCheckingAccess] = useState(true);
   const router = useRouter();
+
+  // Vérifier si le portail est ouvert
+  useEffect(() => {
+    const checkPortalAccess = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('system_settings')
+          .select('setting_value')
+          .eq('setting_key', 'lecteur_externe_portail_actif')
+          .single();
+
+        if (error) throw error;
+
+        // Si le portail est fermé (false), rediriger
+        if (data && data.setting_value === 'false') {
+          router.push('/portail-externe-ferme');
+          return;
+        }
+      } catch (err) {
+        console.error('Erreur vérification accès portail:', err);
+        // En cas d'erreur, on laisse passer par sécurité
+      } finally {
+        setCheckingAccess(false);
+      }
+    };
+
+    checkPortalAccess();
+  }, [router]);
 
   // Vérifier si l'utilisateur existe déjà
   const checkExistingUser = async () => {
     if (!nom.trim() || !prenom.trim()) return;
 
-    // Pour la recherche : on trime mais on garde la casse pour la requête
     const nomTrimmed = nom.trim();
     const prenomTrimmed = prenom.trim();
 
@@ -32,8 +60,8 @@ export default function LoginLecteurExternePage() {
       const { data: lecteurData, error: lecteurError } = await supabase
         .from('lecteurs_externes')
         .select('id, email, telephone, mot_de_passe')
-        .ilike('nom', nomTrimmed) // ilike = insensible à la casse
-        .ilike('prenom', prenomTrimmed + '%') // ilike = insensible à la casse
+        .ilike('nom', nomTrimmed)
+        .ilike('prenom', prenomTrimmed + '%')
         .maybeSingle();
 
       if (!lecteurError && lecteurData) {
@@ -56,24 +84,21 @@ export default function LoginLecteurExternePage() {
     setError('');
     setLoading(true);
 
-    // On trime les valeurs mais on garde la casse
     const nomTrimmed = nom.trim();
     const prenomTrimmed = prenom.trim();
 
     try {
-      // 1. VÉRIFICATION UTILISATEUR EXISTANT (insensible à la casse)
+      // 1. VÉRIFICATION UTILISATEUR EXISTANT
       const { data: existingUser, error: checkError } = await supabase
         .from('lecteurs_externes')
         .select('id, email, mot_de_passe, nom, prenom')
-        .ilike('nom', nomTrimmed) // Recherche insensible à la casse
-        .ilike('prenom', prenomTrimmed + '%') // Recherche insensible à la casse
+        .ilike('nom', nomTrimmed)
+        .ilike('prenom', prenomTrimmed + '%')
         .maybeSingle();
 
       if (!checkError && existingUser) {
-        // CONNEXION UTILISATEUR EXISTANT
         const storedPassword = existingUser.mot_de_passe;
 
-        // Première connexion (pas de mot de passe)
         if (!storedPassword || storedPassword === '') {
           if (!password.trim()) {
             setError('Veuillez créer un mot de passe pour votre première connexion');
@@ -88,7 +113,6 @@ export default function LoginLecteurExternePage() {
 
           if (updateError) throw updateError;
         } else {
-          // Vérifier le mot de passe
           if (storedPassword !== password) {
             setError('Mot de passe incorrect');
             setLoading(false);
@@ -96,10 +120,8 @@ export default function LoginLecteurExternePage() {
           }
         }
 
-        // Connexion réussie
         localStorage.setItem('userType', 'lecteur_externe');
         localStorage.setItem('userId', existingUser.id);
-        // On utilise les valeurs exactes de la BDD pour l'affichage
         localStorage.setItem('userName', `${existingUser.prenom} ${existingUser.nom}`);
         
         router.push('/dashboard/lecteur_externe');
@@ -115,11 +137,10 @@ export default function LoginLecteurExternePage() {
 
       const emailTrimmed = email.trim();
 
-      // Vérifier si l'email existe déjà (insensible à la casse)
       const { data: emailCheck } = await supabase
         .from('lecteurs_externes')
         .select('id')
-        .ilike('email', emailTrimmed) // ilike pour email aussi
+        .ilike('email', emailTrimmed)
         .maybeSingle();
 
       if (emailCheck) {
@@ -129,16 +150,15 @@ export default function LoginLecteurExternePage() {
       }
 
       // 3. CRÉATION DU NOUVEAU LECTEUR EXTERNE
-      // On enregistre les valeurs exactes (trimées mais avec la casse d'origine)
       const telephoneTrimmed = telephone.trim() || null;
 
       const { data: newLecteur, error: insertError } = await supabase
         .from('lecteurs_externes')
         .insert([
           {
-            nom: nomTrimmed, // Nom avec la casse exacte
-            prenom: prenomTrimmed, // Prénom avec la casse exacte
-            email: emailTrimmed, // Email exact (mais recherche insensible à la casse)
+            nom: nomTrimmed,
+            prenom: prenomTrimmed,
+            email: emailTrimmed,
             telephone: telephoneTrimmed,
             mot_de_passe: password || null,
             created_at: new Date().toISOString()  
@@ -149,12 +169,10 @@ export default function LoginLecteurExternePage() {
 
       if (insertError) throw insertError;
 
-      // Connexion automatique
       localStorage.setItem('userType', 'lecteur_externe');
       localStorage.setItem('userId', newLecteur.id);
       localStorage.setItem('userName', `${prenomTrimmed} ${nomTrimmed}`);
       
-      // Redirection avec message de bienvenue
       setWelcomeMessage('Bienvenue ! Votre compte a été créé avec succès \n \n Merci de prendre du temps pour nos rhétos !');
       setShowWelcome(true);
 
@@ -169,7 +187,6 @@ export default function LoginLecteurExternePage() {
     }
   };
 
-  // Vérifier automatiquement quand les champs sont remplis
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (nom.trim() && prenom.trim()) {
@@ -179,6 +196,18 @@ export default function LoginLecteurExternePage() {
 
     return () => clearTimeout(timeoutId);
   }, [nom, prenom]);
+
+  // Afficher un loader pendant la vérification
+  if (checkingAccess) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Vérification de l'accès au portail...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
