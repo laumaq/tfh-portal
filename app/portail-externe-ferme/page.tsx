@@ -31,11 +31,10 @@ export default function PortailExterneFerme() {
         <div className="space-y-6">
           <div className="bg-orange-50 border border-orange-200 rounded-lg p-6 text-center">
             <p className="text-orange-800 mb-4">
-              Les inscriptions et connexions pour les lecteurs externes sont temporairement fermées.
+              Le portail pour les inscriptions et connexions des lecteurs externes est temporairement fermé.
             </p>
             <p className="text-gray-600 text-sm">
-              Cette décision a été prise par l'équipe pédagogique.
-              Veuillez contacter un coordinateur pour plus d'informations.
+              Veuillez contacter Frédéric Donjean pour plus d'informations.
             </p>
           </div>
 
