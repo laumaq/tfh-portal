@@ -327,6 +327,11 @@ export default function EleveDashboard() {
   };
 
   const getMessagePourEleve = (statut: string): string => {
+    // Gérer les cas NULL, undefined ou chaîne vide
+    if (!statut || statut === '' || statut === 'null' || statut === 'undefined') {
+      return 'Ton guide n\'a pas rendu d\'info sur ta convocation. Nous considérons donc que tu n\'es pas convoqué·e.';
+    }
+    
     switch (statut) {
       case 'Oui, l\'élève n\'a pas communiqué':
         return 'Tu es convoqué·e car tu n\'as pas communiqué (ou pas assez) selon ton/ta guide.';
@@ -337,7 +342,7 @@ export default function EleveDashboard() {
       case 'Non, l\'élève atteint bien les objectifs':
         return 'Tu n\'es pas convoqué·e.';
       default:
-        return 'Ton guide n\'a pas communiqué sur ta convocation. Nous considérons donc que tu n\'es pas convoqué.';
+        return statut;
     }
   };
 
@@ -894,24 +899,22 @@ export default function EleveDashboard() {
                               ({session.date_debut.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })})
                             </span>
                           </div>
-                          <span className={
-                            estConvoque 
-                              ? 'text-orange-600 font-medium' 
-                              : statut.startsWith('Non')
-                              ? 'text-green-600 font-medium'
-                              : 'text-gray-500'
-                          }>
-                            {estConvoque ? 'Convoqué·e' : statut.startsWith('Non') ? 'Non convoqué·e' : '—'}
-                          </span>
+                        <span className={
+                          estConvoque ? 'text-orange-600 font-medium' : 
+                          (!statut || statut === '' || statut.startsWith('Non')) ? 'text-green-600 font-medium' : 
+                          'text-gray-500'
+                        }>
+                          {estConvoque ? 'Convoqué·e' : 
+                           (!statut || statut === '') ? 'Non convoqué·e' :
+                           statut.startsWith('Non') ? 'Non convoqué·e' : '—'}
+                        </span>
                         </div>
                         
-                        {statut && statut !== '' && !statut.startsWith('Non') && (
-                          <div className="p-3 border-t bg-white">
-                            <p className="text-sm text-gray-700">
-                              {message}
-                            </p>
-                          </div>
-                        )}
+                      {(!statut || statut === '' || (statut && !statut.startsWith('Non'))) && (
+                        <div className="p-3 border-t bg-white">
+                          <p className="text-sm text-gray-700">{message}</p>
+                        </div>
+                      )}
                       </div>
                     );
                   })
