@@ -336,14 +336,8 @@ export default function EleveDashboard() {
         return 'Tu es convoqué·e car tu as avancé mais n\'atteins pas les objectifs.';
       case 'Non, l\'élève atteint bien les objectifs':
         return 'Tu n\'es pas convoqué·e.';
-      case '':
-        return 'Ton guide n'a pas rendu d'info. Nous considérons donc que tu n'es pas convoqué.';
-      case null:
-        return 'Ton guide n'a pas rendu d'info. Nous considérons donc que tu n'es pas convoqué.';
-      case undefined:
-        return 'Statut non défini.';
       default:
-        return statut;
+        return 'Ton guide n\'a pas communiqué sur ta convocation. Nous considérons donc que tu n\'es pas convoqué.';
     }
   };
 
