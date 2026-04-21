@@ -25,6 +25,7 @@ type SortField =
   | 'categorie'
   | 'problematique'
   | 'guide_nom'
+  | 'guide_prenom'
   | 'lecteur_interne_id'
   | 'lecteur_externe_id'
   | 'mediateur_id'
@@ -69,7 +70,13 @@ export default function DefensesTab({
       case 'prenom': return trimStr(eleve.prenom);
       case 'categorie': return trimStr(eleve.categorie);
       case 'problematique': return trimStr(eleve.problematique);
-      case 'guide_nom': return trimStr(eleve.guide_nom);
+      case 'guide_nom': {
+        // Si pas de guide, retourner une chaîne vide (sera traitée comme vide)
+        if (!eleve.guide_id || eleve.guide_id.trim() === '') return '';
+        // Sinon retourner "nom prénom" pour un tri précis
+        return `${trimStr(eleve.guide_nom)} ${trimStr(eleve.guide_prenom)}`;
+      }
+      case 'guide_prenom': return trimStr(eleve.guide_prenom);
       case 'lecteur_interne_id': {
         const guide = guides.find(g => g.id === eleve.lecteur_interne_id);
         return guide ? `${guide.nom} ${guide.initiale}.` : '';
@@ -117,21 +124,25 @@ export default function DefensesTab({
       newDirection = 'asc';
     }
     
-    // Règles secondaires : classe, nom, prénom (pour homonymes)
-    const secondaryRules: SortRule[] = [
+    // Règles secondaires de base
+    let secondaryRules: SortRule[] = [
       { field: 'classe', direction: 'asc' },
       { field: 'nom', direction: 'asc' },
       { field: 'prenom', direction: 'asc' }
     ];
     
-    let filteredSecondary = secondaryRules;
-    if (field === 'classe') {
-      filteredSecondary = secondaryRules.filter(r => r.field !== 'classe');
-    } else if (field === 'nom') {
-      filteredSecondary = secondaryRules.filter(r => r.field !== 'nom');
-    } else if (field === 'prenom') {
-      filteredSecondary = secondaryRules.filter(r => r.field !== 'prenom');
+    // Si on trie sur le guide, ajouter guide_prenom comme critère de départage
+    if (field === 'guide_nom') {
+      secondaryRules = [
+        { field: 'classe', direction: 'asc' },
+        { field: 'guide_prenom', direction: 'asc' }, // ← départage par prénom du guide
+        { field: 'nom', direction: 'asc' },
+        { field: 'prenom', direction: 'asc' }
+      ];
     }
+    
+    // Éviter la redondance si le champ principal fait partie des secondaires
+    let filteredSecondary = secondaryRules.filter(r => r.field !== field);
     
     setSortRules([
       { field, direction: newDirection },
