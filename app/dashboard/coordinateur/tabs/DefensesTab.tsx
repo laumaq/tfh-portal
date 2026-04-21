@@ -62,13 +62,14 @@ export default function DefensesTab({
   }, [eleves]);
 
   const getFieldValue = (eleve: Eleve, field: SortField): any => {
+    const trimStr = (s: string | null | undefined) => (s || '').trim();
     switch (field) {
-      case 'classe': return eleve.classe || '';
-      case 'nom': return eleve.nom || '';
-      case 'prenom': return eleve.prenom || '';
-      case 'categorie': return eleve.categorie || '';
-      case 'problematique': return eleve.problematique || '';
-      case 'guide_nom': return eleve.guide_nom || '';
+      case 'classe': return trimStr(eleve.classe);
+      case 'nom': return trimStr(eleve.nom);
+      case 'prenom': return trimStr(eleve.prenom);
+      case 'categorie': return trimStr(eleve.categorie);
+      case 'problematique': return trimStr(eleve.problematique);
+      case 'guide_nom': return trimStr(eleve.guide_nom);
       case 'lecteur_interne_id': {
         const guide = guides.find(g => g.id === eleve.lecteur_interne_id);
         return guide ? `${guide.nom} ${guide.initiale}.` : '';
@@ -83,24 +84,59 @@ export default function DefensesTab({
       }
       case 'date_defense':
         return eleve.date_defense ? new Date(eleve.date_defense).getTime() : null;
-      case 'heure_defense': return eleve.heure_defense || '';
-      case 'localisation_defense': return eleve.localisation_defense || '';
+      case 'heure_defense': return trimStr(eleve.heure_defense);
+      case 'localisation_defense': return trimStr(eleve.localisation_defense);
       default: return '';
     }
   };
-
+  
   const compareValues = (valA: any, valB: any, direction: 'asc' | 'desc'): number => {
-    const isEmpty = (v: any) => v === null || v === undefined || v === '';
+    const isEmpty = (v: any) => {
+      if (v === null || v === undefined) return true;
+      if (typeof v === 'string') return v.trim() === '';
+      return false;
+    };
     const aEmpty = isEmpty(valA);
     const bEmpty = isEmpty(valB);
-
+  
     if (aEmpty && bEmpty) return 0;
-    if (aEmpty) return direction === 'asc' ? 1 : -1;
+    if (aEmpty) return direction === 'asc' ? 1 : -1;   // vide en fin pour asc
     if (bEmpty) return direction === 'asc' ? -1 : 1;
-
+  
     if (valA < valB) return direction === 'asc' ? -1 : 1;
     if (valA > valB) return direction === 'asc' ? 1 : -1;
     return 0;
+  };
+  
+  const handleSort = (field: SortField) => {
+    const currentFirst = sortRules[0];
+    let newDirection: 'asc' | 'desc';
+    if (currentFirst.field === field) {
+      newDirection = currentFirst.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+      newDirection = 'asc';
+    }
+    
+    // Règles secondaires : classe, nom, prénom (pour homonymes)
+    const secondaryRules: SortRule[] = [
+      { field: 'classe', direction: 'asc' },
+      { field: 'nom', direction: 'asc' },
+      { field: 'prenom', direction: 'asc' }
+    ];
+    
+    let filteredSecondary = secondaryRules;
+    if (field === 'classe') {
+      filteredSecondary = secondaryRules.filter(r => r.field !== 'classe');
+    } else if (field === 'nom') {
+      filteredSecondary = secondaryRules.filter(r => r.field !== 'nom');
+    } else if (field === 'prenom') {
+      filteredSecondary = secondaryRules.filter(r => r.field !== 'prenom');
+    }
+    
+    setSortRules([
+      { field, direction: newDirection },
+      ...filteredSecondary
+    ]);
   };
 
   const sortData = (data: Eleve[], rules: SortRule[]): Eleve[] => {
@@ -133,20 +169,6 @@ export default function DefensesTab({
     return sortData(result, sortRules);
   }, [localEleves, hideWithoutGuide, showOnlyIncompleteJury, sortRules]);
 
-  const handleSort = (field: SortField) => {
-    const currentFirst = sortRules[0];
-    let newDirection: 'asc' | 'desc';
-    if (currentFirst.field === field) {
-      newDirection = currentFirst.direction === 'asc' ? 'desc' : 'asc';
-    } else {
-      newDirection = 'asc';
-    }
-    setSortRules([
-      { field, direction: newDirection },
-      { field: 'classe', direction: 'asc' },
-      { field: 'nom', direction: 'asc' }
-    ]);
-  };
 
   const getSortIcon = (field: SortField) => {
     const firstRule = sortRules[0];
