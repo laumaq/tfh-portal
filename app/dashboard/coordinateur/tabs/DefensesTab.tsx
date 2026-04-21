@@ -1,4 +1,4 @@
-//     //app/dashboard/coordinateur/tabs/DefensesTab.tsx
+//   /app/dashboard/coordinateur/tabs/DefensesTab.tsx
 
 'use client';
 
@@ -314,9 +314,9 @@ export default function DefensesTab({
               />
               <span className="text-sm font-medium">Mode édition défenses</span>
             </label>
-
+  
             <div className="h-6 w-px bg-gray-300 hidden md:block" />
-
+  
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -326,7 +326,7 @@ export default function DefensesTab({
               />
               <span className="text-sm text-gray-700">Masquer les TFH sans guide</span>
             </label>
-
+  
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -337,12 +337,12 @@ export default function DefensesTab({
               <span className="text-sm text-gray-700">Uniquement les jurys incomplets</span>
             </label>
           </div>
-
+  
           <span className="text-sm text-gray-500">
             {sortedEleves.length} / {localEleves.length} élève{sortedEleves.length > 1 ? 's' : ''}
           </span>
         </div>
-
+  
         {isProcessing && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
             <p className="text-sm text-blue-700 flex items-center gap-2">
@@ -351,7 +351,7 @@ export default function DefensesTab({
           </div>
         )}
       </div>
-
+  
       {/* Tableau des défenses avec tri */}
       <div className="bg-white rounded-lg shadow overflow-x-auto">
         <div className="min-w-[1400px] md:min-w-full">
@@ -394,7 +394,7 @@ export default function DefensesTab({
                 const mediateurLabel = mediateurs.find(m => m.id === eleve.mediateur_id)
                   ? `${mediateurs.find(m => m.id === eleve.mediateur_id)!.nom} ${mediateurs.find(m => m.id === eleve.mediateur_id)!.prenom}`
                   : '';
-
+  
                 return (
                   <tr key={eleve.id} className="border-b hover:bg-gray-50">
                     <td className="px-3 py-3 text-xs md:text-sm font-medium whitespace-nowrap">{eleve.nom}</td>
@@ -444,14 +444,14 @@ export default function DefensesTab({
                     <td className="px-3 py-3">
                       {renderInputOrLabel(eleve, 'localisation_defense', 'text', eleve.localisation_defense || '', 'Salle, bâtiment...')}
                     </td>
-                  </table>
+                  </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
       </div>
-
+  
       {/* Légende */}
       <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
         <h4 className="font-medium text-gray-700 mb-2">Instructions :</h4>
