@@ -1,5 +1,3 @@
-//   /app/dashboard/coordinateur/tabs/DefensesTab.tsx
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -22,8 +20,8 @@ interface DefensesTabProps {
 
 type SortField = 
   | 'classe'
-  | 'nom'           // pour le tri secondaire (nom de famille)
-  | 'prenom'        // pour le tri secondaire
+  | 'nom'
+  | 'prenom'
   | 'categorie'
   | 'problematique'
   | 'guide_nom'
@@ -52,14 +50,10 @@ export default function DefensesTab({
 }: DefensesTabProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [localEleves, setLocalEleves] = useState<Eleve[]>(eleves);
-  
-  // Tri initial : classe puis nom (ascendants)
   const [sortRules, setSortRules] = useState<SortRule[]>([
     { field: 'classe', direction: 'asc' },
     { field: 'nom', direction: 'asc' }
   ]);
-
-  // Filtres
   const [hideWithoutGuide, setHideWithoutGuide] = useState(true);
   const [showOnlyIncompleteJury, setShowOnlyIncompleteJury] = useState(false);
 
@@ -67,7 +61,6 @@ export default function DefensesTab({
     setLocalEleves(eleves);
   }, [eleves]);
 
-  // Fonction pour obtenir la valeur d'un champ pour le tri
   const getFieldValue = (eleve: Eleve, field: SortField): any => {
     switch (field) {
       case 'classe': return eleve.classe || '';
@@ -76,15 +69,18 @@ export default function DefensesTab({
       case 'categorie': return eleve.categorie || '';
       case 'problematique': return eleve.problematique || '';
       case 'guide_nom': return eleve.guide_nom || '';
-      case 'lecteur_interne_id':
+      case 'lecteur_interne_id': {
         const guide = guides.find(g => g.id === eleve.lecteur_interne_id);
         return guide ? `${guide.nom} ${guide.initiale}.` : '';
-      case 'lecteur_externe_id':
+      }
+      case 'lecteur_externe_id': {
         const lecteur = lecteursExternes.find(l => l.id === eleve.lecteur_externe_id);
         return lecteur ? `${lecteur.nom} ${lecteur.prenom}` : '';
-      case 'mediateur_id':
+      }
+      case 'mediateur_id': {
         const med = mediateurs.find(m => m.id === eleve.mediateur_id);
         return med ? `${med.nom} ${med.prenom}` : '';
+      }
       case 'date_defense':
         return eleve.date_defense ? new Date(eleve.date_defense).getTime() : null;
       case 'heure_defense': return eleve.heure_defense || '';
@@ -93,7 +89,6 @@ export default function DefensesTab({
     }
   };
 
-  // Comparateur avec gestion des vides (toujours en fin)
   const compareValues = (valA: any, valB: any, direction: 'asc' | 'desc'): number => {
     const isEmpty = (v: any) => v === null || v === undefined || v === '';
     const aEmpty = isEmpty(valA);
@@ -108,7 +103,6 @@ export default function DefensesTab({
     return 0;
   };
 
-  // Tri multi-niveaux
   const sortData = (data: Eleve[], rules: SortRule[]): Eleve[] => {
     return [...data].sort((a, b) => {
       for (const rule of rules) {
@@ -121,14 +115,11 @@ export default function DefensesTab({
     });
   };
 
-  // Appliquer les filtres puis le tri
   const filteredAndSortedEleves = useMemo(() => {
     let result = [...localEleves];
-
     if (hideWithoutGuide) {
       result = result.filter(e => e.guide_id && e.guide_id.trim() !== '');
     }
-
     if (showOnlyIncompleteJury) {
       result = result.filter(e => {
         const hasGuide = e.guide_id && e.guide_id.trim() !== '';
@@ -139,28 +130,22 @@ export default function DefensesTab({
         return !juryComplet;
       });
     }
-
     return sortData(result, sortRules);
   }, [localEleves, hideWithoutGuide, showOnlyIncompleteJury, sortRules]);
 
-  // Gestion du clic sur une colonne : nouvelle règle en tête, puis classe, puis nom
   const handleSort = (field: SortField) => {
-    // Vérifier si la colonne cliquée est déjà la première règle
     const currentFirst = sortRules[0];
     let newDirection: 'asc' | 'desc';
     if (currentFirst.field === field) {
-      // Inverser la direction
       newDirection = currentFirst.direction === 'asc' ? 'desc' : 'asc';
     } else {
       newDirection = 'asc';
     }
-    // Construire les nouvelles règles : champ cliqué en premier, puis classe, puis nom
-    const newRules: SortRule[] = [
+    setSortRules([
       { field, direction: newDirection },
       { field: 'classe', direction: 'asc' },
       { field: 'nom', direction: 'asc' }
-    ];
-    setSortRules(newRules);
+    ]);
   };
 
   const getSortIcon = (field: SortField) => {
@@ -171,7 +156,6 @@ export default function DefensesTab({
       : <ArrowDown className="w-3 h-3 ml-1 inline" />;
   };
 
-  // Mise à jour des champs
   const handleLocalUpdate = async (eleveId: string, field: string, value: string) => {
     if (isProcessing) return;
     try {
@@ -213,7 +197,6 @@ export default function DefensesTab({
     };
   };
 
-  // Rendu conditionnel select/label
   const renderSelectOrLabel = (
     eleve: Eleve,
     field: 'lecteur_interne_id' | 'lecteur_externe_id' | 'mediateur_id',
@@ -409,7 +392,7 @@ export default function DefensesTab({
                     <td className="px-3 py-3">{renderInputOrLabel(eleve, 'date_defense', 'date', eleve.date_defense || '')}</td>
                     <td className="px-3 py-3">{renderInputOrLabel(eleve, 'heure_defense', 'time', eleve.heure_defense || '')}</td>
                     <td className="px-3 py-3">{renderInputOrLabel(eleve, 'localisation_defense', 'text', eleve.localisation_defense || '', 'Salle, bâtiment...')}</td>
-                  </table>
+                  </tr>
                 );
               })}
             </tbody>
