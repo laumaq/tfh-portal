@@ -1,3 +1,5 @@
+//     //app/dashboard/coordinateur/tabs/DefensesTab.tsx
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -37,16 +39,34 @@ export default function DefensesTab({
   const [sortField, setSortField] = useState<SortField>('nom');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
+  // Filtres
+  const [hideWithoutGuide, setHideWithoutGuide] = useState(true);
+  const [showOnlyIncompleteJury, setShowOnlyIncompleteJury] = useState(false);
+
   // Synchroniser les données locales
   useEffect(() => {
     setLocalEleves(eleves);
   }, [eleves]);
 
-  // Fonctions de tri
+  // Fonction de tri avec gestion des valeurs vides en fin
+  const compareValues = (valA: any, valB: any, direction: SortDirection): number => {
+    const isEmpty = (v: any) => v === null || v === undefined || v === '';
+    const aEmpty = isEmpty(valA);
+    const bEmpty = isEmpty(valB);
+
+    if (aEmpty && bEmpty) return 0;
+    if (aEmpty) return direction === 'asc' ? 1 : -1;  // vide en fin
+    if (bEmpty) return direction === 'asc' ? -1 : 1; // vide en fin
+
+    if (valA < valB) return direction === 'asc' ? -1 : 1;
+    if (valA > valB) return direction === 'asc' ? 1 : -1;
+    return 0;
+  };
+
   const sortData = (data: Eleve[], field: SortField, direction: SortDirection): Eleve[] => {
     return [...data].sort((a, b) => {
       let valA: any, valB: any;
-  
+
       switch (field) {
         case 'nom':
           valA = a.nom || '';
@@ -85,14 +105,25 @@ export default function DefensesTab({
         case 'lecteur_externe_id':
           const lecteurA = lecteursExternes.find(l => l.id === a.lecteur_externe_id);
           const lecteurB = lecteursExternes.find(l => l.id === b.lecteur_externe_id);
-          valA = lecteurA ? `${lecteurA.prenom} ${lecteurA.nom}` : '';
-          valB = lecteurB ? `${lecteurB.prenom} ${lecteurB.nom}` : '';
+          // Trier par nom, puis prénom
+          if (!lecteurA && !lecteurB) { valA = ''; valB = ''; }
+          else if (!lecteurA) { valA = ''; valB = `${lecteurB?.nom} ${lecteurB?.prenom}`; }
+          else if (!lecteurB) { valA = `${lecteurA.nom} ${lecteurA.prenom}`; valB = ''; }
+          else {
+            valA = `${lecteurA.nom} ${lecteurA.prenom}`;
+            valB = `${lecteurB.nom} ${lecteurB.prenom}`;
+          }
           break;
         case 'mediateur_id':
           const medA = mediateurs.find(m => m.id === a.mediateur_id);
           const medB = mediateurs.find(m => m.id === b.mediateur_id);
-          valA = medA ? `${medA.prenom} ${medA.nom}` : '';
-          valB = medB ? `${medB.prenom} ${medB.nom}` : '';
+          if (!medA && !medB) { valA = ''; valB = ''; }
+          else if (!medA) { valA = ''; valB = `${medB?.nom} ${medB?.prenom}`; }
+          else if (!medB) { valA = `${medA.nom} ${medA.prenom}`; valB = ''; }
+          else {
+            valA = `${medA.nom} ${medA.prenom}`;
+            valB = `${medB.nom} ${medB.prenom}`;
+          }
           break;
         case 'date_defense':
           valA = a.date_defense ? new Date(a.date_defense).getTime() : null;
@@ -110,25 +141,36 @@ export default function DefensesTab({
           valA = '';
           valB = '';
       }
-  
-      // Gérer les valeurs vides/null : les mettre à la fin
-      const isEmptyA = valA === null || valA === '' || valA === 0;
-      const isEmptyB = valB === null || valB === '' || valB === 0;
-  
-      if (isEmptyA && isEmptyB) return 0;
-      if (isEmptyA) return 1; // A vide → après B
-      if (isEmptyB) return -1; // B vide → A avant B
-  
-      // Comparaison normale
-      if (valA < valB) return direction === 'asc' ? -1 : 1;
-      if (valA > valB) return direction === 'asc' ? 1 : -1;
-      return 0;
+      return compareValues(valA, valB, direction);
     });
   };
 
+  // Application des filtres
+  const filteredEleves = useMemo(() => {
+    let result = [...localEleves];
+
+    if (hideWithoutGuide) {
+      result = result.filter(e => e.guide_id && e.guide_id.trim() !== '');
+    }
+
+    if (showOnlyIncompleteJury) {
+      result = result.filter(e => {
+        const hasGuide = e.guide_id && e.guide_id.trim() !== '';
+        const hasLecteurInterne = e.lecteur_interne_id && e.lecteur_interne_id.trim() !== '';
+        const hasLecteurExterne = e.lecteur_externe_id && e.lecteur_externe_id.trim() !== '';
+        const hasMediateur = e.mediateur_id && e.mediateur_id.trim() !== '';
+        // Jury complet = les quatre sont présents
+        const juryComplet = hasGuide && hasLecteurInterne && hasLecteurExterne && hasMediateur;
+        return !juryComplet;
+      });
+    }
+
+    return result;
+  }, [localEleves, hideWithoutGuide, showOnlyIncompleteJury]);
+
   const sortedEleves = useMemo(() => {
-    return sortData(localEleves, sortField, sortDirection);
-  }, [localEleves, sortField, sortDirection]);
+    return sortData(filteredEleves, sortField, sortDirection);
+  }, [filteredEleves, sortField, sortDirection]);
 
   const handleSort = (field: SortField) => {
     if (field === sortField) {
@@ -189,7 +231,6 @@ export default function DefensesTab({
     };
   };
 
-  // Rendu d'une cellule de sélection (select ou label)
   const renderSelectOrLabel = (
     eleve: Eleve,
     field: 'lecteur_interne_id' | 'lecteur_externe_id' | 'mediateur_id',
@@ -218,7 +259,6 @@ export default function DefensesTab({
     );
   };
 
-  // Rendu d'une cellule avec input texte ou label
   const renderInputOrLabel = (
     eleve: Eleve,
     field: 'date_defense' | 'heure_defense' | 'localisation_defense',
@@ -260,10 +300,10 @@ export default function DefensesTab({
 
   return (
     <div className="space-y-6">
-      {/* En-tête */}
+      {/* En-tête avec mode édition et filtres */}
       <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-4">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-4">
+          <div className="flex flex-wrap items-center gap-4">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -274,13 +314,37 @@ export default function DefensesTab({
               />
               <span className="text-sm font-medium">Mode édition défenses</span>
             </label>
+
+            <div className="h-6 w-px bg-gray-300 hidden md:block" />
+
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={hideWithoutGuide}
+                onChange={(e) => setHideWithoutGuide(e.target.checked)}
+                className="w-4 h-4 text-blue-600 rounded"
+              />
+              <span className="text-sm text-gray-700">Masquer les TFH sans guide</span>
+            </label>
+
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showOnlyIncompleteJury}
+                onChange={(e) => setShowOnlyIncompleteJury(e.target.checked)}
+                className="w-4 h-4 text-blue-600 rounded"
+              />
+              <span className="text-sm text-gray-700">Uniquement les jurys incomplets</span>
+            </label>
           </div>
+
           <span className="text-sm text-gray-500">
-            ({sortedEleves.length} élève{sortedEleves.length > 1 ? 's' : ''})
+            {sortedEleves.length} / {localEleves.length} élève{sortedEleves.length > 1 ? 's' : ''}
           </span>
         </div>
+
         {isProcessing && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
             <p className="text-sm text-blue-700 flex items-center gap-2">
               <span className="animate-spin">⟳</span> Mise à jour en cours...
             </p>
@@ -321,15 +385,14 @@ export default function DefensesTab({
             <tbody>
               {sortedEleves.map((eleve) => {
                 const categoryStyle = getCategoryStyle(eleve.categorie || 'Non catégorisé');
-                // Labels pour les selects
                 const lecteurInterneLabel = guides.find(g => g.id === eleve.lecteur_interne_id)
                   ? `${guides.find(g => g.id === eleve.lecteur_interne_id)!.nom} ${guides.find(g => g.id === eleve.lecteur_interne_id)!.initiale}.`
                   : '';
                 const lecteurExterneLabel = lecteursExternes.find(l => l.id === eleve.lecteur_externe_id)
-                  ? `${lecteursExternes.find(l => l.id === eleve.lecteur_externe_id)!.prenom} ${lecteursExternes.find(l => l.id === eleve.lecteur_externe_id)!.nom}`
+                  ? `${lecteursExternes.find(l => l.id === eleve.lecteur_externe_id)!.nom} ${lecteursExternes.find(l => l.id === eleve.lecteur_externe_id)!.prenom}`
                   : '';
                 const mediateurLabel = mediateurs.find(m => m.id === eleve.mediateur_id)
-                  ? `${mediateurs.find(m => m.id === eleve.mediateur_id)!.prenom} ${mediateurs.find(m => m.id === eleve.mediateur_id)!.nom}`
+                  ? `${mediateurs.find(m => m.id === eleve.mediateur_id)!.nom} ${mediateurs.find(m => m.id === eleve.mediateur_id)!.prenom}`
                   : '';
 
                 return (
@@ -346,7 +409,7 @@ export default function DefensesTab({
                       {eleve.problematique || '-'}
                     </td>
                     <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">
-                      {eleve.guide_nom} {eleve.guide_prenom}.
+                      {eleve.guide_nom} {eleve.guide_prenom}
                     </td>
                     <td className="px-3 py-3">
                       {renderSelectOrLabel(
@@ -360,7 +423,7 @@ export default function DefensesTab({
                       {renderSelectOrLabel(
                         eleve,
                         'lecteur_externe_id',
-                        lecteursExternes.map(l => ({ id: l.id, label: `${l.prenom} ${l.nom}` })),
+                        lecteursExternes.map(l => ({ id: l.id, label: `${l.nom} ${l.prenom}` })),
                         () => lecteurExterneLabel
                       )}
                     </td>
@@ -368,7 +431,7 @@ export default function DefensesTab({
                       {renderSelectOrLabel(
                         eleve,
                         'mediateur_id',
-                        mediateurs.map(m => ({ id: m.id, label: `${m.prenom} ${m.nom}` })),
+                        mediateurs.map(m => ({ id: m.id, label: `${m.nom} ${m.prenom}` })),
                         () => mediateurLabel
                       )}
                     </td>
@@ -381,7 +444,7 @@ export default function DefensesTab({
                     <td className="px-3 py-3">
                       {renderInputOrLabel(eleve, 'localisation_defense', 'text', eleve.localisation_defense || '', 'Salle, bâtiment...')}
                     </td>
-                  </tr>
+                  </table>
                 );
               })}
             </tbody>
@@ -395,7 +458,8 @@ export default function DefensesTab({
         <ul className="text-sm text-gray-600 space-y-1">
           <li>• Cliquez sur les entêtes de colonnes pour trier (ascendant/descendant).</li>
           <li>• Activez le <strong>Mode édition</strong> pour modifier les défenses.</li>
-          <li>• Sélectionnez un <strong>lecteur interne/externe/médiateur</strong> dans les listes déroulantes.</li>
+          <li>• Les filtres permettent de masquer les élèves sans guide ou de n’afficher que les jurys incomplets.</li>
+          <li>• Un jury est complet si un guide, un lecteur interne, un lecteur externe et un médiateur sont assignés.</li>
           <li>• Cliquez sur <strong>×</strong> pour effacer une date/heure/localisation.</li>
           <li>• Les catégories sont colorées pour une meilleure visibilité.</li>
         </ul>
