@@ -46,7 +46,7 @@ export default function DefensesTab({
   const sortData = (data: Eleve[], field: SortField, direction: SortDirection): Eleve[] => {
     return [...data].sort((a, b) => {
       let valA: any, valB: any;
-
+  
       switch (field) {
         case 'nom':
           valA = a.nom || '';
@@ -95,8 +95,8 @@ export default function DefensesTab({
           valB = medB ? `${medB.prenom} ${medB.nom}` : '';
           break;
         case 'date_defense':
-          valA = a.date_defense ? new Date(a.date_defense).getTime() : 0;
-          valB = b.date_defense ? new Date(b.date_defense).getTime() : 0;
+          valA = a.date_defense ? new Date(a.date_defense).getTime() : null;
+          valB = b.date_defense ? new Date(b.date_defense).getTime() : null;
           break;
         case 'heure_defense':
           valA = a.heure_defense || '';
@@ -110,7 +110,16 @@ export default function DefensesTab({
           valA = '';
           valB = '';
       }
-
+  
+      // Gérer les valeurs vides/null : les mettre à la fin
+      const isEmptyA = valA === null || valA === '' || valA === 0;
+      const isEmptyB = valB === null || valB === '' || valB === 0;
+  
+      if (isEmptyA && isEmptyB) return 0;
+      if (isEmptyA) return 1; // A vide → après B
+      if (isEmptyB) return -1; // B vide → A avant B
+  
+      // Comparaison normale
       if (valA < valB) return direction === 'asc' ? -1 : 1;
       if (valA > valB) return direction === 'asc' ? 1 : -1;
       return 0;
