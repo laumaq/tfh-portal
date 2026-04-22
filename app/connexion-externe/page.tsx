@@ -20,7 +20,6 @@ export default function ConnexionExternePage() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [welcomeMessage, setWelcomeMessage] = useState('');
   const [checkingAccess, setCheckingAccess] = useState(true);
-  const [userRoles, setUserRoles] = useState<{ hasLecteur: boolean; hasMediateur: boolean }>({ hasLecteur: false, hasMediateur: false });
   const router = useRouter();
 
   // Vérifier si le portail est ouvert
@@ -59,27 +58,21 @@ export default function ConnexionExternePage() {
     try {
       const { data: externeData, error } = await supabase
         .from('externes')
-        .select('id, email, telephone, mot_de_passe, lecteur_externe_id, mediateur_id')
+        .select('id, email, telephone, mot_de_passe')
         .ilike('nom', nomTrimmed)
         .ilike('prenom', prenomTrimmed)
         .maybeSingle();
 
       if (!error && externeData) {
         setIsNewUser(false);
-        setUserRoles({
-          hasLecteur: !!externeData.lecteur_externe_id,
-          hasMediateur: !!externeData.mediateur_id
-        });
         return externeData;
       } else {
         setIsNewUser(true);
-        setUserRoles({ hasLecteur: false, hasMediateur: false });
         return null;
       }
     } catch (err) {
       console.error('Erreur vérification:', err);
       setIsNewUser(true);
-      setUserRoles({ hasLecteur: false, hasMediateur: false });
       return null;
     }
   };
@@ -99,7 +92,7 @@ export default function ConnexionExternePage() {
       // 1. VÉRIFICATION UTILISATEUR EXISTANT DANS externes
       const { data: existingUser, error: checkError } = await supabase
         .from('externes')
-        .select('id, email, telephone, mot_de_passe, nom, prenom, lecteur_externe_id, mediateur_id')
+        .select('id, email, telephone, mot_de_passe, nom, prenom')
         .ilike('nom', nomTrimmed)
         .ilike('prenom', prenomTrimmed)
         .maybeSingle();
@@ -129,32 +122,11 @@ export default function ConnexionExternePage() {
           }
         }
 
-        // Déterminer quel rôle utiliser (priorité au lecteur externe si les deux existent)
-        let userType = '';
-        let dashboardPath = '';
-        
-        if (existingUser.lecteur_externe_id && existingUser.mediateur_id) {
-          // Les deux rôles existent - on pourrait demander à l'utilisateur, mais pour l'instant on choisit lecteur
-          userType = 'lecteur_externe';
-          dashboardPath = '/dashboard/externe';
-        } else if (existingUser.lecteur_externe_id) {
-          userType = 'lecteur_externe';
-          dashboardPath = '/dashboard/externe';
-        } else if (existingUser.mediateur_id) {
-          userType = 'mediateur';
-          dashboardPath = '/dashboard/externe';
-        } else {
-          setError('Aucun rôle valide trouvé pour cet utilisateur');
-          setLoading(false);
-          return;
-        }
-
-        localStorage.setItem('userType', userType);
+        localStorage.setItem('userType', 'externe');
         localStorage.setItem('userId', existingUser.id);
         localStorage.setItem('userName', `${existingUser.prenom} ${existingUser.nom}`);
-        localStorage.setItem('externeId', existingUser.id);
         
-        router.push(dashboardPath);
+        router.push('/dashboard/externe');
         return;
       }
 
@@ -184,7 +156,7 @@ export default function ConnexionExternePage() {
       const mediateurId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
 
       // Créer d'abord dans lecteurs_externes
-      const { data: newLecteur, error: lecteurError } = await supabase
+      const { error: lecteurError } = await supabase
         .from('lecteurs_externes')
         .insert([{
           id: lecteurExterneId,
@@ -194,14 +166,12 @@ export default function ConnexionExternePage() {
           telephone: telephoneTrimmed,
           mot_de_passe: password || null,
           created_at: new Date().toISOString()
-        }])
-        .select()
-        .single();
+        }]);
 
       if (lecteurError) throw lecteurError;
 
       // Créer dans mediateurs
-      const { data: newMediateur, error: mediateurError } = await supabase
+      const { error: mediateurError } = await supabase
         .from('mediateurs')
         .insert([{
           id: mediateurId,
@@ -211,9 +181,7 @@ export default function ConnexionExternePage() {
           telephone: telephoneTrimmed,
           mot_de_passe: password || null,
           created_at: new Date().toISOString()
-        }])
-        .select()
-        .single();
+        }]);
 
       if (mediateurError) throw mediateurError;
 
@@ -235,16 +203,15 @@ export default function ConnexionExternePage() {
 
       if (externeError) throw externeError;
 
-      localStorage.setItem('userType', 'lecteur_externe');
+      localStorage.setItem('userType', 'externe');
       localStorage.setItem('userId', newExterne.id);
       localStorage.setItem('userName', `${prenomTrimmed} ${nomTrimmed}`);
-      localStorage.setItem('externeId', newExterne.id);
       
-      setWelcomeMessage('Bienvenue ! Votre compte a été créé avec succès. Vous pourrez accéder à vos deux rôles (lecteur externe et médiateur) !\n\nMerci de prendre du temps pour nos rhétos !');
+      setWelcomeMessage('Bienvenue ! Votre compte a été créé avec succès.\n\nMerci de prendre du temps pour nos rhétos !');
       setShowWelcome(true);
 
       setTimeout(() => {
-        router.push('/dashboard/lecteur_externe');
+        router.push('/dashboard/externe');
       }, 6000);
 
     } catch (err: any) {
@@ -334,12 +301,7 @@ export default function ConnexionExternePage() {
               {isNewUser ? (
                 <>Nouvel externe détecté. Veuillez compléter les informations ci-dessous.</>
               ) : (
-                <>
-                  Externe existant détecté. Connectez-vous avec votre mot de passe.
-                  {userRoles.hasLecteur && userRoles.hasMediateur && (
-                    <p className="text-xs mt-1">Vous avez accès aux deux rôles (lecteur externe et médiateur).</p>
-                  )}
-                </>
+                <>Externe existant détecté. Connectez-vous avec votre mot de passe.</>
               )}
             </div>
           )}
@@ -449,7 +411,7 @@ export default function ConnexionExternePage() {
                   <div className="bg-blue-600 h-2 rounded-full animate-progress"></div>
                 </div>
                 <button
-                  onClick={() => router.push('/dashboard/lecteur_externe')}
+                  onClick={() => router.push('/dashboard/externe')}
                   className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
                 >
                   Aller maintenant →
