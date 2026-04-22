@@ -136,13 +136,13 @@ export default function ConnexionExternePage() {
         if (existingUser.lecteur_externe_id && existingUser.mediateur_id) {
           // Les deux rôles existent - on pourrait demander à l'utilisateur, mais pour l'instant on choisit lecteur
           userType = 'lecteur_externe';
-          dashboardPath = '/dashboard/lecteur_externe';
+          dashboardPath = '/dashboard/externe';
         } else if (existingUser.lecteur_externe_id) {
           userType = 'lecteur_externe';
-          dashboardPath = '/dashboard/lecteur_externe';
+          dashboardPath = '/dashboard/externe';
         } else if (existingUser.mediateur_id) {
           userType = 'mediateur';
-          dashboardPath = '/dashboard/mediateur';
+          dashboardPath = '/dashboard/externe';
         } else {
           setError('Aucun rôle valide trouvé pour cet utilisateur');
           setLoading(false);
