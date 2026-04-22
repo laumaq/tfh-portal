@@ -1,4 +1,4 @@
-// app/connexion-lecteur-externe/page.tsx
+// app/connexion-externe/page.tsx
 
 'use client';
 
