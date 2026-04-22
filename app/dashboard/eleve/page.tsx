@@ -43,6 +43,8 @@ interface EleveInfo {
     eleves_voir_guides: boolean;
     eleves_voir_defenses: boolean;
   };
+
+  url_tfh?: string;
 }
 
 export default function EleveDashboard() {
@@ -78,6 +80,11 @@ export default function EleveDashboard() {
     index: number;
     nom: string;
   }>>([]);
+
+  const [editingUrl, setEditingUrl] = useState(false);
+  const [newUrl, setNewUrl] = useState('');
+
+  
   const router = useRouter();
 
   useEffect(() => {
@@ -235,6 +242,8 @@ export default function EleveDashboard() {
       setNewSource3(data.source_3 || '');
       setNewSource4(data.source_4 || '');
       setNewSource5(data.source_5 || '');
+
+      setNewUrl(data.url_tfh || '');
       
       // Charger l'objectif général
       const { data: objectifGeneralData } = await supabase
@@ -326,6 +335,29 @@ export default function EleveDashboard() {
     }
   };
 
+  const handleSaveUrl = async () => {
+    if (!eleve) return;
+  
+    // Validation simple d'URL
+    const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i;
+    if (newUrl && !urlPattern.test(newUrl)) {
+      alert('Veuillez entrer une URL valide (ex: https://monfichier.pdf)');
+      return;
+    }
+  
+    try {
+      await supabase
+        .from('eleves')
+        .update({ url_tfh: newUrl || null })
+        .eq('id', eleve.id);
+  
+      loadEleve(eleve.id);
+      setEditingUrl(false);
+    } catch (err) {
+      console.error('Erreur sauvegarde URL:', err);
+    }
+  };
+  
   const getMessagePourEleve = (statut: string): string => {
     // Gérer les cas NULL, undefined ou chaîne vide
     if (!statut || statut === '' || statut === 'null' || statut === 'undefined') {
@@ -632,6 +664,65 @@ export default function EleveDashboard() {
             ) : (
               <div className="bg-gray-50 rounded-lg p-4 whitespace-pre-wrap">
                 {eleve.problematique || 'Aucune problématique définie'}
+              </div>
+            )}
+          </div>
+
+          {/* URL du TFH */}
+          <div className="border-t pt-6">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-lg font-semibold text-gray-700">Lien vers mon TFH (version numérique)</h3>
+              {!editingUrl && autorisationModification && (
+                <button
+                  onClick={() => setEditingUrl(true)}
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  {eleve.url_tfh ? 'Modifier' : 'Ajouter'}
+                </button>
+              )}
+            </div>
+          
+            {editingUrl ? (
+              <div className="space-y-3">
+                <input
+                  type="url"
+                  value={newUrl}
+                  onChange={(e) => setNewUrl(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500"
+                  placeholder="https://..."
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSaveUrl}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    Enregistrer
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingUrl(false);
+                      setNewUrl(eleve.url_tfh || '');
+                    }}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gray-50 rounded-lg p-4">
+                {eleve.url_tfh ? (
+                  <a
+                    href={eleve.url_tfh}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline break-all"
+                  >
+                    {eleve.url_tfh}
+                  </a>
+                ) : (
+                  <span className="text-gray-400 italic">Aucun lien déposé</span>
+                )}
               </div>
             )}
           </div>
