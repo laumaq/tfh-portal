@@ -1,3 +1,5 @@
+// /app/dashboard/coordinateur/tabs/DefensesTab.tsx
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -241,70 +243,73 @@ export default function DefensesTab({
     };
   };
   
-  // Récupère les options disponibles pour un type de rôle, en excluant ceux déjà pris à la même date/heure
   const getAvailableOptions = (
     type: 'lecteur_interne' | 'lecteur_externe' | 'mediateur',
     currentEleve: Eleve,
     allEleves: Eleve[]
   ): { id: string; label: string }[] => {
     // Récupérer la date et l'heure de la défense de l'élève courant
-    const currentDate = currentEleve.date_defense;
-    const currentTime = currentEleve.heure_defense;
-    if (!currentDate || !currentTime) {
-      // Si pas de date/heure, on ne filtre pas (on retourne toutes les options triées)
-      if (type === 'lecteur_interne') {
-        return guides.map(g => ({ id: g.id, label: `${g.nom} ${g.initiale}.` }))
-          .sort((a, b) => a.label.localeCompare(b.label));
-      } else if (type === 'lecteur_externe') {
-        return lecteursExternes.map(l => ({ id: l.id, label: `${l.nom} ${l.prenom}` }))
-          .sort((a, b) => a.label.localeCompare(b.label));
-      } else {
-        return mediateurs.map(m => ({ id: m.id, label: `${m.nom} ${m.prenom}` }))
-          .sort((a, b) => a.label.localeCompare(b.label));
-      }
+    const currentDate = currentEleve.date_defense?.trim();
+    const currentTime = currentEleve.heure_defense?.trim();
+    
+    // Construire un timestamp pour la défense courante
+    let currentTimestamp: number | null = null;
+    if (currentDate && currentTime) {
+      const dateTimeStr = `${currentDate}T${currentTime}`;
+      currentTimestamp = new Date(dateTimeStr).getTime();
     }
   
-    // Trouver tous les élèves qui ont une défense à la même date et heure (sauf l'élève courant)
-    const conflits = allEleves.filter(e => 
-      e.id !== currentEleve.id &&
-      e.date_defense === currentDate &&
-      e.heure_defense === currentTime
-    );
+    // Fonction pour obtenir la liste complète des options (triée)
+    const getAllOptions = (): { id: string; label: string }[] => {
+      if (type === 'lecteur_interne') {
+        return guides.map(g => ({ id: g.id, label: `${g.nom} ${g.initiale}.` }));
+      } else if (type === 'lecteur_externe') {
+        return lecteursExternes.map(l => ({ id: l.id, label: `${l.nom} ${l.prenom}` }));
+      } else {
+        return mediateurs.map(m => ({ id: m.id, label: `${m.nom} ${m.prenom}` }));
+      }
+    };
+  
+    // Si pas de date/heure valide, on retourne toutes les options triées
+    if (!currentTimestamp || isNaN(currentTimestamp)) {
+      return getAllOptions().sort((a, b) => a.label.localeCompare(b.label));
+    }
+  
+    // Trouver tous les élèves qui ont une défense au même créneau horaire (à la minute près)
+    const conflits = allEleves.filter(e => {
+      if (e.id === currentEleve.id) return false;
+      const eDate = e.date_defense?.trim();
+      const eTime = e.heure_defense?.trim();
+      if (!eDate || !eTime) return false;
+      const eTimestamp = new Date(`${eDate}T${eTime}`).getTime();
+      return eTimestamp === currentTimestamp;
+    });
   
     // Extraire les IDs des personnes déjà assignées pour ce rôle
     let idsPris: string[] = [];
     if (type === 'lecteur_interne') {
       idsPris = conflits
         .map(e => e.lecteur_interne_id)
-        .filter((id): id is string => id !== null && id !== undefined && id.trim() !== '');
+        .filter((id): id is string => !!id && id.trim() !== '');
     } else if (type === 'lecteur_externe') {
       idsPris = conflits
         .map(e => e.lecteur_externe_id)
-        .filter((id): id is string => id !== null && id !== undefined && id.trim() !== '');
+        .filter((id): id is string => !!id && id.trim() !== '');
     } else {
       idsPris = conflits
         .map(e => e.mediateur_id)
-        .filter((id): id is string => id !== null && id !== undefined && id.trim() !== '');
+        .filter((id): id is string => !!id && id.trim() !== '');
     }
   
-    // Générer toutes les options
-    let allOptions: { id: string; label: string }[] = [];
-    if (type === 'lecteur_interne') {
-      allOptions = guides.map(g => ({ id: g.id, label: `${g.nom} ${g.initiale}.` }));
-    } else if (type === 'lecteur_externe') {
-      allOptions = lecteursExternes.map(l => ({ id: l.id, label: `${l.nom} ${l.prenom}` }));
-    } else {
-      allOptions = mediateurs.map(m => ({ id: m.id, label: `${m.nom} ${m.prenom}` }));
-    }
-  
-    // Filtrer : garder ceux qui ne sont PAS dans idsPris, SAUF si c'est l'option actuellement sélectionnée
-    const currentId = currentEleve[type === 'lecteur_interne' ? 'lecteur_interne_id' : 
+    const allOptions = getAllOptions();
+    const currentId = currentEleve[type === 'lecteur_interne' ? 'lecteur_interne_id' :
                                     type === 'lecteur_externe' ? 'lecteur_externe_id' : 'mediateur_id'] || '';
-    const availableOptions = allOptions.filter(opt => 
+  
+    // Filtrer : exclure les indisponibles sauf si c'est la valeur actuelle
+    const availableOptions = allOptions.filter(opt =>
       !idsPris.includes(opt.id) || opt.id === currentId
     );
   
-    // Trier par label alphabétique
     return availableOptions.sort((a, b) => a.label.localeCompare(b.label));
   };
 
