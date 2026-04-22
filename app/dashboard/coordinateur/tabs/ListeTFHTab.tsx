@@ -17,6 +17,7 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
   const [filteredClass, setFilteredClass] = useState<string>('all');
   const [isProcessing, setIsProcessing] = useState<string | null>(null); // ID de l'élève en cours de traitement
   const [localEleves, setLocalEleves] = useState<Eleve[]>(eleves);
+  const [renduFilter, setRenduFilter] = useState<'all' | 'rendu' | 'non_rendu'>('all');
   
   // Extraire toutes les classes uniques
   const classesUniques = Array.from(new Set(eleves.map(e => e.classe || '').filter(c => c))).sort();
@@ -34,10 +35,20 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
     setLocalEleves(elevesTries);
   }, [eleves]);
 
-  // Filtrer les élèves par classe sélectionnée
-  const elevesFiltres = filteredClass === 'all' 
-    ? localEleves 
-    : localEleves.filter(e => e.classe === filteredClass);
+  // Filtrer les élèves par classe et par état de rendu
+  const elevesFiltres = (() => {
+    let result = filteredClass === 'all' 
+      ? localEleves 
+      : localEleves.filter(e => e.classe === filteredClass);
+    
+    if (renduFilter === 'rendu') {
+      result = result.filter(e => e.tfh_non_rendu !== true);
+    } else if (renduFilter === 'non_rendu') {
+      result = result.filter(e => e.tfh_non_rendu === true);
+    }
+    
+    return result;
+  })();
 
   // Fonction pour formater le nom complet
   const formatNomComplet = (eleve: Eleve) => {
@@ -163,6 +174,27 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
     
     // Cas spécial pour problématique (textarea)
     if (field === 'problematique') {
+      // Hors mode édition, afficher un lien si url_tfh existe
+      if (!editingMode && eleve.url_tfh) {
+        return (
+          <div className="text-sm">
+            <a
+              href={eleve.url_tfh}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline break-words"
+            >
+              {displayValue || '-'}
+            </a>
+          </div>
+        );
+      }
+      
+      // Sinon, afficher le textarea normal (mode édition) ou texte simple (hors édition sans lien)
+      if (!editingMode) {
+        return <div className="text-sm whitespace-pre-wrap break-words">{displayValue || '-'}</div>;
+      }
+      
       return (
         <div className="relative group">
           <textarea
@@ -253,6 +285,24 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
                 <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
+
+
+            {/* Filtre par état de rendu */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">État:</label>
+              <div className="relative">
+                <select
+                  value={renduFilter}
+                  onChange={(e) => setRenduFilter(e.target.value as 'all' | 'rendu' | 'non_rendu')}
+                  className="pl-3 pr-8 py-1.5 text-sm border border-gray-300 rounded-lg bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                >
+                  <option value="all">Tous</option>
+                  <option value="rendu">Rendu</option>
+                  <option value="non_rendu">Non rendu</option>
+                </select>
+                <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
             
             {/* Mode édition */}
             <div className="flex items-center gap-2">
@@ -314,7 +364,7 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {elevesFiltres.map((eleve) => (
-                <tr key={eleve.id} className="hover:bg-gray-50">
+                <tr key={eleve.id} className={`hover:bg-gray-50 ${eleve.tfh_non_rendu ? 'bg-red-50' : ''}`}>
                   {/* Classe */}
                   <td className="px-3 py-3 whitespace-nowrap">
                     {renderEditableCell(eleve, 'classe', eleve.classe || '')}
