@@ -672,7 +672,7 @@ export default function EleveDashboard() {
           <div className="border-t pt-6">
             <div className="flex justify-between items-center mb-3">
               <h3 className="text-lg font-semibold text-gray-700">Lien vers mon TFH (version numérique)</h3>
-              {!editingUrl && autorisationModification && (
+              {!editingUrl && (
                 <button
                   onClick={() => setEditingUrl(true)}
                   className="text-sm text-blue-600 hover:text-blue-700 font-medium"
