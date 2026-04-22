@@ -1,3 +1,5 @@
+// app/connexion-lecteur-externe/page.tsx
+
 'use client';
 
 import { useState, useEffect } from 'react';
