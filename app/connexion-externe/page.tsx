@@ -51,18 +51,18 @@ export default function ConnexionExternePage() {
   // Vérifier si l'utilisateur existe dans la table externes
   const checkExistingUser = async () => {
     if (!nom.trim() || !prenom.trim()) return;
-
-    const nomTrimmed = nom.trim();
-    const prenomTrimmed = prenom.trim();
-
+  
+    const nomRaw = nom.trim();
+    const prenomRaw = prenom.trim();
+  
     try {
       const { data: externeData, error } = await supabase
         .from('externes')
         .select('id, email, telephone, mot_de_passe')
-        .ilike('nom', nomTrimmed)
-        .ilike('prenom', prenomTrimmed)
+        .ilike('nom', nomRaw)
+        .ilike('prenom', prenomRaw)
         .maybeSingle();
-
+  
       if (!error && externeData) {
         setIsNewUser(false);
         return externeData;
