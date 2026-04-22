@@ -739,23 +739,31 @@ export default function GuideDashboard() {
                             autoFocus
                           />
                         ) : (
-                          <div
-                            onClick={() => setEditingCell({id: eleve.id, field: 'problematique'})}
-                            className="cursor-pointer hover:bg-gray-100 p-1 rounded min-h-[60px] flex items-start whitespace-pre-wrap break-words"
-                          >
-                            {eleve.url_tfh ? (
-                              <a
-                                href={eleve.url_tfh}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline"
-                                onClick={(e) => e.stopPropagation()} // Empêche l'activation de l'édition
+                          <div className="flex items-start gap-2">
+                            <div className="flex-1 whitespace-pre-wrap break-words">
+                              {eleve.problematique || '-'}
+                            </div>
+                            <div className="flex gap-1 flex-shrink-0">
+                              <button
+                                onClick={() => setEditingCell({id: eleve.id, field: 'problematique'})}
+                                className="text-gray-400 hover:text-blue-600 transition-colors p-1"
+                                title="Modifier la problématique"
                               >
-                                {eleve.problematique || '-'}
-                              </a>
-                            ) : (
-                              eleve.problematique || '-'
-                            )}
+                                ✏️
+                              </button>
+                              {eleve.url_tfh && (
+                                <a
+                                  href={eleve.url_tfh}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-gray-400 hover:text-blue-600 transition-colors p-1"
+                                  title="Ouvrir le lien vers le TFH numérique"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  🔗
+                                </a>
+                              )}
+                            </div>
                           </div>
                         )}
                       </td>
