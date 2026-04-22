@@ -80,6 +80,7 @@ export interface Eleve {
 
   mot_de_passe?: string | null;
   tfh_non_rendu?: boolean;
+  url_tfh?: string;
 }
 
 export interface Guide {
