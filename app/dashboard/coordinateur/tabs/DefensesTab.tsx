@@ -251,22 +251,22 @@ export default function DefensesTab({
     const currentDate = currentEleve.date_defense;
     const currentTime = currentEleve.heure_defense;
     if (!currentDate || !currentTime) {
-      // Si pas de date/heure, on ne filtre pas (on retourne toutes les options)
+      // Si pas de date/heure, on ne filtre pas (on retourne toutes les options triées)
       if (type === 'lecteur_interne') {
         return guides.map(g => ({ id: g.id, label: `${g.nom} ${g.initiale}.` }))
-          .sort((a,b) => a.label.localeCompare(b.label));
+          .sort((a, b) => a.label.localeCompare(b.label));
       } else if (type === 'lecteur_externe') {
         return lecteursExternes.map(l => ({ id: l.id, label: `${l.nom} ${l.prenom}` }))
-          .sort((a,b) => a.label.localeCompare(b.label));
+          .sort((a, b) => a.label.localeCompare(b.label));
       } else {
         return mediateurs.map(m => ({ id: m.id, label: `${m.nom} ${m.prenom}` }))
-          .sort((a,b) => a.label.localeCompare(b.label));
+          .sort((a, b) => a.label.localeCompare(b.label));
       }
     }
   
-    // Trouver tous les élèves qui ont une défense à la même date et heure
+    // Trouver tous les élèves qui ont une défense à la même date et heure (sauf l'élève courant)
     const conflits = allEleves.filter(e => 
-      e.id !== currentEleve.id && // exclure l'élève courant
+      e.id !== currentEleve.id &&
       e.date_defense === currentDate &&
       e.heure_defense === currentTime
     );
@@ -274,11 +274,17 @@ export default function DefensesTab({
     // Extraire les IDs des personnes déjà assignées pour ce rôle
     let idsPris: string[] = [];
     if (type === 'lecteur_interne') {
-      idsPris = conflits.map(e => e.lecteur_interne_id).filter(id => id && id.trim() !== '');
+      idsPris = conflits
+        .map(e => e.lecteur_interne_id)
+        .filter((id): id is string => id !== null && id !== undefined && id.trim() !== '');
     } else if (type === 'lecteur_externe') {
-      idsPris = conflits.map(e => e.lecteur_externe_id).filter(id => id && id.trim() !== '');
+      idsPris = conflits
+        .map(e => e.lecteur_externe_id)
+        .filter((id): id is string => id !== null && id !== undefined && id.trim() !== '');
     } else {
-      idsPris = conflits.map(e => e.mediateur_id).filter(id => id && id.trim() !== '');
+      idsPris = conflits
+        .map(e => e.mediateur_id)
+        .filter((id): id is string => id !== null && id !== undefined && id.trim() !== '');
     }
   
     // Générer toutes les options
@@ -300,7 +306,7 @@ export default function DefensesTab({
   
     // Trier par label alphabétique
     return availableOptions.sort((a, b) => a.label.localeCompare(b.label));
-  };  
+  };
 
   const renderSelectOrLabel = (
     eleve: Eleve,
