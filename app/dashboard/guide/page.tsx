@@ -33,6 +33,7 @@ interface Eleve {
   mediateur_prenom?: string;
   objectif_particulier: string | null;
   url_tfh?: string;
+  tfh_non_rendu?: boolean;
 }
 
 interface Guide {
@@ -75,6 +76,7 @@ export default function GuideDashboard() {
   const [lecteurInterneEnabled, setLecteurInterneEnabled] = useState(false);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [objectifGeneral, setObjectifGeneral] = useState<string>('');
+  const [defensesNonRendus, setDefensesNonRendus] = useState<Eleve[]>([]);
   // Modal d'objectif
   const [showObjectifModal, setShowObjectifModal] = useState(false);
   const [selectedEleveForObjectif, setSelectedEleveForObjectif] = useState<Eleve | null>(null);
@@ -329,6 +331,18 @@ export default function GuideDashboard() {
     return count;
   };
 
+  const calculateColspanNonRendu = () => {
+    let count = 0;
+    if (displaySettings.lecteur_interne_voir_eleves) count += 2; // classe + élève
+    count += 1; // catégorie
+    count += 1; // problématique
+    if (displaySettings.lecteur_interne_voir_guides) count += 1;
+    if (displaySettings.lecteur_interne_voir_guides) count += 1;
+    if (displaySettings.lecteur_interne_voir_lecteurs_externes) count += 1;
+    if (displaySettings.lecteur_interne_voir_mediateurs) count += 1;
+    return count;
+  };  
+
   const loadDefenses = async (guideId: string) => {
     try {
       setLoadingDefenses(true);
@@ -374,6 +388,7 @@ export default function GuideDashboard() {
 
       setDefensesProgrammees(programmees);
       setDefensesNonProgrammees(nonProgrammees);
+      setDefensesNonRendus(nonRendus);
 
     } catch (err) {
       console.error('Erreur chargement des défenses:', err);
@@ -1345,6 +1360,120 @@ export default function GuideDashboard() {
                     </div>
                   </div>
                 )}
+
+                {defensesNonRendus.length > 0 && (
+                  <div>
+                    <div className="mb-4">
+                      <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                        <span className="w-3 h-3 bg-red-500 rounded-full"></span>
+                        TFH non rendus ({defensesNonRendus.length})
+                      </h3>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Ces élèves n’ont pas rendu leur travail. Leur soutenance n’aura pas lieu.
+                      </p>
+                    </div>
+                    
+                    <div className="bg-white rounded-lg shadow overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-100 border-b">
+                          <tr>
+                            {displaySettings.lecteur_interne_voir_eleves && (
+                              <>
+                                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Classe</th>
+                                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-32">Élève</th>
+                              </>
+                            )}
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Catégorie</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-96">Problématique</th>
+                            {displaySettings.lecteur_interne_voir_guides && (
+                              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Guide</th>
+                            )}
+                            {displaySettings.lecteur_interne_voir_guides && (
+                              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur interne</th>
+                            )}
+                            {displaySettings.lecteur_interne_voir_lecteurs_externes && (
+                              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur externe</th>
+                            )}
+                            {displaySettings.lecteur_interne_voir_mediateurs && (
+                              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Médiateur</th>
+                            )}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {defensesNonRendus.map((eleve) => {
+                            const isGuide = eleve.guide_id === userGuideId;
+                            const isLecteurInterne = eleve.lecteur_interne_id === userGuideId;
+                            
+                            return (
+                              <tr key={eleve.id} className="border-b bg-red-50">
+                                {displaySettings.lecteur_interne_voir_eleves && (
+                                  <>
+                                    <td className="px-4 py-3 text-sm">{eleve.classe}</td>
+                                    <td className="px-4 py-3 text-sm">
+                                      <div className="flex flex-col min-w-0">
+                                        <span className="font-medium truncate">{eleve.nom}</span>
+                                        <span className="truncate">{eleve.prenom}</span>
+                                      </div>
+                                    </td>
+                                  </>
+                                )}
+                                <td className="px-4 py-3 text-sm">
+                                  {eleve.categorie ? (
+                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 whitespace-nowrap">
+                                      {eleve.categorie}
+                                    </span>
+                                  ) : '-'}
+                                </td>
+                                <td className="px-4 py-3 text-sm">
+                                  <div className="whitespace-pre-wrap break-words min-h-[40px] max-w-96">
+                                    {eleve.problematique || '-'}
+                                  </div>
+                                </td>
+                                {displaySettings.lecteur_interne_voir_guides && (
+                                  <td className="px-4 py-3 text-sm whitespace-nowrap">
+                                    {eleve.guide_nom} {eleve.guide_initiale}.
+                                    {isGuide && <span className="ml-1 text-xs text-blue-600">(vous)</span>}
+                                  </td>
+                                )}
+                                {displaySettings.lecteur_interne_voir_guides && (
+                                  <td className="px-4 py-3 text-sm whitespace-nowrap">
+                                    {eleve.lecteur_interne_nom ? (
+                                      <span>
+                                        {eleve.lecteur_interne_nom} {eleve.lecteur_interne_initiale}.
+                                        {isLecteurInterne && <span className="ml-1 text-xs text-blue-600">(vous)</span>}
+                                      </span>
+                                    ) : '-'}
+                                  </td>
+                                )}
+                                {displaySettings.lecteur_interne_voir_lecteurs_externes && (
+                                  <td className="px-4 py-3 text-sm whitespace-nowrap">
+                                    {eleve.lecteur_externe_nom ? (
+                                      <span>{eleve.lecteur_externe_prenom} {eleve.lecteur_externe_nom}</span>
+                                    ) : '-'}
+                                  </td>
+                                )}
+                                {displaySettings.lecteur_interne_voir_mediateurs && (
+                                  <td className="px-4 py-3 text-sm whitespace-nowrap">
+                                    {eleve.mediateur_nom ? (
+                                      <span>{eleve.mediateur_prenom} {eleve.mediateur_nom}</span>
+                                    ) : '-'}
+                                  </td>
+                                )}
+                              </tr>
+                              // Ligne supplémentaire pour le message explicatif (fusionne toutes les colonnes)
+                              <tr className="bg-red-50 border-b">
+                                <td colSpan={calculateColspanNonRendu()} className="px-4 py-2 text-sm text-red-700 bg-red-100">
+                                  ⚠️ L'élève n'a malheureusement pas rendu son TFH. Sa soutenance n'aura donc pas lieu.
+                                  {!isGuide && isLecteurInterne && " S'il reste des TFH disponibles qui vous intéressent, n'hésitez pas à refaire un tour dans l'onglet 'Lecteur interne'."}
+                                </td>
+                               </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1357,7 +1486,7 @@ export default function GuideDashboard() {
             <span>
               {activeTab === 'guide' && 'Vous pouvez modifier la problématique en cliquant dessus (sauf si l’élève a déposé un lien, auquel cas il est cliquable vers sa version numérique). Les convocations se gèrent via les menus déroulants.'}
               {activeTab === 'lecteur-interne' && 'Sélectionnez les élèves pour lesquels vous serez lecteur interne. Un élève ne peut avoir qu\'un seul lecteur interne.'}
-              {activeTab === 'defenses' && 'Les problématiques surlignées en bleu sont cliquables vers le travail numérique de l’élève (s’il a déposé un lien).'}
+              {activeTab === 'defenses' && 'Les élèves en rouge n’ont pas rendu leur TFH → soutenance annulée. Les problématiques bleues sont cliquables pour accéder à la version digitale du TFH (si disponible).'}
             </span>
           </p>
         </div>
