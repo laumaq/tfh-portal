@@ -229,6 +229,7 @@ export default function EleveDashboard() {
         guide_initiale: data.guide?.initiale || '-',
         sessions: sessionsAVenir,
         defense: defenseData,
+        url_tfh: data.url_tfh || '',
         displaySettings: displaySettings // Inclure directement ici
       };
       
