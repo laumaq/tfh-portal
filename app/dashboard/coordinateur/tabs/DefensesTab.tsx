@@ -240,20 +240,83 @@ export default function DefensesTab({
       color: color.text,
     };
   };
+  
+  // Récupère les options disponibles pour un type de rôle, en excluant ceux déjà pris à la même date/heure
+  const getAvailableOptions = (
+    type: 'lecteur_interne' | 'lecteur_externe' | 'mediateur',
+    currentEleve: Eleve,
+    allEleves: Eleve[]
+  ): { id: string; label: string }[] => {
+    // Récupérer la date et l'heure de la défense de l'élève courant
+    const currentDate = currentEleve.date_defense;
+    const currentTime = currentEleve.heure_defense;
+    if (!currentDate || !currentTime) {
+      // Si pas de date/heure, on ne filtre pas (on retourne toutes les options)
+      if (type === 'lecteur_interne') {
+        return guides.map(g => ({ id: g.id, label: `${g.nom} ${g.initiale}.` }))
+          .sort((a,b) => a.label.localeCompare(b.label));
+      } else if (type === 'lecteur_externe') {
+        return lecteursExternes.map(l => ({ id: l.id, label: `${l.nom} ${l.prenom}` }))
+          .sort((a,b) => a.label.localeCompare(b.label));
+      } else {
+        return mediateurs.map(m => ({ id: m.id, label: `${m.nom} ${m.prenom}` }))
+          .sort((a,b) => a.label.localeCompare(b.label));
+      }
+    }
+  
+    // Trouver tous les élèves qui ont une défense à la même date et heure
+    const conflits = allEleves.filter(e => 
+      e.id !== currentEleve.id && // exclure l'élève courant
+      e.date_defense === currentDate &&
+      e.heure_defense === currentTime
+    );
+  
+    // Extraire les IDs des personnes déjà assignées pour ce rôle
+    let idsPris: string[] = [];
+    if (type === 'lecteur_interne') {
+      idsPris = conflits.map(e => e.lecteur_interne_id).filter(id => id && id.trim() !== '');
+    } else if (type === 'lecteur_externe') {
+      idsPris = conflits.map(e => e.lecteur_externe_id).filter(id => id && id.trim() !== '');
+    } else {
+      idsPris = conflits.map(e => e.mediateur_id).filter(id => id && id.trim() !== '');
+    }
+  
+    // Générer toutes les options
+    let allOptions: { id: string; label: string }[] = [];
+    if (type === 'lecteur_interne') {
+      allOptions = guides.map(g => ({ id: g.id, label: `${g.nom} ${g.initiale}.` }));
+    } else if (type === 'lecteur_externe') {
+      allOptions = lecteursExternes.map(l => ({ id: l.id, label: `${l.nom} ${l.prenom}` }));
+    } else {
+      allOptions = mediateurs.map(m => ({ id: m.id, label: `${m.nom} ${m.prenom}` }));
+    }
+  
+    // Filtrer : garder ceux qui ne sont PAS dans idsPris, SAUF si c'est l'option actuellement sélectionnée
+    const currentId = currentEleve[type === 'lecteur_interne' ? 'lecteur_interne_id' : 
+                                    type === 'lecteur_externe' ? 'lecteur_externe_id' : 'mediateur_id'] || '';
+    const availableOptions = allOptions.filter(opt => 
+      !idsPris.includes(opt.id) || opt.id === currentId
+    );
+  
+    // Trier par label alphabétique
+    return availableOptions.sort((a, b) => a.label.localeCompare(b.label));
+  };  
 
   const renderSelectOrLabel = (
     eleve: Eleve,
     field: 'lecteur_interne_id' | 'lecteur_externe_id' | 'mediateur_id',
-    options: { id: string; label: string }[],
+    type: 'lecteur_interne' | 'lecteur_externe' | 'mediateur',
     getCurrentLabel: () => string
   ) => {
     const currentId = eleve[field] || '';
     const currentLabel = getCurrentLabel();
-
+    // Obtenir les options disponibles (filtrées et triées)
+    const availableOptions = getAvailableOptions(type, eleve, localEleves);
+  
     if (!editingMode) {
       return <div className="text-xs md:text-sm">{currentLabel || '-'}</div>;
     }
-
+  
     return (
       <select
         value={currentId}
@@ -262,7 +325,7 @@ export default function DefensesTab({
         disabled={isProcessing}
       >
         <option value="">-</option>
-        {options.map(opt => (
+        {availableOptions.map(opt => (
           <option key={opt.id} value={opt.id}>{opt.label}</option>
         ))}
       </select>
@@ -466,13 +529,13 @@ export default function DefensesTab({
                       {eleve.guide_nom ? `${eleve.guide_nom} ${eleve.guide_prenom}` : '-'}
                     </td>
                     <td className="px-3 py-3">
-                      {renderSelectOrLabel(eleve, 'lecteur_interne_id', guides.map(g => ({ id: g.id, label: `${g.nom} ${g.initiale}.` })), () => lecteurInterneLabel)}
+                      {renderSelectOrLabel(eleve, 'lecteur_interne_id', 'lecteur_interne', () => lecteurInterneLabel)}
                     </td>
                     <td className="px-3 py-3">
-                      {renderSelectOrLabel(eleve, 'lecteur_externe_id', lecteursExternes.map(l => ({ id: l.id, label: `${l.nom} ${l.prenom}` })), () => lecteurExterneLabel)}
+                      {renderSelectOrLabel(eleve, 'lecteur_externe_id', 'lecteur_externe', () => lecteurExterneLabel)}
                     </td>
                     <td className="px-3 py-3">
-                      {renderSelectOrLabel(eleve, 'mediateur_id', mediateurs.map(m => ({ id: m.id, label: `${m.nom} ${m.prenom}` })), () => mediateurLabel)}
+                      {renderSelectOrLabel(eleve, 'mediateur_id', 'mediateur', () => mediateurLabel)}
                     </td>
                     <td className="px-3 py-3">{renderInputOrLabel(eleve, 'date_defense', 'date', eleve.date_defense || '')}</td>
                     <td className="px-3 py-3">{renderInputOrLabel(eleve, 'heure_defense', 'time', eleve.heure_defense || '')}</td>
