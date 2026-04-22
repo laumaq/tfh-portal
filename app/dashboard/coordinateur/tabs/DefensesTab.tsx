@@ -58,6 +58,7 @@ export default function DefensesTab({
   ]);
   const [hideWithoutGuide, setHideWithoutGuide] = useState(true);
   const [showOnlyIncompleteJury, setShowOnlyIncompleteJury] = useState(false);
+  const [renduFilter, setRenduFilter] = useState<'all' | 'rendu' | 'non_rendu'>('all');
 
   useEffect(() => {
     setLocalEleves(eleves);
@@ -166,6 +167,14 @@ export default function DefensesTab({
 
   const filteredAndSortedEleves = useMemo(() => {
     let result = [...localEleves];
+    
+    // Filtre par état de rendu
+    if (renduFilter === 'rendu') {
+      result = result.filter(e => e.tfh_non_rendu !== true);
+    } else if (renduFilter === 'non_rendu') {
+      result = result.filter(e => e.tfh_non_rendu === true);
+    }
+    
     if (hideWithoutGuide) {
       result = result.filter(e => e.guide_id && e.guide_id.trim() !== '');
     }
@@ -180,7 +189,7 @@ export default function DefensesTab({
       });
     }
     return sortData(result, sortRules);
-  }, [localEleves, hideWithoutGuide, showOnlyIncompleteJury, sortRules]);
+  }, [localEleves, hideWithoutGuide, showOnlyIncompleteJury, sortRules, renduFilter]);
 
 
   const getSortIcon = (field: SortField) => {
@@ -333,6 +342,35 @@ export default function DefensesTab({
               />
               <span className="text-sm text-gray-700">Uniquement les jurys incomplets</span>
             </label>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">État TFH :</span>
+            <div className="flex gap-1">
+              <button
+                onClick={() => setRenduFilter('all')}
+                className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                  renduFilter === 'all' ? 'bg-blue-100 text-blue-800 font-medium' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                Tous
+              </button>
+              <button
+                onClick={() => setRenduFilter('rendu')}
+                className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                  renduFilter === 'rendu' ? 'bg-green-100 text-green-800 font-medium' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                Rendu
+              </button>
+              <button
+                onClick={() => setRenduFilter('non_rendu')}
+                className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                  renduFilter === 'non_rendu' ? 'bg-red-100 text-red-800 font-medium' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                Non rendu
+              </button>
+            </div>
           </div>
           <span className="text-sm text-gray-500">
             {filteredAndSortedEleves.length} / {localEleves.length} élève{filteredAndSortedEleves.length > 1 ? 's' : ''}
