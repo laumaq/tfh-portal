@@ -222,7 +222,7 @@ export default function LoginLecteurExternePage() {
               />
             </div>
           <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            Connexion Lecteur Externe
+            Connexion Externes (lecteurs et médiateurs)
           </h1>
           <p className="text-gray-600">
             Portail dédié aux évaluateurs externes des TFH
@@ -349,7 +349,7 @@ export default function LoginLecteurExternePage() {
           {/* Lien vers la connexion normale */}
           <div className="text-center pt-4 border-t border-gray-200">
             <p className="text-sm text-gray-600">
-              Vous êtes coordinateur, guide, élève ou médiateur ?{' '}
+              Vous êtes coordinateur, guide, élève ?{' '}
               <a 
                 href="/" 
                 className="text-blue-600 hover:text-blue-800 font-medium"
@@ -393,7 +393,7 @@ export default function LoginLecteurExternePage() {
           <div className="bg-gray-50 p-4 rounded-lg">
             <h3 className="font-medium text-gray-700 mb-2">Informations importantes :</h3>
             <ul className="text-sm text-gray-600 space-y-1">
-              <li>• Les lecteurs externes peuvent créer leur compte eux-mêmes</li>
+              <li>• Les lecteurs externes et médiateurs peuvent créer leur compte eux-mêmes</li>
               <li>• L'email est obligatoire pour la création de compte</li>
               <li>• Si vous avez oublié votre mot de passe, contactez un coordinateur</li>
             </ul>
