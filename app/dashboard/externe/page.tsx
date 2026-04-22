@@ -1,4 +1,3 @@
-// app/dashboard/lecteur_externe/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -54,14 +53,17 @@ interface DefenseEvent {
 
 type ViewMode = 'choice' | 'planning' | 'list' | 'calendar' | 'question-view' | 'question-dates' | 'question-categories';
 
-export default function LecteurExterneDashboard() {
+export default function ExterneDashboard() {
   const [eleves, setEleves] = useState<Eleve[]>([]);
   const [elevesDisponibles, setElevesDisponibles] = useState<Eleve[]>([]);
   const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState('');
-  const [userLecteurExterneId, setUserLecteurExterneId] = useState<string>('');
+  const [externeId, setExterneId] = useState<string>('');
+  const [lecteurExterneId, setLecteurExterneId] = useState<string>('');
+  const [mediateurId, setMediateurId] = useState<string>('');
   const [viewMode, setViewMode] = useState<ViewMode>('choice');
-  const [selectedEleves, setSelectedEleves] = useState<string[]>([]);
+  const [selectedElevesAsLecteur, setSelectedElevesAsLecteur] = useState<string[]>([]);
+  const [selectedElevesAsMediateur, setSelectedElevesAsMediateur] = useState<string[]>([]);
   const [selectedCategorie, setSelectedCategorie] = useState<string>('toutes');
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
@@ -69,7 +71,8 @@ export default function LecteurExterneDashboard() {
   const [dates, setDates] = useState<string[]>([]);
   const [locations, setLocations] = useState<string[]>([]);
   const [defenseEvents, setDefenseEvents] = useState<DefenseEvent[]>([]);
-  const [busySlots, setBusySlots] = useState<Map<string, string[]>>(new Map());
+  const [busySlotsLecteur, setBusySlotsLecteur] = useState<Map<string, string[]>>(new Map());
+  const [busySlotsMediateur, setBusySlotsMediateur] = useState<Map<string, string[]>>(new Map());
   const [tempViewMode, setTempViewMode] = useState<'list' | 'calendar'>('list');
   const [tempSelectedDates, setTempSelectedDates] = useState<string[]>([]);
   const [tempSelectedCategories, setTempSelectedCategories] = useState<string[]>([]);
@@ -78,9 +81,9 @@ export default function LecteurExterneDashboard() {
   const [selectedMultipleDates, setSelectedMultipleDates] = useState<string[]>([]);
   const [selectedMultipleCategories, setSelectedMultipleCategories] = useState<string[]>([]);
   const [selectedMultipleLocations, setSelectedMultipleLocations] = useState<string[]>([]);
+  const [selectedRole, setSelectedRole] = useState<'lecteur' | 'mediateur'>('lecteur');
   const router = useRouter();
 
-  // CORRECTION: Déplacer displaySettings AVANT les useEffect
   const [displaySettings, setDisplaySettings] = useState({
     lecteur_externe_voir_eleves: true,
     lecteur_externe_voir_guides: true,
@@ -93,66 +96,97 @@ export default function LecteurExterneDashboard() {
     const userId = localStorage.getItem('userId');
     const name = localStorage.getItem('userName');
 
-    if (userType !== 'lecteur_externe' || !userId) {
-      router.push('/');
+    if (userType !== 'externe' || !userId) {
+      router.push('/connexion-externe');
       return;
     }
 
     setUserName(name || '');
-    setUserLecteurExterneId(userId);
-    loadData(userId);
+    setExterneId(userId);
+    loadUserRoles(userId);
   }, [router]);
 
-  const loadData = async (lecteurExterneId: string) => {
+  const loadUserRoles = async (externeId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('externes')
+        .select('lecteur_externe_id, mediateur_id')
+        .eq('id', externeId)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setLecteurExterneId(data.lecteur_externe_id || '');
+        setMediateurId(data.mediateur_id || '');
+        await loadData(data.lecteur_externe_id || '', data.mediateur_id || '');
+      }
+    } catch (err) {
+      console.error('Erreur chargement rôles:', err);
+      router.push('/connexion-externe');
+    }
+  };
+
+  const loadData = async (lecteurExterneIdVal: string, mediateurIdVal: string) => {
     try {
       setLoading(true);
 
-      const loadDisplaySettings = async () => {
-        try {
-          const { data, error } = await supabase
-            .from('system_settings')
-            .select('setting_key, setting_value')
-            .in('setting_key', [
-              'lecteur_externe_voir_eleves',
-              'lecteur_externe_voir_guides',
-              'lecteur_externe_voir_lecteurs_internes',
-              'lecteur_externe_voir_mediateurs'
-            ]);
-      
-          if (error) throw error;
-      
-          if (data) {
-            const settings: any = {};
-            data.forEach(setting => {
-              settings[setting.setting_key] = setting.setting_value === 'true';
-            });
-            setDisplaySettings(prev => ({ ...prev, ...settings }));
-          }
-        } catch (err) {
-          console.error('Erreur chargement paramètres:', err);
-        }
-      };
-      
-      await loadDisplaySettings();  
-      
-      const { data: elevesData, error: elevesError } = await supabase
-        .from('eleves')
-        .select(`
-          *,
-          guide:guides!guide_id (nom, prenom),
-          lecteur_interne:guides!lecteur_interne_id (nom, prenom),
-          lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
-          mediateur:mediateurs!mediateur_id (nom, prenom)
-        `)
-        .eq('lecteur_externe_id', lecteurExterneId)
-        .order('date_defense', { ascending: true, nullsFirst: true })
-        .order('heure_defense', { ascending: true, nullsFirst: true })
-        .order('classe', { ascending: true })
-        .order('nom', { ascending: true });
+      // Charger les paramètres d'affichage
+      const { data: settingsData } = await supabase
+        .from('system_settings')
+        .select('setting_key, setting_value')
+        .in('setting_key', [
+          'lecteur_externe_voir_eleves',
+          'lecteur_externe_voir_guides',
+          'lecteur_externe_voir_lecteurs_internes',
+          'lecteur_externe_voir_mediateurs'
+        ]);
 
-      if (elevesError) throw elevesError;
+      if (settingsData) {
+        const settings: any = {};
+        settingsData.forEach(setting => {
+          settings[setting.setting_key] = setting.setting_value === 'true';
+        });
+        setDisplaySettings(prev => ({ ...prev, ...settings }));
+      }
 
-      const elevesFormatted = (elevesData || []).map(eleve => ({
+      // Charger les élèves assignés à l'utilisateur (comme lecteur OU médiateur)
+      let allAssigned: Eleve[] = [];
+
+      if (lecteurExterneIdVal) {
+        const { data: lecteurData } = await supabase
+          .from('eleves')
+          .select(`
+            *,
+            guide:guides!guide_id (nom, prenom),
+            lecteur_interne:guides!lecteur_interne_id (nom, prenom),
+            lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
+            mediateur:mediateurs!mediateur_id (nom, prenom)
+          `)
+          .eq('lecteur_externe_id', lecteurExterneIdVal);
+        
+        if (lecteurData) allAssigned = [...allAssigned, ...lecteurData];
+      }
+
+      if (mediateurIdVal) {
+        const { data: mediateurData } = await supabase
+          .from('eleves')
+          .select(`
+            *,
+            guide:guides!guide_id (nom, prenom),
+            lecteur_interne:guides!lecteur_interne_id (nom, prenom),
+            lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
+            mediateur:mediateurs!mediateur_id (nom, prenom)
+          `)
+          .eq('mediateur_id', mediateurIdVal);
+        
+        if (mediateurData) allAssigned = [...allAssigned, ...mediateurData];
+      }
+
+      // Supprimer les doublons
+      const uniqueAssigned = Array.from(new Map(allAssigned.map(e => [e.id, e])).values());
+
+      const elevesFormatted = uniqueAssigned.map(eleve => ({
         ...eleve,
         guide_nom: eleve.guide?.nom || '-',
         guide_prenom: eleve.guide?.prenom || '-',
@@ -166,7 +200,8 @@ export default function LecteurExterneDashboard() {
 
       setEleves(elevesFormatted);
 
-      const { data: allElevesData, error: allElevesError } = await supabase
+      // Charger les élèves disponibles pour sélection
+      const { data: allElevesData } = await supabase
         .from('eleves')
         .select(`
           *,
@@ -176,13 +211,10 @@ export default function LecteurExterneDashboard() {
         `)
         .not('categorie', 'is', null)
         .not('categorie', 'eq', '')
-        .or(`lecteur_externe_id.is.null,lecteur_externe_id.eq.${lecteurExterneId}`)
         .order('date_defense', { ascending: true, nullsFirst: true })
         .order('heure_defense', { ascending: true, nullsFirst: true })
         .order('classe', { ascending: true })
         .order('nom', { ascending: true });
-
-      if (allElevesError) throw allElevesError;
 
       const allElevesFormatted = (allElevesData || []).map(eleve => ({
         ...eleve,
@@ -213,20 +245,26 @@ export default function LecteurExterneDashboard() {
         new Set(allElevesFormatted
           .filter(e => e.localisation_defense)
           .map(e => e.localisation_defense!))
-      ).sort((a, b) => a.charAt(0).localeCompare(b.charAt(0)));
+      ).sort();
       setLocations(uniqueLocations);
       setSelectedLocations(uniqueLocations);
 
       setSelectedMultipleDates(uniqueDates);
       setSelectedMultipleCategories(uniqueCategories);
       setSelectedMultipleLocations(uniqueLocations);
-      
-      const preSelected = allElevesFormatted
-        .filter(e => e.lecteur_externe_id === lecteurExterneId)
-        .map(e => e.id);
-      setSelectedEleves(preSelected);
 
-      generateBusySlots(elevesFormatted, lecteurExterneId);
+      // Pré-sélectionner les élèves déjà assignés
+      const preSelectedLecteur = allElevesFormatted
+        .filter(e => e.lecteur_externe_id === lecteurExterneIdVal)
+        .map(e => e.id);
+      const preSelectedMediateur = allElevesFormatted
+        .filter(e => e.mediateur_id === mediateurIdVal)
+        .map(e => e.id);
+      
+      setSelectedElevesAsLecteur(preSelectedLecteur);
+      setSelectedElevesAsMediateur(preSelectedMediateur);
+
+      generateBusySlots(elevesFormatted, lecteurExterneIdVal, mediateurIdVal);
 
     } catch (err) {
       console.error('Erreur chargement des données:', err);
@@ -234,6 +272,207 @@ export default function LecteurExterneDashboard() {
       setLoading(false);
     }
   };
+
+  const generateBusySlots = (assignedEleves: Eleve[], lecteurExterneIdVal: string, mediateurIdVal: string) => {
+    const slotsMapLecteur = new Map<string, string[]>();
+    const slotsMapMediateur = new Map<string, string[]>();
+    
+    assignedEleves.forEach(eleve => {
+      if (eleve.date_defense && eleve.heure_defense) {
+        const slotKey = `${eleve.date_defense}_${eleve.heure_defense.substring(0, 5)}`;
+        
+        if (eleve.lecteur_externe_id === lecteurExterneIdVal) {
+          const currentIds = slotsMapLecteur.get(slotKey) || [];
+          slotsMapLecteur.set(slotKey, [...currentIds, eleve.id]);
+        }
+        
+        if (eleve.mediateur_id === mediateurIdVal) {
+          const currentIds = slotsMapMediateur.get(slotKey) || [];
+          slotsMapMediateur.set(slotKey, [...currentIds, eleve.id]);
+        }
+      }
+    });
+  
+    setBusySlotsLecteur(slotsMapLecteur);
+    setBusySlotsMediateur(slotsMapMediateur);
+  };
+
+  const prepareCalendarData = () => {
+    const defensesWithSchedule = elevesDisponibles.filter(e => 
+      e.date_defense && e.heure_defense
+    );
+    
+    const events: DefenseEvent[] = defensesWithSchedule.map(eleve => {
+      const startTime = eleve.heure_defense!.substring(0, 5);
+      
+      return {
+        id: eleve.id,
+        eleveId: eleve.id,
+        date: eleve.date_defense!,
+        startTime: startTime,
+        endTime: add50Minutes(startTime),
+        location: eleve.localisation_defense || 'Non défini',
+        eleveNom: eleve.nom,
+        elevePrenom: eleve.prenom,
+        guideNom: eleve.guide_nom || '-',
+        guidePrenom: eleve.guide_prenom || '-',
+        lecteurInterneNom: eleve.lecteur_interne_nom || '-',
+        lecteurInternePrenom: eleve.lecteur_interne_prenom || '-',
+        lecteurExterneNom: eleve.lecteur_externe_nom || '-',
+        lecteurExternePrenom: eleve.lecteur_externe_prenom || '-',
+        mediateurNom: '-',
+        mediateurPrenom: '-',
+        categorie: eleve.categorie || 'Non catégorisé',
+        problematique: eleve.problematique || ''
+      };
+    });
+
+    setDefenseEvents(events);
+  };
+
+  const add50Minutes = (time: string): string => {
+    if (!time) return '';
+    const [hours, minutes] = time.split(':').map(Number);
+    let newHours = hours;
+    let newMinutes = minutes + 50;
+    
+    if (newMinutes >= 60) {
+      newHours += Math.floor(newMinutes / 60);
+      newMinutes = newMinutes % 60;
+    }
+    
+    return `${newHours.toString().padStart(2, '0')}:${newMinutes.toString().padStart(2, '0')}`;
+  };
+
+  useEffect(() => {
+    if (elevesDisponibles.length > 0 && (viewMode === 'list' || viewMode === 'calendar')) {
+      prepareCalendarData();
+    }
+  }, [elevesDisponibles, viewMode]);
+
+  const isTimeSlotBusy = (eleve: Eleve, role: 'lecteur' | 'mediateur'): boolean => {
+    if (!eleve.date_defense || !eleve.heure_defense) return false;
+    
+    const slotKey = `${eleve.date_defense}_${eleve.heure_defense.substring(0, 5)}`;
+    const busySlots = role === 'lecteur' ? busySlotsLecteur : busySlotsMediateur;
+    const busyElevesIds = busySlots.get(slotKey) || [];
+    
+    // Vérifier s'il y a d'autres TFH sur ce créneau (hors le sien)
+    const otherBusyIds = busyElevesIds.filter(id => id !== eleve.id);
+    return otherBusyIds.length > 0;
+  };
+
+  const handleToggleSelection = async (eleveId: string, role: 'lecteur' | 'mediateur') => {
+    const eleve = elevesDisponibles.find(e => e.id === eleveId);
+    if (!eleve) return;
+
+    const field = role === 'lecteur' ? 'lecteur_externe_id' : 'mediateur_id';
+    const currentId = role === 'lecteur' ? lecteurExterneId : mediateurId;
+    const isCurrentlySelected = role === 'lecteur' 
+      ? selectedElevesAsLecteur.includes(eleveId)
+      : selectedElevesAsMediateur.includes(eleveId);
+
+    // Vérifier les conflits de créneaux
+    if (isTimeSlotBusy(eleve, role) && !isCurrentlySelected) {
+      alert(`Vous avez déjà une défense en tant que ${role === 'lecteur' ? 'lecteur externe' : 'médiateur'} à ce créneau horaire !`);
+      return;
+    }
+
+    try {
+      if (isCurrentlySelected) {
+        // Désélectionner
+        await supabase
+          .from('eleves')
+          .update({ [field]: null })
+          .eq('id', eleveId);
+        
+        if (role === 'lecteur') {
+          setSelectedElevesAsLecteur(prev => prev.filter(id => id !== eleveId));
+        } else {
+          setSelectedElevesAsMediateur(prev => prev.filter(id => id !== eleveId));
+        }
+      } else {
+        // Sélectionner
+        await supabase
+          .from('eleves')
+          .update({ [field]: currentId })
+          .eq('id', eleveId);
+        
+        if (role === 'lecteur') {
+          setSelectedElevesAsLecteur(prev => [...prev, eleveId]);
+        } else {
+          setSelectedElevesAsMediateur(prev => [...prev, eleveId]);
+        }
+      }
+
+      // Recharger les données
+      await loadData(lecteurExterneId, mediateurId);
+      
+    } catch (err) {
+      console.error('Erreur lors de la sauvegarde:', err);
+      alert('Erreur lors de l\'enregistrement');
+    }
+  };
+
+  const getAssignedRoleForEleve = (eleve: Eleve): string => {
+    const roles = [];
+    if (eleve.lecteur_externe_id === lecteurExterneId) roles.push('📖 Lecteur');
+    if (eleve.mediateur_id === mediateurId) roles.push('⚖️ Médiateur');
+    return roles.join(' / ') || '-';
+  };
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short'
+    });
+  };
+
+  const formatHeure = (heureString: string | null) => {
+    if (!heureString) return '-';
+    return heureString.substring(0, 5);
+  };
+
+  const sortEleves = (elevesList: Eleve[]): Eleve[] => {
+    return [...elevesList].sort((a, b) => {
+      if (!a.date_defense && b.date_defense) return 1;
+      if (a.date_defense && !b.date_defense) return -1;
+      if (a.date_defense && b.date_defense) {
+        const dateCompare = a.date_defense.localeCompare(b.date_defense);
+        if (dateCompare !== 0) return dateCompare;
+      }
+      
+      if (!a.heure_defense && b.heure_defense) return 1;
+      if (a.heure_defense && !b.heure_defense) return -1;
+      if (a.heure_defense && b.heure_defense) {
+        const timeCompare = a.heure_defense.localeCompare(b.heure_defense);
+        if (timeCompare !== 0) return timeCompare;
+      }
+      
+      const classCompare = a.classe.localeCompare(b.classe);
+      if (classCompare !== 0) return classCompare;
+      
+      return a.nom.localeCompare(b.nom);
+    });
+  };
+
+  const filteredElevesDisponibles = elevesDisponibles.filter(eleve => {
+    if (selectedMultipleCategories.length > 0 && !selectedMultipleCategories.includes(eleve.categorie)) {
+      return false;
+    }
+    if (selectedMultipleDates.length > 0 && eleve.date_defense && !selectedMultipleDates.includes(eleve.date_defense)) {
+      return false;
+    }
+    if (selectedMultipleLocations.length > 0 && eleve.localisation_defense && !selectedMultipleLocations.includes(eleve.localisation_defense)) {
+      return false;
+    }
+    return true;
+  });
+
+  const sortedElevesDisponibles = sortEleves(filteredElevesDisponibles);
 
   const renderCheckboxFilter = (
     title: string,
@@ -243,7 +482,6 @@ export default function LecteurExterneDashboard() {
     getDisplayName?: (item: string) => string
   ) => {
     const allSelected = selectedItems.length === items.length;
-    const noneSelected = selectedItems.length === 0;
   
     const handleToggleAll = () => {
       if (allSelected) {
@@ -305,264 +543,21 @@ export default function LecteurExterneDashboard() {
             );
           })}
         </div>
-  
-        {selectedItems.length > 0 && (
-          <div className="mt-2">
-            <div className="text-xs text-gray-500 mb-1">Sélectionné(s) :</div>
-            <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
-              {selectedItems.slice(0, 5).map(item => {
-                const displayName = getDisplayName ? getDisplayName(item) : item;
-                return (
-                  <span
-                    key={item}
-                    className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800"
-                    title={displayName}
-                  >
-                    {displayName.length > 15 ? displayName.substring(0, 15) + '...' : displayName}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleToggleItem(item);
-                      }}
-                      className="ml-1 text-blue-600 hover:text-blue-800"
-                    >
-                      ×
-                    </button>
-                  </span>
-                );
-              })}
-              {selectedItems.length > 5 && (
-                <span className="text-xs text-gray-500">
-                  +{selectedItems.length - 5} autre{selectedItems.length - 5 > 1 ? 's' : ''}
-                </span>
-              )}
-            </div>
-          </div>
-        )}
       </div>
     );
-  };
-
-  const generateBusySlots = (assignedEleves: Eleve[], lecteurExterneId: string) => {
-    const slotsMap = new Map<string, string[]>();
-    
-    assignedEleves.forEach(eleve => {
-      if (eleve.date_defense && eleve.heure_defense) {
-        const slotKey = `${eleve.date_defense}_${eleve.heure_defense.substring(0, 5)}`;
-        const currentIds = slotsMap.get(slotKey) || [];
-        // Inclure tous les TFH de ce créneau
-        slotsMap.set(slotKey, [...currentIds, eleve.id]);
-      }
-    });
-  
-    setBusySlots(slotsMap);
-  };
-
-  const add50Minutes = (time: string): string => {
-    if (!time) return '';
-    const [hours, minutes] = time.split(':').map(Number);
-    let newHours = hours;
-    let newMinutes = minutes + 50;
-    
-    if (newMinutes >= 60) {
-      newHours += Math.floor(newMinutes / 60);
-      newMinutes = newMinutes % 60;
-    }
-    
-    return `${newHours.toString().padStart(2, '0')}:${newMinutes.toString().padStart(2, '0')}`;
-  };
-
-  const prepareCalendarData = () => {
-    const defensesWithSchedule = elevesDisponibles.filter(e => 
-      e.date_defense && e.heure_defense
-    );
-    
-    const events: DefenseEvent[] = defensesWithSchedule.map(eleve => {
-      const startTime = eleve.heure_defense!.substring(0, 5);
-      
-      return {
-        id: eleve.id,
-        eleveId: eleve.id,
-        date: eleve.date_defense!,
-        startTime: startTime,
-        endTime: add50Minutes(startTime),
-        location: eleve.localisation_defense || 'Non défini',
-        eleveNom: eleve.nom,
-        elevePrenom: eleve.prenom,
-        guideNom: eleve.guide_nom || '-',
-        guidePrenom: eleve.guide_prenom || '-',
-        lecteurInterneNom: eleve.lecteur_interne_nom || '-',
-        lecteurInternePrenom: eleve.lecteur_interne_prenom || '-',
-        lecteurExterneNom: eleve.lecteur_externe_nom || '-',
-        lecteurExternePrenom: eleve.lecteur_externe_prenom || '-',
-        mediateurNom: '-',
-        mediateurPrenom: '-',
-        categorie: eleve.categorie || 'Non catégorisé',
-        problematique: eleve.problematique || ''
-      };
-    });
-
-    setDefenseEvents(events);
-  };
-
-  useEffect(() => {
-    if (elevesDisponibles.length > 0) {
-      prepareCalendarData();
-    }
-  }, [elevesDisponibles]);
-
-  const isTimeSlotBusy = (eleve: Eleve): boolean => {
-    if (!eleve.date_defense || !eleve.heure_defense) return false;
-    
-    const slotKey = `${eleve.date_defense}_${eleve.heure_defense.substring(0, 5)}`;
-    const busyElevesIds = busySlots.get(slotKey) || [];
-    
-    // ✅ Si c'est son propre TFH, ce n'est pas un conflit
-    if (busyElevesIds.includes(eleve.id) && eleve.lecteur_externe_id === userLecteurExterneId) {
-      return false;
-    }
-    
-    // ✅ Vérifier s'il y a d'autres TFH sur ce créneau (hors le sien)
-    const otherBusyIds = busyElevesIds.filter(id => id !== eleve.id);
-    return otherBusyIds.length > 0;
-  };
-
-  const sortEleves = (eleves: Eleve[]): Eleve[] => {
-    return [...eleves].sort((a, b) => {
-      if (!a.date_defense && b.date_defense) return 1;
-      if (a.date_defense && !b.date_defense) return -1;
-      if (a.date_defense && b.date_defense) {
-        const dateCompare = a.date_defense.localeCompare(b.date_defense);
-        if (dateCompare !== 0) return dateCompare;
-      }
-      
-      if (!a.heure_defense && b.heure_defense) return 1;
-      if (a.heure_defense && !b.heure_defense) return -1;
-      if (a.heure_defense && b.heure_defense) {
-        const timeCompare = a.heure_defense.localeCompare(b.heure_defense);
-        if (timeCompare !== 0) return timeCompare;
-      }
-      
-      const classCompare = a.classe.localeCompare(b.classe);
-      if (classCompare !== 0) return classCompare;
-      
-      return a.nom.localeCompare(b.nom);
-    });
-  };
-
-  const filteredElevesDisponibles = elevesDisponibles.filter(eleve => {
-    if (eleve.lecteur_externe_id !== null && eleve.lecteur_externe_id !== userLecteurExterneId) {
-      console.log('TFH exclu car déjà attribué à un autre lecteur:', `${eleve.prenom} ${eleve.nom}`);
-      return false;
-    }
-    
-    if (selectedMultipleCategories.length > 0 && !selectedMultipleCategories.includes(eleve.categorie)) {
-      return false;
-    }
-    
-    if (selectedMultipleDates.length > 0 && eleve.date_defense && !selectedMultipleDates.includes(eleve.date_defense)) {
-      return false;
-    }
-    
-    if (selectedMultipleLocations.length > 0 && eleve.localisation_defense && !selectedMultipleLocations.includes(eleve.localisation_defense)) {
-      return false;
-    }
-    
-    return true;
-  });
-
-  const sortedElevesDisponibles = sortEleves(filteredElevesDisponibles);
-  
-  
-  const handleToggleSelection = async (eleveId: string) => {
-    const eleve = elevesDisponibles.find(e => e.id === eleveId);
-    
-    // Vérifier les conflits de créneaux (sauf pour ses propres TFH)
-    if (eleve && isTimeSlotBusy(eleve) && eleve.lecteur_externe_id !== userLecteurExterneId) {
-      const busySlotKey = `${eleve.date_defense}_${eleve.heure_defense!.substring(0, 5)}`;
-      const busyElevesIds = busySlots.get(busySlotKey) || [];
-      const busyEleves = elevesDisponibles.filter(e => busyElevesIds.includes(e.id));
-      const busyNames = busyEleves.map(e => `${e.prenom} ${e.nom}`).join(', ');
-      
-      alert(`Vous avez déjà une défense à ce créneau horaire !\n\nCréneau occupé par: ${busyNames}`);
-      return;
-    }
-  
-    const isCurrentlySelected = selectedEleves.includes(eleveId);
-    let newSelectedEleves: string[];
-    
-    if (isCurrentlySelected) {
-      // Désélectionner : retirer de la liste
-      newSelectedEleves = selectedEleves.filter(id => id !== eleveId);
-    } else {
-      // Sélectionner : ajouter à la liste
-      newSelectedEleves = [...selectedEleves, eleveId];
-    }
-    
-    setSelectedEleves(newSelectedEleves);
-  
-    try {
-      // ✅ Mettre à jour uniquement les TFH modifiés, sans tout écraser
-      if (isCurrentlySelected) {
-        // Désélectionner : supprimer le lecteur_externe_id de ce TFH
-        await supabase
-          .from('eleves')
-          .update({ lecteur_externe_id: null })
-          .eq('id', eleveId);
-      } else {
-        // Sélectionner : attribuer le lecteur_externe_id à ce TFH
-        await supabase
-          .from('eleves')
-          .update({ lecteur_externe_id: userLecteurExterneId })
-          .eq('id', eleveId);
-      }
-  
-      // Recharger les données pour mettre à jour l'affichage
-      await loadData(userLecteurExterneId);
-      
-    } catch (err) {
-      console.error('Erreur lors de la sauvegarde:', err);
-      // Restaurer l'état précédent
-      setSelectedEleves(selectedEleves);
-      alert('Erreur lors de l\'enregistrement');
-    }
-  };
-
-  const handleSelectAll = () => {
-    const availableEleves = sortedElevesDisponibles.filter(eleve => !isTimeSlotBusy(eleve));
-    
-    if (selectedEleves.length === availableEleves.length) {
-      setSelectedEleves([]);
-    } else {
-      setSelectedEleves(availableEleves.map(e => e.id));
-    }
   };
 
   const handleCalendarEventClick = (event: DefenseEvent) => {
     const eleve = elevesDisponibles.find(e => e.id === event.eleveId);
     if (eleve) {
-      handleToggleSelection(eleve.id);
+      // Afficher un modal de choix du rôle
+      const roleChoice = window.confirm(`Choisir ${eleve.prenom} ${eleve.nom} comme :\n\nOK = Lecteur externe\nAnnuler = Médiateur`);
+      if (roleChoice) {
+        handleToggleSelection(eleve.id, 'lecteur');
+      } else {
+        handleToggleSelection(eleve.id, 'mediateur');
+      }
     }
-  };
-
-  const handleLogout = () => {
-    localStorage.clear();
-    router.push('/connexion-lecteur-externe/');
-  };
-
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return '-';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('fr-FR', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short'
-    });
-  };
-
-  const formatHeure = (heureString: string | null) => {
-    if (!heureString) return '-';
-    return heureString.substring(0, 5);
   };
 
   const goToFinalView = () => {
@@ -575,6 +570,19 @@ export default function LecteurExterneDashboard() {
     
     setViewMode(tempViewMode);
   };
+
+  const handleLogout = () => {
+    localStorage.clear();
+    router.push('/connexion-externe');
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-xl">Chargement...</div>
+      </div>
+    );
+  }
 
   // Écran de choix initial
   if (viewMode === 'choice') {
@@ -598,7 +606,7 @@ export default function LecteurExterneDashboard() {
                 <div>
                   <h3 className="text-lg font-semibold text-gray-800">Voir mon planning</h3>
                   <p className="text-gray-600 text-sm mt-1">
-                    Consulter les {eleves.length} TFH qui me sont assignés
+                    Consulter les {eleves.length} défenses qui me sont assignées
                   </p>
                 </div>
                 <div className="ml-auto text-gray-400 group-hover:text-blue-600">
@@ -621,7 +629,7 @@ export default function LecteurExterneDashboard() {
                 <div>
                   <h3 className="text-lg font-semibold text-gray-800">Choisir des TFH</h3>
                   <p className="text-gray-600 text-sm mt-1">
-                    Sélectionner de nouveaux TFH à évaluer
+                    Sélectionner de nouveaux TFH à évaluer (lecteur ou médiateur)
                   </p>
                 </div>
                 <div className="ml-auto text-gray-400 group-hover:text-green-600">
@@ -906,13 +914,169 @@ export default function LecteurExterneDashboard() {
     );
   }
 
-  // CORRECTION: Vue list/calendar - JSX corrigé
+  // Vue planning (dashboard principal)
+  if (viewMode === 'planning') {
+    return (
+      <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Mon planning ({eleves.length} défense{eleves.length > 1 ? 's' : ''})</h1>
+              <div className="flex items-center gap-2">
+                <p className="text-gray-600 mt-1">Connecté en tant que {userName}</p>
+                <button
+                  onClick={() => setShowProfileEditor(true)}
+                  className="ml-2 px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200"
+                >
+                  ✎
+                </button>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setViewMode('choice')}
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm md:text-base"
+              >
+                Menu
+              </button>
+              <button
+                onClick={() => {
+                  setTempViewMode('list');
+                  setViewMode('question-view');
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm md:text-base"
+              >
+                Choisir des TFH
+              </button>
+              <button
+                onClick={handleLogout}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm md:text-base"
+              >
+                Déconnexion
+              </button>
+            </div>
+          </div>
+
+          {eleves.length === 0 ? (
+            <div className="bg-white rounded-lg shadow p-8 text-center">
+              <div className="text-4xl mb-4">📋</div>
+              <h3 className="text-xl font-semibold text-gray-700 mb-2">Aucune défense assignée</h3>
+              <p className="text-gray-500 mb-6">Aucun TFH ne vous est actuellement assigné comme lecteur externe ou médiateur.</p>
+              <button
+                onClick={() => {
+                  setTempViewMode('list');
+                  setViewMode('question-view');
+                }}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+              >
+                Sélectionner des TFH
+              </button>
+            </div>
+          ) : (
+            <div className="bg-white rounded-lg shadow overflow-x-auto">
+              <div className="min-w-[1200px] md:min-w-full">
+                <table className="w-full">
+                  <thead className="bg-gray-100 border-b">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Date</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Heure</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lieu</th>
+                      {displaySettings.lecteur_externe_voir_eleves && (
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Élève</th>
+                      )}
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Problématique</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Thématique</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Votre rôle</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortEleves(eleves).map((eleve) => (
+                      <tr key={eleve.id} className="border-b hover:bg-gray-50">
+                        <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
+                          {formatDate(eleve.date_defense)}
+                        </td>
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">
+                          {formatHeure(eleve.heure_defense)}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          {eleve.localisation_defense || '-'}
+                        </td>
+                        {displaySettings.lecteur_externe_voir_eleves && (
+                          <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
+                            {eleve.nom} {eleve.prenom}
+                          </td>
+                        )}
+                        <td className="px-4 py-3 text-sm max-w-md">
+                          <div className="whitespace-pre-wrap max-h-32 overflow-y-auto pr-2">
+                            {eleve.problematique || '-'}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">
+                          <span className="px-2 py-1 bg-gray-100 rounded text-xs">
+                            {eleve.categorie || '-'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">
+                          <span className={`px-2 py-1 rounded text-xs ${
+                            eleve.lecteur_externe_id === lecteurExterneId && eleve.mediateur_id === mediateurId
+                              ? 'bg-purple-100 text-purple-800'
+                              : eleve.lecteur_externe_id === lecteurExterneId
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-green-100 text-green-800'
+                          }`}>
+                            {getAssignedRoleForEleve(eleve)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          <button
+                            onClick={async () => {
+                              const role = eleve.lecteur_externe_id === lecteurExterneId ? 'lecteur' : 'mediateur';
+                              await handleToggleSelection(eleve.id, role);
+                            }}
+                            className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
+                          >
+                            Désélectionner
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <p className="text-sm text-blue-700 flex items-start gap-2">
+              <span className="text-lg">💡</span>
+              <span>
+                Ce tableau affiche les TFH qui vous sont assignés. Vous pouvez être lecteur externe (📖) ou médiateur (⚖️).
+                Pour modifier votre sélection, utilisez le bouton "Choisir des TFH".
+              </span>
+            </p>
+          </div>
+        </div>
+
+        {showProfileEditor && (
+          <ProfileEditor
+            userId={externeId}
+            userType="externe"
+            onClose={() => setShowProfileEditor(false)}
+            onUpdate={() => {
+              const name = localStorage.getItem('userName');
+              if (name) setUserName(name);
+            }}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // Vue liste ou calendrier pour la sélection
   if (viewMode === 'list' || viewMode === 'calendar') {
-    const busyCount = sortedElevesDisponibles.filter(e => isTimeSlotBusy(e)).length;
-    
     return (
       <div className="min-h-screen bg-gray-50">
-        {/* Barre d'en-tête fixe */}
         <div className="sticky top-0 z-50 bg-white border-b shadow-sm">
           <div className="max-w-7xl mx-auto px-4 md:px-8 py-3">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
@@ -927,13 +1091,34 @@ export default function LecteurExterneDashboard() {
                   <button
                     onClick={() => setShowProfileEditor(true)}
                     className="ml-2 px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200"
-                    title="Modifier mon profil"
                   >
                     ✎
                   </button>
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+                  <button
+                    onClick={() => setSelectedRole('lecteur')}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                      selectedRole === 'lecteur'
+                        ? 'bg-blue-600 text-white'
+                        : 'text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    📖 Lecteur
+                  </button>
+                  <button
+                    onClick={() => setSelectedRole('mediateur')}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                      selectedRole === 'mediateur'
+                        ? 'bg-purple-600 text-white'
+                        : 'text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    ⚖️ Médiateur
+                  </button>
+                </div>
                 <button
                   onClick={() => setViewMode('planning')}
                   className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 text-sm"
@@ -968,84 +1153,41 @@ export default function LecteurExterneDashboard() {
               </div>
             </div>
             
-            {/* Résumé des filtres */}
             <div className="mt-2 flex flex-wrap gap-2 text-xs">
-              <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">
-                {selectedEleves.length} TFH sélectionné{selectedEleves.length > 1 ? 's' : ''}
+              <span className={`${selectedRole === 'lecteur' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'} px-2 py-1 rounded`}>
+                Rôle sélectionné : {selectedRole === 'lecteur' ? '📖 Lecteur externe' : '⚖️ Médiateur'}
               </span>
-              
-              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded flex items-center gap-1">
-                <span>📅</span>
-                <span>
-                  {selectedMultipleDates.length === 0 || selectedMultipleDates.length === dates.length 
-                    ? "Tous les jours" 
-                    : `${selectedMultipleDates.length} jour${selectedMultipleDates.length > 1 ? 's' : ''}`}
-                </span>
+              <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
+                {selectedRole === 'lecteur' ? selectedElevesAsLecteur.length : selectedElevesAsMediateur.length} TFH sélectionné{selectedRole === 'lecteur' ? selectedElevesAsLecteur.length > 1 ? 's' : '' : selectedElevesAsMediateur.length > 1 ? 's' : ''}
               </span>
-              
-              <span className="bg-green-100 text-green-800 px-2 py-1 rounded flex items-center gap-1">
-                <span>🏷️</span>
-                <span>
-                  {selectedMultipleCategories.length === 0 || selectedMultipleCategories.length === categories.length 
-                    ? "Toutes les thématiques" 
-                    : `${selectedMultipleCategories.length} thème${selectedMultipleCategories.length > 1 ? 's' : ''}`}
-                </span>
+              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                {selectedMultipleDates.length === 0 || selectedMultipleDates.length === dates.length ? "Tous les jours" : `${selectedMultipleDates.length} jour${selectedMultipleDates.length > 1 ? 's' : ''}`}
               </span>
-              
-              <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded flex items-center gap-1">
-                <span>🏢</span>
-                <span>
-                  {selectedMultipleLocations.length === 0 || selectedMultipleLocations.length === locations.length 
-                    ? "Tous les locaux" 
-                    : (selectedMultipleLocations.length === 1 
-                      ? "1 local"
-                      : `${selectedMultipleLocations.length} locaux`)}
-                </span>
+              <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
+                {selectedMultipleCategories.length === 0 || selectedMultipleCategories.length === categories.length ? "Toutes les thématiques" : `${selectedMultipleCategories.length} thème${selectedMultipleCategories.length > 1 ? 's' : ''}`}
               </span>
             </div>
           </div>
 
-          {/* CORRECTION: Section filtres déplacée ICI (dans la même div parente) */}
           {showFilters && (
             <div className="border-t border-gray-200 bg-white">
               <div className="max-w-7xl mx-auto px-4 md:px-8 py-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* Filtre Jours */}
                   {renderCheckboxFilter(
                     "Jours",
                     dates,
                     selectedMultipleDates,
                     setSelectedMultipleDates,
-                    (date) => new Date(date).toLocaleDateString('fr-FR', { 
-                      weekday: 'short', 
-                      day: 'numeric', 
-                      month: 'short' 
-                    })
+                    (date) => new Date(date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
                   )}
-          
-                  {/* Filtre Thématiques */}
-                  {renderCheckboxFilter(
-                    "Thématiques",
-                    categories,
-                    selectedMultipleCategories,
-                    setSelectedMultipleCategories
-                  )}
-          
-                  {/* Filtre Locaux */}
-                  {renderCheckboxFilter(
-                    "Locaux",
-                    locations,
-                    selectedMultipleLocations,
-                    setSelectedMultipleLocations
-                  )}
+                  {renderCheckboxFilter("Thématiques", categories, selectedMultipleCategories, setSelectedMultipleCategories)}
+                  {renderCheckboxFilter("Locaux", locations, selectedMultipleLocations, setSelectedMultipleLocations)}
                 </div>
                 
-                {/* Boutons d'action rapide */}
                 <div className="mt-6 pt-4 border-t border-gray-100 flex flex-wrap justify-between items-center gap-3">
                   <div className="text-xs text-gray-600">
-                    <span className="text-blue-600">✓ Sélectionnés par vous</span>
+                    <span className="text-blue-600">✓</span> TFH que vous avez déjà sélectionnés
                   </div>
-                  
                   <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() => {
@@ -1053,41 +1195,34 @@ export default function LecteurExterneDashboard() {
                         setSelectedMultipleCategories(categories);
                         setSelectedMultipleLocations(locations);
                       }}
-                      className="px-3 py-1.5 text-xs bg-blue-50 text-blue-700 rounded-lg border border-blue-200 hover:bg-blue-100 hover:border-blue-300 transition-colors flex items-center gap-1"
+                      className="px-3 py-1.5 text-xs bg-blue-50 text-blue-700 rounded-lg border border-blue-200 hover:bg-blue-100"
                     >
-                      <span>✓</span>
-                      <span>Tout sélectionner</span>
+                      Tout sélectionner
                     </button>
-                    
                     <button
                       onClick={() => {
                         setSelectedMultipleDates([]);
                         setSelectedMultipleCategories([]);
                         setSelectedMultipleLocations([]);
                       }}
-                      className="px-3 py-1.5 text-xs bg-gray-50 text-gray-700 rounded-lg border border-gray-200 hover:bg-gray-100 hover:border-gray-300 transition-colors flex items-center gap-1"
+                      className="px-3 py-1.5 text-xs bg-gray-50 text-gray-700 rounded-lg border border-gray-200 hover:bg-gray-100"
                     >
-                      <span>✗</span>
-                      <span>Tout effacer</span>
+                      Tout effacer
                     </button>
-                    
                     <button
                       onClick={() => setShowFilters(false)}
-                      className="px-3 py-1.5 text-xs bg-green-50 text-green-700 rounded-lg border border-green-200 hover:bg-green-100 hover:border-green-300 transition-colors flex items-center gap-1"
+                      className="px-3 py-1.5 text-xs bg-green-50 text-green-700 rounded-lg border border-green-200 hover:bg-green-100"
                     >
-                      <span>▼</span>
-                      <span>Fermer filtres</span>
+                      Fermer filtres
                     </button>
                   </div>
                 </div>
               </div>
             </div>
           )}
-        </div> 
+        </div>
 
-        {/* Contenu principal */}
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-4">
-          {/* Vue liste */}
           {viewMode === 'list' ? (
             <div className="bg-white rounded-lg shadow overflow-hidden">
               <div className="overflow-x-auto">
@@ -1095,88 +1230,78 @@ export default function LecteurExterneDashboard() {
                   <thead className="bg-gray-100 border-b">
                     <tr>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-12">
-                        {/* Checkbox */}
+                        <input
+                          type="checkbox"
+                          checked={(() => {
+                            const selectedCount = selectedRole === 'lecteur' ? selectedElevesAsLecteur.length : selectedElevesAsMediateur.length;
+                            const availableCount = sortedElevesDisponibles.filter(e => !isTimeSlotBusy(e, selectedRole)).length;
+                            return selectedCount === availableCount && availableCount > 0;
+                          })()}
+                          onChange={() => {
+                            const availableEleves = sortedElevesDisponibles.filter(e => !isTimeSlotBusy(e, selectedRole));
+                            const allSelected = selectedRole === 'lecteur' 
+                              ? selectedElevesAsLecteur.length === availableEleves.length
+                              : selectedElevesAsMediateur.length === availableEleves.length;
+                            
+                            if (allSelected) {
+                              availableEleves.forEach(e => handleToggleSelection(e.id, selectedRole));
+                            } else {
+                              availableEleves.forEach(e => {
+                                const isSelected = selectedRole === 'lecteur' 
+                                  ? selectedElevesAsLecteur.includes(e.id)
+                                  : selectedElevesAsMediateur.includes(e.id);
+                                if (!isSelected) handleToggleSelection(e.id, selectedRole);
+                              });
+                            }
+                          }}
+                          className="w-4 h-4 text-blue-600 rounded"
+                        />
                       </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">
-                        Date
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">
-                        Heure
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">
-                        Local
-                      </th>
-                      
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Date</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Heure</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Local</th>
                       {displaySettings.lecteur_externe_voir_eleves && (
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">
-                          Élève
-                        </th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Élève</th>
                       )}
-                      
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">
-                        Problématique
-                      </th>
-                      
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">
-                        Thématique
-                      </th>
-                      
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Problématique</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Thématique</th>
                       {displaySettings.lecteur_externe_voir_guides && (
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 whitespace-nowrap">
-                          Guide
-                        </th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Guide</th>
                       )}
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Statut</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {sortedElevesDisponibles.length === 0 ? (
                       <tr>
-                        <td colSpan={
-                            2 + // Date, Heure
-                            1 + // Local
-                            3 + // Thématique, Problématique
-                            (displaySettings.lecteur_externe_voir_eleves ? 1 : 0) +
-                            (displaySettings.lecteur_externe_voir_guides ? 1 : 0)
-                          }  className="px-4 py-8 text-center text-gray-500">
-                          Aucun élève trouvé avec ces filtres.
+                        <td colSpan={10} className="px-4 py-8 text-center text-gray-500">
+                          Aucun TFH trouvé avec ces filtres.
                         </td>
                       </tr>
                     ) : (
                       sortedElevesDisponibles.map((eleve) => {
-                        const isBusy = isTimeSlotBusy(eleve);
-                        const isSelected = selectedEleves.includes(eleve.id);
-                        const isCurrentlyAssigned = eleve.lecteur_externe_id === userLecteurExterneId;
+                        const isBusy = isTimeSlotBusy(eleve, selectedRole);
+                        const isSelected = selectedRole === 'lecteur' 
+                          ? selectedElevesAsLecteur.includes(eleve.id)
+                          : selectedElevesAsMediateur.includes(eleve.id);
+                        const isAlreadyAssignedOtherRole = (selectedRole === 'lecteur' && eleve.mediateur_id === mediateurId) ||
+                                                           (selectedRole === 'mediateur' && eleve.lecteur_externe_id === lecteurExterneId);
                         
                         return (
-                          <tr 
-                            key={eleve.id} 
-                            className={`hover:bg-gray-50 ${
-                              isBusy && !isCurrentlyAssigned 
-                                ? 'bg-gray-100 opacity-60' 
-                                : ''
-                            }`}
-                          >
+                          <tr key={eleve.id} className={`hover:bg-gray-50 ${isBusy ? 'bg-gray-100 opacity-60' : ''}`}>
                             <td className="px-4 py-3">
                               <input
                                 type="checkbox"
                                 checked={isSelected}
-                                onChange={() => handleToggleSelection(eleve.id)}
-                                disabled={isBusy && !isCurrentlyAssigned}
-                                className={`w-4 h-4 text-blue-600 rounded ${
-                                  isBusy && !isCurrentlyAssigned 
-                                    ? 'cursor-not-allowed opacity-50' 
-                                    : 'cursor-pointer'
-                                }`}
+                                onChange={() => handleToggleSelection(eleve.id, selectedRole)}
+                                disabled={isBusy || isAlreadyAssignedOtherRole}
+                                className={`w-4 h-4 rounded ${(isBusy || isAlreadyAssignedOtherRole) ? 'cursor-not-allowed opacity-50' : 'text-blue-600 cursor-pointer'}`}
                               />
                             </td>
                             <td className="px-4 py-3 text-sm whitespace-nowrap">
-                              <div className={`px-2 py-1 rounded inline-block ${
-                                eleve.date_defense
-                                  ? 'bg-blue-50 text-blue-700 border border-blue-100'
-                                  : 'bg-gray-100 text-gray-500'
-                              }`}>
+                              <span className={`px-2 py-1 rounded inline-block ${eleve.date_defense ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
                                 {formatDate(eleve.date_defense)}
-                              </div>
+                              </span>
                             </td>
                             <td className="px-4 py-3 text-sm whitespace-nowrap">
                               {formatHeure(eleve.heure_defense)}
@@ -1184,30 +1309,39 @@ export default function LecteurExterneDashboard() {
                             <td className="px-4 py-3 text-sm">
                               {eleve.localisation_defense || '-'}
                             </td>
-                            
                             {displaySettings.lecteur_externe_voir_eleves && (
                               <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
                                 {eleve.nom} {eleve.prenom}
                               </td>
                             )}
-                            
                             <td className="px-4 py-3 text-sm max-w-xs">
                               <div className="whitespace-pre-wrap max-h-24 overflow-y-auto pr-2 text-xs">
                                 {eleve.problematique || '-'}
                               </div>
                             </td>
-                            
                             <td className="px-4 py-3 text-sm">
                               <span className="px-2 py-1 bg-gray-100 rounded text-xs whitespace-nowrap">
                                 {eleve.categorie || '-'}
                               </span>
                             </td>
-                            
                             {displaySettings.lecteur_externe_voir_guides && (
                               <td className="px-4 py-3 text-sm whitespace-nowrap">
                                 {eleve.guide_prenom} {eleve.guide_nom}
                               </td>
                             )}
+                            <td className="px-4 py-3 text-sm">
+                              {isAlreadyAssignedOtherRole && (
+                                <span className="text-xs text-orange-600">
+                                  Déjà {selectedRole === 'lecteur' ? 'médiateur' : 'lecteur'} sur ce TFH
+                                </span>
+                              )}
+                              {isBusy && !isAlreadyAssignedOtherRole && (
+                                <span className="text-xs text-red-600">Conflit de créneau</span>
+                              )}
+                              {isSelected && !isBusy && (
+                                <span className="text-xs text-green-600">Sélectionné</span>
+                              )}
+                            </td>
                           </tr>
                         );
                       })
@@ -1217,41 +1351,43 @@ export default function LecteurExterneDashboard() {
               </div>
             </div>
           ) : (
-            /* Vue calendrier */
-            <div className="space-y-4">
-              <div className="bg-white rounded-lg shadow p-4">
-                <CalendarDisplayLecteurExterne
-                  eleves={sortedElevesDisponibles}
-                  selectedCategory={selectedCategorie}
-                  selectedDates={selectedDates}
-                  selectedLocations={selectedLocations}
-                  onEventClick={handleCalendarEventClick}
-                  selectedEventIds={selectedEleves}
-                  busyEventIds={(() => {
-                    const allBusyIds = new Set<string>();
-                    busySlots.forEach((eleveIds, slotKey) => {
-                      eleveIds.forEach(id => {
-                        const eleve = elevesDisponibles.find(e => e.id === id);
-                        if (eleve && eleve.lecteur_externe_id !== userLecteurExterneId) {
+            <div className="bg-white rounded-lg shadow p-4">
+              <CalendarDisplayLecteurExterne
+                eleves={sortedElevesDisponibles}
+                selectedCategory={selectedCategorie}
+                selectedDates={selectedMultipleDates}
+                selectedLocations={selectedMultipleLocations}
+                onEventClick={handleCalendarEventClick}
+                selectedEventIds={selectedRole === 'lecteur' ? selectedElevesAsLecteur : selectedElevesAsMediateur}
+                busyEventIds={(() => {
+                  const allBusyIds = new Set<string>();
+                  const busySlots = selectedRole === 'lecteur' ? busySlotsLecteur : busySlotsMediateur;
+                  busySlots.forEach((eleveIds) => {
+                    eleveIds.forEach(id => {
+                      const eleve = elevesDisponibles.find(e => e.id === id);
+                      if (eleve) {
+                        const isAlreadyAssigned = selectedRole === 'lecteur' 
+                          ? eleve.lecteur_externe_id === lecteurExterneId
+                          : eleve.mediateur_id === mediateurId;
+                        if (!isAlreadyAssigned) {
                           allBusyIds.add(id);
                         }
-                      });
+                      }
                     });
-                    return Array.from(allBusyIds);
-                  })()}
-                  userLecteurExterneId={userLecteurExterneId}
-                  displaySettings={displaySettings}
-                />
-              </div>
+                  });
+                  return Array.from(allBusyIds);
+                })()}
+                userLecteurExterneId={lecteurExterneId}
+                displaySettings={displaySettings}
+              />
             </div>
           )}
         </div>
 
-        {/* PROFIL EDITOR */}
         {showProfileEditor && (
           <ProfileEditor
-            userId={userLecteurExterneId}
-            userType="lecteur_externe"
+            userId={externeId}
+            userType="externe"
             onClose={() => setShowProfileEditor(false)}
             onUpdate={() => {
               const name = localStorage.getItem('userName');
@@ -1263,204 +1399,5 @@ export default function LecteurExterneDashboard() {
     );
   }
 
-  // Vue planning (dashboard)
-  return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Planning ({eleves.length} élèves)</h1>
-            <div className="flex items-center gap-2">
-              <p className="text-gray-600 mt-1">Connecté en tant que {userName}</p>
-              <button
-                onClick={() => setShowProfileEditor(true)}
-                className="ml-2 px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200"
-                title="Modifier mon profil"
-              >
-                ✎
-              </button>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setViewMode('choice')}
-              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm md:text-base"
-            >
-              Menu principal
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm md:text-base"
-            >
-              Choisir des TFH
-            </button>
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm md:text-base"
-            >
-              Déconnexion
-            </button>
-          </div>
-        </div>
-
-        {eleves.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-8 text-center">
-            <div className="text-4xl mb-4">📋</div>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">Aucun élève assigné</h3>
-            <p className="text-gray-500 mb-6">Aucun TFH ne vous est actuellement assigné comme lecteur externe.</p>
-            <button
-              onClick={() => setViewMode('list')}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
-            >
-              Sélectionner des TFH
-            </button>
-          </div>
-        ) : (
-          <>
-            {/* Statistiques */}
-            <div className="flex gap-4 mb-6">
-              <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-                {eleves.length} TFH assigné{eleves.length > 1 ? 's' : ''}
-              </span>
-              <span className="text-sm text-green-600 bg-green-100 px-3 py-1 rounded-full">
-                {eleves.filter(e => e.date_defense).length} avec date de défense
-              </span>
-              <span className="text-sm text-orange-600 bg-orange-100 px-3 py-1 rounded-full">
-                {eleves.filter(e => !e.date_defense).length} sans date
-              </span>
-            </div>
-
-            {/* Tableau des élèves assignés */}
-            <div className="bg-white rounded-lg shadow overflow-x-auto">
-              <div className="min-w-[1200px] md:min-w-full">
-                <table className="w-full">
-                  <thead className="bg-gray-100 border-b">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Date</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Heure</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lieu</th>
-                      {displaySettings.lecteur_externe_voir_eleves && (
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Élève</th>
-                      )}
-
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Problématique</th>
-                      
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Thématique</th>
-                      {displaySettings.lecteur_externe_voir_guides && (
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Guide</th>
-                      )}
-                      
-                      {displaySettings.lecteur_externe_voir_lecteurs_internes && (
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur interne</th>
-                      )}
-                      
-                      {displaySettings.lecteur_externe_voir_mediateurs && (
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Médiateur</th>
-                      )}
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {eleves.map((eleve) => (
-                      <tr key={eleve.id} className="border-b hover:bg-gray-50">
-                        <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
-                          {eleve.date_defense ? (
-                            <div className={`px-2 py-1 rounded ${new Date(eleve.date_defense) < new Date() ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
-                              {formatDate(eleve.date_defense)}
-                            </div>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-sm whitespace-nowrap">
-                          {formatHeure(eleve.heure_defense)}
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          {eleve.localisation_defense || '-'}
-                        </td>
-                        
-                        {displaySettings.lecteur_externe_voir_eleves && (
-                          <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
-                            {eleve.nom} {eleve.prenom}
-                          </td>
-                        )}
-                        
-                        <td className="px-4 py-3 text-sm max-w-md">
-                          <div className="whitespace-pre-wrap max-h-32 overflow-y-auto pr-2">
-                            {eleve.problematique || '-'}
-                          </div>
-                        </td>
-                        
-                        <td className="px-4 py-3 text-sm whitespace-nowrap">
-                          <span className="px-2 py-1 bg-gray-100 rounded text-xs">
-                            {eleve.categorie || '-'}
-                          </span>
-                        </td>
-                        
-                        {displaySettings.lecteur_externe_voir_guides && (
-                          <td className="px-4 py-3 text-sm whitespace-nowrap">
-                            {eleve.guide_prenom} {eleve.guide_nom}
-                          </td>
-                        )}
-                        
-                        {displaySettings.lecteur_externe_voir_lecteurs_internes && (
-                          <td className="px-4 py-3 text-sm whitespace-nowrap">
-                            {eleve.lecteur_interne_prenom} {eleve.lecteur_interne_nom}
-                          </td>
-                        )}
-                                              
-                        {displaySettings.lecteur_externe_voir_mediateurs && (
-                          <td className="px-4 py-3 text-sm whitespace-nowrap">
-                            {eleve.mediateur_prenom} {eleve.mediateur_nom}
-                          </td>
-                        )}
-                        <td className="px-4 py-3 text-sm">
-                          <button
-                            onClick={async () => {
-                              await supabase
-                                .from('eleves')
-                                .update({ lecteur_externe_id: null })
-                                .eq('id', eleve.id);
-                              await loadData(userLecteurExterneId);
-                            }}
-                            className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
-                          >
-                            Désélectionner
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* Note informative */}
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <p className="text-sm text-blue-700 flex items-start gap-2">
-            <span className="text-lg">💡</span>
-            <span>
-              Ce tableau affiche les TFH qui vous sont assignés comme lecteur externe, triés par date de défense.
-              Pour modifier votre sélection, utilisez le bouton "Choisir des TFH".
-            </span>
-          </p>
-        </div>
-        
-        {/* PROFIL EDITOR */}
-        {showProfileEditor && (
-          <ProfileEditor
-            userId={userLecteurExterneId}
-            userType="lecteur_externe"
-            onClose={() => setShowProfileEditor(false)}
-            onUpdate={() => {
-              const name = localStorage.getItem('userName');
-              if (name) setUserName(name);
-            }}
-          />
-        )}
-      </div>
-    </div>
-  );
+  return null;
 }
