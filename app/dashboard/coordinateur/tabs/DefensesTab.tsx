@@ -32,6 +32,7 @@ type SortField =
   | 'date_defense'
   | 'heure_defense'
   | 'localisation_defense';
+  | 'tfh_non_rendu';
 
 interface SortRule {
   field: SortField;
@@ -93,6 +94,7 @@ export default function DefensesTab({
         return eleve.date_defense ? new Date(eleve.date_defense).getTime() : null;
       case 'heure_defense': return trimStr(eleve.heure_defense);
       case 'localisation_defense': return trimStr(eleve.localisation_defense);
+      case 'tfh_non_rendu': return eleve.tfh_non_rendu === true ? 1 : 0;
       default: return '';
     }
   };
@@ -350,6 +352,9 @@ export default function DefensesTab({
           <table className="w-full">
             <thead className="bg-gray-100 border-b">
               <tr>
+                <th onClick={() => handleSort('tfh_non_rendu')} className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-200">
+                  Non rendu {getSortIcon('tfh_non_rendu')}
+                </th>
                 <th onClick={() => handleSort('classe')} className="px-3 py-3 text-left text-xs md:text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-200">
                   Classe {getSortIcon('classe')}
                 </th>
@@ -399,7 +404,16 @@ export default function DefensesTab({
                   : '';
 
                 return (
-                  <tr key={eleve.id} className="border-b hover:bg-gray-50">
+                  <tr key={eleve.id} className={`border-b hover:bg-gray-50 ${eleve.tfh_non_rendu ? 'bg-red-50' : ''}`}>
+                    <td className="px-3 py-3 text-center">
+                      <input
+                        type="checkbox"
+                        checked={eleve.tfh_non_rendu === true}
+                        onChange={(e) => handleLocalUpdate(eleve.id, 'tfh_non_rendu', e.target.checked ? 'true' : 'false')}
+                        className="w-4 h-4 text-red-600 rounded focus:ring-red-500"
+                        disabled={!editingMode || isProcessing}
+                      />
+                    </td>
                     <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">{eleve.classe || '-'}</td>
                     <td className="px-3 py-3 text-xs md:text-sm font-medium whitespace-nowrap">
                       {eleve.nom ? `${eleve.nom.toUpperCase()} ${eleve.prenom}` : eleve.prenom || '-'}
