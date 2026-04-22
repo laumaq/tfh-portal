@@ -731,13 +731,34 @@ export default function GuideDashboard() {
                       <td className="px-4 py-3 text-sm">{eleve.prenom}</td>
                       <td className="px-4 py-3 text-sm">
                         {editingCell?.id === eleve.id && editingCell?.field === 'problematique' ? (
-                          <textarea
-                            defaultValue={eleve.problematique}
-                            onBlur={(e) => handleUpdateProblematique(eleve.id, e.target.value)}
-                            className="w-full border rounded px-2 py-1 text-sm"
-                            rows={3}
-                            autoFocus
-                          />
+                          <div className="space-y-2">
+                            <textarea
+                              defaultValue={eleve.problematique}
+                              className="w-full border rounded px-2 py-1 text-sm"
+                              rows={3}
+                              autoFocus
+                              id={`textarea-${eleve.id}`}
+                            />
+                            <div className="flex gap-2 justify-end">
+                              <button
+                                onClick={async () => {
+                                  const textarea = document.getElementById(`textarea-${eleve.id}`) as HTMLTextAreaElement;
+                                  const newValue = textarea.value;
+                                  await handleUpdateProblematique(eleve.id, newValue);
+                                  setEditingCell(null);
+                                }}
+                                className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
+                              >
+                                ✓ Sauvegarder
+                              </button>
+                              <button
+                                onClick={() => setEditingCell(null)}
+                                className="px-3 py-1 bg-gray-300 text-gray-700 rounded text-sm hover:bg-gray-400"
+                              >
+                                ✗ Annuler
+                              </button>
+                            </div>
+                          </div>
                         ) : (
                           <div className="flex items-start gap-2">
                             <div className="flex-1 whitespace-pre-wrap break-words">
