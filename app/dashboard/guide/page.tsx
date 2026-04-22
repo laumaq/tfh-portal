@@ -378,12 +378,12 @@ export default function GuideDashboard() {
       }));
 
       // Séparer les défenses programmées et non programmées
+      const nonRendus = defensesFormatted.filter(eleve => eleve.tfh_non_rendu === true);
       const programmees = defensesFormatted.filter(eleve => 
-        eleve.date_defense && eleve.heure_defense
+        eleve.tfh_non_rendu !== true && eleve.date_defense && eleve.heure_defense
       );
-      
       const nonProgrammees = defensesFormatted.filter(eleve => 
-        !eleve.date_defense || !eleve.heure_defense
+        eleve.tfh_non_rendu !== true && (!eleve.date_defense || !eleve.heure_defense)
       );
 
       setDefensesProgrammees(programmees);
