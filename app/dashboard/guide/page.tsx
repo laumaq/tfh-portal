@@ -1405,68 +1405,69 @@ export default function GuideDashboard() {
                             const isLecteurInterne = eleve.lecteur_interne_id === userGuideId;
                             
                             return (
-                              <tr key={eleve.id} className="border-b bg-red-50">
-                                {displaySettings.lecteur_interne_voir_eleves && (
-                                  <>
-                                    <td className="px-4 py-3 text-sm">{eleve.classe}</td>
-                                    <td className="px-4 py-3 text-sm">
-                                      <div className="flex flex-col min-w-0">
-                                        <span className="font-medium truncate">{eleve.nom}</span>
-                                        <span className="truncate">{eleve.prenom}</span>
-                                      </div>
-                                    </td>
-                                  </>
-                                )}
-                                <td className="px-4 py-3 text-sm">
-                                  {eleve.categorie ? (
-                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 whitespace-nowrap">
-                                      {eleve.categorie}
-                                    </span>
-                                  ) : '-'}
-                                </td>
-                                <td className="px-4 py-3 text-sm">
-                                  <div className="whitespace-pre-wrap break-words min-h-[40px] max-w-96">
-                                    {eleve.problematique || '-'}
-                                  </div>
-                                </td>
-                                {displaySettings.lecteur_interne_voir_guides && (
-                                  <td className="px-4 py-3 text-sm whitespace-nowrap">
-                                    {eleve.guide_nom} {eleve.guide_initiale}.
-                                    {isGuide && <span className="ml-1 text-xs text-blue-600">(vous)</span>}
-                                  </td>
-                                )}
-                                {displaySettings.lecteur_interne_voir_guides && (
-                                  <td className="px-4 py-3 text-sm whitespace-nowrap">
-                                    {eleve.lecteur_interne_nom ? (
-                                      <span>
-                                        {eleve.lecteur_interne_nom} {eleve.lecteur_interne_initiale}.
-                                        {isLecteurInterne && <span className="ml-1 text-xs text-blue-600">(vous)</span>}
+                              <React.Fragment key={eleve.id}>
+                                <tr className="border-b bg-red-50">
+                                  {displaySettings.lecteur_interne_voir_eleves && (
+                                    <>
+                                      <td className="px-4 py-3 text-sm">{eleve.classe}</td>
+                                      <td className="px-4 py-3 text-sm">
+                                        <div className="flex flex-col min-w-0">
+                                          <span className="font-medium truncate">{eleve.nom}</span>
+                                          <span className="truncate">{eleve.prenom}</span>
+                                        </div>
+                                      </td>
+                                    </>
+                                  )}
+                                  <td className="px-4 py-3 text-sm">
+                                    {eleve.categorie ? (
+                                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 whitespace-nowrap">
+                                        {eleve.categorie}
                                       </span>
                                     ) : '-'}
                                   </td>
-                                )}
-                                {displaySettings.lecteur_interne_voir_lecteurs_externes && (
-                                  <td className="px-4 py-3 text-sm whitespace-nowrap">
-                                    {eleve.lecteur_externe_nom ? (
-                                      <span>{eleve.lecteur_externe_prenom} {eleve.lecteur_externe_nom}</span>
-                                    ) : '-'}
+                                  <td className="px-4 py-3 text-sm">
+                                    <div className="whitespace-pre-wrap break-words min-h-[40px] max-w-96">
+                                      {eleve.problematique || '-'}
+                                    </div>
                                   </td>
-                                )}
-                                {displaySettings.lecteur_interne_voir_mediateurs && (
-                                  <td className="px-4 py-3 text-sm whitespace-nowrap">
-                                    {eleve.mediateur_nom ? (
-                                      <span>{eleve.mediateur_prenom} {eleve.mediateur_nom}</span>
-                                    ) : '-'}
+                                  {displaySettings.lecteur_interne_voir_guides && (
+                                    <td className="px-4 py-3 text-sm whitespace-nowrap">
+                                      {eleve.guide_nom} {eleve.guide_initiale}.
+                                      {isGuide && <span className="ml-1 text-xs text-blue-600">(vous)</span>}
+                                    </td>
+                                  )}
+                                  {displaySettings.lecteur_interne_voir_guides && (
+                                    <td className="px-4 py-3 text-sm whitespace-nowrap">
+                                      {eleve.lecteur_interne_nom ? (
+                                        <span>
+                                          {eleve.lecteur_interne_nom} {eleve.lecteur_interne_initiale}.
+                                          {isLecteurInterne && <span className="ml-1 text-xs text-blue-600">(vous)</span>}
+                                        </span>
+                                      ) : '-'}
+                                    </td>
+                                  )}
+                                  {displaySettings.lecteur_interne_voir_lecteurs_externes && (
+                                    <td className="px-4 py-3 text-sm whitespace-nowrap">
+                                      {eleve.lecteur_externe_nom ? (
+                                        <span>{eleve.lecteur_externe_prenom} {eleve.lecteur_externe_nom}</span>
+                                      ) : '-'}
+                                    </td>
+                                  )}
+                                  {displaySettings.lecteur_interne_voir_mediateurs && (
+                                    <td className="px-4 py-3 text-sm whitespace-nowrap">
+                                      {eleve.mediateur_nom ? (
+                                        <span>{eleve.mediateur_prenom} {eleve.mediateur_nom}</span>
+                                      ) : '-'}
+                                    </td>
+                                  )}
+                                </tr>
+                                <tr className="bg-red-50 border-b">
+                                  <td colSpan={calculateColspanNonRendu()} className="px-4 py-2 text-sm text-red-700 bg-red-100">
+                                    ⚠️ L'élève n'a malheureusement pas rendu son TFH. Sa soutenance n'aura donc pas lieu.
+                                    {!isGuide && isLecteurInterne && " S'il reste des TFH disponibles qui vous intéressent, n'hésitez pas à refaire un tour dans l'onglet 'Lecteur interne'."}
                                   </td>
-                                )}
-                              </tr>
-                              // Ligne supplémentaire pour le message explicatif (fusionne toutes les colonnes)
-                              <tr className="bg-red-50 border-b">
-                                <td colSpan={calculateColspanNonRendu()} className="px-4 py-2 text-sm text-red-700 bg-red-100">
-                                  ⚠️ L'élève n'a malheureusement pas rendu son TFH. Sa soutenance n'aura donc pas lieu.
-                                  {!isGuide && isLecteurInterne && " S'il reste des TFH disponibles qui vous intéressent, n'hésitez pas à refaire un tour dans l'onglet 'Lecteur interne'."}
-                                </td>
-                               </tr>
+                                </tr>
+                              </React.Fragment>
                             );
                           })}
                         </tbody>
