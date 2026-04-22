@@ -48,21 +48,21 @@ export default function ConnexionExternePage() {
     checkPortalAccess();
   }, [router]);
 
-  // Vérifier si l'utilisateur existe dans la table externes
+  // Vérifier si l'utilisateur existe déjà
   const checkExistingUser = async () => {
     if (!nom.trim() || !prenom.trim()) return;
-  
-    const nomRaw = nom.trim();
-    const prenomRaw = prenom.trim();
-  
+
+    const nomTrimmed = nom.trim();
+    const prenomTrimmed = prenom.trim();
+
     try {
       const { data: externeData, error } = await supabase
         .from('externes')
         .select('id, email, telephone, mot_de_passe')
-        .ilike('nom', nomRaw)
-        .ilike('prenom', prenomRaw)
+        .eq('nom', nomTrimmed)
+        .eq('prenom', prenomTrimmed)
         .maybeSingle();
-  
+
       if (!error && externeData) {
         setIsNewUser(false);
         return externeData;
@@ -85,20 +85,17 @@ export default function ConnexionExternePage() {
 
     const nomTrimmed = nom.trim();
     const prenomTrimmed = prenom.trim();
-    const emailTrimmed = email.trim();
-    const telephoneTrimmed = telephone.trim() || null;
 
     try {
-      // 1. VÉRIFICATION UTILISATEUR EXISTANT DANS externes
+      // 1. VÉRIFICATION UTILISATEUR EXISTANT
       const { data: existingUser, error: checkError } = await supabase
         .from('externes')
-        .select('id, email, telephone, mot_de_passe, nom, prenom')
-        .ilike('nom', nomTrimmed)
-        .ilike('prenom', prenomTrimmed)
+        .select('id, email, mot_de_passe, nom, prenom')
+        .eq('nom', nomTrimmed)
+        .eq('prenom', prenomTrimmed)
         .maybeSingle();
 
       if (!checkError && existingUser) {
-        // UTILISATEUR EXISTANT
         const storedPassword = existingUser.mot_de_passe;
 
         if (!storedPassword || storedPassword === '') {
@@ -131,17 +128,18 @@ export default function ConnexionExternePage() {
       }
 
       // 2. NOUVEL UTILISATEUR - VÉRIFICATION EMAIL
-      if (!emailTrimmed) {
+      if (!email.trim()) {
         setError('L\'email est obligatoire pour les nouveaux utilisateurs');
         setLoading(false);
         return;
       }
 
-      // Vérifier si l'email existe déjà
+      const emailTrimmed = email.trim();
+
       const { data: emailCheck } = await supabase
         .from('externes')
         .select('id')
-        .ilike('email', emailTrimmed)
+        .eq('email', emailTrimmed)
         .maybeSingle();
 
       if (emailCheck) {
@@ -151,63 +149,30 @@ export default function ConnexionExternePage() {
       }
 
       // 3. CRÉATION DU NOUVEL EXTERNE
-      // Générer des UUID pour lecteur_externe_id et mediateur_id
-      const lecteurExterneId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
-      const mediateurId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+      const telephoneTrimmed = telephone.trim() || null;
 
-      // Créer d'abord dans lecteurs_externes
-      const { error: lecteurError } = await supabase
-        .from('lecteurs_externes')
-        .insert([{
-          id: lecteurExterneId,
-          nom: nomTrimmed,
-          prenom: prenomTrimmed,
-          email: emailTrimmed,
-          telephone: telephoneTrimmed,
-          mot_de_passe: password || null,
-          created_at: new Date().toISOString()
-        }]);
-
-      if (lecteurError) throw lecteurError;
-
-      // Créer dans mediateurs
-      const { error: mediateurError } = await supabase
-        .from('mediateurs')
-        .insert([{
-          id: mediateurId,
-          nom: nomTrimmed,
-          prenom: prenomTrimmed,
-          email: emailTrimmed,
-          telephone: telephoneTrimmed,
-          mot_de_passe: password || null,
-          created_at: new Date().toISOString()
-        }]);
-
-      if (mediateurError) throw mediateurError;
-
-      // Créer l'entrée dans externes
-      const { data: newExterne, error: externeError } = await supabase
+      const { data: newExterne, error: insertError } = await supabase
         .from('externes')
-        .insert([{
-          nom: nomTrimmed,
-          prenom: prenomTrimmed,
-          email: emailTrimmed,
-          telephone: telephoneTrimmed,
-          mot_de_passe: password || null,
-          lecteur_externe_id: lecteurExterneId,
-          mediateur_id: mediateurId,
-          created_at: new Date().toISOString()
-        }])
+        .insert([
+          {
+            nom: nomTrimmed,
+            prenom: prenomTrimmed,
+            email: emailTrimmed,
+            telephone: telephoneTrimmed,
+            mot_de_passe: password || null,
+            created_at: new Date().toISOString()  
+          }
+        ])
         .select()
         .single();
 
-      if (externeError) throw externeError;
+      if (insertError) throw insertError;
 
       localStorage.setItem('userType', 'externe');
       localStorage.setItem('userId', newExterne.id);
       localStorage.setItem('userName', `${prenomTrimmed} ${nomTrimmed}`);
       
-      setWelcomeMessage('Bienvenue ! Votre compte a été créé avec succès.\n\nMerci de prendre du temps pour nos rhétos !');
+      setWelcomeMessage('Bienvenue ! Votre compte a été créé avec succès \n \n Merci de prendre du temps pour nos rhétos !');
       setShowWelcome(true);
 
       setTimeout(() => {
@@ -231,6 +196,7 @@ export default function ConnexionExternePage() {
     return () => clearTimeout(timeoutId);
   }, [nom, prenom]);
 
+  // Afficher un loader pendant la vérification
   if (checkingAccess) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
@@ -358,7 +324,7 @@ export default function ConnexionExternePage() {
             <p className="text-xs text-gray-500 mt-1">
               {isNewUser 
                 ? 'Ce mot de passe vous servira pour vos prochaines connexions'
-                : 'Votre mot de passe personnel'}
+                : 'À la première connexion, ce mot de passe sera enregistré'}
             </p>
           </div>
 
@@ -427,7 +393,6 @@ export default function ConnexionExternePage() {
             <h3 className="font-medium text-gray-700 mb-2">Informations importantes :</h3>
             <ul className="text-sm text-gray-600 space-y-1">
               <li>• Les lecteurs externes et médiateurs peuvent créer leur compte eux-mêmes</li>
-              <li>• Un même compte vous donne accès aux deux rôles (lecteur externe et médiateur)</li>
               <li>• L'email est obligatoire pour la création de compte</li>
               <li>• Si vous avez oublié votre mot de passe, contactez un coordinateur</li>
             </ul>
