@@ -339,13 +339,6 @@ export default function EleveDashboard() {
   const handleSaveUrl = async () => {
     if (!eleve) return;
   
-    // Validation simple d'URL
-    const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i;
-    if (newUrl && !urlPattern.test(newUrl)) {
-      alert('Veuillez entrer une URL valide (ex: https://monfichier.pdf)');
-      return;
-    }
-  
     try {
       await supabase
         .from('eleves')
