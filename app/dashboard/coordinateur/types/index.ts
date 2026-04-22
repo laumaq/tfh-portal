@@ -79,6 +79,7 @@ export interface Eleve {
   journee_20_present?: boolean | null;
 
   mot_de_passe?: string | null;
+  tfh_non_rendu?: boolean;
 }
 
 export interface Guide {
