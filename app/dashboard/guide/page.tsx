@@ -32,6 +32,7 @@ interface Eleve {
   mediateur_nom?: string;
   mediateur_prenom?: string;
   objectif_particulier: string | null;
+  url_tfh?: string;
 }
 
 interface Guide {
@@ -742,7 +743,19 @@ export default function GuideDashboard() {
                             onClick={() => setEditingCell({id: eleve.id, field: 'problematique'})}
                             className="cursor-pointer hover:bg-gray-100 p-1 rounded min-h-[60px] flex items-start whitespace-pre-wrap break-words"
                           >
-                            {eleve.problematique || '-'}
+                            {eleve.url_tfh ? (
+                              <a
+                                href={eleve.url_tfh}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline"
+                                onClick={(e) => e.stopPropagation()} // Empêche l'activation de l'édition
+                              >
+                                {eleve.problematique || '-'}
+                              </a>
+                            ) : (
+                              eleve.problematique || '-'
+                            )}
                           </div>
                         )}
                       </td>
@@ -1097,7 +1110,18 @@ export default function GuideDashboard() {
                         
                                 <td className="px-4 py-3 text-sm">
                                   <div className="whitespace-pre-wrap break-words min-h-[40px] max-w-96">
-                                    {eleve.problematique || '-'}
+                                    {eleve.url_tfh ? (
+                                      <a
+                                        href={eleve.url_tfh}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-blue-600 hover:underline"
+                                      >
+                                        {eleve.problematique || '-'}
+                                      </a>
+                                    ) : (
+                                      eleve.problematique || '-'
+                                    )}
                                   </div>
                                 </td>
                         
@@ -1222,11 +1246,24 @@ export default function GuideDashboard() {
                                     </span>
                                   ) : '-'}
                                 </td>
+                                
                                 <td className="px-4 py-3 text-sm">
                                   <div className="whitespace-pre-wrap break-words min-h-[40px] max-w-96">
-                                    {eleve.problematique || '-'}
+                                    {eleve.url_tfh ? (
+                                      <a
+                                        href={eleve.url_tfh}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-blue-600 hover:underline"
+                                      >
+                                        {eleve.problematique || '-'}
+                                      </a>
+                                    ) : (
+                                      eleve.problematique || '-'
+                                    )}
                                   </div>
                                 </td>
+                                
                                 {displaySettings.lecteur_interne_voir_guides && (
                                   <td className="px-4 py-3 text-sm whitespace-nowrap">
                                     {eleve.guide_nom} {eleve.guide_initiale}.
@@ -1289,9 +1326,9 @@ export default function GuideDashboard() {
           <p className="text-sm text-blue-700 flex items-start gap-2">
             <span className="text-lg">💡</span>
             <span>
-              {activeTab === 'guide' && 'Vous pouvez modifier la problématique en cliquant dessus, et les convocations via les menus déroulants.'}
+              {activeTab === 'guide' && 'Vous pouvez modifier la problématique en cliquant dessus (sauf si l’élève a déposé un lien, auquel cas il est cliquable vers sa version numérique). Les convocations se gèrent via les menus déroulants.'}
               {activeTab === 'lecteur-interne' && 'Sélectionnez les élèves pour lesquels vous serez lecteur interne. Un élève ne peut avoir qu\'un seul lecteur interne.'}
-              {activeTab === 'defenses' && 'Affichage séparé des défenses programmées et non programmées.'}
+              {activeTab === 'defenses' && 'Les problématiques surlignées en bleu sont cliquables vers le travail numérique de l’élève (s’il a déposé un lien).'}
             </span>
           </p>
         </div>
