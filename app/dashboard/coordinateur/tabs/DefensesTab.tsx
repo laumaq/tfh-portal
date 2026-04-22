@@ -31,7 +31,7 @@ type SortField =
   | 'mediateur_id'
   | 'date_defense'
   | 'heure_defense'
-  | 'localisation_defense';
+  | 'localisation_defense'
   | 'tfh_non_rendu';
 
 interface SortRule {
