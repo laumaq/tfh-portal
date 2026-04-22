@@ -1,4 +1,3 @@
-// app/connexion-lecteur-externe/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -7,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import Image from 'next/image';
 import logo from '@/app/components/Logotypebaseline_NB.png';
 
-export default function LoginLecteurExternePage() {
+export default function ConnexionExternePage() {
   const [nom, setNom] = useState('');
   const [prenom, setPrenom] = useState('');
   const [email, setEmail] = useState('');
@@ -19,6 +18,7 @@ export default function LoginLecteurExternePage() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [welcomeMessage, setWelcomeMessage] = useState('');
   const [checkingAccess, setCheckingAccess] = useState(true);
+  const [userRoles, setUserRoles] = useState<{ hasLecteur: boolean; hasMediateur: boolean }>({ hasLecteur: false, hasMediateur: false });
   const router = useRouter();
 
   // Vérifier si le portail est ouvert
@@ -33,14 +33,12 @@ export default function LoginLecteurExternePage() {
 
         if (error) throw error;
 
-        // Si le portail est fermé (false), rediriger
         if (data && data.setting_value === 'false') {
           router.push('/portail-externe-ferme');
           return;
         }
       } catch (err) {
         console.error('Erreur vérification accès portail:', err);
-        // En cas d'erreur, on laisse passer par sécurité
       } finally {
         setCheckingAccess(false);
       }
@@ -49,7 +47,7 @@ export default function LoginLecteurExternePage() {
     checkPortalAccess();
   }, [router]);
 
-  // Vérifier si l'utilisateur existe déjà
+  // Vérifier si l'utilisateur existe dans la table externes
   const checkExistingUser = async () => {
     if (!nom.trim() || !prenom.trim()) return;
 
@@ -57,23 +55,29 @@ export default function LoginLecteurExternePage() {
     const prenomTrimmed = prenom.trim();
 
     try {
-      const { data: lecteurData, error: lecteurError } = await supabase
-        .from('lecteurs_externes')
-        .select('id, email, telephone, mot_de_passe')
+      const { data: externeData, error } = await supabase
+        .from('externes')
+        .select('id, email, telephone, mot_de_passe, lecteur_externe_id, mediateur_id')
         .ilike('nom', nomTrimmed)
-        .ilike('prenom', prenomTrimmed + '%')
+        .ilike('prenom', prenomTrimmed)
         .maybeSingle();
 
-      if (!lecteurError && lecteurData) {
+      if (!error && externeData) {
         setIsNewUser(false);
-        return lecteurData;
+        setUserRoles({
+          hasLecteur: !!externeData.lecteur_externe_id,
+          hasMediateur: !!externeData.mediateur_id
+        });
+        return externeData;
       } else {
         setIsNewUser(true);
+        setUserRoles({ hasLecteur: false, hasMediateur: false });
         return null;
       }
     } catch (err) {
       console.error('Erreur vérification:', err);
       setIsNewUser(true);
+      setUserRoles({ hasLecteur: false, hasMediateur: false });
       return null;
     }
   };
@@ -86,17 +90,20 @@ export default function LoginLecteurExternePage() {
 
     const nomTrimmed = nom.trim();
     const prenomTrimmed = prenom.trim();
+    const emailTrimmed = email.trim();
+    const telephoneTrimmed = telephone.trim() || null;
 
     try {
-      // 1. VÉRIFICATION UTILISATEUR EXISTANT
+      // 1. VÉRIFICATION UTILISATEUR EXISTANT DANS externes
       const { data: existingUser, error: checkError } = await supabase
-        .from('lecteurs_externes')
-        .select('id, email, mot_de_passe, nom, prenom')
+        .from('externes')
+        .select('id, email, telephone, mot_de_passe, nom, prenom, lecteur_externe_id, mediateur_id')
         .ilike('nom', nomTrimmed)
-        .ilike('prenom', prenomTrimmed + '%')
+        .ilike('prenom', prenomTrimmed)
         .maybeSingle();
 
       if (!checkError && existingUser) {
+        // UTILISATEUR EXISTANT
         const storedPassword = existingUser.mot_de_passe;
 
         if (!storedPassword || storedPassword === '') {
@@ -107,7 +114,7 @@ export default function LoginLecteurExternePage() {
           }
 
           const { error: updateError } = await supabase
-            .from('lecteurs_externes')
+            .from('externes')
             .update({ mot_de_passe: password })
             .eq('id', existingUser.id);
 
@@ -120,25 +127,45 @@ export default function LoginLecteurExternePage() {
           }
         }
 
-        localStorage.setItem('userType', 'lecteur_externe');
+        // Déterminer quel rôle utiliser (priorité au lecteur externe si les deux existent)
+        let userType = '';
+        let dashboardPath = '';
+        
+        if (existingUser.lecteur_externe_id && existingUser.mediateur_id) {
+          // Les deux rôles existent - on pourrait demander à l'utilisateur, mais pour l'instant on choisit lecteur
+          userType = 'lecteur_externe';
+          dashboardPath = '/dashboard/lecteur_externe';
+        } else if (existingUser.lecteur_externe_id) {
+          userType = 'lecteur_externe';
+          dashboardPath = '/dashboard/lecteur_externe';
+        } else if (existingUser.mediateur_id) {
+          userType = 'mediateur';
+          dashboardPath = '/dashboard/mediateur';
+        } else {
+          setError('Aucun rôle valide trouvé pour cet utilisateur');
+          setLoading(false);
+          return;
+        }
+
+        localStorage.setItem('userType', userType);
         localStorage.setItem('userId', existingUser.id);
         localStorage.setItem('userName', `${existingUser.prenom} ${existingUser.nom}`);
+        localStorage.setItem('externeId', existingUser.id);
         
-        router.push('/dashboard/lecteur_externe');
+        router.push(dashboardPath);
         return;
       }
 
       // 2. NOUVEL UTILISATEUR - VÉRIFICATION EMAIL
-      if (!email.trim()) {
-        setError('L\'email est obligatoire pour les nouveaux lecteurs externes');
+      if (!emailTrimmed) {
+        setError('L\'email est obligatoire pour les nouveaux utilisateurs');
         setLoading(false);
         return;
       }
 
-      const emailTrimmed = email.trim();
-
+      // Vérifier si l'email existe déjà
       const { data: emailCheck } = await supabase
-        .from('lecteurs_externes')
+        .from('externes')
         .select('id')
         .ilike('email', emailTrimmed)
         .maybeSingle();
@@ -149,31 +176,69 @@ export default function LoginLecteurExternePage() {
         return;
       }
 
-      // 3. CRÉATION DU NOUVEAU LECTEUR EXTERNE
-      const telephoneTrimmed = telephone.trim() || null;
+      // 3. CRÉATION DU NOUVEL EXTERNE
+      // Générer des UUID pour lecteur_externe_id et mediateur_id
+      const lecteurExterneId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+      const mediateurId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
 
-      const { data: newLecteur, error: insertError } = await supabase
+      // Créer d'abord dans lecteurs_externes
+      const { data: newLecteur, error: lecteurError } = await supabase
         .from('lecteurs_externes')
-        .insert([
-          {
-            nom: nomTrimmed,
-            prenom: prenomTrimmed,
-            email: emailTrimmed,
-            telephone: telephoneTrimmed,
-            mot_de_passe: password || null,
-            created_at: new Date().toISOString()  
-          }
-        ])
+        .insert([{
+          id: lecteurExterneId,
+          nom: nomTrimmed,
+          prenom: prenomTrimmed,
+          email: emailTrimmed,
+          telephone: telephoneTrimmed,
+          mot_de_passe: password || null,
+          created_at: new Date().toISOString()
+        }])
         .select()
         .single();
 
-      if (insertError) throw insertError;
+      if (lecteurError) throw lecteurError;
+
+      // Créer dans mediateurs
+      const { data: newMediateur, error: mediateurError } = await supabase
+        .from('mediateurs')
+        .insert([{
+          id: mediateurId,
+          nom: nomTrimmed,
+          prenom: prenomTrimmed,
+          email: emailTrimmed,
+          telephone: telephoneTrimmed,
+          mot_de_passe: password || null,
+          created_at: new Date().toISOString()
+        }])
+        .select()
+        .single();
+
+      if (mediateurError) throw mediateurError;
+
+      // Créer l'entrée dans externes
+      const { data: newExterne, error: externeError } = await supabase
+        .from('externes')
+        .insert([{
+          nom: nomTrimmed,
+          prenom: prenomTrimmed,
+          email: emailTrimmed,
+          telephone: telephoneTrimmed,
+          mot_de_passe: password || null,
+          lecteur_externe_id: lecteurExterneId,
+          mediateur_id: mediateurId,
+          created_at: new Date().toISOString()
+        }])
+        .select()
+        .single();
+
+      if (externeError) throw externeError;
 
       localStorage.setItem('userType', 'lecteur_externe');
-      localStorage.setItem('userId', newLecteur.id);
+      localStorage.setItem('userId', newExterne.id);
       localStorage.setItem('userName', `${prenomTrimmed} ${nomTrimmed}`);
+      localStorage.setItem('externeId', newExterne.id);
       
-      setWelcomeMessage('Bienvenue ! Votre compte a été créé avec succès \n \n Merci de prendre du temps pour nos rhétos !');
+      setWelcomeMessage('Bienvenue ! Votre compte a été créé avec succès. Vous pourrez accéder à vos deux rôles (lecteur externe et médiateur) !\n\nMerci de prendre du temps pour nos rhétos !');
       setShowWelcome(true);
 
       setTimeout(() => {
@@ -197,7 +262,6 @@ export default function LoginLecteurExternePage() {
     return () => clearTimeout(timeoutId);
   }, [nom, prenom]);
 
-  // Afficher un loader pendant la vérification
   if (checkingAccess) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
@@ -213,19 +277,19 @@ export default function LoginLecteurExternePage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
         <div className="text-center mb-6">
-            <div className="mb-4 flex justify-center">
-              <Image
-                src={logo}
-                alt="Logo de l'école"
-                className="h-auto max-w-[400px] object-contain"
-                priority
-              />
-            </div>
+          <div className="mb-4 flex justify-center">
+            <Image
+              src={logo}
+              alt="Logo de l'école"
+              className="h-auto max-w-[400px] object-contain"
+              priority
+            />
+          </div>
           <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            Connexion Externes (lecteurs et médiateurs)
+            Connexion Externes
           </h1>
           <p className="text-gray-600">
-            Portail dédié aux évaluateurs externes des TFH
+            Portail dédié aux lecteurs externes et médiateurs des TFH
           </p>
         </div>
 
@@ -266,9 +330,14 @@ export default function LoginLecteurExternePage() {
           {isNewUser !== null && (
             <div className={`p-3 rounded-lg text-sm ${isNewUser ? 'bg-blue-50 text-blue-700' : 'bg-green-50 text-green-700'}`}>
               {isNewUser ? (
-                <>Nouveau lecteur détecté. Veuillez compléter les informations ci-dessous.</>
+                <>Nouvel externe détecté. Veuillez compléter les informations ci-dessous.</>
               ) : (
-                <>Lecteur existant détecté. Connectez-vous avec votre mot de passe.</>
+                <>
+                  Externe existant détecté. Connectez-vous avec votre mot de passe.
+                  {userRoles.hasLecteur && userRoles.hasMediateur && (
+                    <p className="text-xs mt-1">Vous avez accès aux deux rôles (lecteur externe et médiateur).</p>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -325,7 +394,7 @@ export default function LoginLecteurExternePage() {
             <p className="text-xs text-gray-500 mt-1">
               {isNewUser 
                 ? 'Ce mot de passe vous servira pour vos prochaines connexions'
-                : 'À la première connexion, ce mot de passe sera enregistré'}
+                : 'Votre mot de passe personnel'}
             </p>
           </div>
 
@@ -394,6 +463,7 @@ export default function LoginLecteurExternePage() {
             <h3 className="font-medium text-gray-700 mb-2">Informations importantes :</h3>
             <ul className="text-sm text-gray-600 space-y-1">
               <li>• Les lecteurs externes et médiateurs peuvent créer leur compte eux-mêmes</li>
+              <li>• Un même compte vous donne accès aux deux rôles (lecteur externe et médiateur)</li>
               <li>• L'email est obligatoire pour la création de compte</li>
               <li>• Si vous avez oublié votre mot de passe, contactez un coordinateur</li>
             </ul>
