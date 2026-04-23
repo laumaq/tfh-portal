@@ -1315,23 +1315,62 @@ export default function ExterneDashboard() {
                       </tr>
                     ) : (
                       sortedElevesDisponibles.map((eleve) => {
-                        const isBusy = isTimeSlotBusy(eleve, selectedRole);
-                        const isSelected = selectedRole === 'lecteur' 
-                          ? selectedElevesAsLecteur.includes(eleve.id)
-                          : selectedElevesAsMediateur.includes(eleve.id);
-                        const isAlreadyAssignedOtherRole = (selectedRole === 'lecteur' && eleve.mediateur_id === mediateurId) ||
-                                                           (selectedRole === 'mediateur' && eleve.lecteur_externe_id === lecteurExterneId);
+                        const isBusyLecteur = isTimeSlotBusy(eleve, 'lecteur');
+                        const isBusyMediateur = isTimeSlotBusy(eleve, 'mediateur');
+                        const isLecteurSelected = selectedElevesAsLecteur.includes(eleve.id);
+                        const isMediateurSelected = selectedElevesAsMediateur.includes(eleve.id);
+                        const isLecteurAlreadyTaken = eleve.lecteur_externe_id && eleve.lecteur_externe_id !== lecteurExterneId;
+                        const isMediateurAlreadyTaken = eleve.mediateur_id && eleve.mediateur_id !== mediateurId;
+                        const hasConflict = (isBusyLecteur && !isLecteurSelected) || (isBusyMediateur && !isMediateurSelected);
                         
                         return (
-                          <tr key={eleve.id} className={`hover:bg-gray-50 ${isBusy ? 'bg-gray-100 opacity-60' : ''}`}>
+                          <tr key={eleve.id} className={`hover:bg-gray-50 ${hasConflict ? 'bg-gray-100 opacity-60' : ''}`}>
                             <td className="px-4 py-3">
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={() => handleToggleSelection(eleve.id, selectedRole)}
-                                disabled={isBusy || isAlreadyAssignedOtherRole}
-                                className={`w-4 h-4 rounded ${(isBusy || isAlreadyAssignedOtherRole) ? 'cursor-not-allowed opacity-50' : 'text-blue-600 cursor-pointer'}`}
-                              />
+                              <div className="flex gap-2">
+                                {/* Bouton Lecteur (bleu) */}
+                                <button
+                                  onClick={() => {
+                                    if (isMediateurSelected) {
+                                      // D'abord désélectionner le rôle médiateur
+                                      handleToggleSelection(eleve.id, 'mediateur');
+                                    }
+                                    handleToggleSelection(eleve.id, 'lecteur');
+                                  }}
+                                  disabled={isBusyLecteur || isLecteurAlreadyTaken}
+                                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                                    isLecteurSelected
+                                      ? 'bg-blue-600 text-white'
+                                      : isBusyLecteur || isLecteurAlreadyTaken
+                                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                      : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                                  }`}
+                                  title={isLecteurAlreadyTaken ? "Déjà attribué à un autre lecteur" : isBusyLecteur ? "Conflit de créneau" : ""}
+                                >
+                                  📖 Lecteur
+                                </button>
+                                
+                                {/* Bouton Médiateur (violet) */}
+                                <button
+                                  onClick={() => {
+                                    if (isLecteurSelected) {
+                                      // D'abord désélectionner le rôle lecteur
+                                      handleToggleSelection(eleve.id, 'lecteur');
+                                    }
+                                    handleToggleSelection(eleve.id, 'mediateur');
+                                  }}
+                                  disabled={isBusyMediateur || isMediateurAlreadyTaken}
+                                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                                    isMediateurSelected
+                                      ? 'bg-purple-600 text-white'
+                                      : isBusyMediateur || isMediateurAlreadyTaken
+                                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                      : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                                  }`}
+                                  title={isMediateurAlreadyTaken ? "Déjà attribué à un autre médiateur" : isBusyMediateur ? "Conflit de créneau" : ""}
+                                >
+                                  ⚖️ Médiateur
+                                </button>
+                              </div>
                             </td>
                             <td className="px-4 py-3 text-sm whitespace-nowrap">
                               <span className={`px-2 py-1 rounded inline-block ${eleve.date_defense ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
@@ -1364,24 +1403,6 @@ export default function ExterneDashboard() {
                                 {eleve.guide_prenom} {eleve.guide_nom}
                               </td>
                             )}
-                            <td className="px-4 py-3 text-sm">
-                              {isAlreadyAssignedOtherRole && (
-                                <span className="text-xs text-orange-600">
-                                  Déjà {selectedRole === 'lecteur' ? 'médiateur' : 'lecteur'} sur ce TFH
-                                </span>
-                              )}
-                              {isBusy && !isAlreadyAssignedOtherRole && (
-                                <span className="text-xs text-red-600">Conflit de créneau</span>
-                              )}
-                              {!isBusy && !isAlreadyAssignedOtherRole && eleve[selectedRole === 'lecteur' ? 'lecteur_externe_id' : 'mediateur_id'] && (
-                                <span className="text-xs text-yellow-600">
-                                  Rôle déjà pourvu
-                                </span>
-                              )}
-                              {isSelected && !isBusy && (
-                                <span className="text-xs text-green-600">Sélectionné</span>
-                              )}
-                            </td>
                           </tr>
                         );
                       })
