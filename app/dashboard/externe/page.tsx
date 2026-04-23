@@ -490,6 +490,20 @@ export default function ExterneDashboard() {
     if (selectedMultipleLocations.length > 0 && eleve.localisation_defense && !selectedMultipleLocations.includes(eleve.localisation_defense)) {
       return false;
     }
+    
+    // NOUVEAU FILTRE : Exclure les TFH qui ont déjà tous leurs rôles
+    if (selectedRole === 'lecteur') {
+      // Pour lecteur externe : on ne peut pas sélectionner un TFH qui a déjà un lecteur externe
+      if (eleve.lecteur_externe_id && eleve.lecteur_externe_id !== lecteurExterneId) {
+        return false;
+      }
+    } else if (selectedRole === 'mediateur') {
+      // Pour médiateur : on ne peut pas sélectionner un TFH qui a déjà un médiateur
+      if (eleve.mediateur_id && eleve.mediateur_id !== mediateurId) {
+        return false;
+      }
+    }
+    
     return true;
   });
 
@@ -1358,6 +1372,11 @@ export default function ExterneDashboard() {
                               )}
                               {isBusy && !isAlreadyAssignedOtherRole && (
                                 <span className="text-xs text-red-600">Conflit de créneau</span>
+                              )}
+                              {!isBusy && !isAlreadyAssignedOtherRole && eleve[selectedRole === 'lecteur' ? 'lecteur_externe_id' : 'mediateur_id'] && (
+                                <span className="text-xs text-yellow-600">
+                                  Rôle déjà pourvu
+                                </span>
                               )}
                               {isSelected && !isBusy && (
                                 <span className="text-xs text-green-600">Sélectionné</span>
