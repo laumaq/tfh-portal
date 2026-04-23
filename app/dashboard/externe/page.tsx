@@ -387,19 +387,29 @@ export default function ExterneDashboard() {
   const handleToggleSelection = async (eleveId: string, role: 'lecteur' | 'mediateur') => {
     const eleve = elevesDisponibles.find(e => e.id === eleveId);
     if (!eleve) return;
-
+  
     const field = role === 'lecteur' ? 'lecteur_externe_id' : 'mediateur_id';
     const currentId = role === 'lecteur' ? lecteurExterneId : mediateurId;
     const isCurrentlySelected = role === 'lecteur' 
       ? selectedElevesAsLecteur.includes(eleveId)
       : selectedElevesAsMediateur.includes(eleveId);
-
+  
     // Vérifier les conflits de créneaux
     if (isTimeSlotBusy(eleve, role) && !isCurrentlySelected) {
       alert(`Vous avez déjà une défense en tant que ${role === 'lecteur' ? 'lecteur externe' : 'médiateur'} à ce créneau horaire !`);
       return;
     }
-
+  
+    // Vérifier si le rôle est déjà pris par quelqu'un d'autre
+    const isAlreadyTaken = role === 'lecteur'
+      ? (eleve.lecteur_externe_id && eleve.lecteur_externe_id !== lecteurExterneId)
+      : (eleve.mediateur_id && eleve.mediateur_id !== mediateurId);
+  
+    if (isAlreadyTaken && !isCurrentlySelected) {
+      alert(`Ce TFH a déjà un ${role === 'lecteur' ? 'lecteur externe' : 'médiateur'} assigné à quelqu\'un d'autre.`);
+      return;
+    }
+  
     try {
       if (isCurrentlySelected) {
         // Désélectionner
@@ -408,13 +418,34 @@ export default function ExterneDashboard() {
           .update({ [field]: null })
           .eq('id', eleveId);
         
+        // Mise à jour immédiate des states locaux
         if (role === 'lecteur') {
           setSelectedElevesAsLecteur(prev => prev.filter(id => id !== eleveId));
         } else {
           setSelectedElevesAsMediateur(prev => prev.filter(id => id !== eleveId));
         }
       } else {
-        // Sélectionner
+        // Si l'autre rôle est sélectionné, le désélectionner d'abord
+        const otherRole = role === 'lecteur' ? 'mediateur' : 'lecteur';
+        const otherField = otherRole === 'lecteur' ? 'lecteur_externe_id' : 'mediateur_id';
+        const isOtherSelected = otherRole === 'lecteur'
+          ? selectedElevesAsLecteur.includes(eleveId)
+          : selectedElevesAsMediateur.includes(eleveId);
+        
+        if (isOtherSelected) {
+          await supabase
+            .from('eleves')
+            .update({ [otherField]: null })
+            .eq('id', eleveId);
+          
+          if (otherRole === 'lecteur') {
+            setSelectedElevesAsLecteur(prev => prev.filter(id => id !== eleveId));
+          } else {
+            setSelectedElevesAsMediateur(prev => prev.filter(id => id !== eleveId));
+          }
+        }
+        
+        // Sélectionner le nouveau rôle
         await supabase
           .from('eleves')
           .update({ [field]: currentId })
@@ -426,13 +457,17 @@ export default function ExterneDashboard() {
           setSelectedElevesAsMediateur(prev => [...prev, eleveId]);
         }
       }
-
-      // Recharger les données
-      await loadData(lecteurExterneId, mediateurId);
+  
+      // Recharger les données en arrière-plan pour synchroniser
+      setTimeout(() => {
+        loadData(lecteurExterneId, mediateurId);
+      }, 500);
       
     } catch (err) {
       console.error('Erreur lors de la sauvegarde:', err);
       alert('Erreur lors de l\'enregistrement');
+      // Recharger pour corriger l'état
+      loadData(lecteurExterneId, mediateurId);
     }
   };
 
