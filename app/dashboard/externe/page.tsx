@@ -1,3 +1,5 @@
+// /app/dashboard/externe/page.tsx
+  
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -1319,8 +1321,8 @@ export default function ExterneDashboard() {
                         const isBusyMediateur = isTimeSlotBusy(eleve, 'mediateur');
                         const isLecteurSelected = selectedElevesAsLecteur.includes(eleve.id);
                         const isMediateurSelected = selectedElevesAsMediateur.includes(eleve.id);
-                        const isLecteurAlreadyTaken = eleve.lecteur_externe_id && eleve.lecteur_externe_id !== lecteurExterneId;
-                        const isMediateurAlreadyTaken = eleve.mediateur_id && eleve.mediateur_id !== mediateurId;
+                        const isLecteurAlreadyTaken = !!(eleve.lecteur_externe_id && eleve.lecteur_externe_id !== lecteurExterneId);
+                        const isMediateurAlreadyTaken = !!(eleve.mediateur_id && eleve.mediateur_id !== mediateurId);
                         const hasConflict = (isBusyLecteur && !isLecteurSelected) || (isBusyMediateur && !isMediateurSelected);
                         
                         return (
