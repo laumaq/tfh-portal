@@ -1,6 +1,8 @@
+// /app/dashboard/coordinateur/tabs/DashboardTab.tsx
+
 'use client';
 
-import { Eleve, Guide, TabType, Externe } from '../types';
+import { Eleve, Guide, TabType } from '../types';
 import { detecterSessions, Journee, getJourneesFromSupabase } from '../utils/sessionUtils';
 import { supabase } from '@/lib/supabase';
 import { useState, useEffect } from 'react';
@@ -8,7 +10,6 @@ import {
   Shield, FileText, UserCheck, Calendar, 
   Users, Settings, BarChart, ChevronRight, BookOpen 
 } from 'lucide-react';
-
 
 interface DashboardTabProps {
   eleves: Eleve[];
@@ -29,7 +30,6 @@ export default function DashboardTab({
 }: DashboardTabProps) {
   const [sessions, setSessions] = useState<any[]>([]);
   const [journees, setJournees] = useState<Journee[]>([]);
-  const [externes, setExternes] = useState<Externe[]>([]);
 
   // Charger les journées et sessions
   useEffect(() => {
@@ -119,17 +119,6 @@ export default function DashboardTab({
   };
   
   const stats = calculateSystemOverview();
-  
-  // Fonction pour formater le texte selon les conditions demandées
-  const getDefensesText = () => {
-    if (stats.defensesProgrammees > 0) {
-      return `${stats.defensesProgrammees} défenses programmées / ${stats.avecProblematique} problématiques`;
-    } else if (stats.avecProblematique > 0) {
-      return `${stats.avecProblematique} problématiques / ${stats.avecThematique} thématiques`;
-    } else {
-      return `${stats.avecThematique} thématiques / ${stats.elevesTotal} élèves`;
-    }
-  };
   
   const tabs = [
     {
@@ -254,7 +243,7 @@ export default function DashboardTab({
         <p className="text-gray-600">Bienvenue {coordinateurPrenom} {coordinateurNom}. Voici votre panneau de gestion des TFH.</p>
       </div>
 
-      {/* Aperçu du système - AU-DESSUS des boutons comme demandé */}
+      {/* Aperçu du système */}
       <div className="bg-white rounded-xl shadow-sm border p-6 mb-8">
         <h3 className="font-semibold text-gray-800 mb-6 text-lg">Aperçu du système</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -357,8 +346,8 @@ export default function DashboardTab({
               )}
             </div>
           </div>
-        </div> {/* Fermeture du grid grid-cols-1 */}
-      </div> {/* Fermeture du bg-white rounded-xl shadow-sm border p-6 mb-8 */}
+        </div>
+      </div>
 
       {/* Cartes de navigation */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
