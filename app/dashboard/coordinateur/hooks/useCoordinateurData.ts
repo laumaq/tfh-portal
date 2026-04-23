@@ -157,7 +157,7 @@ export function useCoordinateurData() {
     guides,
     lecteursExternes,
     mediateurs,
-    externes, // ← NOUVEAU
+    externes,
     coordinateurs,
     currentCoordinateur,
     categories,
