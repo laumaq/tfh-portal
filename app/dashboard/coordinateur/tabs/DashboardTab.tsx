@@ -2,7 +2,7 @@
 
 'use client';
 
-import { Eleve, Guide, TabType } from '../types';
+import { Eleve, Guide, Externe, TabType } from '../types';
 import { detecterSessions, Journee, getJourneesFromSupabase } from '../utils/sessionUtils';
 import { supabase } from '@/lib/supabase';
 import { useState, useEffect } from 'react';
