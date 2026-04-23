@@ -1,13 +1,16 @@
 // app/dashboard/coordinateur/tabs/StatsTab.tsx
+
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { 
   BarChart3, TrendingUp, Users, BookOpen, UserCheck, Eye, 
-  CheckCircle, XCircle, AlertCircle, Download, Filter, RefreshCw
+  CheckCircle, XCircle, AlertCircle, Download, Filter, RefreshCw,
+  Scale
 } from 'lucide-react';
-import { Eleve } from '../types';
+import { Eleve, Externe } from '../types';
 
 interface StatsData {
   totalEleves: number;
@@ -17,12 +20,14 @@ interface StatsData {
   avecGuide: number;
   avecLecteurInterne: number;
   avecLecteurExterne: number;
+  avecMediateur: number;
   pourcentageThematique: number;
   pourcentageProblematique: number;
   pourcentageSources: number;
   pourcentageGuide: number;
   pourcentageLecteurInterne: number;
   pourcentageLecteurExterne: number;
+  pourcentageMediateur: number;
 }
 
 interface ElevesListModalProps {
@@ -129,10 +134,18 @@ export default function StatsTab() {
           *,
           guide:guides!guide_id (nom, prenom),
           lecteur_interne:guides!lecteur_interne_id (nom, prenom),
-          lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom)
+          lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
+          mediateur:mediateurs!mediateur_id (nom, prenom)
         `);
       
       if (error) throw error;
+
+      // Charger les externes (lecteurs et médiateurs)
+      const { data: externes, error: externesError } = await supabase
+        .from('externes')
+        .select('*');
+      
+      if (externesError) throw externesError;
 
       const totalEleves = eleves.length;
       
@@ -149,6 +162,7 @@ export default function StatsTab() {
       const avecGuide = eleves.filter(e => e.guide_id).length;
       const avecLecteurInterne = eleves.filter(e => e.lecteur_interne_id).length;
       const avecLecteurExterne = eleves.filter(e => e.lecteur_externe_id).length;
+      const avecMediateur = eleves.filter(e => e.mediateur_id).length;
 
       setStats({
         totalEleves,
@@ -158,12 +172,14 @@ export default function StatsTab() {
         avecGuide,
         avecLecteurInterne,
         avecLecteurExterne,
+        avecMediateur,
         pourcentageThematique: totalEleves > 0 ? (avecThematique / totalEleves) * 100 : 0,
         pourcentageProblematique: totalEleves > 0 ? (avecProblematique / totalEleves) * 100 : 0,
         pourcentageSources: totalEleves > 0 ? (avecSources / totalEleves) * 100 : 0,
         pourcentageGuide: totalEleves > 0 ? (avecGuide / totalEleves) * 100 : 0,
         pourcentageLecteurInterne: totalEleves > 0 ? (avecLecteurInterne / totalEleves) * 100 : 0,
         pourcentageLecteurExterne: totalEleves > 0 ? (avecLecteurExterne / totalEleves) * 100 : 0,
+        pourcentageMediateur: totalEleves > 0 ? (avecMediateur / totalEleves) * 100 : 0,
       });
 
     } catch (err) {
@@ -181,7 +197,8 @@ export default function StatsTab() {
           *,
           guide:guides!guide_id (nom, prenom),
           lecteur_interne:guides!lecteur_interne_id (nom, prenom),
-          lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom)
+          lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
+          mediateur:mediateurs!mediateur_id (nom, prenom)
         `)
         .order('nom', { ascending: true });
       
@@ -207,6 +224,8 @@ export default function StatsTab() {
               return eleve.lecteur_interne_id;
             case 'lecteur_externe':
               return eleve.lecteur_externe_id;
+            case 'mediateur':
+              return eleve.mediateur_id;
             default:
               return false;
           }
@@ -242,6 +261,7 @@ export default function StatsTab() {
       case 'guide': return <Users className="w-6 h-6" />;
       case 'lecteur_interne': return <Eye className="w-6 h-6" />;
       case 'lecteur_externe': return <UserCheck className="w-6 h-6" />;
+      case 'mediateur': return <Scale className="w-6 h-6" />;
       default: return null;
     }
   };
@@ -254,6 +274,7 @@ export default function StatsTab() {
       case 'guide': return 'Guide';
       case 'lecteur_interne': return 'Lecteur interne';
       case 'lecteur_externe': return 'Lecteur externe';
+      case 'mediateur': return 'Médiateur';
       default: return '';
     }
   };
@@ -333,6 +354,7 @@ export default function StatsTab() {
               { field: 'guide', value: stats.avecGuide, percentage: stats.pourcentageGuide },
               { field: 'lecteur_interne', value: stats.avecLecteurInterne, percentage: stats.pourcentageLecteurInterne },
               { field: 'lecteur_externe', value: stats.avecLecteurExterne, percentage: stats.pourcentageLecteurExterne },
+              { field: 'mediateur', value: stats.avecMediateur, percentage: stats.pourcentageMediateur },
             ].map((stat) => (
               <div
                 key={stat.field}
@@ -438,6 +460,7 @@ export default function StatsTab() {
                     { field: 'sources', label: '5 sources rendues', value: stats.avecSources, percentage: stats.pourcentageSources, color: 'purple' },
                     { field: 'lecteur_interne', label: 'Lecteur interne', value: stats.avecLecteurInterne, percentage: stats.pourcentageLecteurInterne, color: 'indigo' },
                     { field: 'lecteur_externe', label: 'Lecteur externe', value: stats.avecLecteurExterne, percentage: stats.pourcentageLecteurExterne, color: 'pink' },
+                    { field: 'mediateur', label: 'Médiateur', value: stats.avecMediateur, percentage: stats.pourcentageMediateur, color: 'violet' },
                   ].map((item) => (
                     <tr key={item.field} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -448,7 +471,8 @@ export default function StatsTab() {
                             item.color === 'yellow' ? 'bg-yellow-100 text-yellow-600' :
                             item.color === 'purple' ? 'bg-purple-100 text-purple-600' :
                             item.color === 'indigo' ? 'bg-indigo-100 text-indigo-600' :
-                            'bg-pink-100 text-pink-600'
+                            item.color === 'pink' ? 'bg-pink-100 text-pink-600' :
+                            'bg-violet-100 text-violet-600'
                           }`}>
                             {getStatIcon(item.field)}
                           </div>
@@ -482,7 +506,8 @@ export default function StatsTab() {
                                   item.color === 'yellow' ? 'bg-yellow-500' :
                                   item.color === 'purple' ? 'bg-purple-500' :
                                   item.color === 'indigo' ? 'bg-indigo-500' :
-                                  'bg-pink-500'
+                                  item.color === 'pink' ? 'bg-pink-500' :
+                                  'bg-violet-500'
                                 }`}
                                 style={{ width: `${Math.min(item.percentage, 100)}%` }}
                               />
@@ -555,6 +580,7 @@ export default function StatsTab() {
                     { label: '5 sources', value: stats.pourcentageSources },
                     { label: 'Lecteur interne', value: stats.pourcentageLecteurInterne },
                     { label: 'Lecteur externe', value: stats.pourcentageLecteurExterne },
+                    { label: 'Médiateur', value: stats.pourcentageMediateur },
                   ]
                     .filter(item => item.value < 70)
                     .map((item, index) => (
