@@ -150,22 +150,31 @@ export default function ConnexionExternePage() {
 
       // 3. CRÉATION DU NOUVEL EXTERNE
       const telephoneTrimmed = telephone.trim() || null;
-
+      
+      // Générer les trois UUID
+      const newId = crypto.randomUUID();
+      const newLecteurExterneId = crypto.randomUUID();
+      const newMediateurId = crypto.randomUUID();
+      
+      // Créer l'entrée dans externes avec les trois IDs
       const { data: newExterne, error: insertError } = await supabase
         .from('externes')
         .insert([
           {
+            id: newId,
             nom: nomTrimmed,
             prenom: prenomTrimmed,
             email: emailTrimmed,
             telephone: telephoneTrimmed,
             mot_de_passe: password || null,
+            lecteur_externe_id: newLecteurExterneId,
+            mediateur_id: newMediateurId,
             created_at: new Date().toISOString()  
           }
         ])
         .select()
         .single();
-
+      
       if (insertError) throw insertError;
 
       localStorage.setItem('userType', 'externe');
