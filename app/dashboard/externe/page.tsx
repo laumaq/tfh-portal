@@ -109,9 +109,14 @@ export default function ExterneDashboard() {
     setExterneId(userId);
     loadUserRoles(userId);
   }, [router]);
-
+  
   const loadUserRoles = async (externeId: string) => {
-    try {
+    if (!externeId || externeId.trim() === '') {
+      console.error('externeId manquant, redirection vers connexion');
+      router.push('/connexion-externe');
+      return;
+    }
+  try {
       const { data, error } = await supabase
         .from('externes')
         .select('lecteur_externe_id, mediateur_id')
