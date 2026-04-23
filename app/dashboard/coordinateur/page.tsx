@@ -36,6 +36,7 @@ export default function CoordinateurDashboard() {
     lecteursExternes, 
     mediateurs, 
     coordinateurs, 
+    externes,
     currentCoordinateur,
     categories,
     loading, 
@@ -120,8 +121,7 @@ export default function CoordinateurDashboard() {
           <DefensesTab
             eleves={eleves}
             guides={guides}
-            lecteursExternes={lecteursExternes}
-            mediateurs={mediateurs}
+            externes={externes}
             editingMode={editingModeDefenses}
             onUpdate={handleUpdate}
             onSelectUpdate={handleSelectUpdate}
@@ -134,6 +134,7 @@ export default function CoordinateurDashboard() {
         return (
           <CalendrierTab
             eleves={eleves}
+            externes={externes}
             categories={categories}
             onRefresh={refreshData}
           />
@@ -144,8 +145,7 @@ export default function CoordinateurDashboard() {
           <GestionUtilisateursTab
             eleves={eleves}
             guides={guides}
-            lecteursExternes={lecteursExternes}
-            mediateurs={mediateurs}
+            externes={externes}
             coordinateurs={coordinateurs}
             onRefresh={refreshData}
           />
