@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Eleve, Guide, LecteurExterne, Mediateur } from '../types';
+import { Eleve, Guide, Externe } from '../types';
 import { formatDateForInput } from '../utils/dateUtils';
 import { getCategoryColor } from '../utils/categoryUtils';
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
