@@ -1,6 +1,6 @@
 'use client';
 
-import { Eleve, Guide, TabType } from '../types';
+import { Eleve, Guide, TabType, Externe } from '../types';
 import { detecterSessions, Journee, getJourneesFromSupabase } from '../utils/sessionUtils';
 import { supabase } from '@/lib/supabase';
 import { useState, useEffect } from 'react';
@@ -29,6 +29,7 @@ export default function DashboardTab({
 }: DashboardTabProps) {
   const [sessions, setSessions] = useState<any[]>([]);
   const [journees, setJournees] = useState<Journee[]>([]);
+  const [externes, setExternes] = useState<Externe[]>([]);
 
   // Charger les journées et sessions
   useEffect(() => {
