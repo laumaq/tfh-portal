@@ -11,8 +11,7 @@ import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 interface DefensesTabProps {
   eleves: Eleve[];
   guides: Guide[];
-  lecteursExternes: LecteurExterne[];
-  mediateurs: Mediateur[];
+  externes: Externe[];
   editingMode: boolean;
   onUpdate: (eleveId: string, field: string, value: string) => Promise<void>;
   onSelectUpdate: (eleveId: string, field: string, value: string) => Promise<void>;
@@ -44,8 +43,7 @@ interface SortRule {
 export default function DefensesTab({
   eleves,
   guides,
-  lecteursExternes,
-  mediateurs,
+  externes,
   editingMode,
   onUpdate,
   onSelectUpdate,
@@ -86,12 +84,12 @@ export default function DefensesTab({
         return guide ? `${guide.nom} ${guide.initiale}.` : '';
       }
       case 'lecteur_externe_id': {
-        const lecteur = lecteursExternes.find(l => l.id === eleve.lecteur_externe_id);
-        return lecteur ? `${lecteur.nom} ${lecteur.prenom}` : '';
+        const externe = externes.find(l => l.lecteur_externe_id === eleve.lecteur_externe_id);
+        return externe ? `${externe.nom} ${externe.prenom}` : '';
       }
       case 'mediateur_id': {
-        const med = mediateurs.find(m => m.id === eleve.mediateur_id);
-        return med ? `${med.nom} ${med.prenom}` : '';
+        const externe = externes.find(m => m.mediateur_id === eleve.mediateur_id);
+        return externe ? `${externe.nom} ${externe.prenom}` : '';
       }
       case 'date_defense':
         return eleve.date_defense ? new Date(eleve.date_defense).getTime() : null;
@@ -248,34 +246,36 @@ export default function DefensesTab({
     currentEleve: Eleve,
     allEleves: Eleve[]
   ): { id: string; label: string }[] => {
-    // Récupérer la date et l'heure de la défense de l'élève courant
     const currentDate = currentEleve.date_defense?.trim();
     const currentTime = currentEleve.heure_defense?.trim();
     
-    // Construire un timestamp pour la défense courante
     let currentTimestamp: number | null = null;
     if (currentDate && currentTime) {
       const dateTimeStr = `${currentDate}T${currentTime}`;
       currentTimestamp = new Date(dateTimeStr).getTime();
     }
   
-    // Fonction pour obtenir la liste complète des options (triée)
+    // Fonction pour obtenir la liste complète des options depuis externes
     const getAllOptions = (): { id: string; label: string }[] => {
       if (type === 'lecteur_interne') {
         return guides.map(g => ({ id: g.id, label: `${g.nom} ${g.initiale}.` }));
       } else if (type === 'lecteur_externe') {
-        return lecteursExternes.map(l => ({ id: l.id, label: `${l.nom} ${l.prenom}` }));
+        // Filtrer les externes qui ont un lecteur_externe_id
+        return externes
+          .filter(e => e.lecteur_externe_id)
+          .map(e => ({ id: e.lecteur_externe_id!, label: `${e.nom} ${e.prenom}` }));
       } else {
-        return mediateurs.map(m => ({ id: m.id, label: `${m.nom} ${m.prenom}` }));
+        // Filtrer les externes qui ont un mediateur_id
+        return externes
+          .filter(e => e.mediateur_id)
+          .map(e => ({ id: e.mediateur_id!, label: `${e.nom} ${e.prenom}` }));
       }
     };
   
-    // Si pas de date/heure valide, on retourne toutes les options triées
     if (!currentTimestamp || isNaN(currentTimestamp)) {
       return getAllOptions().sort((a, b) => a.label.localeCompare(b.label));
     }
   
-    // Trouver tous les élèves qui ont une défense au même créneau horaire (à la minute près)
     const conflits = allEleves.filter(e => {
       if (e.id === currentEleve.id) return false;
       const eDate = e.date_defense?.trim();
@@ -285,7 +285,6 @@ export default function DefensesTab({
       return eTimestamp === currentTimestamp;
     });
   
-    // Extraire les IDs des personnes déjà assignées pour ce rôle
     let idsPris: string[] = [];
     if (type === 'lecteur_interne') {
       idsPris = conflits
@@ -305,7 +304,6 @@ export default function DefensesTab({
     const currentId = currentEleve[type === 'lecteur_interne' ? 'lecteur_interne_id' :
                                     type === 'lecteur_externe' ? 'lecteur_externe_id' : 'mediateur_id'] || '';
   
-    // Filtrer : exclure les indisponibles sauf si c'est la valeur actuelle
     const availableOptions = allOptions.filter(opt =>
       !idsPris.includes(opt.id) || opt.id === currentId
     );
@@ -508,11 +506,12 @@ export default function DefensesTab({
                 const lecteurInterneLabel = guides.find(g => g.id === eleve.lecteur_interne_id)
                   ? `${guides.find(g => g.id === eleve.lecteur_interne_id)!.nom} ${guides.find(g => g.id === eleve.lecteur_interne_id)!.initiale}.`
                   : '';
-                const lecteurExterneLabel = lecteursExternes.find(l => l.id === eleve.lecteur_externe_id)
-                  ? `${lecteursExternes.find(l => l.id === eleve.lecteur_externe_id)!.nom} ${lecteursExternes.find(l => l.id === eleve.lecteur_externe_id)!.prenom}`
+                const lecteurExterneLabel = externes.find(e => e.lecteur_externe_id === eleve.lecteur_externe_id)
+                  ? `${externes.find(e => e.lecteur_externe_id === eleve.lecteur_externe_id)!.nom} ${externes.find(e => e.lecteur_externe_id === eleve.lecteur_externe_id)!.prenom}`
                   : '';
-                const mediateurLabel = mediateurs.find(m => m.id === eleve.mediateur_id)
-                  ? `${mediateurs.find(m => m.id === eleve.mediateur_id)!.nom} ${mediateurs.find(m => m.id === eleve.mediateur_id)!.prenom}`
+                
+                const mediateurLabel = externes.find(e => e.mediateur_id === eleve.mediateur_id)
+                  ? `${externes.find(e => e.mediateur_id === eleve.mediateur_id)!.nom} ${externes.find(e => e.mediateur_id === eleve.mediateur_id)!.prenom}`
                   : '';
 
                 return (
