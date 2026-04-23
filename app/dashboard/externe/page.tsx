@@ -111,18 +111,13 @@ export default function ExterneDashboard() {
   }, [router]);
   
   const loadUserRoles = async () => {
-    // Récupérer directement depuis localStorage pour être sûr
     const storedUserId = localStorage.getItem('userId');
     if (!storedUserId) {
-      console.error('Aucun userId dans localStorage');
       router.push('/connexion-externe');
       return;
     }
   
-    console.log('loadUserRoles: storedUserId =', storedUserId);
-
     try {
-      // Chercher l'externe par son id (clé primaire)
       const { data, error } = await supabase
         .from('externes')
         .select('id, lecteur_externe_id, mediateur_id')
@@ -130,21 +125,19 @@ export default function ExterneDashboard() {
         .single();
   
       if (error || !data) {
-        console.error('Externe non trouvé pour id =', storedUserId, error);
         router.push('/connexion-externe');
         return;
       }
   
-      console.log('Externe trouvé:', data);
-  
       // Mettre à jour les states
+      setExterneId(data.id);
       setLecteurExterneId(data.lecteur_externe_id || '');
       setMediateurId(data.mediateur_id || '');
       
-      // Charger les données avec les bons IDs
+      // Appeler loadData avec les IDs récupérés (pas les states)
       await loadData(data.lecteur_externe_id || '', data.mediateur_id || '');
     } catch (err) {
-      console.error('Erreur chargement rôles:', err);
+      console.error(err);
       router.push('/connexion-externe');
     }
   };
@@ -175,21 +168,10 @@ export default function ExterneDashboard() {
       // Charger les élèves assignés à l'utilisateur (comme lecteur OU médiateur)
       let allAssigned: Eleve[] = [];
 
-      const { data: externeData } = await supabase
-        .from('externes')
-        .select('lecteur_externe_id, mediateur_id')
-        .eq('id', externeId)
-        .single();
-      
-      const vraiLecteurId = externeData?.lecteur_externe_id;
-      const vraiMediateurId = externeData?.mediateur_id;
 
-      console.log('externeData reçu:', externeData);
-      console.log('vraiLecteurId:', vraiLecteurId);
-      console.log('vraiMediateurId:', vraiMediateurId);
-      
-      if (vraiLecteurId) {
-        console.log('Recherche des élèves avec lecteur_externe_id =', vraiLecteurId);
+
+      if (lecteurExterneIdVal) {
+        console.log('Recherche des élèves avec lecteur_externe_id =', lecteurExterneIdVal);
         const { data: lecteurData, error: lecteurError } = await supabase
           .from('eleves')
           .select(`
@@ -199,14 +181,14 @@ export default function ExterneDashboard() {
             lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
             mediateur:mediateurs!mediateur_id (nom, prenom)
           `)
-          .eq('lecteur_externe_id', vraiLecteurId);
+          .eq('lecteur_externe_id', lecteurExterneIdVal);
         
         if (lecteurError) console.error('Erreur lecteur:', lecteurError);
         if (lecteurData) allAssigned = [...allAssigned, ...lecteurData];
       }
       
-      if (vraiMediateurId) {
-        console.log('Recherche des élèves avec mediateur_id =', vraiMediateurId);
+      if (mediateurIdVal) {
+        console.log('Recherche des élèves avec mediateur_id =', mediateurIdVal);
         const { data: mediateurData, error: mediateurError } = await supabase
           .from('eleves')
           .select(`
@@ -216,7 +198,7 @@ export default function ExterneDashboard() {
             lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
             mediateur:mediateurs!mediateur_id (nom, prenom)
           `)
-          .eq('mediateur_id', vraiMediateurId);
+          .eq('mediateur_id', mediateurIdVal);
         
         if (mediateurError) console.error('Erreur mediateur:', mediateurError);
         if (mediateurData) allAssigned = [...allAssigned, ...mediateurData];
