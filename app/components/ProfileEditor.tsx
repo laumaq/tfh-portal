@@ -1,4 +1,5 @@
 // app/components/ProfileEditor.tsx
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -46,6 +47,9 @@ export default function ProfileEditor({ userId, userType, onClose, onUpdate }: P
           break;
         case 'eleve':
           tableName = 'eleves';
+          break;
+        case 'externe':
+          tableName = 'externes';
           break;
         default:
           throw new Error('Type d\'utilisateur non supporté');
@@ -96,6 +100,9 @@ export default function ProfileEditor({ userId, userType, onClose, onUpdate }: P
           break;
         case 'eleve':
           tableName = 'eleves';
+          break;
+        case 'externe':
+          tableName = 'externes';
           break;
       }
 
