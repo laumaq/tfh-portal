@@ -153,7 +153,16 @@ export default function ExterneDashboard() {
       // Charger les élèves assignés à l'utilisateur (comme lecteur OU médiateur)
       let allAssigned: Eleve[] = [];
 
-      if (lecteurExterneIdVal) {
+      const { data: externeData } = await supabase
+        .from('externes')
+        .select('lecteur_externe_id, mediateur_id')
+        .eq('id', externeId)
+        .single();
+      
+      const vraiLecteurId = externeData?.lecteur_externe_id;
+      const vraiMediateurId = externeData?.mediateur_id;
+
+      if (vraiLecteurId) {
         const { data: lecteurData } = await supabase
           .from('eleves')
           .select(`
@@ -163,12 +172,12 @@ export default function ExterneDashboard() {
             lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
             mediateur:mediateurs!mediateur_id (nom, prenom)
           `)
-          .eq('lecteur_externe_id', lecteurExterneIdVal);
+          .eq('lecteur_externe_id', vraiLecteurId);       
         
         if (lecteurData) allAssigned = [...allAssigned, ...lecteurData];
       }
 
-      if (mediateurIdVal) {
+      if (vraiMediateurId) {
         const { data: mediateurData } = await supabase
           .from('eleves')
           .select(`
@@ -178,7 +187,7 @@ export default function ExterneDashboard() {
             lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
             mediateur:mediateurs!mediateur_id (nom, prenom)
           `)
-          .eq('mediateur_id', mediateurIdVal);
+            .eq('mediateur_id', vraiMediateurId);
         
         if (mediateurData) allAssigned = [...allAssigned, ...mediateurData];
       }
