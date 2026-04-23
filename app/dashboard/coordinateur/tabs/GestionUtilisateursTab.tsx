@@ -1,19 +1,16 @@
-// app/dashboard/coordinateur/tabs/GestionUtilisateursTab.tsx
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import * as XLSX from 'xlsx';
 import { Plus, Upload, Trash2, UserPlus, AlertTriangle, Check, Lock, Unlock, CheckCircle, XCircle } from 'lucide-react';
-import { Eleve, Guide, LecteurExterne, Mediateur, Coordinateur } from '../types';
+import { Eleve, Guide, Externe, Coordinateur } from '../types';
 
 interface GestionUtilisateursTabProps {
   eleves: Eleve[];
   guides: Guide[];
-  lecteursExternes: LecteurExterne[];
-  mediateurs: Mediateur[];
+  externes: Externe[];
   coordinateurs: Coordinateur[];
-  directionMembers?: any[]; 
   onRefresh: () => void;
 }
 
@@ -38,8 +35,7 @@ interface DeletePasswordModalState {
 export default function GestionUtilisateursTab({
   eleves,
   guides,
-  lecteursExternes,
-  mediateurs,
+  externes,
   coordinateurs,
   onRefresh
 }: GestionUtilisateursTabProps) {
@@ -70,7 +66,6 @@ export default function GestionUtilisateursTab({
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Effacer les messages après 3 secondes
   const clearMessages = () => {
     setTimeout(() => {
       setSuccessMessage('');
@@ -85,9 +80,9 @@ export default function GestionUtilisateursTab({
       case 'guides':
         return guides;
       case 'lecteurs-externes':
-        return lecteursExternes;
+        return externes.filter(e => e.lecteur_externe_id);
       case 'mediateurs':
-        return mediateurs;
+        return externes.filter(e => e.mediateur_id);
       case 'coordinateurs':
         return coordinateurs;
       case 'direction':
@@ -99,10 +94,9 @@ export default function GestionUtilisateursTab({
 
   const getCurrentUserCount = () => {
     if (selectedUserType === 'direction') {
-      // Pour la direction, compter seulement ceux qui sont dans la direction
       return directionMembers.length;
     }
-    return getCurrentUsers().length;  
+    return getCurrentUsers().length;
   };
 
   const handleAddUser = async () => {
@@ -111,7 +105,6 @@ export default function GestionUtilisateursTab({
     setErrorMessage('');
     
     try {
-      // Vérifier les champs requis
       if (!newUser.nom.trim()) {
         setErrorMessage('Le nom est requis');
         clearMessages();
@@ -146,7 +139,7 @@ export default function GestionUtilisateursTab({
               categorie: newUser.categorie || null,
               initiale: initialeEleve,
               guide_id: null,
-              mot_de_passe: null // Initialisé à null
+              mot_de_passe: null
             }]);
 
           if (eleveError) throw eleveError;
@@ -169,7 +162,7 @@ export default function GestionUtilisateursTab({
               prenom: newUser.prenom,
               initiale: initialeGuide,
               email: newUser.email || null,
-              mot_de_passe: null // Initialisé à null
+              mot_de_passe: null
             }]);
 
           if (guideError) throw guideError;
@@ -183,13 +176,17 @@ export default function GestionUtilisateursTab({
             return;
           }
           
+          const lecteurExterneId = crypto.randomUUID();
+          
           const { error: lecteurError } = await supabase
-            .from('lecteurs_externes')
+            .from('externes')
             .insert([{
+              id: crypto.randomUUID(),
               nom: newUser.nom,
               prenom: newUser.prenom,
               email: newUser.email || null,
-              mot_de_passe: null // Initialisé à null
+              lecteur_externe_id: lecteurExterneId,
+              mot_de_passe: null
             }]);
 
           if (lecteurError) throw lecteurError;
@@ -203,13 +200,17 @@ export default function GestionUtilisateursTab({
             return;
           }
           
+          const mediateurId = crypto.randomUUID();
+          
           const { error: mediateurError } = await supabase
-            .from('mediateurs')
+            .from('externes')
             .insert([{
+              id: crypto.randomUUID(),
               nom: newUser.nom,
               prenom: newUser.prenom,
               email: newUser.email || null,
-              mot_de_passe: null // Initialisé à null
+              mediateur_id: mediateurId,
+              mot_de_passe: null
             }]);
 
           if (mediateurError) throw mediateurError;
@@ -231,20 +232,16 @@ export default function GestionUtilisateursTab({
               nom: newUser.nom,
               prenom: newUser.prenom,
               initiale: initialeCoord,
-              mot_de_passe: null // Initialisé à null
+              mot_de_passe: null
             }]);
 
-          if (coordError) {
-            console.error('Erreur détaillée coordinateur:', coordError);
-            throw coordError;
-          }
+          if (coordError) throw coordError;
           break;
       }
 
       setSuccessMessage('Utilisateur ajouté avec succès!');
       clearMessages();
       
-      // Réinitialiser le formulaire
       setNewUser({
         nom: '',
         prenom: '',
@@ -266,7 +263,6 @@ export default function GestionUtilisateursTab({
 
   const loadDirectionData = useCallback(async () => {
     try {
-      // Charger tous les guides
       const { data: guidesData, error: guidesError } = await supabase
         .from('guides')
         .select('*')
@@ -274,7 +270,6 @@ export default function GestionUtilisateursTab({
       
       if (guidesError) throw guidesError;
       
-      // Charger les membres de la direction
       const { data: directionData, error: directionError } = await supabase
         .from('direction')
         .select('guide_id');
@@ -283,15 +278,11 @@ export default function GestionUtilisateursTab({
       
       const directionGuideIds = directionData?.map(d => d.guide_id) || [];
       
-      console.log('Membres direction chargés:', directionGuideIds.length);
-      
-      // Créer un tableau avec tous les guides et info direction
       const guidesWithDirection = (guidesData || []).map(guide => ({
         ...guide,
         isInDirection: directionGuideIds.includes(guide.id)
       }));
       
-      // Trier : membres direction en premier
       guidesWithDirection.sort((a, b) => {
         if (a.isInDirection && !b.isInDirection) return -1;
         if (!a.isInDirection && b.isInDirection) return 1;
@@ -313,24 +304,18 @@ export default function GestionUtilisateursTab({
     try {
       const isCurrentlyInDirection = directionMembers.includes(guideId);
       
-      // Si la nouvelle valeur est true mais qu'il est déjà dans la direction, ou
-      // si la nouvelle valeur est false mais qu'il n'est pas dans la direction,
-      // c'est incohérent
       if (newCheckedValue === isCurrentlyInDirection) {
-        // L'état est déjà cohérent, pas besoin de changement
         setLoading(false);
         return;
       }
       
       if (newCheckedValue) {
-        // Ajouter à la direction
         const { error } = await supabase
           .from('direction')
           .insert([{ guide_id: guideId }]);
         
         if (error) {
           if (error.code === '23505') {
-            // Contrainte UNIQUE violation (déjà dans la direction)
             setErrorMessage('Ce guide est déjà dans la direction');
           } else {
             throw error;
@@ -340,11 +325,9 @@ export default function GestionUtilisateursTab({
           setDirectionGuides(prev => prev.map(g => 
             g.id === guideId ? { ...g, isInDirection: true } : g
           ));
-          
           setSuccessMessage('Guide ajouté à la direction');
         }
       } else {
-        // Retirer de la direction
         const { error } = await supabase
           .from('direction')
           .delete()
@@ -356,7 +339,6 @@ export default function GestionUtilisateursTab({
         setDirectionGuides(prev => prev.map(g => 
           g.id === guideId ? { ...g, isInDirection: false } : g
         ));
-        
         setSuccessMessage('Guide retiré de la direction');
       }
       clearMessages();
@@ -369,7 +351,6 @@ export default function GestionUtilisateursTab({
     }
   };
 
-  
   const handleDeleteUser = async (id: string, nom: string, prenom?: string) => {
     const fullName = prenom ? `${prenom} ${nom}` : nom;
     
@@ -383,10 +364,8 @@ export default function GestionUtilisateursTab({
             await supabase.from('guides').delete().eq('id', id);
             break;
           case 'lecteurs-externes':
-            await supabase.from('lecteurs_externes').delete().eq('id', id);
-            break;
           case 'mediateurs':
-            await supabase.from('mediateurs').delete().eq('id', id);
+            await supabase.from('externes').delete().eq('id', id);
             break;
           case 'coordinateurs':
             await supabase.from('coordinateurs').delete().eq('id', id);
@@ -421,10 +400,8 @@ export default function GestionUtilisateursTab({
           tableName = 'guides';
           break;
         case 'lecteurs-externes':
-          tableName = 'lecteurs_externes';
-          break;
         case 'mediateurs':
-          tableName = 'mediateurs';
+          tableName = 'externes';
           break;
         case 'coordinateurs':
           tableName = 'coordinateurs';
@@ -474,12 +451,10 @@ export default function GestionUtilisateursTab({
     });
   };
 
-  // Fonction pour vérifier si l'utilisateur a un mot de passe (s'est connecté)
   const hasPassword = (user: any): boolean => {
     return user.mot_de_passe !== null && user.mot_de_passe !== undefined && user.mot_de_passe !== '';
   };
 
-  // Fonction pour rendre l'indicateur de connexion
   const renderConnectionStatus = (user: any) => {
     const connected = hasPassword(user);
     
@@ -527,7 +502,6 @@ export default function GestionUtilisateursTab({
         const worksheet = workbook.Sheets[workbook.SheetNames[0]];
         const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as string[][];
         
-        // Convertir en format CSV pour l'affichage
         const csvText = jsonData.map(row => row.join(',')).join('\n');
         setMassImportData(csvText);
         setShowMassImport(true);
@@ -554,28 +528,24 @@ export default function GestionUtilisateursTab({
         return;
       }
 
-      // Vérifier si la première ligne contient des en-têtes
       const firstRow = rows[0].split(',').map(c => c.trim().toLowerCase());
       const hasHeaders = firstRow.includes('nom') || firstRow.includes('prenom') || firstRow.includes('classe');
       
       const dataRows = hasHeaders ? rows.slice(1) : rows;
       
-      console.log(`Import de ${dataRows.length} utilisateurs...`);
-
       switch (selectedUserType) {
         case 'eleves':
           const elevesToInsert = dataRows.map(row => {
             const values = row.split(',').map(v => v.trim());
-            const eleve: any = {
+            return {
               nom: values[0] || '',
               prenom: values[1] || '',
               classe: values[2] || '',
               initiale: (values[1] || '').charAt(0).toUpperCase(),
               categorie: values[3] || null,
               guide_id: null,
-              mot_de_passe: null // Toujours null à l'import
+              mot_de_passe: null
             };
-            return eleve;
           }).filter(e => e.nom && e.prenom && e.classe);
 
           if (elevesToInsert.length > 0) {
@@ -589,13 +559,13 @@ export default function GestionUtilisateursTab({
         case 'guides':
           const guidesToInsert = dataRows.map(row => {
             const values = row.split(',').map(v => v.trim());
-            const guideData: any = {
+            return {
               nom: values[0] || '',
               prenom: values[1] || '',
               initiale: (values[1] || '').charAt(0).toUpperCase(),
-              mot_de_passe: null // Toujours null à l'import
+              email: values[2] || null,
+              mot_de_passe: null
             };
-            return guideData;
           }).filter(g => g.nom && g.prenom);
 
           if (guidesToInsert.length > 0) {
@@ -607,39 +577,43 @@ export default function GestionUtilisateursTab({
           break;
 
         case 'lecteurs-externes':
-          const lecteursToInsert = dataRows.map(row => {
+          const externesLecteursToInsert = dataRows.map(row => {
             const values = row.split(',').map(v => v.trim());
             return {
+              id: crypto.randomUUID(),
               nom: values[0] || '',
               prenom: values[1] || '',
               email: values[2] || null,
-              mot_de_passe: null // Toujours null à l'import
+              lecteur_externe_id: crypto.randomUUID(),
+              mot_de_passe: null
             };
           }).filter(l => l.nom && l.prenom);
 
-          if (lecteursToInsert.length > 0) {
+          if (externesLecteursToInsert.length > 0) {
             const { error } = await supabase
-              .from('lecteurs_externes')
-              .insert(lecteursToInsert);
+              .from('externes')
+              .insert(externesLecteursToInsert);
             if (error) throw error;
           }
           break;
 
         case 'mediateurs':
-          const mediateursToInsert = dataRows.map(row => {
+          const externesMediateursToInsert = dataRows.map(row => {
             const values = row.split(',').map(v => v.trim());
             return {
+              id: crypto.randomUUID(),
               nom: values[0] || '',
               prenom: values[1] || '',
               email: values[2] || null,
-              mot_de_passe: null // Toujours null à l'import
+              mediateur_id: crypto.randomUUID(),
+              mot_de_passe: null
             };
           }).filter(m => m.nom && m.prenom);
 
-          if (mediateursToInsert.length > 0) {
+          if (externesMediateursToInsert.length > 0) {
             const { error } = await supabase
-              .from('mediateurs')
-              .insert(mediateursToInsert);
+              .from('externes')
+              .insert(externesMediateursToInsert);
             if (error) throw error;
           }
           break;
@@ -650,7 +624,7 @@ export default function GestionUtilisateursTab({
             const coordData: any = {
               nom: values[0] || '',
               prenom: values[1] || '',
-              mot_de_passe: null // Toujours null à l'import
+              mot_de_passe: null
             };
             
             if (values[1]) {
@@ -699,7 +673,6 @@ export default function GestionUtilisateursTab({
       return;
     }
 
-    // 3 confirmations reçues
     try {
       if (type === 'eleves') {
         const { error } = await supabase
@@ -734,12 +707,11 @@ export default function GestionUtilisateursTab({
       case 'lecteurs-externes': return 'Lecteurs externes';
       case 'mediateurs': return 'Médiateurs';
       case 'coordinateurs': return 'Coordinateurs';
-      case 'direction': return 'Membres direction'; // <-- Nouveau
+      case 'direction': return 'Membres direction';
       default: return '';
     }
   };
 
-  // Rendu des messages
   const renderMessages = () => {
     if (!successMessage && !errorMessage) return null;
 
@@ -769,7 +741,6 @@ export default function GestionUtilisateursTab({
     <div className="space-y-6">
       {renderMessages()}
       
-      {/* En-tête */}
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -786,7 +757,6 @@ export default function GestionUtilisateursTab({
         </div>
       </div>
 
-      {/* Section d'ajout d'utilisateur */}
       <div className="bg-white rounded-lg shadow p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div>
@@ -839,7 +809,6 @@ export default function GestionUtilisateursTab({
           </div>
         </div>
         
-        {/* Formulaire d'ajout */}
         {selectedUserType !== 'direction' && (
           <div className="border rounded-lg p-4 bg-gray-50">
             <h3 className="text-sm font-medium text-gray-700 mb-4 flex items-center gap-2">
@@ -956,11 +925,24 @@ export default function GestionUtilisateursTab({
                       className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
+                  {selectedUserType === 'guides' && (
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        placeholder="Email"
+                        value={newUser.email}
+                        onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                  )}
                 </>
               )}
             </div>
   
-            {/* Bouton Ajouter */}
             <button
               onClick={handleAddUser}
               disabled={loading}
@@ -982,7 +964,6 @@ export default function GestionUtilisateursTab({
         )}
       </div>
 
-      {/* Liste des utilisateurs */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
@@ -1026,6 +1007,9 @@ export default function GestionUtilisateursTab({
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       Prénom
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Email
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       Connecté
@@ -1144,6 +1128,9 @@ export default function GestionUtilisateursTab({
                       <td className="px-4 py-3 text-sm text-gray-900">
                         {user.prenom}
                       </td>
+                      <td className="px-4 py-3 text-sm text-gray-500">
+                        {user.email || '-'}
+                      </td>
                       <td className="px-4 py-3">
                         {renderConnectionStatus(user)}
                       </td>
@@ -1158,32 +1145,7 @@ export default function GestionUtilisateursTab({
                       </td>
                     </>
                   )}
-                  {selectedUserType === 'lecteurs-externes' && (
-                    <>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                        {user.nom}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-900">
-                        {user.prenom}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
-                        {user.email || '-'}
-                      </td>
-                      <td className="px-4 py-3">
-                        {renderConnectionStatus(user)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={() => handleDeleteUser(user.id, user.nom, user.prenom)}
-                          className="px-3 py-1 bg-red-50 text-red-700 hover:bg-red-100 rounded text-sm transition-colors flex items-center gap-1"
-                          title="Supprimer l'utilisateur"
-                        >
-                          ✕
-                        </button>
-                      </td>
-                    </>
-                  )}
-                  {selectedUserType === 'mediateurs' && (
+                  {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && (
                     <>
                       <td className="px-4 py-3 text-sm font-medium text-gray-900">
                         {user.nom}
@@ -1267,7 +1229,6 @@ export default function GestionUtilisateursTab({
         </div>
       </div>
 
-      {/* Modal d'import massif */}
       {showMassImport && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
@@ -1282,7 +1243,7 @@ export default function GestionUtilisateursTab({
                 </label>
                 <div className="text-sm text-gray-600 mb-3">
                   {selectedUserType === 'eleves' && 'Colonnes: nom, prenom, classe, categorie (optionnel)'}
-                  {selectedUserType === 'guides' && 'Colonnes: nom, prenom'}
+                  {selectedUserType === 'guides' && 'Colonnes: nom, prenom, email (optionnel)'}
                   {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && 'Colonnes: nom, prenom, email'}
                   {selectedUserType === 'coordinateurs' && 'Colonnes: nom, prenom'}
                 </div>
@@ -1332,7 +1293,6 @@ export default function GestionUtilisateursTab({
         </div>
       )}
 
-      {/* Modal de confirmation pour suppression massive */}
       {showClearConfirmations && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
@@ -1389,7 +1349,6 @@ export default function GestionUtilisateursTab({
         </div>
       )}
 
-      {/* Modal de confirmation pour suppression de mot de passe */}
       {deletePasswordModal.isOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
