@@ -199,8 +199,51 @@ export default function CalendarDisplayLecteurExterne({
     prepareCalendarData();
   }, [eleves, selectedCategory, selectedDates, selectedLocations]);
 
-  const isLecteurSelected = (eventId: string) => selectedLecteurIds.includes(eventId);
-  const isMediateurSelected = (eventId: string) => selectedMediateurIds.includes(eventId);
+  const isLecteurSelected = (eventId: string) => {
+    const isSelected = selectedLecteurIds.includes(eventId);
+    console.log(`isLecteurSelected ${eventId}:`, isSelected, 'selectedLecteurIds:', selectedLecteurIds);
+    return isSelected;
+  };
+
+  const isMediateurSelected = (eventId: string) => {
+    const isSelected = selectedMediateurIds.includes(eventId);
+    console.log(`isMediateurSelected ${eventId}:`, isSelected, 'selectedMediateurIds:', selectedMediateurIds);
+    return isSelected;
+  };
+  
+  const getLecteurStatus = (event: DefenseEvent) => {
+    // Récupérer l'élève original pour vérifier ce qui est en base
+    const eleve = eleves.find(e => e.id === event.eleveId);
+    
+    // Si déjà assigné à quelqu'un d'autre
+    if (eleve?.lecteur_externe_id && eleve.lecteur_externe_id !== lecteurExterneId) {
+      return 'taken';
+    }
+    // Si conflit de créneau
+    if (isLecteurBusy(event.eleveId)) {
+      return 'busy';
+    }
+    // Si sélectionné par l'utilisateur courant
+    if (isLecteurSelected(event.eleveId)) {
+      return 'selected';
+    }
+    return 'available';
+  };
+  
+  const getMediateurStatus = (event: DefenseEvent) => {
+    const eleve = eleves.find(e => e.id === event.eleveId);
+    
+    if (eleve?.mediateur_id && eleve.mediateur_id !== mediateurId) {
+      return 'taken';
+    }
+    if (isMediateurBusy(event.eleveId)) {
+      return 'busy';
+    }
+    if (isMediateurSelected(event.eleveId)) {
+      return 'selected';
+    }
+    return 'available';
+  };
   const isLecteurBusy = (eventId: string) => busyLecteurIds.includes(eventId);
   const isMediateurBusy = (eventId: string) => busyMediateurIds.includes(eventId);
 
