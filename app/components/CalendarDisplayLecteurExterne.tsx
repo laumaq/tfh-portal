@@ -1,4 +1,5 @@
 // app/components/CalendarDisplayLecteurExterne.tsx
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -36,10 +37,14 @@ interface CalendarDisplayProps {
   selectedCategory: string;
   selectedDates: string[];
   selectedLocations: string[];
-  onEventClick: (event: DefenseEvent) => void;
-  selectedEventIds: string[];
-  busyEventIds: string[];
-  userLecteurExterneId: string;
+  onLecteurClick: (event: DefenseEvent) => void;
+  onMediateurClick: (event: DefenseEvent) => void;
+  selectedLecteurIds: string[];
+  selectedMediateurIds: string[];
+  busyLecteurIds: string[];
+  busyMediateurIds: string[];
+  lecteurExterneId: string;
+  mediateurId: string;
   displaySettings?: {
     lecteur_externe_voir_eleves: boolean;
     lecteur_externe_voir_guides: boolean;
@@ -53,11 +58,15 @@ export default function CalendarDisplayLecteurExterne({
   selectedCategory, 
   selectedDates, 
   selectedLocations,
-  onEventClick,
-  selectedEventIds,
-  busyEventIds,
-  userLecteurExterneId,
-  displaySettings = {  // ← Ajoutez ce paramètre avec valeur par défaut
+  onLecteurClick,
+  onMediateurClick,
+  selectedLecteurIds,
+  selectedMediateurIds,
+  busyLecteurIds,
+  busyMediateurIds,
+  lecteurExterneId,
+  mediateurId,
+  displaySettings = {
     lecteur_externe_voir_eleves: true,
     lecteur_externe_voir_guides: true,
     lecteur_externe_voir_lecteurs_internes: true,
@@ -66,7 +75,6 @@ export default function CalendarDisplayLecteurExterne({
 }: CalendarDisplayProps) {
   const [dayDefenses, setDayDefenses] = useState<DayDefenses[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
 
   const PIXELS_PER_HOUR = 300;
 
@@ -123,19 +131,10 @@ export default function CalendarDisplayLecteurExterne({
       e.date_defense && e.heure_defense
     );
     
-    console.log('Élèves avec date/heure:', defensesWithSchedule.length);
-    console.log('Edouard dans defensesWithSchedule?', 
-      defensesWithSchedule.find(e => e.id === '34f64a57-2087-47a6-ae9c-487acb8c3fa3') ? 'OUI' : 'NON');
-    
     setIsProcessing(true);
 
-    
     const defenseEvents: DefenseEvent[] = defensesWithSchedule.map(eleve => {
       const startTime = eleve.heure_defense!.substring(0, 5);
-
-      if (eleve.id === '34f64a57-2087-47a6-ae9c-487acb8c3fa3') {
-        console.log('Edouard - startTime:', startTime, 'endTime calculé:', add50Minutes(startTime));
-      }
       
       return {
         id: eleve.id,
@@ -173,36 +172,12 @@ export default function CalendarDisplayLecteurExterne({
       filteredDefenses = filteredDefenses.filter(d => selectedLocations.includes(d.location));
     }
     
-    console.log('=== APRÈS FILTRES CALENDRIER ===');
-    console.log('filteredDefenses count:', filteredDefenses.length);
-    console.log('Edouard dans filteredDefenses?', 
-      filteredDefenses.find(d => d.eleveId === '34f64a57-2087-47a6-ae9c-487acb8c3fa3') ? 'OUI' : 'NON');
-    
-    // Ajoute aussi les valeurs des filtres
-    console.log('Filtres appliqués:', {
-      selectedCategory,
-      selectedDates,
-      selectedLocations
-    });
-    
     const uniqueDates = Array.from(new Set(filteredDefenses.map(d => d.date))).sort();
-
-    console.log('Dates uniques dans filteredDefenses:', uniqueDates);
-    console.log('Date d\'Edouard (2026-05-13) dans uniqueDates?', uniqueDates.includes('2026-05-13'));
     
     const daysData: DayDefenses[] = uniqueDates.map(date => {
-    const dateDefenses = filteredDefenses.filter(d => d.date === date);
-
-    if (date === '2026-05-13') {
-      console.log('=== JOUR 2026-05-13 ===');
-      console.log('Nombre de défenses ce jour:', dateDefenses.length);
-      console.log('Edouard dans dateDefenses?', 
-        dateDefenses.find(d => d.eleveId === '34f64a57-2087-47a6-ae9c-487acb8c3fa3') ? 'OUI' : 'NON');
-      console.log('Locations ce jour:', Array.from(new Set(dateDefenses.map(d => d.location))).sort());
-    }
-      
-    const uniqueLocations = Array.from(new Set(dateDefenses.map(d => d.location)))
-      .sort((a, b) => a.charAt(0).localeCompare(b.charAt(0)));
+      const dateDefenses = filteredDefenses.filter(d => d.date === date);
+      const uniqueLocations = Array.from(new Set(dateDefenses.map(d => d.location)))
+        .sort((a, b) => a.charAt(0).localeCompare(b.charAt(0)));
       
       return {
         date,
@@ -215,7 +190,6 @@ export default function CalendarDisplayLecteurExterne({
         defenses: dateDefenses.sort((a, b) => a.startTime.localeCompare(b.startTime))
       };
     });
-    console.log('Nombre total de jours dans daysData:', daysData.length);
     
     setDayDefenses(daysData);
     setIsProcessing(false);
@@ -225,36 +199,36 @@ export default function CalendarDisplayLecteurExterne({
     prepareCalendarData();
   }, [eleves, selectedCategory, selectedDates, selectedLocations]);
 
-  const isEventSelected = (eventId: string) => {
-    return selectedEventIds.includes(eventId);
+  const isLecteurSelected = (eventId: string) => selectedLecteurIds.includes(eventId);
+  const isMediateurSelected = (eventId: string) => selectedMediateurIds.includes(eventId);
+  const isLecteurBusy = (eventId: string) => busyLecteurIds.includes(eventId);
+  const isMediateurBusy = (eventId: string) => busyMediateurIds.includes(eventId);
+
+  const getLecteurStatus = (eleve: any) => {
+    if (eleve.lecteur_externe_id && eleve.lecteur_externe_id !== lecteurExterneId) {
+      return 'taken';
+    }
+    if (isLecteurBusy(eleve.id)) return 'busy';
+    if (isLecteurSelected(eleve.id)) return 'selected';
+    return 'available';
   };
 
-  const isEventBusy = (eventId: string) => {
-    return busyEventIds.includes(eventId);
-  };
-
-  const isEventAssignedToCurrentUser = (event: DefenseEvent) => {
-    const eleve = eleves.find(e => e.id === event.eleveId);
-    return eleve?.lecteur_externe_id === userLecteurExterneId;
+  const getMediateurStatus = (eleve: any) => {
+    if (eleve.mediateur_id && eleve.mediateur_id !== mediateurId) {
+      return 'taken';
+    }
+    if (isMediateurBusy(eleve.id)) return 'busy';
+    if (isMediateurSelected(eleve.id)) return 'selected';
+    return 'available';
   };
 
   const pluralize = (count: number, singular: string, plural: string) => {
     return count === 1 ? singular : plural;
   };
 
-  const handleEventClick = (event: DefenseEvent, e: React.MouseEvent) => {
-    e.stopPropagation();
-    
-    if (!isEventBusy(event.eleveId) || isEventAssignedToCurrentUser(event)) {
-      onEventClick(event);
-    }
-  };
-
   const formatProblematique = (problematique: string, maxLength: number = 200) => {
     if (!problematique || problematique.trim() === '') return '';
-    
     if (problematique.length <= maxLength) return problematique;
-    
     return problematique.substring(0, maxLength) + '...';
   };
 
@@ -340,99 +314,47 @@ export default function CalendarDisplayLecteurExterne({
                             style={{ minWidth: '200px' }}
                           >
                             {day.defenses
-                              .filter(defense => {
-                                const matches = defense.location === location;
-                                if (defense.eleveId === '34f64a57-2087-47a6-ae9c-487acb8c3fa3') {
-                                  console.log('=== FILTRE LOCATION EDOUARD ===');
-                                  console.log('Location defense:', defense.location);
-                                  console.log('Location colonne:', location);
-                                  console.log('Match?', matches);
-                                }
-                                return matches;
-                              })
+                              .filter(defense => defense.location === location)
                               .map(defense => {
-                                if (defense.eleveId === '34f64a57-2087-47a6-ae9c-487acb8c3fa3') {
-                                  console.log('=== RENDU CALENDRIER EDOUARD ===');
-                                  console.log('Location:', defense.location);
-                                  console.log('startTime:', defense.startTime);
-                                  console.log('endTime:', defense.endTime);
-                                  
-                                  // Calcule les heures/minutes pour le log
-                                  const [logStartHours, logStartMinutes] = defense.startTime.split(':').map(Number);
-                                  console.log('Position calculée:', {
-                                    location,
-                                    startHours: logStartHours,
-                                    startMinutes: logStartMinutes,
-                                    top: `${(logStartHours - 8 + logStartMinutes/60) * PIXELS_PER_HOUR}px`
-                                  });
-                                }
                                 const [startHours, startMinutes] = defense.startTime.split(':').map(Number);
-                                
                                 const hoursFrom8 = startHours - 8;
                                 const minutesFraction = startMinutes / 60;
                                 const top = (hoursFrom8 + minutesFraction) * PIXELS_PER_HOUR;
-                                
                                 const DEFENSE_DURATION_MINUTES = 50;
-                                const baseHeight = (DEFENSE_DURATION_MINUTES / 60) * PIXELS_PER_HOUR;
-                                const isExpanded = expandedEventId === defense.id;
-                                const height = isExpanded ? Math.max(baseHeight * 2, 150) : baseHeight;
-                                
+                                const height = (DEFENSE_DURATION_MINUTES / 60) * PIXELS_PER_HOUR;
                                 const color = getCategoryColor(defense.categorie);
-                                const selected = isEventSelected(defense.eleveId);
-                                const busy = isEventBusy(defense.eleveId);
-                                const assignedToCurrentUser = isEventAssignedToCurrentUser(defense);
-                                const clickable = !busy || assignedToCurrentUser;
+                                
+                                const lecteurStatus = getLecteurStatus(defense);
+                                const mediateurStatus = getMediateurStatus(defense);
                                 
                                 return (
                                   <div
                                     key={defense.id}
-                                    className={`absolute left-1 right-1 rounded p-2 overflow-hidden border shadow-sm hover:shadow-md transition-all ${
-                                      clickable ? 'cursor-pointer' : 'cursor-not-allowed'
-                                    } ${selected ? 'ring-2 ring-blue-500 ring-offset-1' : ''} ${
-                                      busy && !assignedToCurrentUser ? 'opacity-50' : ''
-                                    } ${
-                                      // === AJOUTE CE STYLE POUR EDOUARD ===
-                                      defense.eleveId === '34f64a57-2087-47a6-ae9c-487acb8c3fa3' 
-                                        ? '!border-4 !border-red-500 !bg-yellow-200 !z-50' 
-                                        : ''
-                                      // === FIN DE L'AJOUT ===
-                                    }`}
+                                    className="absolute left-1 right-1 rounded p-2 overflow-hidden border shadow-sm transition-all"
                                     style={{
                                       top: `${top}px`,
                                       height: `${height}px`,
-                                      backgroundColor: selected ? '#E0F2FE' : color.bg,
-                                      borderColor: selected ? '#7DD3FC' : color.border,
-                                      color: selected ? '#0C4A6E' : color.text,
+                                      backgroundColor: color.bg,
+                                      borderColor: color.border,
+                                      color: color.text,
                                       zIndex: 10,
                                       fontSize: '13px'
                                     }}
-                                    onClick={(e) => handleEventClick(defense, e)}
                                   >
                                     <div className="font-bold mb-1 flex justify-between items-start">
                                       <span>{defense.startTime} - {defense.endTime}</span>
-                                      <div className="flex gap-1">
-                                        {selected && (
-                                          <span className="text-xs bg-blue-500 text-white px-1 py-0.5 rounded">✓</span>
-                                        )}
-                                        {busy && !assignedToCurrentUser && (
-                                          <span className="text-xs bg-red-500 text-white px-1 py-0.5 rounded">Occupé</span>
-                                        )}
-                                      </div>
                                     </div>
                                     <div className="space-y-1 overflow-hidden h-full">
-                                      {/* Élève */}
                                       {displaySettings.lecteur_externe_voir_eleves && (
                                         <div className="font-semibold">
                                           {defense.elevePrenom} {defense.eleveNom}
                                         </div>
                                       )}
                                       
-                                      {/* Catégorie (en petit en bas) */}
                                       <div className="text-xs opacity-75 mt-1">
                                         {defense.categorie}
                                       </div>
                                       
-                                      {/* Problématique */}
                                       {defense.problematique && defense.problematique.trim() !== '' && (
                                         <div className="mt-1">
                                           <div className="text-xs opacity-90 whitespace-pre-wrap overflow-y-auto max-h-[100px]">
@@ -447,20 +369,49 @@ export default function CalendarDisplayLecteurExterne({
                                         </div>
                                       )}
                                       
-                                      {/* Lecteur interne */}
                                       {displaySettings.lecteur_externe_voir_lecteurs_internes && defense.lecteurInterneNom !== '-' && (
                                         <div className="text-xs">
                                           <span className="font-medium">Lecteur interne:</span> {defense.lecteurInternePrenom} {defense.lecteurInterneNom}
                                         </div>
                                       )}
-                                                                            
-                                      {/* Médiateur - conditionnel */}
-                                      {displaySettings.lecteur_externe_voir_mediateurs && defense.mediateurNom !== '-' && (
-                                        <div className="text-xs">
-                                          <span className="font-medium">Médiateur:</span> {defense.mediateurPrenom} {defense.mediateurNom}
-                                        </div>
-                                      )}
                                       
+                                      {/* Boutons d'action en bas */}
+                                      <div className="flex gap-2 mt-2 pt-1 border-t border-gray-200">
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            onLecteurClick(defense);
+                                          }}
+                                          disabled={lecteurStatus === 'busy' || lecteurStatus === 'taken'}
+                                          className={`flex-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+                                            lecteurStatus === 'selected'
+                                              ? 'bg-blue-600 text-white'
+                                              : lecteurStatus === 'busy' || lecteurStatus === 'taken'
+                                              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                              : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                                          }`}
+                                          title={lecteurStatus === 'taken' ? "Déjà attribué à un autre lecteur" : lecteurStatus === 'busy' ? "Conflit de créneau" : ""}
+                                        >
+                                          📖 {lecteurStatus === 'selected' ? 'Sélectionné' : 'Lecteur'}
+                                        </button>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            onMediateurClick(defense);
+                                          }}
+                                          disabled={mediateurStatus === 'busy' || mediateurStatus === 'taken'}
+                                          className={`flex-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+                                            mediateurStatus === 'selected'
+                                              ? 'bg-purple-600 text-white'
+                                              : mediateurStatus === 'busy' || mediateurStatus === 'taken'
+                                              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                              : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                                          }`}
+                                          title={mediateurStatus === 'taken' ? "Déjà attribué à un autre médiateur" : mediateurStatus === 'busy' ? "Conflit de créneau" : ""}
+                                        >
+                                          ⚖️ {mediateurStatus === 'selected' ? 'Sélectionné' : 'Médiateur'}
+                                        </button>
+                                      </div>
                                     </div>
                                   </div>
                                 );
