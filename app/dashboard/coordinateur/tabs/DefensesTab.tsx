@@ -260,12 +260,10 @@ export default function DefensesTab({
       if (type === 'lecteur_interne') {
         return guides.map(g => ({ id: g.id, label: `${g.nom} ${g.initiale}.` }));
       } else if (type === 'lecteur_externe') {
-        // Filtrer les externes qui ont un lecteur_externe_id
         return externes
           .filter(e => e.lecteur_externe_id)
           .map(e => ({ id: e.lecteur_externe_id!, label: `${e.nom} ${e.prenom}` }));
       } else {
-        // Filtrer les externes qui ont un mediateur_id
         return externes
           .filter(e => e.mediateur_id)
           .map(e => ({ id: e.mediateur_id!, label: `${e.nom} ${e.prenom}` }));
@@ -276,6 +274,7 @@ export default function DefensesTab({
       return getAllOptions().sort((a, b) => a.label.localeCompare(b.label));
     }
   
+    // Trouver tous les élèves qui ont une défense au même créneau horaire
     const conflits = allEleves.filter(e => {
       if (e.id === currentEleve.id) return false;
       const eDate = e.date_defense?.trim();
@@ -286,24 +285,24 @@ export default function DefensesTab({
     });
   
     let idsPris: string[] = [];
-    if (type === 'lecteur_interne') {
-      idsPris = conflits
-        .map(e => e.lecteur_interne_id)
-        .filter((id): id is string => !!id && id.trim() !== '');
-    } else if (type === 'lecteur_externe') {
-      idsPris = conflits
-        .map(e => e.lecteur_externe_id)
-        .filter((id): id is string => !!id && id.trim() !== '');
-    } else {
-      idsPris = conflits
-        .map(e => e.mediateur_id)
-        .filter((id): id is string => !!id && id.trim() !== '');
-    }
+    
+    // Pour chaque conflit, vérifier les deux rôles (lecteur externe ET médiateur)
+    conflits.forEach(e => {
+      if (e.lecteur_externe_id && e.lecteur_externe_id.trim() !== '') {
+        idsPris.push(e.lecteur_externe_id);
+      }
+      if (e.mediateur_id && e.mediateur_id.trim() !== '') {
+        idsPris.push(e.mediateur_id);
+      }
+    });
   
-    const allOptions = getAllOptions();
+    // Récupérer l'ID actuel de l'élève pour ce champ
     const currentId = currentEleve[type === 'lecteur_interne' ? 'lecteur_interne_id' :
                                     type === 'lecteur_externe' ? 'lecteur_externe_id' : 'mediateur_id'] || '';
   
+    const allOptions = getAllOptions();
+    
+    // Filtrer : exclure les indisponibles sauf si c'est la valeur actuelle
     const availableOptions = allOptions.filter(opt =>
       !idsPris.includes(opt.id) || opt.id === currentId
     );
