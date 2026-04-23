@@ -1,3 +1,5 @@
+// /app/dashboard/coordinateur/hooks/useCoordinateurData.ts
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -7,7 +9,8 @@ import {
   Guide, 
   LecteurExterne, 
   Mediateur, 
-  Coordinateur 
+  Coordinateur,
+  Externe 
 } from '../types';
 
 export function useCoordinateurData() {
@@ -15,6 +18,7 @@ export function useCoordinateurData() {
   const [guides, setGuides] = useState<Guide[]>([]);
   const [lecteursExternes, setLecteursExternes] = useState<LecteurExterne[]>([]);
   const [mediateurs, setMediateurs] = useState<Mediateur[]>([]);
+  const [externes, setExternes] = useState<Externe[]>([]); // ← NOUVEAU
   const [coordinateurs, setCoordinateurs] = useState<Coordinateur[]>([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<string[]>([]);
@@ -22,27 +26,27 @@ export function useCoordinateurData() {
 
   const loadData = useCallback(async () => {
     try {
-      // Charger les guides - AVEC mot_de_passe
+      // Charger les guides
       const { data: guidesData, error: guidesError } = await supabase
         .from('guides')
-        .select('id, nom, prenom, initiale, email, mot_de_passe') // ← AJOUTÉ
+        .select('id, nom, prenom, initiale, email, mot_de_passe')
         .order('nom', { ascending: true });
       
       if (guidesError) throw guidesError;
       setGuides(guidesData || []);
 
-      // Charger les lecteurs externes - AVEC mot_de_passe
+      // Charger les lecteurs externes (à garder pour compatibilité)
       const { data: lecteursExternesData, error: lecteursError } = await supabase
         .from('lecteurs_externes')
-        .select('id, nom, prenom, email, mot_de_passe'); // ← AJOUTÉ
+        .select('id, nom, prenom, email, mot_de_passe');
 
       if (lecteursError) throw lecteursError;
       setLecteursExternes(lecteursExternesData || []);
 
-      // Charger les médiateurs - AVEC mot_de_passe
+      // Charger les médiateurs (à garder pour compatibilité)
       const { data: mediateursData, error: mediateursError } = await supabase
         .from('mediateurs')
-        .select('id, nom, prenom, email, mot_de_passe'); // ← AJOUTÉ
+        .select('id, nom, prenom, email, mot_de_passe');
 
       if (mediateursError) {
         setMediateurs([]);
@@ -50,10 +54,23 @@ export function useCoordinateurData() {
         setMediateurs(mediateursData || []);
       }
 
-      // Charger les coordinateurs - AVEC mot_de_passe
+      // ← NOUVEAU : Charger les externes (table unifiée)
+      const { data: externesData, error: externesError } = await supabase
+        .from('externes')
+        .select('*')
+        .order('nom', { ascending: true });
+
+      if (externesError) {
+        console.error('Erreur chargement externes:', externesError);
+        setExternes([]);
+      } else {
+        setExternes(externesData || []);
+      }
+
+      // Charger les coordinateurs
       const { data: coordinateursData, error: coordinateursError } = await supabase
         .from('coordinateurs')
-        .select('id, nom, prenom, initiale, mot_de_passe'); // ← AJOUTÉ
+        .select('id, nom, prenom, initiale, mot_de_passe');
 
       if (coordinateursError) {
         setCoordinateurs([]);
@@ -61,7 +78,7 @@ export function useCoordinateurData() {
         setCoordinateurs(coordinateursData || []);
       }
 
-      // Charger les élèves avec jointures (déjà avec *)
+      // Charger les élèves avec jointures
       const { data: elevesData, error: elevesError } = await supabase
         .from('eleves')
         .select(`
@@ -101,7 +118,7 @@ export function useCoordinateurData() {
         if (userId) {
           const { data } = await supabase
             .from('coordinateurs')
-            .select('nom, prenom, mot_de_passe') // ← AJOUTÉ mot_de_passe ici aussi
+            .select('nom, prenom, mot_de_passe')
             .eq('id', userId)
             .single();
           
@@ -129,7 +146,6 @@ export function useCoordinateurData() {
     loadData();
   };
 
-  // Dans useCoordinateurData.ts, ajoutez cette fonction :
   const updateEleveLocal = (updatedEleve: Eleve) => {
     setEleves(prev => prev.map(e => 
       e.id === updatedEleve.id ? updatedEleve : e
@@ -141,6 +157,7 @@ export function useCoordinateurData() {
     guides,
     lecteursExternes,
     mediateurs,
+    externes, // ← NOUVEAU
     coordinateurs,
     currentCoordinateur,
     categories,
