@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 
 interface ProfileEditorProps {
   userId: string;
-  userType: 'lecteur_externe' | 'guide' | 'coordinateur' | 'mediateur' | 'eleve';
+  userType: 'lecteur_externe' | 'guide' | 'coordinateur' | 'mediateur' | 'eleve' | 'externe'
   onClose: () => void;
   onUpdate?: () => void;
 }
