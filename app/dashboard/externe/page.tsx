@@ -1403,29 +1403,26 @@ export default function ExterneDashboard() {
                 selectedCategory={selectedCategorie}
                 selectedDates={selectedMultipleDates}
                 selectedLocations={selectedMultipleLocations}
-                onEventClick={handleCalendarEventClick}
-                selectedEventIds={[...selectedElevesAsLecteur, ...selectedElevesAsMediateur]}
-                busyEventIds={(() => {
-                  const allBusyIds = new Set<string>();
-                  // Pour chaque créneau, on marque comme "occupé" si les deux rôles sont déjà pris
-                  // ou si l'utilisateur a déjà un rôle sur ce créneau mais que l'autre rôle est pris
-                  sortedElevesDisponibles.forEach(eleve => {
-                    if (eleve.date_defense && eleve.heure_defense) {
-                      const lecteurBusy = isTimeSlotBusy(eleve, 'lecteur');
-                      const mediateurBusy = isTimeSlotBusy(eleve, 'mediateur');
-                      const lecteurSelected = selectedElevesAsLecteur.includes(eleve.id);
-                      const mediateurSelected = selectedElevesAsMediateur.includes(eleve.id);
-                      
-                      // Si les deux rôles sont indisponibles, ou si l'utilisateur n'a aucun rôle et qu'au moins un rôle est indisponible
-                      if ((lecteurBusy && mediateurBusy) || 
-                          (!lecteurSelected && !mediateurSelected && (lecteurBusy || mediateurBusy))) {
-                        allBusyIds.add(eleve.id);
-                      }
-                    }
+                onLecteurClick={(event) => handleToggleSelection(event.eleveId, 'lecteur')}
+                onMediateurClick={(event) => handleToggleSelection(event.eleveId, 'mediateur')}
+                selectedLecteurIds={selectedElevesAsLecteur}
+                selectedMediateurIds={selectedElevesAsMediateur}
+                busyLecteurIds={(() => {
+                  const busyIds = new Set<string>();
+                  busySlotsLecteur.forEach((ids) => {
+                    ids.forEach(id => busyIds.add(id));
                   });
-                  return Array.from(allBusyIds);
+                  return Array.from(busyIds);
                 })()}
-                userLecteurExterneId={lecteurExterneId}
+                busyMediateurIds={(() => {
+                  const busyIds = new Set<string>();
+                  busySlotsMediateur.forEach((ids) => {
+                    ids.forEach(id => busyIds.add(id));
+                  });
+                  return Array.from(busyIds);
+                })()}
+                lecteurExterneId={lecteurExterneId}
+                mediateurId={mediateurId}
                 displaySettings={displaySettings}
               />
             </div>
