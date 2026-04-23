@@ -28,6 +28,10 @@ interface Eleve {
   lecteur_externe_prenom?: string;
   mediateur_nom?: string;
   mediateur_prenom?: string;
+  guide?: { nom: string; prenom: string };
+  lecteur_interne?: { nom: string; prenom: string };
+  lecteur_externe?: { nom: string; prenom: string };
+  mediateur?: { nom: string; prenom: string };
 }
 
 interface DefenseEvent {
