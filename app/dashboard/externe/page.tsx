@@ -584,16 +584,48 @@ export default function ExterneDashboard() {
     );
   };
 
-  const handleCalendarEventClick = (event: DefenseEvent) => {
+  const handleCalendarEventClick = async (event: DefenseEvent) => {
     const eleve = elevesDisponibles.find(e => e.id === event.eleveId);
-    if (eleve) {
-      // Afficher un modal de choix du rôle
-      const roleChoice = window.confirm(`Choisir ${eleve.prenom} ${eleve.nom} comme :\n\nOK = Lecteur externe\nAnnuler = Médiateur`);
-      if (roleChoice) {
-        handleToggleSelection(eleve.id, 'lecteur');
-      } else {
-        handleToggleSelection(eleve.id, 'mediateur');
-      }
+    if (!eleve) return;
+  
+    const lecteurSelected = selectedElevesAsLecteur.includes(eleve.id);
+    const mediateurSelected = selectedElevesAsMediateur.includes(eleve.id);
+    const lecteurBusy = isTimeSlotBusy(eleve, 'lecteur');
+    const mediateurBusy = isTimeSlotBusy(eleve, 'mediateur');
+    const lecteurTaken = eleve.lecteur_externe_id && eleve.lecteur_externe_id !== lecteurExterneId;
+    const mediateurTaken = eleve.mediateur_id && eleve.mediateur_id !== mediateurId;
+  
+    // Si déjà sélectionné comme lecteur
+    if (lecteurSelected) {
+      await handleToggleSelection(eleve.id, 'lecteur');
+      return;
+    }
+    
+    // Si déjà sélectionné comme médiateur
+    if (mediateurSelected) {
+      await handleToggleSelection(eleve.id, 'mediateur');
+      return;
+    }
+  
+    // Sinon, proposer un choix
+    let roleChoice: 'lecteur' | 'mediateur' | null = null;
+    
+    if (!lecteurBusy && !lecteurTaken && !mediateurBusy && !mediateurTaken) {
+      // Les deux rôles sont disponibles → demander à l'utilisateur
+      roleChoice = window.confirm(`Choisir ${eleve.prenom} ${eleve.nom} comme :\n\nOK = Lecteur externe\nAnnuler = Médiateur`) 
+        ? 'lecteur' 
+        : 'mediateur';
+    } else if (!lecteurBusy && !lecteurTaken) {
+      roleChoice = 'lecteur';
+    } else if (!mediateurBusy && !mediateurTaken) {
+      roleChoice = 'mediateur';
+    } else {
+      alert(`Aucun rôle disponible pour ${eleve.prenom} ${eleve.nom}`);
+      return;
+    }
+  
+    if (roleChoice) {
+      await handleToggleSelection(eleve.id, roleChoice);
     }
   };
 
@@ -1171,7 +1203,7 @@ export default function ExterneDashboard() {
             
             <div className="mt-2 flex flex-wrap gap-2 text-xs">
               <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
-                {selectedRole === 'lecteur' ? selectedElevesAsLecteur.length : selectedElevesAsMediateur.length} TFH sélectionné{selectedRole === 'lecteur' ? selectedElevesAsLecteur.length > 1 ? 's' : '' : selectedElevesAsMediateur.length > 1 ? 's' : ''}
+                📖 {selectedElevesAsLecteur.length} + ⚖️ {selectedElevesAsMediateur.length} = {selectedElevesAsLecteur.length + selectedElevesAsMediateur.length} sélectionné{(selectedElevesAsLecteur.length + selectedElevesAsMediateur.length) > 1 ? 's' : ''}
               </span>
               <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
                 {selectedMultipleDates.length === 0 || selectedMultipleDates.length === dates.length ? "Tous les jours" : `${selectedMultipleDates.length} jour${selectedMultipleDates.length > 1 ? 's' : ''}`}
@@ -1372,22 +1404,24 @@ export default function ExterneDashboard() {
                 selectedDates={selectedMultipleDates}
                 selectedLocations={selectedMultipleLocations}
                 onEventClick={handleCalendarEventClick}
-                selectedEventIds={selectedRole === 'lecteur' ? selectedElevesAsLecteur : selectedElevesAsMediateur}
+                selectedEventIds={[...selectedElevesAsLecteur, ...selectedElevesAsMediateur]}
                 busyEventIds={(() => {
                   const allBusyIds = new Set<string>();
-                  const busySlots = selectedRole === 'lecteur' ? busySlotsLecteur : busySlotsMediateur;
-                  busySlots.forEach((eleveIds) => {
-                    eleveIds.forEach(id => {
-                      const eleve = elevesDisponibles.find(e => e.id === id);
-                      if (eleve) {
-                        const isAlreadyAssigned = selectedRole === 'lecteur' 
-                          ? eleve.lecteur_externe_id === lecteurExterneId
-                          : eleve.mediateur_id === mediateurId;
-                        if (!isAlreadyAssigned) {
-                          allBusyIds.add(id);
-                        }
+                  // Pour chaque créneau, on marque comme "occupé" si les deux rôles sont déjà pris
+                  // ou si l'utilisateur a déjà un rôle sur ce créneau mais que l'autre rôle est pris
+                  sortedElevesDisponibles.forEach(eleve => {
+                    if (eleve.date_defense && eleve.heure_defense) {
+                      const lecteurBusy = isTimeSlotBusy(eleve, 'lecteur');
+                      const mediateurBusy = isTimeSlotBusy(eleve, 'mediateur');
+                      const lecteurSelected = selectedElevesAsLecteur.includes(eleve.id);
+                      const mediateurSelected = selectedElevesAsMediateur.includes(eleve.id);
+                      
+                      // Si les deux rôles sont indisponibles, ou si l'utilisateur n'a aucun rôle et qu'au moins un rôle est indisponible
+                      if ((lecteurBusy && mediateurBusy) || 
+                          (!lecteurSelected && !mediateurSelected && (lecteurBusy || mediateurBusy))) {
+                        allBusyIds.add(eleve.id);
                       }
-                    });
+                    }
                   });
                   return Array.from(allBusyIds);
                 })()}
