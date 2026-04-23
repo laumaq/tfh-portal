@@ -168,7 +168,12 @@ export default function ExterneDashboard() {
       const vraiLecteurId = externeData?.lecteur_externe_id;
       const vraiMediateurId = externeData?.mediateur_id;
 
+      console.log('externeData reçu:', externeData);
+      console.log('vraiLecteurId:', vraiLecteurId);
+      console.log('vraiMediateurId:', vraiMediateurId);
+      
       if (vraiLecteurId) {
+          console.log('Recherche des élèves avec lecteur_externe_id =', vraiLecteurId);
         const { data: lecteurData } = await supabase
           .from('eleves')
           .select(`
@@ -179,11 +184,15 @@ export default function ExterneDashboard() {
             mediateur:mediateurs!mediateur_id (nom, prenom)
           `)
           .eq('lecteur_externe_id', vraiLecteurId);       
+
+        console.log('lecteurData trouvés:', lecteurData?.length || 0, lecteurData);
+        if (lecteurError) console.error('Erreur lecteur:', lecteurError);
         
         if (lecteurData) allAssigned = [...allAssigned, ...lecteurData];
       }
 
       if (vraiMediateurId) {
+        console.log('Recherche des élèves avec mediateur_id =', vraiMediateurId);
         const { data: mediateurData } = await supabase
           .from('eleves')
           .select(`
@@ -194,6 +203,9 @@ export default function ExterneDashboard() {
             mediateur:mediateurs!mediateur_id (nom, prenom)
           `)
             .eq('mediateur_id', vraiMediateurId);
+        
+        console.log('mediateurData trouvés:', mediateurData?.length || 0, mediateurData);
+        if (mediateurError) console.error('Erreur mediateur:', mediateurError);
         
         if (mediateurData) allAssigned = [...allAssigned, ...mediateurData];
       }
