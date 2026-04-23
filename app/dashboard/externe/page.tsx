@@ -113,10 +113,12 @@ export default function ExterneDashboard() {
         .select('lecteur_externe_id, mediateur_id')
         .eq('id', externeId)
         .single();
-
+  
       if (error) throw error;
-
+  
       if (data) {
+        // ICI : data.lecteur_externe_id et data.mediateur_id sont les vrais IDs
+        // qui correspondent à ceux dans la table eleves
         setLecteurExterneId(data.lecteur_externe_id || '');
         setMediateurId(data.mediateur_id || '');
         await loadData(data.lecteur_externe_id || '', data.mediateur_id || '');
