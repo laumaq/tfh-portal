@@ -244,26 +244,9 @@ export default function CalendarDisplayLecteurExterne({
     }
     return 'available';
   };
+  
   const isLecteurBusy = (eventId: string) => busyLecteurIds.includes(eventId);
   const isMediateurBusy = (eventId: string) => busyMediateurIds.includes(eventId);
-
-  const getLecteurStatus = (eleve: any) => {
-    if (eleve.lecteur_externe_id && eleve.lecteur_externe_id !== lecteurExterneId) {
-      return 'taken';
-    }
-    if (isLecteurBusy(eleve.id)) return 'busy';
-    if (isLecteurSelected(eleve.id)) return 'selected';
-    return 'available';
-  };
-
-  const getMediateurStatus = (eleve: any) => {
-    if (eleve.mediateur_id && eleve.mediateur_id !== mediateurId) {
-      return 'taken';
-    }
-    if (isMediateurBusy(eleve.id)) return 'busy';
-    if (isMediateurSelected(eleve.id)) return 'selected';
-    return 'available';
-  };
 
   const pluralize = (count: number, singular: string, plural: string) => {
     return count === 1 ? singular : plural;
