@@ -87,7 +87,6 @@ export default function ExterneDashboard() {
   const [selectedMultipleDates, setSelectedMultipleDates] = useState<string[]>([]);
   const [selectedMultipleCategories, setSelectedMultipleCategories] = useState<string[]>([]);
   const [selectedMultipleLocations, setSelectedMultipleLocations] = useState<string[]>([]);
-  const [selectedRole, setSelectedRole] = useState<'lecteur' | 'mediateur'>('lecteur');
   const router = useRouter();
 
   const [displaySettings, setDisplaySettings] = useState({
@@ -483,27 +482,28 @@ export default function ExterneDashboard() {
   };
 
   const filteredElevesDisponibles = elevesDisponibles.filter(eleve => {
+    // Filtre par catégories
     if (selectedMultipleCategories.length > 0 && !selectedMultipleCategories.includes(eleve.categorie)) {
       return false;
     }
+    
+    // Filtre par dates
     if (selectedMultipleDates.length > 0 && eleve.date_defense && !selectedMultipleDates.includes(eleve.date_defense)) {
       return false;
     }
+    
+    // Filtre par locaux
     if (selectedMultipleLocations.length > 0 && eleve.localisation_defense && !selectedMultipleLocations.includes(eleve.localisation_defense)) {
       return false;
     }
     
-    // NOUVEAU FILTRE : Exclure les TFH qui ont déjà tous leurs rôles
-    if (selectedRole === 'lecteur') {
-      // Pour lecteur externe : on ne peut pas sélectionner un TFH qui a déjà un lecteur externe
-      if (eleve.lecteur_externe_id && eleve.lecteur_externe_id !== lecteurExterneId) {
-        return false;
-      }
-    } else if (selectedRole === 'mediateur') {
-      // Pour médiateur : on ne peut pas sélectionner un TFH qui a déjà un médiateur
-      if (eleve.mediateur_id && eleve.mediateur_id !== mediateurId) {
-        return false;
-      }
+    // Vérifier si les deux rôles sont déjà pris par d'autres personnes
+    const hasLecteurExterneTaken = eleve.lecteur_externe_id && eleve.lecteur_externe_id !== lecteurExterneId;
+    const hasMediateurTaken = eleve.mediateur_id && eleve.mediateur_id !== mediateurId;
+    
+    // Si les deux rôles (lecteur ET médiateur) sont déjà attribués à d'autres, on masque le TFH
+    if (hasLecteurExterneTaken && hasMediateurTaken) {
+      return false;
     }
     
     return true;
@@ -1134,28 +1134,7 @@ export default function ExterneDashboard() {
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
-                <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
-                  <button
-                    onClick={() => setSelectedRole('lecteur')}
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                      selectedRole === 'lecteur'
-                        ? 'bg-blue-600 text-white'
-                        : 'text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    📖 Lecteur
-                  </button>
-                  <button
-                    onClick={() => setSelectedRole('mediateur')}
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                      selectedRole === 'mediateur'
-                        ? 'bg-purple-600 text-white'
-                        : 'text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    ⚖️ Médiateur
-                  </button>
-                </div>
+
                 <button
                   onClick={() => setViewMode('planning')}
                   className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 text-sm"
@@ -1191,9 +1170,6 @@ export default function ExterneDashboard() {
             </div>
             
             <div className="mt-2 flex flex-wrap gap-2 text-xs">
-              <span className={`${selectedRole === 'lecteur' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'} px-2 py-1 rounded`}>
-                Rôle sélectionné : {selectedRole === 'lecteur' ? '📖 Lecteur externe' : '⚖️ Médiateur'}
-              </span>
               <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
                 {selectedRole === 'lecteur' ? selectedElevesAsLecteur.length : selectedElevesAsMediateur.length} TFH sélectionné{selectedRole === 'lecteur' ? selectedElevesAsLecteur.length > 1 ? 's' : '' : selectedElevesAsMediateur.length > 1 ? 's' : ''}
               </span>
@@ -1267,32 +1243,7 @@ export default function ExterneDashboard() {
                   <thead className="bg-gray-100 border-b">
                     <tr>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-12">
-                        <input
-                          type="checkbox"
-                          checked={(() => {
-                            const selectedCount = selectedRole === 'lecteur' ? selectedElevesAsLecteur.length : selectedElevesAsMediateur.length;
-                            const availableCount = sortedElevesDisponibles.filter(e => !isTimeSlotBusy(e, selectedRole)).length;
-                            return selectedCount === availableCount && availableCount > 0;
-                          })()}
-                          onChange={() => {
-                            const availableEleves = sortedElevesDisponibles.filter(e => !isTimeSlotBusy(e, selectedRole));
-                            const allSelected = selectedRole === 'lecteur' 
-                              ? selectedElevesAsLecteur.length === availableEleves.length
-                              : selectedElevesAsMediateur.length === availableEleves.length;
-                            
-                            if (allSelected) {
-                              availableEleves.forEach(e => handleToggleSelection(e.id, selectedRole));
-                            } else {
-                              availableEleves.forEach(e => {
-                                const isSelected = selectedRole === 'lecteur' 
-                                  ? selectedElevesAsLecteur.includes(e.id)
-                                  : selectedElevesAsMediateur.includes(e.id);
-                                if (!isSelected) handleToggleSelection(e.id, selectedRole);
-                              });
-                            }
-                          }}
-                          className="w-4 h-4 text-blue-600 rounded"
-                        />
+                        {/* Actions */}
                       </th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Date</th>
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Heure</th>
