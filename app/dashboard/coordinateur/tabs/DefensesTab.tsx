@@ -256,22 +256,32 @@ export default function DefensesTab({
     }
   
     // Fonction pour obtenir la liste complète des options depuis externes
-    const getAllOptions = (): { id: string; label: string }[] => {
+    const getAllOptions = (): { id: string; label: string; externeId: string }[] => {
       if (type === 'lecteur_interne') {
-        return guides.map(g => ({ id: g.id, label: `${g.nom} ${g.initiale}.` }));
+        return guides.map(g => ({ id: g.id, label: `${g.nom} ${g.initiale}.`, externeId: '' }));
       } else if (type === 'lecteur_externe') {
         return externes
           .filter(e => e.lecteur_externe_id)
-          .map(e => ({ id: e.lecteur_externe_id!, label: `${e.nom} ${e.prenom}` }));
+          .map(e => ({ 
+            id: e.lecteur_externe_id!, 
+            label: `${e.nom} ${e.prenom}`,
+            externeId: e.id 
+          }));
       } else {
         return externes
           .filter(e => e.mediateur_id)
-          .map(e => ({ id: e.mediateur_id!, label: `${e.nom} ${e.prenom}` }));
+          .map(e => ({ 
+            id: e.mediateur_id!, 
+            label: `${e.nom} ${e.prenom}`,
+            externeId: e.id 
+          }));
       }
     };
   
     if (!currentTimestamp || isNaN(currentTimestamp)) {
-      return getAllOptions().sort((a, b) => a.label.localeCompare(b.label));
+      return getAllOptions()
+        .map(opt => ({ id: opt.id, label: opt.label }))
+        .sort((a, b) => a.label.localeCompare(b.label));
     }
   
     // Trouver tous les élèves qui ont une défense au même créneau horaire
@@ -284,30 +294,42 @@ export default function DefensesTab({
       return eTimestamp === currentTimestamp;
     });
   
-    let idsPris: string[] = [];
+    // Récupérer les IDs des externes déjà occupés sur ce créneau
+    const externesIdsPris: string[] = [];
     
-    // Pour chaque conflit, vérifier les deux rôles (lecteur externe ET médiateur)
     conflits.forEach(e => {
-      if (e.lecteur_externe_id && e.lecteur_externe_id.trim() !== '') {
-        idsPris.push(e.lecteur_externe_id);
+      // Chercher l'externe correspondant au lecteur_externe_id
+      if (e.lecteur_externe_id) {
+        const externe = externes.find(ext => ext.lecteur_externe_id === e.lecteur_externe_id);
+        if (externe && externe.id) {
+          externesIdsPris.push(externe.id);
+        }
       }
-      if (e.mediateur_id && e.mediateur_id.trim() !== '') {
-        idsPris.push(e.mediateur_id);
+      // Chercher l'externe correspondant au mediateur_id
+      if (e.mediateur_id) {
+        const externe = externes.find(ext => ext.mediateur_id === e.mediateur_id);
+        if (externe && externe.id) {
+          externesIdsPris.push(externe.id);
+        }
       }
     });
   
-    // Récupérer l'ID actuel de l'élève pour ce champ
-    const currentId = currentEleve[type === 'lecteur_interne' ? 'lecteur_interne_id' :
-                                    type === 'lecteur_externe' ? 'lecteur_externe_id' : 'mediateur_id'] || '';
-  
     const allOptions = getAllOptions();
-    
-    // Filtrer : exclure les indisponibles sauf si c'est la valeur actuelle
+    // Récupérer l'ID de l'externe actuellement sélectionné pour ce champ
+    const currentExterne = externes.find(ext => 
+      (type === 'lecteur_externe' && ext.lecteur_externe_id === currentEleve.lecteur_externe_id) ||
+      (type === 'mediateur' && ext.mediateur_id === currentEleve.mediateur_id)
+    );
+    const currentExterneId = currentExterne?.id || '';
+  
+    // Filtrer : exclure les externes occupés sauf si c'est la valeur actuelle
     const availableOptions = allOptions.filter(opt =>
-      !idsPris.includes(opt.id) || opt.id === currentId
+      !externesIdsPris.includes(opt.externeId) || opt.externeId === currentExterneId
     );
   
-    return availableOptions.sort((a, b) => a.label.localeCompare(b.label));
+    return availableOptions
+      .map(opt => ({ id: opt.id, label: opt.label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
   };
 
   const renderSelectOrLabel = (
