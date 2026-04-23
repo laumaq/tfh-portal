@@ -173,8 +173,8 @@ export default function ExterneDashboard() {
       console.log('vraiMediateurId:', vraiMediateurId);
       
       if (vraiLecteurId) {
-          console.log('Recherche des élèves avec lecteur_externe_id =', vraiLecteurId);
-        const { data: lecteurData } = await supabase
+        console.log('Recherche des élèves avec lecteur_externe_id =', vraiLecteurId);
+        const { data: lecteurData, error: lecteurError } = await supabase
           .from('eleves')
           .select(`
             *,
@@ -183,17 +183,15 @@ export default function ExterneDashboard() {
             lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
             mediateur:mediateurs!mediateur_id (nom, prenom)
           `)
-          .eq('lecteur_externe_id', vraiLecteurId);       
-
-        console.log('lecteurData trouvés:', lecteurData?.length || 0, lecteurData);
-        if (lecteurError) console.error('Erreur lecteur:', lecteurError);
+          .eq('lecteur_externe_id', vraiLecteurId);
         
+        if (lecteurError) console.error('Erreur lecteur:', lecteurError);
         if (lecteurData) allAssigned = [...allAssigned, ...lecteurData];
       }
-
+      
       if (vraiMediateurId) {
         console.log('Recherche des élèves avec mediateur_id =', vraiMediateurId);
-        const { data: mediateurData } = await supabase
+        const { data: mediateurData, error: mediateurError } = await supabase
           .from('eleves')
           .select(`
             *,
@@ -202,11 +200,9 @@ export default function ExterneDashboard() {
             lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
             mediateur:mediateurs!mediateur_id (nom, prenom)
           `)
-            .eq('mediateur_id', vraiMediateurId);
+          .eq('mediateur_id', vraiMediateurId);
         
-        console.log('mediateurData trouvés:', mediateurData?.length || 0, mediateurData);
         if (mediateurError) console.error('Erreur mediateur:', mediateurError);
-        
         if (mediateurData) allAssigned = [...allAssigned, ...mediateurData];
       }
 
