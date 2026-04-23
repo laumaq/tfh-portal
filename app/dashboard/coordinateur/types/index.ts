@@ -92,6 +92,14 @@ export interface Guide {
   mot_de_passe?: string | null;
 }
 
+export interface Externe {
+  id: string;
+  nom: string;
+  prenom: string;
+  lecteur_externe_id?: string;
+  mediateur_id?: string;
+}
+
 export interface LecteurExterne {
   id: string;
   nom: string;
