@@ -107,31 +107,42 @@ export default function ExterneDashboard() {
 
     setUserName(name || '');
     setExterneId(userId);
-    loadUserRoles(userId);
+    loadUserRoles();
   }, [router]);
   
-  const loadUserRoles = async (externeId: string) => {
-    if (!externeId || externeId.trim() === '') {
-      console.error('externeId manquant, redirection vers connexion');
+  const loadUserRoles = async () => {
+    // Récupérer directement depuis localStorage pour être sûr
+    const storedUserId = localStorage.getItem('userId');
+    if (!storedUserId) {
+      console.error('Aucun userId dans localStorage');
       router.push('/connexion-externe');
       return;
     }
-  try {
+  
+    console.log('loadUserRoles: storedUserId =', storedUserId);
+
+    try {
+      // Chercher l'externe par son id (clé primaire)
       const { data, error } = await supabase
         .from('externes')
-        .select('lecteur_externe_id, mediateur_id')
-        .eq('id', externeId)
+        .select('id, lecteur_externe_id, mediateur_id')
+        .eq('id', storedUserId)
         .single();
   
-      if (error) throw error;
-  
-      if (data) {
-        // ICI : data.lecteur_externe_id et data.mediateur_id sont les vrais IDs
-        // qui correspondent à ceux dans la table eleves
-        setLecteurExterneId(data.lecteur_externe_id || '');
-        setMediateurId(data.mediateur_id || '');
-        await loadData(data.lecteur_externe_id || '', data.mediateur_id || '');
+      if (error || !data) {
+        console.error('Externe non trouvé pour id =', storedUserId, error);
+        router.push('/connexion-externe');
+        return;
       }
+  
+      console.log('Externe trouvé:', data);
+  
+      // Mettre à jour les states
+      setLecteurExterneId(data.lecteur_externe_id || '');
+      setMediateurId(data.mediateur_id || '');
+      
+      // Charger les données avec les bons IDs
+      await loadData(data.lecteur_externe_id || '', data.mediateur_id || '');
     } catch (err) {
       console.error('Erreur chargement rôles:', err);
       router.push('/connexion-externe');
