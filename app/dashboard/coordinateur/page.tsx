@@ -144,7 +144,7 @@ export default function CoordinateurDashboard() {
           <GestionUtilisateursTab
             eleves={eleves}
             guides={guides}
-            //externes={externes}
+            externes={externes}
             coordinateurs={coordinateurs}
             onRefresh={refreshData}
           />
