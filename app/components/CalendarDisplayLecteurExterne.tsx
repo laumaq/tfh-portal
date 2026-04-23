@@ -199,54 +199,51 @@ export default function CalendarDisplayLecteurExterne({
     prepareCalendarData();
   }, [eleves, selectedCategory, selectedDates, selectedLocations]);
 
-  const isLecteurSelected = (eventId: string) => {
-    const isSelected = selectedLecteurIds.includes(eventId);
-    console.log(`isLecteurSelected ${eventId}:`, isSelected, 'selectedLecteurIds:', selectedLecteurIds);
-    return isSelected;
-  };
-
-  const isMediateurSelected = (eventId: string) => {
-    const isSelected = selectedMediateurIds.includes(eventId);
-    console.log(`isMediateurSelected ${eventId}:`, isSelected, 'selectedMediateurIds:', selectedMediateurIds);
-    return isSelected;
-  };
-  
+  // Fonction pour déterminer le statut du bouton Lecteur
   const getLecteurStatus = (event: DefenseEvent) => {
-    // Récupérer l'élève original pour vérifier ce qui est en base
     const eleve = eleves.find(e => e.id === event.eleveId);
     
-    // Si déjà assigné à quelqu'un d'autre
-    if (eleve?.lecteur_externe_id && eleve.lecteur_externe_id !== lecteurExterneId) {
-      return 'taken';
-    }
-    // Si conflit de créneau
-    if (isLecteurBusy(event.eleveId)) {
-      return 'busy';
-    }
-    // Si sélectionné par l'utilisateur courant
-    if (isLecteurSelected(event.eleveId)) {
+    // 1. L'utilisateur est déjà lecteur de ce TFH
+    if (eleve?.lecteur_externe_id === lecteurExterneId) {
       return 'selected';
     }
+    
+    // 2. Un autre lecteur externe est déjà assigné
+    if (eleve?.lecteur_externe_id && eleve.lecteur_externe_id !== lecteurExterneId) {
+      return 'taken_by_other';
+    }
+    
+    // 3. L'utilisateur a un conflit horaire (déjà occupé sur ce créneau)
+    if (busyLecteurIds.includes(event.eleveId)) {
+      return 'busy';
+    }
+    
+    // 4. Disponible
     return 'available';
   };
-  
+
+  // Fonction pour déterminer le statut du bouton Médiateur
   const getMediateurStatus = (event: DefenseEvent) => {
     const eleve = eleves.find(e => e.id === event.eleveId);
     
-    if (eleve?.mediateur_id && eleve.mediateur_id !== mediateurId) {
-      return 'taken';
-    }
-    if (isMediateurBusy(event.eleveId)) {
-      return 'busy';
-    }
-    if (isMediateurSelected(event.eleveId)) {
+    // 1. L'utilisateur est déjà médiateur de ce TFH
+    if (eleve?.mediateur_id === mediateurId) {
       return 'selected';
     }
+    
+    // 2. Un autre médiateur est déjà assigné
+    if (eleve?.mediateur_id && eleve.mediateur_id !== mediateurId) {
+      return 'taken_by_other';
+    }
+    
+    // 3. L'utilisateur a un conflit horaire (déjà occupé sur ce créneau)
+    if (busyMediateurIds.includes(event.eleveId)) {
+      return 'busy';
+    }
+    
+    // 4. Disponible
     return 'available';
   };
-  
-  const isLecteurBusy = (eventId: string) => busyLecteurIds.includes(eventId);
-  const isMediateurBusy = (eventId: string) => busyMediateurIds.includes(eventId);
 
   const pluralize = (count: number, singular: string, plural: string) => {
     return count === 1 ? singular : plural;
@@ -408,15 +405,23 @@ export default function CalendarDisplayLecteurExterne({
                                             e.stopPropagation();
                                             onLecteurClick(defense);
                                           }}
-                                          disabled={lecteurStatus === 'busy' || lecteurStatus === 'taken'}
+                                          disabled={lecteurStatus === 'busy' || lecteurStatus === 'taken_by_other'}
                                           className={`flex-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
                                             lecteurStatus === 'selected'
                                               ? 'bg-blue-600 text-white'
-                                              : lecteurStatus === 'busy' || lecteurStatus === 'taken'
+                                              : lecteurStatus === 'busy' || lecteurStatus === 'taken_by_other'
                                               ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                                               : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                                           }`}
-                                          title={lecteurStatus === 'taken' ? "Déjà attribué à un autre lecteur" : lecteurStatus === 'busy' ? "Conflit de créneau" : ""}
+                                          title={
+                                            lecteurStatus === 'taken_by_other' 
+                                              ? "TFH déjà choisi par un autre lecteur externe"
+                                              : lecteurStatus === 'busy' 
+                                              ? "Vous êtes déjà occupé à cet horaire"
+                                              : lecteurStatus === 'selected'
+                                              ? "Cliquer pour annuler"
+                                              : ""
+                                          }
                                         >
                                           📖 {lecteurStatus === 'selected' ? 'Sélectionné' : 'Lecteur'}
                                         </button>
@@ -425,15 +430,23 @@ export default function CalendarDisplayLecteurExterne({
                                             e.stopPropagation();
                                             onMediateurClick(defense);
                                           }}
-                                          disabled={mediateurStatus === 'busy' || mediateurStatus === 'taken'}
+                                          disabled={mediateurStatus === 'busy' || mediateurStatus === 'taken_by_other'}
                                           className={`flex-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
                                             mediateurStatus === 'selected'
                                               ? 'bg-purple-600 text-white'
-                                              : mediateurStatus === 'busy' || mediateurStatus === 'taken'
+                                              : mediateurStatus === 'busy' || mediateurStatus === 'taken_by_other'
                                               ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                                               : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
                                           }`}
-                                          title={mediateurStatus === 'taken' ? "Déjà attribué à un autre médiateur" : mediateurStatus === 'busy' ? "Conflit de créneau" : ""}
+                                          title={
+                                            mediateurStatus === 'taken_by_other'
+                                              ? "TFH déjà choisi par un autre médiateur"
+                                              : mediateurStatus === 'busy'
+                                              ? "Vous êtes déjà occupé à cet horaire"
+                                              : mediateurStatus === 'selected'
+                                              ? "Cliquer pour annuler"
+                                              : ""
+                                          }
                                         >
                                           ⚖️ {mediateurStatus === 'selected' ? 'Sélectionné' : 'Médiateur'}
                                         </button>
