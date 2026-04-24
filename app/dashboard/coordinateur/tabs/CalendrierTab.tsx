@@ -1,3 +1,5 @@
+// /app/dashboard/coordinateur/tabs/CalendrierTab.tsx
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo  } from 'react';
