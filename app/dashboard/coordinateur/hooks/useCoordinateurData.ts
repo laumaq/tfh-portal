@@ -77,16 +77,16 @@ export function useCoordinateurData() {
       } else {
         setCoordinateurs(coordinateursData || []);
       }
-
-      // Charger les élèves avec jointures
+      
+      // Charger les élèves avec jointures (corrigé pour utiliser externes)
       const { data: elevesData, error: elevesError } = await supabase
         .from('eleves')
         .select(`
           *,
           guide:guides!guide_id (nom, prenom),
           lecteur_interne:guides!lecteur_interne_id (nom, prenom),
-          lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
-          mediateur:mediateurs!mediateur_id (nom, prenom)
+          lecteur_externe:externes!lecteur_externe_id (nom, prenom),
+          mediateur:externes!mediateur_id (nom, prenom)
         `)
         .order('classe', { ascending: true })
         .order('nom', { ascending: true });
