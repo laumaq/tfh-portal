@@ -117,19 +117,24 @@ export default function ExterneDashboard() {
       router.push('/connexion-externe');
       return;
     }
-
+  
     try {
       const { data, error } = await supabase
         .from('externes')
         .select('id, lecteur_externe_id, mediateur_id')
         .eq('id', storedUserId)
         .single();
-
+  
       if (error || !data) {
         router.push('/connexion-externe');
         return;
       }
-
+  
+      console.log('=== loadUserRoles ===');
+      console.log('data reçu:', data);
+      console.log('lecteur_externe_id:', data.lecteur_externe_id);
+      console.log('mediateur_id:', data.mediateur_id);
+  
       setExterneId(data.id);
       setLecteurExterneId(data.lecteur_externe_id || '');
       setMediateurId(data.mediateur_id || '');
@@ -419,6 +424,15 @@ export default function ExterneDashboard() {
     const isCurrentlySelected = role === 'lecteur' 
       ? selectedElevesAsLecteur.includes(eleveId)
       : selectedElevesAsMediateur.includes(eleveId);
+  
+    console.log('=== handleToggleSelection ===');
+    console.log('eleveId:', eleveId);
+    console.log('role:', role);
+    console.log('field:', field);
+    console.log('currentId:', currentId);
+    console.log('isCurrentlySelected:', isCurrentlySelected);
+    console.log('lecteurExterneId:', lecteurExterneId);
+    console.log('mediateurId:', mediateurId);
   
     // Vérifier les conflits de créneaux
     if (isTimeSlotBusy(eleve, role) && !isCurrentlySelected) {
