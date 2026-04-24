@@ -42,17 +42,6 @@ interface Guide {
   initiale: string;
 }
 
-interface LecteurExterne {
-  id: string;
-  nom: string;
-  prenom: string;
-}
-
-interface Mediateur {
-  id: string;
-  nom: string;
-  prenom: string;
-}
 
 type TabType = 'guide' | 'lecteur-interne' | 'defenses';
 
@@ -62,8 +51,6 @@ export default function GuideDashboard() {
   const [defensesProgrammees, setDefensesProgrammees] = useState<Eleve[]>([]);
   const [defensesNonProgrammees, setDefensesNonProgrammees] = useState<Eleve[]>([]);
   const [guides, setGuides] = useState<Guide[]>([]);
-  const [lecteursExternes, setLecteursExternes] = useState<LecteurExterne[]>([]);
-  const [mediateurs, setMediateurs] = useState<Mediateur[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingDefenses, setLoadingDefenses] = useState(false);
   const [userName, setUserName] = useState('');
@@ -173,16 +160,6 @@ export default function GuideDashboard() {
         .select('id, nom, initiale');
       setGuides(guidesData || []);
 
-      // Charger les lecteurs externes et médiateurs pour l'affichage des défenses
-      const { data: lecteursExternesData } = await supabase
-        .from('lecteurs_externes')
-        .select('id, nom, prenom');
-      setLecteursExternes(lecteursExternesData || []);
-
-      const { data: mediateursData } = await supabase
-        .from('mediateurs')
-        .select('id, nom, prenom');
-      setMediateurs(mediateursData || []);
 
       // Charger les élèves assignés à ce guide
       const { data: elevesData, error: elevesError } = await supabase
@@ -191,8 +168,8 @@ export default function GuideDashboard() {
           *,
           guide:guides!guide_id (nom, initiale),
           lecteur_interne:guides!lecteur_interne_id (nom, initiale),
-          lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
-          mediateur:mediateurs!mediateur_id (nom, prenom)
+          lecteur_externe:externes!lecteur_externe_id (nom, prenom),
+          mediateur:externes!mediateur_id (nom, prenom)
         `)
         .eq('guide_id', guideId)
         .order('classe', { ascending: true })
@@ -354,8 +331,8 @@ export default function GuideDashboard() {
           *,
           guide:guides!guide_id (nom, initiale),
           lecteur_interne:guides!lecteur_interne_id (nom, initiale),
-          lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
-          mediateur:mediateurs!mediateur_id (nom, prenom)
+          lecteur_externe:externes!lecteur_externe_id (nom, prenom),
+          mediateur:externes!mediateur_id (nom, prenom)
         `)
         .or(`guide_id.eq.${guideId},lecteur_interne_id.eq.${guideId}`)
         .order('date_defense', { ascending: true, nullsFirst: false })
