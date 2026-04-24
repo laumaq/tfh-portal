@@ -143,7 +143,7 @@ export default function ExterneDashboard() {
   const loadData = async (lecteurExterneIdVal: string, mediateurIdVal: string) => {
     try {
       setLoading(true);
-
+  
       // Charger les paramètres d'affichage
       const { data: settingsData } = await supabase
         .from('system_settings')
@@ -154,7 +154,7 @@ export default function ExterneDashboard() {
           'lecteur_externe_voir_lecteurs_internes',
           'lecteur_externe_voir_mediateurs'
         ]);
-
+  
       if (settingsData) {
         const settings: any = {};
         settingsData.forEach(setting => {
@@ -162,33 +162,26 @@ export default function ExterneDashboard() {
         });
         setDisplaySettings(prev => ({ ...prev, ...settings }));
       }
-
+  
       // Charger les élèves assignés à l'utilisateur (comme lecteur OU médiateur)
       let allAssigned: Eleve[] = [];
-
+  
       if (lecteurExterneIdVal) {
-        console.log('Recherche des élèves avec lecteur_externe_id =', lecteurExterneIdVal);
-        const { data: lecteurData, error: lecteurError } = await supabase
+        const { data: lecteurData } = await supabase
           .from('eleves')
           .select('*')
           .eq('lecteur_externe_id', lecteurExterneIdVal);
-        
-        if (lecteurError) console.error('Erreur lecteur:', lecteurError);
         if (lecteurData) allAssigned = [...allAssigned, ...lecteurData];
       }
       
       if (mediateurIdVal) {
-        console.log('Recherche des élèves avec mediateur_id =', mediateurIdVal);
-        const { data: mediateurData, error: mediateurError } = await supabase
+        const { data: mediateurData } = await supabase
           .from('eleves')
           .select('*')
           .eq('mediateur_id', mediateurIdVal);
-        
-        if (mediateurError) console.error('Erreur mediateur:', mediateurError);
         if (mediateurData) allAssigned = [...allAssigned, ...mediateurData];
       }
-
-      // Supprimer les doublons
+  
       const uniqueAssigned = Array.from(new Map(allAssigned.map(e => [e.id, e])).values());
       const elevesFormatted = uniqueAssigned.map(eleve => ({
         ...eleve,
@@ -202,43 +195,92 @@ export default function ExterneDashboard() {
         mediateur_prenom: eleve.mediateur_prenom || '-'
       }));
       setEleves(elevesFormatted);
-
-      // Charger les élèves disponibles pour sélection (avec jointures vers externes)
-      const { data: allElevesData } = await supabase
+  
+      // Charger les élèves disponibles pour sélection (sans jointures)
+      const { data: allElevesData, error: elevesError } = await supabase
         .from('eleves')
-        .select(`
-          *,
-          guide:guides!guide_id (nom, prenom),
-          lecteur_interne:guides!lecteur_interne_id (nom, prenom),
-          lecteur_externe:externes!lecteur_externe_id (nom, prenom),
-          mediateur:externes!mediateur_id (nom, prenom)
-        `)
+        .select('*')
         .not('categorie', 'is', null)
         .not('categorie', 'eq', '')
         .order('date_defense', { ascending: true, nullsFirst: true })
         .order('heure_defense', { ascending: true, nullsFirst: true })
         .order('classe', { ascending: true })
         .order('nom', { ascending: true });
-
-      const allElevesFormatted = (allElevesData || []).map(eleve => ({
-        ...eleve,
-        guide_nom: eleve.guide?.nom || '-',
-        guide_prenom: eleve.guide?.prenom || '-',
-        lecteur_interne_nom: eleve.lecteur_interne?.nom || '-',
-        lecteur_interne_prenom: eleve.lecteur_interne?.prenom || '-',
-        lecteur_externe_nom: eleve.lecteur_externe?.nom || '-',
-        lecteur_externe_prenom: eleve.lecteur_externe?.prenom || '-',
-        mediateur_nom: eleve.mediateur?.nom || '-',
-        mediateur_prenom: eleve.mediateur?.prenom || '-'
-      }));
-
+  
+      if (elevesError) throw elevesError;
+  
+      // Récupérer tous les guides en une seule requête
+      const { data: allGuides } = await supabase
+        .from('guides')
+        .select('id, nom, prenom');
+  
+      const guidesMap = new Map();
+      if (allGuides) {
+        allGuides.forEach(guide => {
+          guidesMap.set(guide.id, guide);
+        });
+      }
+  
+      // Récupérer tous les externes en une seule requête
+      const { data: allExternes } = await supabase
+        .from('externes')
+        .select('id, nom, prenom, lecteur_externe_id, mediateur_id');
+  
+      const externesByLecteurId = new Map();
+      const externesByMediateurId = new Map();
+      if (allExternes) {
+        allExternes.forEach(externe => {
+          if (externe.lecteur_externe_id) {
+            externesByLecteurId.set(externe.lecteur_externe_id, externe);
+          }
+          if (externe.mediateur_id) {
+            externesByMediateurId.set(externe.mediateur_id, externe);
+          }
+        });
+      }
+  
+      // Formater les données
+      const allElevesFormatted = (allElevesData || []).map(eleve => {
+        // Guide
+        const guide = guidesMap.get(eleve.guide_id);
+        const guide_nom = guide?.nom || '-';
+        const guide_prenom = guide?.prenom || '-';
+  
+        // Lecteur interne
+        const lecteurInterne = guidesMap.get(eleve.lecteur_interne_id);
+        const lecteur_interne_nom = lecteurInterne?.nom || '-';
+        const lecteur_interne_prenom = lecteurInterne?.prenom || '-';
+  
+        // Lecteur externe
+        const lecteurExterne = externesByLecteurId.get(eleve.lecteur_externe_id);
+        const lecteur_externe_nom = lecteurExterne?.nom || '-';
+        const lecteur_externe_prenom = lecteurExterne?.prenom || '-';
+  
+        // Médiateur
+        const mediateur = externesByMediateurId.get(eleve.mediateur_id);
+        const mediateur_nom = mediateur?.nom || '-';
+        const mediateur_prenom = mediateur?.prenom || '-';
+  
+        return {
+          ...eleve,
+          guide_nom,
+          guide_prenom,
+          lecteur_interne_nom,
+          lecteur_interne_prenom,
+          lecteur_externe_nom,
+          lecteur_externe_prenom,
+          mediateur_nom,
+          mediateur_prenom
+        };
+      });
+  
       setElevesDisponibles(allElevesFormatted);
-
+  
       const uniqueCategories = Array.from(
         new Set(allElevesFormatted.map(e => e.categorie).filter(Boolean))
       ).sort();
       setCategories(uniqueCategories);
-
+  
       const uniqueDates = Array.from(
         new Set(allElevesFormatted
           .filter(e => e.date_defense)
@@ -246,7 +288,7 @@ export default function ExterneDashboard() {
       ).sort();
       setDates(uniqueDates);
       setSelectedDates(uniqueDates);
-
+  
       const uniqueLocations = Array.from(
         new Set(allElevesFormatted
           .filter(e => e.localisation_defense)
@@ -254,11 +296,11 @@ export default function ExterneDashboard() {
       ).sort();
       setLocations(uniqueLocations);
       setSelectedLocations(uniqueLocations);
-
+  
       setSelectedMultipleDates(uniqueDates);
       setSelectedMultipleCategories(uniqueCategories);
       setSelectedMultipleLocations(uniqueLocations);
-
+  
       // Pré-sélectionner les élèves déjà assignés
       const preSelectedLecteur = allElevesFormatted
         .filter(e => e.lecteur_externe_id === lecteurExterneIdVal)
@@ -269,16 +311,16 @@ export default function ExterneDashboard() {
       
       setSelectedElevesAsLecteur(preSelectedLecteur);
       setSelectedElevesAsMediateur(preSelectedMediateur);
-
+  
       generateBusySlots(elevesFormatted, lecteurExterneIdVal, mediateurIdVal);
-
+  
     } catch (err) {
       console.error('Erreur chargement des données:', err);
     } finally {
       setLoading(false);
     }
   };
-
+  
   const generateBusySlots = (assignedEleves: Eleve[], lecteurExterneIdVal: string, mediateurIdVal: string) => {
     const slotsMapLecteur = new Map<string, string[]>();
     const slotsMapMediateur = new Map<string, string[]>();
