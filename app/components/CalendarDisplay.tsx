@@ -22,6 +22,7 @@ interface DefenseEvent {
   mediateurNom: string;
   mediateurPrenom: string;
   categorie: string;
+  problematique: string;
 }
 
 interface DayDefenses {
@@ -61,7 +62,7 @@ export default function CalendarDisplay({
   });
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const PIXELS_PER_HOUR = 200;
+  const PIXELS_PER_HOUR = 300;
 
   const add50Minutes = (time: string): string => {
     if (!time) return '';
@@ -277,7 +278,8 @@ export default function CalendarDisplay({
         lecteurExternePrenom: eleve.lecteur_externe_prenom || '-',
         mediateurNom: eleve.mediateur_nom || '-',
         mediateurPrenom: eleve.mediateur_prenom || '-',
-        categorie: eleve.categorie || 'Non catégorisé'
+        categorie: eleve.categorie || 'Non catégorisé',
+        problematique: eleve.problematique || ''
       };
     });
     
@@ -500,6 +502,14 @@ export default function CalendarDisplay({
                                       <div className="text-xs opacity-75">
                                         {defense.categorie}
                                       </div>
+                                      
+                                      {/* AJOUTER LA PROBLÉMATIQUE ICI */}
+                                      {defense.problematique && (
+                                        <div className="text-xs mt-1 p-1 bg-white bg-opacity-50 rounded break-words max-h-16 overflow-y-auto">
+                                          <span className="font-medium">📝</span> {defense.problematique}
+                                        </div>
+                                      )}
+                                      
                                       {defense.guideNom !== '-' && (
                                         <div className="text-xs">
                                           Guide: {defense.guidePrenom} {defense.guideNom}
