@@ -1,5 +1,3 @@
-// /app/dashboard/externe/page.tsx
-  
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -110,32 +108,29 @@ export default function ExterneDashboard() {
     setExterneId(userId);
     loadUserRoles();
   }, [router]);
-  
+
   const loadUserRoles = async () => {
     const storedUserId = localStorage.getItem('userId');
     if (!storedUserId) {
       router.push('/connexion-externe');
       return;
     }
-  
+
     try {
       const { data, error } = await supabase
         .from('externes')
         .select('id, lecteur_externe_id, mediateur_id')
         .eq('id', storedUserId)
         .single();
-  
+
       if (error || !data) {
         router.push('/connexion-externe');
         return;
       }
-  
-      // Mettre à jour les states
+
       setExterneId(data.id);
       setLecteurExterneId(data.lecteur_externe_id || '');
       setMediateurId(data.mediateur_id || '');
-      
-      // Appeler loadData avec les IDs récupérés (pas les states)
       await loadData(data.lecteur_externe_id || '', data.mediateur_id || '');
     } catch (err) {
       console.error(err);
@@ -169,19 +164,11 @@ export default function ExterneDashboard() {
       // Charger les élèves assignés à l'utilisateur (comme lecteur OU médiateur)
       let allAssigned: Eleve[] = [];
 
-
-
       if (lecteurExterneIdVal) {
         console.log('Recherche des élèves avec lecteur_externe_id =', lecteurExterneIdVal);
         const { data: lecteurData, error: lecteurError } = await supabase
           .from('eleves')
-          .select(`
-            *,
-            guide:guides!guide_id (nom, prenom),
-            lecteur_interne:guides!lecteur_interne_id (nom, prenom),
-            lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
-            mediateur:mediateurs!mediateur_id (nom, prenom)
-          `)
+          .select('*')
           .eq('lecteur_externe_id', lecteurExterneIdVal);
         
         if (lecteurError) console.error('Erreur lecteur:', lecteurError);
@@ -192,13 +179,7 @@ export default function ExterneDashboard() {
         console.log('Recherche des élèves avec mediateur_id =', mediateurIdVal);
         const { data: mediateurData, error: mediateurError } = await supabase
           .from('eleves')
-          .select(`
-            *,
-            guide:guides!guide_id (nom, prenom),
-            lecteur_interne:guides!lecteur_interne_id (nom, prenom),
-            lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom),
-            mediateur:mediateurs!mediateur_id (nom, prenom)
-          `)
+          .select('*')
           .eq('mediateur_id', mediateurIdVal);
         
         if (mediateurError) console.error('Erreur mediateur:', mediateurError);
@@ -207,29 +188,28 @@ export default function ExterneDashboard() {
 
       // Supprimer les doublons
       const uniqueAssigned = Array.from(new Map(allAssigned.map(e => [e.id, e])).values());
-
       const elevesFormatted = uniqueAssigned.map(eleve => ({
         ...eleve,
-        guide_nom: eleve.guide?.nom || '-',
-        guide_prenom: eleve.guide?.prenom || '-',
-        lecteur_interne_nom: eleve.lecteur_interne?.nom || '-',
-        lecteur_interne_prenom: eleve.lecteur_interne?.prenom || '-',
-        lecteur_externe_nom: eleve.lecteur_externe?.nom || '-',
-        lecteur_externe_prenom: eleve.lecteur_externe?.prenom || '-',
-        mediateur_nom: eleve.mediateur?.nom || '-',
-        mediateur_prenom: eleve.mediateur?.prenom || '-'
+        guide_nom: eleve.guide_nom || '-',
+        guide_prenom: eleve.guide_prenom || '-',
+        lecteur_interne_nom: eleve.lecteur_interne_nom || '-',
+        lecteur_interne_prenom: eleve.lecteur_interne_prenom || '-',
+        lecteur_externe_nom: eleve.lecteur_externe_nom || '-',
+        lecteur_externe_prenom: eleve.lecteur_externe_prenom || '-',
+        mediateur_nom: eleve.mediateur_nom || '-',
+        mediateur_prenom: eleve.mediateur_prenom || '-'
       }));
-
       setEleves(elevesFormatted);
 
-      // Charger les élèves disponibles pour sélection
+      // Charger les élèves disponibles pour sélection (avec jointures vers externes)
       const { data: allElevesData } = await supabase
         .from('eleves')
         .select(`
           *,
           guide:guides!guide_id (nom, prenom),
           lecteur_interne:guides!lecteur_interne_id (nom, prenom),
-          lecteur_externe:lecteurs_externes!lecteur_externe_id (nom, prenom)
+          lecteur_externe:externes!lecteur_externe_id (nom, prenom),
+          mediateur:externes!mediateur_id (nom, prenom)
         `)
         .not('categorie', 'is', null)
         .not('categorie', 'eq', '')
@@ -245,7 +225,9 @@ export default function ExterneDashboard() {
         lecteur_interne_nom: eleve.lecteur_interne?.nom || '-',
         lecteur_interne_prenom: eleve.lecteur_interne?.prenom || '-',
         lecteur_externe_nom: eleve.lecteur_externe?.nom || '-',
-        lecteur_externe_prenom: eleve.lecteur_externe?.prenom || '-'
+        lecteur_externe_prenom: eleve.lecteur_externe?.prenom || '-',
+        mediateur_nom: eleve.mediateur?.nom || '-',
+        mediateur_prenom: eleve.mediateur?.prenom || '-'
       }));
 
       setElevesDisponibles(allElevesFormatted);
@@ -418,7 +400,6 @@ export default function ExterneDashboard() {
           .update({ [field]: null })
           .eq('id', eleveId);
         
-        // Mise à jour immédiate des states locaux
         if (role === 'lecteur') {
           setSelectedElevesAsLecteur(prev => prev.filter(id => id !== eleveId));
         } else {
@@ -466,7 +447,6 @@ export default function ExterneDashboard() {
     } catch (err) {
       console.error('Erreur lors de la sauvegarde:', err);
       alert('Erreur lors de l\'enregistrement');
-      // Recharger pour corriger l'état
       loadData(lecteurExterneId, mediateurId);
     }
   };
