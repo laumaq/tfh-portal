@@ -62,7 +62,7 @@ export default function CalendarDisplay({
   });
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const PIXELS_PER_HOUR = 300;
+  const PIXELS_PER_HOUR = 350;
 
   const add50Minutes = (time: string): string => {
     if (!time) return '';
@@ -466,7 +466,7 @@ export default function CalendarDisplay({
                                 return (
                                   <div
                                     key={defense.id}
-                                    className={`absolute left-1 right-1 rounded p-2 overflow-hidden border shadow-sm transition-shadow ${
+                                    className={`absolute left-1 right-1 rounded p-2 overflow-y-auto border shadow-sm transition-shadow ${
                                       isClickable ? 'hover:shadow-md cursor-pointer' : ''
                                     } ${isSelected ? 'ring-2 ring-blue-500 ring-offset-1' : ''} ${
                                       isBusy && !isAssignedToCurrentUser ? 'opacity-50' : ''
@@ -478,7 +478,7 @@ export default function CalendarDisplay({
                                       borderColor: isSelected ? '#7DD3FC' : color.border,
                                       color: isSelected ? '#0C4A6E' : color.text,
                                       zIndex: 10,
-                                      fontSize: '13px'
+                                      fontSize: '12px'
                                     }}
                                     onClick={() => {
                                       if (isClickable) {
@@ -486,50 +486,70 @@ export default function CalendarDisplay({
                                       }
                                     }}
                                   >
-                                    <div className="font-bold mb-1 flex justify-between items-start">
-                                      <span>{defense.startTime} - {defense.endTime}</span>
-                                      {isSelected && (
-                                        <span className="text-xs bg-blue-500 text-white px-1 py-0.5 rounded">✓</span>
-                                      )}
-                                      {isBusy && !isAssignedToCurrentUser && (
-                                        <span className="text-xs bg-red-500 text-white px-1 py-0.5 rounded">Occupé</span>
-                                      )}
+                                    {/* En-tête avec horaire */}
+                                    <div className="font-bold mb-1 flex justify-between items-center sticky top-0 bg-inherit pb-1 border-b border-gray-300">
+                                      <span className="text-xs">{defense.startTime} - {defense.endTime}</span>
+                                      <div className="flex gap-1">
+                                        {isSelected && (
+                                          <span className="text-xs bg-blue-500 text-white px-1 py-0.5 rounded">✓</span>
+                                        )}
+                                        {isBusy && !isAssignedToCurrentUser && (
+                                          <span className="text-xs bg-red-500 text-white px-1 py-0.5 rounded">Occupé</span>
+                                        )}
+                                      </div>
                                     </div>
-                                    <div className="space-y-0.5">
-                                      <div className="font-semibold">
-                                        {defense.elevePrenom} {defense.eleveNom}
-                                      </div>
-                                      <div className="text-xs opacity-75">
-                                        {defense.categorie}
+                                    
+                                    <div className="space-y-2">
+                                      {/* Élève et catégorie */}
+                                      <div>
+                                        <div className="font-semibold text-sm">
+                                          {defense.elevePrenom} {defense.eleveNom}
+                                        </div>
+                                        <div className="text-xs opacity-75">
+                                          {defense.categorie}
+                                        </div>
                                       </div>
                                       
-                                      {/* AJOUTER LA PROBLÉMATIQUE ICI */}
+                                      {/* Séparateur 1 */}
+                                      <hr className="border-gray-400 my-1" />
+                                      
+                                      {/* Problématique */}
                                       {defense.problematique && (
-                                        <div className="text-xs mt-1 p-1 bg-white bg-opacity-50 rounded break-words max-h-16 overflow-y-auto">
-                                          <span className="font-medium">📝</span> {defense.problematique}
-                                        </div>
+                                        <>
+                                          <div className="text-xs leading-relaxed break-words">
+                                            <span className="font-medium">📝</span> {defense.problematique}
+                                          </div>
+                                          <hr className="border-gray-400 my-1" />
+                                        </>
                                       )}
                                       
-                                      {defense.guideNom !== '-' && (
-                                        <div className="text-xs">
-                                          Guide: {defense.guidePrenom} {defense.guideNom}
-                                        </div>
-                                      )}
-                                      {defense.lecteurInterneNom !== '-' && (
-                                        <div className="text-xs">
-                                          Lecteur interne: {defense.lecteurInternePrenom} {defense.lecteurInterneNom}
-                                        </div>
-                                      )}
-                                      {defense.lecteurExterneNom !== '-' && (
-                                        <div className="text-xs">
-                                          Lecteur externe: {defense.lecteurExternePrenom} {defense.lecteurExterneNom}
-                                        </div>
-                                      )}
-                                      {defense.mediateurNom !== '-' && (
-                                        <div className="text-xs">
-                                          Médiateur: {defense.mediateurPrenom} {defense.mediateurNom}
-                                        </div>
-                                      )}
+                                      {/* Jury */}
+                                      <div className="space-y-0.5 text-xs">
+                                        {defense.guideNom !== '-' && (
+                                          <div className="flex items-start gap-1">
+                                            <span className="font-medium min-w-[85px]">Guide:</span>
+                                            <span>{defense.guidePrenom} {defense.guideNom}</span>
+                                          </div>
+                                        )}
+                                        {defense.lecteurInterneNom !== '-' && (
+                                          <div className="flex items-start gap-1">
+                                            <span className="font-medium min-w-[85px]">Lecteur interne:</span>
+                                            <span>{defense.lecteurInternePrenom} {defense.lecteurInterneNom}</span>
+                                          </div>
+                                        )}
+                                        {defense.lecteurExterneNom !== '-' && (
+                                          <div className="flex items-start gap-1">
+                                            <span className="font-medium min-w-[85px]">Lecteur externe:</span>
+                                            <span>{defense.lecteurExternePrenom} {defense.lecteurExterneNom}</span>
+                                          </div>
+                                        )}
+                                        {defense.mediateurNom !== '-' && (
+                                          <div className="flex items-start gap-1">
+                                            <span className="font-medium min-w-[85px]">Médiateur:</span>
+                                            <span>{defense.mediateurPrenom} {defense.mediateurNom}</span>
+                                          </div>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
                                 );
