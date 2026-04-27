@@ -34,6 +34,7 @@ interface Eleve {
   lecteur_interne?: { nom: string; prenom: string };
   lecteur_externe?: { nom: string; prenom: string };
   mediateur?: { nom: string; prenom: string };
+  url_tfh?: string;
 }
 
 interface DefenseEvent {
@@ -268,6 +269,7 @@ export default function ExterneDashboard() {
   
         return {
           ...eleve,
+          url_tfh: eleve.url_tfh || '',
           guide_nom,
           guide_prenom,
           lecteur_interne_nom,
@@ -1150,9 +1152,21 @@ export default function ExterneDashboard() {
                           </td>
                         )}
                         <td className="px-4 py-3 text-sm max-w-md">
-                          <div className="whitespace-pre-wrap max-h-32 overflow-y-auto pr-2">
-                            {eleve.problematique || '-'}
-                          </div>
+                          {eleve.url_tfh ? (
+                            <a
+                              href={eleve.url_tfh}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:underline break-words"
+                              title="Ouvrir le travail numérique"
+                            >
+                              📄 {eleve.problematique || '-'}
+                            </a>
+                          ) : (
+                            <div className="whitespace-pre-wrap max-h-32 overflow-y-auto pr-2">
+                              {eleve.problematique || '-'}
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-sm whitespace-nowrap">
                           <span className="px-2 py-1 bg-gray-100 rounded text-xs">
