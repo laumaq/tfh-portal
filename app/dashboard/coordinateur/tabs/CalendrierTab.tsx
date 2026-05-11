@@ -167,70 +167,204 @@ export default function CalendrierTab({
     
     return container;
   };
-
+  
   const handleExportFull = async () => {
+    console.log('=== handleExportFull ===');
+    console.log('calendarRef.current:', calendarRef.current);
+    
+    if (!calendarRef.current) {
+      alert('Le calendrier n\'est pas encore chargé. Veuillez réessayer.');
+      return;
+    }
+    
     setIsExporting(true);
     setShowExportOptions(false);
     
     try {
       const html2pdf = require('html2pdf.js');
-      const content = generatePDFContent('full');
       
-      const opt = {
-        margin: [0.5, 0.5, 0.5, 0.5],
-        filename: `calendrier_complet_${new Date().toISOString().split('T')[0]}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false, letterRendering: true },
-        jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
-      };
+      // Attendre un peu que le contenu soit stable
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const element = calendarRef.current.cloneNode(true) as HTMLElement;
+      console.log('element cloné:', element);
+      console.log('Contenu du calendrier:', element.innerHTML.substring(0, 500));
+      
+      element.style.width = '100%';
+      element.style.maxWidth = '100%';
+      element.style.overflow = 'visible';
+      element.style.backgroundColor = 'white';
+      element.style.padding = '20px';
+      
+      // Nettoyer les éléments interactifs
+      element.querySelectorAll('button').forEach(btn => btn.remove());
+      element.querySelectorAll('.animate-spin').forEach(el => el.remove());
       
       const container = document.createElement('div');
       container.style.position = 'absolute';
       container.style.left = '-9999px';
       container.style.top = '-9999px';
-      container.appendChild(content);
+      container.appendChild(element);
       document.body.appendChild(container);
       
+      // Vérifier que le contenu a été ajouté
+      console.log('container enfant:', container.innerHTML.substring(0, 500));
+      
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const opt = {
+        margin: [0.5, 0.5, 0.5, 0.5],
+        filename: `calendrier_complet_${new Date().toISOString().split('T')[0]}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { 
+          scale: 2, 
+          useCORS: true, 
+          logging: true,
+          letterRendering: true,
+          backgroundColor: '#ffffff'
+        },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
+      };
+      
+      console.log('Génération du PDF en cours...');
       await html2pdf().from(container).set(opt).save();
+      console.log('PDF généré avec succès');
+      
       document.body.removeChild(container);
       
     } catch (error) {
-      console.error(error);
-      alert('Erreur lors de l\'export');
+      console.error('Erreur détaillée:', error);
+      alert('Erreur lors de l\'export: ' + (error.message || error));
     } finally {
       setIsExporting(false);
     }
   };
-
+  
   const handleExportByDayLocation = async () => {
     setIsExporting(true);
     setShowExportOptions(false);
     
     try {
       const html2pdf = require('html2pdf.js');
-      const content = generatePDFContent('day-location');
+      const defenses = getFilteredDefenses();
+      
+      if (defenses.length === 0) {
+        alert('Aucune défense à exporter avec les filtres actuels.');
+        setIsExporting(false);
+        return;
+      }
+      
+      // Créer le contenu HTML
+      const container = document.createElement('div');
+      container.style.padding = '20px';
+      container.style.fontFamily = 'Arial, sans-serif';
+      container.style.backgroundColor = 'white';
+      
+      // Grouper par jour et local
+      const grouped: Record<string, Record<string, Eleve[]>> = {};
+      
+      defenses.forEach(defense => {
+        const date = defense.date_defense!;
+        const location = defense.localisation_defense || 'Non défini';
+        if (!grouped[date]) grouped[date] = {};
+        if (!grouped[date][location]) grouped[date][location] = [];
+        grouped[date][location].push(defense);
+      });
+      
+      const sortedDates = Object.keys(grouped).sort();
+      
+      for (const date of sortedDates) {
+        const locations = grouped[date];
+        const sortedLocations = Object.keys(locations).sort();
+        
+        for (const location of sortedLocations) {
+          const dayDefenses = locations[location].sort((a, b) => 
+            (a.heure_defense || '').localeCompare(b.heure_defense || '')
+          );
+          
+          // Page
+          const pageDiv = document.createElement('div');
+          pageDiv.style.pageBreakAfter = 'always';
+          pageDiv.style.marginBottom = '20px';
+          
+          // En-tête
+          const header = document.createElement('div');
+          header.style.textAlign = 'center';
+          header.style.marginBottom = '20px';
+          header.innerHTML = `
+            <h2 style="margin: 0; color: #333;">${new Date(date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</h2>
+            <p style="margin: 5px 0; color: #666;"><strong>Local :</strong> ${location}</p>
+            <p style="margin: 5px 0; color: #666;"><strong>Nombre de défenses :</strong> ${dayDefenses.length}</p>
+          `;
+          pageDiv.appendChild(header);
+          
+          // Tableau
+          const table = document.createElement('table');
+          table.style.width = '100%';
+          table.style.borderCollapse = 'collapse';
+          table.style.marginBottom = '20px';
+          
+          const thead = document.createElement('thead');
+          thead.innerHTML = `
+            <tr style="background-color: #f2f2f2;">
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Horaire</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Élève</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Problématique</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Catégorie</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Guide</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Lecteur interne</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Lecteur externe</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Médiateur</th>
+             </tr>
+          `;
+          table.appendChild(thead);
+          
+          const tbody = document.createElement('tbody');
+          for (const defense of dayDefenses) {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td style="border: 1px solid #ddd; padding: 8px; white-space: nowrap;">${defense.heure_defense?.substring(0, 5) || '-'}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;"><strong>${defense.prenom} ${defense.nom}</strong><br><small>${defense.classe}</small></td>
+              <td style="border: 1px solid #ddd; padding: 8px; max-width: 300px;">${(defense.problematique || '-').substring(0, 150)}${(defense.problematique || '').length > 150 ? '...' : ''}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">${defense.categorie || '-'}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">${defense.guide_prenom || ''} ${defense.guide_nom || '-'}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">${defense.lecteur_interne_prenom || ''} ${defense.lecteur_interne_nom || '-'}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">${defense.lecteur_externe_prenom || ''} ${defense.lecteur_externe_nom || '-'}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">${defense.mediateur_prenom || ''} ${defense.mediateur_nom || '-'}</td>
+            `;
+            tbody.appendChild(row);
+          }
+          table.appendChild(tbody);
+          pageDiv.appendChild(table);
+          
+          container.appendChild(pageDiv);
+        }
+      }
+      
+      // Ajouter au DOM
+      const tempContainer = document.createElement('div');
+      tempContainer.style.position = 'absolute';
+      tempContainer.style.left = '-9999px';
+      tempContainer.style.top = '-9999px';
+      tempContainer.appendChild(container);
+      document.body.appendChild(tempContainer);
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       const opt = {
         margin: [0.5, 0.5, 0.5, 0.5],
         filename: `calendrier_par_jour_local_${new Date().toISOString().split('T')[0]}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false, letterRendering: true },
+        html2canvas: { scale: 2, useCORS: true, logging: true, backgroundColor: '#ffffff' },
         jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
       };
       
-      const container = document.createElement('div');
-      container.style.position = 'absolute';
-      container.style.left = '-9999px';
-      container.style.top = '-9999px';
-      container.appendChild(content);
-      document.body.appendChild(container);
-      
-      await html2pdf().from(container).set(opt).save();
-      document.body.removeChild(container);
+      await html2pdf().from(tempContainer).set(opt).save();
+      document.body.removeChild(tempContainer);
       
     } catch (error) {
-      console.error(error);
-      alert('Erreur lors de l\'export');
+      console.error('Erreur:', error);
+      alert('Erreur lors de l\'export: ' + error);
     } finally {
       setIsExporting(false);
     }
