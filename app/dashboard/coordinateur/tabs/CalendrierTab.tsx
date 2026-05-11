@@ -871,6 +871,7 @@ export default function CalendrierTab({
           </div>
         </div>
         
+        {/* Grille des filtres */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           {/* Filtre des jours */}
           <div>
@@ -925,7 +926,6 @@ export default function CalendrierTab({
               {categories.map(cat => {
                 const color = getCategoryColor(cat);
                 const isSelected = selectedCategories.includes(cat);
-                const allSelected = selectedCategories.length === categories.length;
                 
                 return (
                   <div key={cat} className="flex items-center mb-1">
@@ -1029,6 +1029,7 @@ export default function CalendrierTab({
               </button>
             )}
           </div>
+        </div>
         
         {/* Résumé des filtres */}
         <div className="text-sm text-gray-600">
