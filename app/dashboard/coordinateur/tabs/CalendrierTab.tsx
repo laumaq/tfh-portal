@@ -51,8 +51,9 @@ export default function CalendrierTab({
     ), [eleves]);
 
   useEffect(() => {
-     setSelectedCategories(categories);
-  }, [categories]);
+    setSelectedCategories(categories);
+    setSelectedLocations(allLocations);
+  }, [categories, allLocations]);
 
   useEffect(() => {
     if (allDates.length > 0 && selectedDates.length === 0) {
