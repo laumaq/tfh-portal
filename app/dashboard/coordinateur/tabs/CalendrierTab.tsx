@@ -399,11 +399,14 @@ export default function CalendrierTab({
       
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const startHour = 8;
-      const endHour = 18;
-      const totalHours = endHour - startHour;
-      const cellHeight = 48; // mm par heure
       const colWidth = 52; // mm par local
+      
+      // Plages horaires
+      const timeSlots = [
+        { name: 'Matin (08h00 - 11h00)', startHour: 8, endHour: 11, startY: 35 },
+        { name: 'Milieu de journée (11h00 - 13h55)', startHour: 11, endHour: 13.916, startY: 35 },
+        { name: 'Après-midi (13h55 - 17h20)', startHour: 13.916, endHour: 17.333, startY: 35 }
+      ];
       
       let isFirstPage = true;
       const sortedDates = Object.keys(groupedByDay).sort();
@@ -414,156 +417,155 @@ export default function CalendrierTab({
         // Récupérer tous les locaux uniques pour ce jour
         const locations = Array.from(new Set(dayDefenses.map(d => d.localisation_defense || 'Non défini'))).sort();
         
-        // Calculer la hauteur totale nécessaire pour ce jour
-        const gridHeight = totalHours * cellHeight + 20;
-        const availableHeight = pageHeight - 40;
-        
-        // Si le contenu dépasse, ajouter une nouvelle page avant
-        if (!isFirstPage && gridHeight > availableHeight) {
-          pdf.addPage();
-        }
-        isFirstPage = false;
-        
-        // En-tête
-        pdf.setFontSize(12);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(new Date(date).toLocaleDateString('fr-FR', { 
-          weekday: 'long', 
-          day: 'numeric', 
-          month: 'long', 
-          year: 'numeric' 
-        }), pageWidth / 2, 15, { align: 'center' });
-        
-        let startX = 35;
-        let startY = 30;
-        
-        // Dessiner l'en-tête des locaux
-        pdf.setFontSize(8);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Heure', startX - 15, startY + 5);
-        
-        for (let i = 0; i < locations.length; i++) {
-          const x = startX + i * colWidth;
-          pdf.rect(x, startY, colWidth, 8, 'S');
-          pdf.text(locations[i].substring(0, 25), x + 2, startY + 5);
-        }
-        
-        startY += 8;
-        
-        // Dessiner la grille horaire et les événements
-        for (let hour = startHour; hour <= endHour; hour++) {
-          const y = startY + (hour - startHour) * cellHeight;
+        for (const slot of timeSlots) {
+          // Filtrer les défenses dans cette plage horaire
+          const slotDefenses = dayDefenses.filter(d => {
+            const hour = parseFloat((d.heure_defense || '08:00').substring(0, 2));
+            const minute = parseFloat((d.heure_defense || '08:00').substring(3, 5)) / 60;
+            const time = hour + minute;
+            return time >= slot.startHour && time < slot.endHour;
+          });
           
-          // Ligne de séparation horaire
-          pdf.setLineWidth(0.3);
-          pdf.line(startX - 15, y, startX + locations.length * colWidth, y);
+          // Si aucune défense dans cette plage, passer à la suivante
+          if (slotDefenses.length === 0 && slot !== timeSlots[1]) continue;
           
-          // Heure
+          if (!isFirstPage) {
+            pdf.addPage();
+          }
+          isFirstPage = false;
+          
+          // En-tête de la page
+          pdf.setFontSize(12);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(new Date(date).toLocaleDateString('fr-FR', { 
+            weekday: 'long', 
+            day: 'numeric', 
+            month: 'long', 
+            year: 'numeric' 
+          }), pageWidth / 2, 15, { align: 'center' });
+          
+          pdf.setFontSize(10);
+          pdf.text(slot.name, pageWidth / 2, 23, { align: 'center' });
+          
+          let startX = 35;
+          let startY = slot.startY;
+          const cellHeight = 48; // mm par heure
+          
+          // Dessiner l'en-tête des locaux
           pdf.setFontSize(8);
-          pdf.setFont('helvetica', 'normal');
-          pdf.text(`${hour}h00`, startX - 15, y + 4);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text('Heure', startX - 15, startY + 5);
+          
+          for (let i = 0; i < locations.length; i++) {
+            const x = startX + i * colWidth;
+            pdf.rect(x, startY, colWidth, 8, 'S');
+            pdf.text(locations[i].substring(0, 25), x + 2, startY + 5);
+          }
+          
+          startY += 8;
+          
+          // Calculer la hauteur totale de la plage horaire
+          const slotDuration = slot.endHour - slot.startHour;
+          const totalHeight = slotDuration * cellHeight;
+          
+          // Dessiner la grille horaire
+          for (let hour = Math.floor(slot.startHour); hour < slot.endHour; hour++) {
+            const hourPos = (hour - slot.startHour) * cellHeight;
+            const y = startY + hourPos;
+            
+            pdf.setLineWidth(0.3);
+            pdf.line(startX - 15, y, startX + locations.length * colWidth, y);
+            
+            pdf.setFontSize(7);
+            pdf.setFont('helvetica', 'normal');
+            pdf.text(`${hour}h00`, startX - 15, y + 4);
+            
+            // Demi-heure
+            const halfY = y + cellHeight / 2;
+            pdf.setLineWidth(0.1);
+            pdf.line(startX - 15, halfY, startX + locations.length * colWidth, halfY);
+          }
           
           // Lignes verticales des locaux
           for (let i = 0; i <= locations.length; i++) {
             const x = startX + i * colWidth;
-            pdf.line(x, startY - 8, x, startY + totalHours * cellHeight);
+            pdf.line(x, startY - 8, x, startY + totalHeight);
           }
-        }
-        
-        // Dessiner les événements
-        for (const defense of dayDefenses) {
-          const location = defense.localisation_defense || 'Non défini';
-          const locIndex = locations.indexOf(location);
-          if (locIndex === -1) continue;
           
-          const [hours, minutes] = (defense.heure_defense || '08:00').split(':').map(Number);
-          const startYOffset = (hours - startHour) * cellHeight + (minutes / 60) * cellHeight;
-          const duration = 50; // minutes
-          const height = (duration / 60) * cellHeight;
-          
-          const x = startX + locIndex * colWidth;
-          const y = startY + startYOffset;
-          
-          const color = getCategoryColor(defense.categorie || '');
-          
-          // Fond de la case
-          pdf.setFillColor(parseInt(color.bg.slice(1, 3), 16), parseInt(color.bg.slice(3, 5), 16), parseInt(color.bg.slice(5, 7), 16));
-          pdf.rect(x + 1, y + 1, colWidth - 2, height - 1, 'F');
-          pdf.setDrawColor(parseInt(color.border.slice(1, 3), 16), parseInt(color.border.slice(3, 5), 16), parseInt(color.border.slice(5, 7), 16));
-          pdf.rect(x + 1, y + 1, colWidth - 2, height - 1, 'S');
-          
-          pdf.setFontSize(7);
-          pdf.setTextColor(0, 0, 0);
-          
-          // Heure
-          pdf.setFont('helvetica', 'bold');
-          pdf.text(`${defense.heure_defense?.substring(0, 5)}`, x + 3, y + 4);
-          
-          // Élève
-          pdf.setFont('helvetica', 'normal');
-          let currentY = y + 8;
-          const eleveText = `${defense.prenom} ${defense.nom}`;
-          pdf.text(eleveText, x + 3, currentY);
-          currentY += 5;
-          
-          // Classe
-          pdf.text(defense.classe || '', x + 3, currentY);
-          currentY += 5;
-          
-          // Problématique (avec retour à la ligne automatique)
-          if (defense.problematique) {
-            const probLines = pdf.splitTextToSize(defense.problematique, colWidth - 10);
-            for (const line of probLines) {
-              if (currentY + 4 > y + height - 8) break;
-              pdf.text(line, x + 3, currentY);
+          // Dessiner les événements
+          for (const defense of slotDefenses) {
+            const location = defense.localisation_defense || 'Non défini';
+            const locIndex = locations.indexOf(location);
+            if (locIndex === -1) continue;
+            
+            const [hours, minutes] = (defense.heure_defense || '08:00').split(':').map(Number);
+            const timeInHours = hours + minutes / 60;
+            const startYOffset = (timeInHours - slot.startHour) * cellHeight;
+            const duration = 50; // minutes
+            const height = (duration / 60) * cellHeight;
+            
+            const x = startX + locIndex * colWidth;
+            const y = startY + startYOffset;
+            
+            const color = getCategoryColor(defense.categorie || '');
+            
+            // Fond de la case
+            pdf.setFillColor(parseInt(color.bg.slice(1, 3), 16), parseInt(color.bg.slice(3, 5), 16), parseInt(color.bg.slice(5, 7), 16));
+            pdf.rect(x + 1, y + 1, colWidth - 2, Math.min(height - 1, totalHeight - startYOffset - 1), 'F');
+            pdf.setDrawColor(parseInt(color.border.slice(1, 3), 16), parseInt(color.border.slice(3, 5), 16), parseInt(color.border.slice(5, 7), 16));
+            pdf.rect(x + 1, y + 1, colWidth - 2, Math.min(height - 1, totalHeight - startYOffset - 1), 'S');
+            
+            pdf.setFontSize(6);
+            pdf.setTextColor(0, 0, 0);
+            
+            // Heure
+            pdf.setFont('helvetica', 'bold');
+            pdf.text(`${defense.heure_defense?.substring(0, 5)}`, x + 2, y + 3);
+            
+            // Élève
+            pdf.setFont('helvetica', 'normal');
+            let currentY = y + 7;
+            const eleveText = `${defense.prenom} ${defense.nom}`;
+            pdf.text(eleveText, x + 2, currentY);
+            currentY += 4;
+            
+            // Guide
+            pdf.setFont('helvetica', 'bold');
+            pdf.text('G:', x + 2, currentY);
+            pdf.setFont('helvetica', 'normal');
+            pdf.text(`${defense.guide_prenom?.substring(0, 1) || ''} ${defense.guide_nom?.substring(0, 8) || '-'}`, x + 10, currentY);
+            currentY += 4;
+            
+            // Lecteur interne
+            if (currentY + 3 < y + height - 3) {
+              pdf.setFont('helvetica', 'bold');
+              pdf.text('LI:', x + 2, currentY);
+              pdf.setFont('helvetica', 'normal');
+              pdf.text(`${defense.lecteur_interne_prenom?.substring(0, 1) || ''} ${defense.lecteur_interne_nom?.substring(0, 8) || '-'}`, x + 12, currentY);
               currentY += 4;
+            }
+            
+            // Lecteur externe
+            if (currentY + 3 < y + height - 3) {
+              pdf.setFont('helvetica', 'bold');
+              pdf.text('LE:', x + 2, currentY);
+              pdf.setFont('helvetica', 'normal');
+              pdf.text(`${defense.lecteur_externe_prenom?.substring(0, 1) || ''} ${defense.lecteur_externe_nom?.substring(0, 8) || '-'}`, x + 12, currentY);
+              currentY += 4;
+            }
+            
+            // Médiateur
+            if (currentY + 3 < y + height - 3) {
+              pdf.setFont('helvetica', 'bold');
+              pdf.text('M:', x + 2, currentY);
+              pdf.setFont('helvetica', 'normal');
+              pdf.text(`${defense.mediateur_prenom?.substring(0, 1) || ''} ${defense.mediateur_nom?.substring(0, 8) || '-'}`, x + 9, currentY);
             }
           }
           
-          // Ligne séparatrice
-          if (currentY + 4 < y + height - 8) {
-            pdf.line(x + 3, currentY, x + colWidth - 6, currentY);
-            currentY += 4;
-          }
-          
-          // Rôles (G: / LI: / LE: / M:)
-          pdf.setFont('helvetica', 'bold');
-          pdf.text('G:', x + 3, currentY);
-          pdf.setFont('helvetica', 'normal');
-          pdf.text(`${defense.guide_prenom?.substring(0, 1) || ''} ${defense.guide_nom?.substring(0, 8) || '-'}`, x + 12, currentY);
-          currentY += 4;
-          
-          if (currentY + 4 < y + height - 4) {
-            pdf.setFont('helvetica', 'bold');
-            pdf.text('LI:', x + 3, currentY);
-            pdf.setFont('helvetica', 'normal');
-            pdf.text(`${defense.lecteur_interne_prenom?.substring(0, 1) || ''} ${defense.lecteur_interne_nom?.substring(0, 8) || '-'}`, x + 12, currentY);
-            currentY += 4;
-          }
-          
-          if (currentY + 4 < y + height - 4) {
-            pdf.setFont('helvetica', 'bold');
-            pdf.text('LE:', x + 3, currentY);
-            pdf.setFont('helvetica', 'normal');
-            pdf.text(`${defense.lecteur_externe_prenom?.substring(0, 1) || ''} ${defense.lecteur_externe_nom?.substring(0, 8) || '-'}`, x + 12, currentY);
-            currentY += 4;
-          }
-          
-          if (currentY + 4 < y + height - 4) {
-            pdf.setFont('helvetica', 'bold');
-            pdf.text('M:', x + 3, currentY);
-            pdf.setFont('helvetica', 'normal');
-            pdf.text(`${defense.mediateur_prenom?.substring(0, 1) || ''} ${defense.mediateur_nom?.substring(0, 8) || '-'}`, x + 12, currentY);
-          }
+          // Ligne de fin
+          pdf.line(startX - 15, startY + totalHeight, startX + locations.length * colWidth, startY + totalHeight);
         }
-        
-        // Ligne de fin du tableau
-        pdf.line(startX - 15, startY + totalHours * cellHeight, startX + locations.length * colWidth, startY + totalHours * cellHeight);
-        
-        // Légende en bas de page
-        pdf.setFontSize(7);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text('G: Guide | LI: Lecteur interne | LE: Lecteur externe | M: Médiateur', startX, pageHeight - 12);
       }
       
       pdf.save(`calendrier_visuel_${new Date().toISOString().split('T')[0]}.pdf`);
