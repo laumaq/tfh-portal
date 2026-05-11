@@ -169,13 +169,7 @@ export default function CalendrierTab({
   };
   
   const handleExportFull = async () => {
-    console.log('=== handleExportFull ===');
-    console.log('calendarRef.current:', calendarRef.current);
-    
-    if (!calendarRef.current) {
-      alert('Le calendrier n\'est pas encore chargé. Veuillez réessayer.');
-      return;
-    }
+    if (!calendarRef.current) return;
     
     setIsExporting(true);
     setShowExportOptions(false);
@@ -183,33 +177,25 @@ export default function CalendrierTab({
     try {
       const html2pdf = require('html2pdf.js');
       
-      // Attendre un peu que le contenu soit stable
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Créer un conteneur temporaire avec les bons styles
+      const tempContainer = document.createElement('div');
+      tempContainer.style.position = 'absolute';
+      tempContainer.style.left = '-9999px';
+      tempContainer.style.top = '-9999px';
+      tempContainer.style.width = '100%';
+      tempContainer.style.maxWidth = '1200px';
+      tempContainer.style.backgroundColor = 'white';
+      tempContainer.style.padding = '20px';
       
-      const element = calendarRef.current.cloneNode(true) as HTMLElement;
-      console.log('element cloné:', element);
-      console.log('Contenu du calendrier:', element.innerHTML.substring(0, 500));
+      // Copier le contenu
+      const content = calendarRef.current.cloneNode(true) as HTMLElement;
+      content.style.overflow = 'visible';
+      content.style.height = 'auto';
       
-      element.style.width = '100%';
-      element.style.maxWidth = '100%';
-      element.style.overflow = 'visible';
-      element.style.backgroundColor = 'white';
-      element.style.padding = '20px';
+      tempContainer.appendChild(content);
+      document.body.appendChild(tempContainer);
       
-      // Nettoyer les éléments interactifs
-      element.querySelectorAll('button').forEach(btn => btn.remove());
-      element.querySelectorAll('.animate-spin').forEach(el => el.remove());
-      
-      const container = document.createElement('div');
-      container.style.position = 'absolute';
-      container.style.left = '-9999px';
-      container.style.top = '-9999px';
-      container.appendChild(element);
-      document.body.appendChild(container);
-      
-      // Vérifier que le contenu a été ajouté
-      console.log('container enfant:', container.innerHTML.substring(0, 500));
-      
+      // Attendre le rendu
       await new Promise(resolve => setTimeout(resolve, 500));
       
       const opt = {
@@ -226,16 +212,13 @@ export default function CalendrierTab({
         jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
       };
       
-      console.log('Génération du PDF en cours...');
-      await html2pdf().from(container).set(opt).save();
-      console.log('PDF généré avec succès');
+      await html2pdf().from(tempContainer).set(opt).save();
       
-      document.body.removeChild(container);
+      document.body.removeChild(tempContainer);
       
     } catch (error) {
-      console.error('Erreur détaillée:', error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      alert('Erreur lors de l\'export: ' + errorMessage);
+      console.error('Erreur:', error);
+      alert('Erreur lors de l\'export');
     } finally {
       setIsExporting(false);
     }
