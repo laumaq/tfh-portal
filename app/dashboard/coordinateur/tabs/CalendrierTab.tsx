@@ -54,6 +54,12 @@ export default function CalendrierTab({
      setSelectedCategories(categories);
   }, [categories]);
 
+  useEffect(() => {
+    if (allDates.length > 0 && selectedDates.length === 0) {
+      setSelectedDates([...allDates]);
+    }
+  }, [allDates]);
+
   const getFilteredDefenses = () => {
     return eleves.filter(e => 
       e.date_defense && e.heure_defense && 
@@ -978,41 +984,51 @@ export default function CalendrierTab({
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Sélectionner les locaux
             </label>
-            <div className="max-h-40 overflow-y-auto border rounded p-2">
-              {allLocations.map(location => (
-                <div key={location} className="flex items-center mb-1">
-                  <input
-                    type="checkbox"
-                    id={`loc-${location}`}
-                    checked={selectedLocations.includes(location)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedLocations([...selectedLocations, location]);
-                      } else {
+            <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto border rounded p-2">
+              <button
+                type="button"
+                onClick={() => setSelectedLocations([...allLocations])}
+                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                  selectedLocations.length === allLocations.length
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Tous
+              </button>
+              {allLocations.map(location => {
+                const isSelected = selectedLocations.includes(location);
+                return (
+                  <button
+                    key={location}
+                    type="button"
+                    onClick={() => {
+                      if (isSelected) {
                         setSelectedLocations(selectedLocations.filter(l => l !== location));
+                      } else {
+                        setSelectedLocations([...selectedLocations, location]);
                       }
                     }}
-                    className="mr-2"
-                    disabled={isLoading}
-                  />
-                  <label htmlFor={`loc-${location}`} className="text-sm truncate">
+                    className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                      isSelected
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
                     {location}
-                  </label>
-                </div>
-              ))}
-              {allLocations.length === 0 && (
-                <p className="text-sm text-gray-500">Aucun local défini</p>
-              )}
+                  </button>
+                );
+              })}
             </div>
-            <button
-              onClick={toggleAllLocations}
-              className="mt-2 text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50"
-              disabled={isLoading || allLocations.length === 0}
-            >
-              {selectedLocations.length === allLocations.length ? "Tout désélectionner" : "Tout sélectionner"}
-            </button>
+            {selectedLocations.length > 0 && selectedLocations.length < allLocations.length && (
+              <button
+                onClick={() => setSelectedLocations([])}
+                className="mt-2 text-xs text-red-600 hover:text-red-800"
+              >
+                Tout désélectionner
+              </button>
+            )}
           </div>
-        </div>
         
         {/* Résumé des filtres */}
         <div className="text-sm text-gray-600">
