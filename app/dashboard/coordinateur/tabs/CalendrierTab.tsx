@@ -985,26 +985,6 @@ export default function CalendrierTab({
               Sélectionner les locaux
             </label>
             <div className="max-h-40 overflow-y-auto border rounded p-2">
-              <div className="flex items-center mb-1 pb-1 border-b border-gray-200">
-                <input
-                  type="checkbox"
-                  id="select-all-locations"
-                  checked={selectedLocations.length === allLocations.length && allLocations.length > 0}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setSelectedLocations([...allLocations]);
-                    } else {
-                      setSelectedLocations([]);
-                    }
-                  }}
-                  className="mr-2"
-                />
-                <label htmlFor="select-all-locations" className="text-sm font-medium">
-                  {selectedLocations.length === allLocations.length && allLocations.length > 0 
-                    ? "Tout désélectionner" 
-                    : "Tout sélectionner"}
-                </label>
-              </div>
               {allLocations.map(location => {
                 const isSelected = selectedLocations.includes(location);
                 return (
@@ -1013,15 +993,14 @@ export default function CalendrierTab({
                       type="checkbox"
                       id={`loc-${location}`}
                       checked={isSelected}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedLocations([...selectedLocations, location]);
-                        } else {
+                      onChange={() => {
+                        if (isSelected) {
                           setSelectedLocations(selectedLocations.filter(l => l !== location));
+                        } else {
+                          setSelectedLocations([...selectedLocations, location]);
                         }
                       }}
                       className="mr-2"
-                      disabled={isLoading}
                     />
                     <label htmlFor={`loc-${location}`} className="text-sm truncate">
                       {location}
@@ -1030,14 +1009,20 @@ export default function CalendrierTab({
                 );
               })}
             </div>
-            {selectedLocations.length > 0 && selectedLocations.length < allLocations.length && (
+            <div className="flex gap-4 mt-2">
+              <button
+                onClick={() => setSelectedLocations([...allLocations])}
+                className="text-xs text-blue-600 hover:text-blue-800"
+              >
+                Tout sélectionner
+              </button>
               <button
                 onClick={() => setSelectedLocations([])}
-                className="mt-2 text-xs text-red-600 hover:text-red-800"
+                className="text-xs text-red-600 hover:text-red-800"
               >
                 Tout désélectionner
               </button>
-            )}
+            </div>
           </div>
         </div>
         
