@@ -241,7 +241,7 @@ export default function CalendarDisplay({
     eleves.find(e => e.id === '34f64a57-2087-47a6-ae9c-487acb8c3fa3') ? 'OUI' : 'NON');
     
     const defensesWithSchedule = eleves.filter(e => 
-      e.date_defense && e.heure_defense
+      e.date_defense && e.heure_defense && e.tfh_non_rendu !== true  // ← Exclure les non rendus
     );
     
     const edouardWithSchedule = defensesWithSchedule.find(e => e.id === '34f64a57-2087-47a6-ae9c-487acb8c3fa3');
@@ -386,18 +386,23 @@ export default function CalendarDisplay({
                 </p>
               </div>
               
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto relative">
                 <div className="min-w-full">
-                  <div className="flex border-t border-gray-200">
-                    <div className="w-24 bg-gray-50"></div>
-                    {day.locations.map(location => (
-                      <div
-                        key={`header-${location}`}
-                        className="flex-1 min-w-[200px] px-4 py-3 text-sm font-semibold text-gray-700 border-r border-b bg-gray-100"
-                      >
-                        {location}
+                  {/* En-tête fixe */}
+                  <div className="sticky top-0 z-10 bg-white">
+                    <div className="flex border-t border-b border-gray-200 bg-gray-100">
+                      <div className="w-24 px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-100">
+                        Horaire
                       </div>
-                    ))}
+                      {day.locations.map(location => (
+                        <div
+                          key={`header-${location}`}
+                          className="flex-1 min-w-[200px] px-4 py-3 text-sm font-semibold text-gray-700 border-l border-gray-200 bg-gray-100"
+                        >
+                          {location}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                   
                   <div className="flex border-b border-gray-200">
