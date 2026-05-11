@@ -434,7 +434,7 @@ export default function CalendrierTab({
           }
           isFirstPage = false;
           
-          // En-tête de la page (compressé)
+          // En-tête de la page
           pdf.setFontSize(11);
           pdf.setFont('helvetica', 'bold');
           pdf.text(new Date(date).toLocaleDateString('fr-FR', { 
@@ -468,8 +468,8 @@ export default function CalendrierTab({
           const slotDuration = slot.endHour - slot.startHour;
           const totalHeight = slotDuration * cellHeight;
           
-          // Dessiner la grille horaire
-          for (let hour = Math.floor(slot.startHour); hour < slot.endHour; hour++) {
+          // Dessiner la grille horaire (seulement les heures pleines)
+          for (let hour = Math.ceil(slot.startHour); hour <= Math.floor(slot.endHour); hour++) {
             const hourPos = (hour - slot.startHour) * cellHeight;
             const y = startY + hourPos;
             
@@ -479,21 +479,14 @@ export default function CalendrierTab({
             pdf.setFontSize(7);
             pdf.setFont('helvetica', 'normal');
             
-            // Heure de début - heure de fin
-            const nextHour = hour + 1;
-            let endDisplay = `${nextHour}h00`;
-            if (nextHour === 11) endDisplay = '11h00';
-            else if (nextHour === 14) endDisplay = '14h00';
-            else if (nextHour === 18) endDisplay = '18h00';
-            pdf.text(`${hour}h00 - ${endDisplay}`, startX - 15, y + 3);
-            
-            // Demi-heure
-            const halfY = y + cellHeight / 2;
-            pdf.setLineWidth(0.1);
-            pdf.line(startX - 15, halfY, startX + locations.length * colWidth, halfY);
+            // Afficher seulement l'heure de début
+            let displayHour = `${hour}h00`;
+            if (hour === 14) displayHour = '14h00';
+            else if (hour === 17) displayHour = '17h00';
+            pdf.text(displayHour, startX - 15, y + 3);
           }
           
-          // Lignes verticales des locaux
+          // Lignes verticales des locaux (sans la ligne du bas en trop)
           for (let i = 0; i <= locations.length; i++) {
             const x = startX + i * colWidth;
             pdf.line(x, startY - 7, x, startY + totalHeight);
@@ -536,7 +529,7 @@ export default function CalendrierTab({
             pdf.text(eleveText, x + 2, currentY);
             currentY += 4;
             
-            // Problématique (retour à la ligne)
+            // Problématique
             pdf.setFont('helvetica', 'italic');
             pdf.setFontSize(5);
             if (defense.problematique) {
@@ -590,10 +583,6 @@ export default function CalendrierTab({
               pdf.text(`${defense.mediateur_prenom?.substring(0, 1) || ''} ${defense.mediateur_nom?.substring(0, 8) || '-'}`, x + 8, currentY);
             }
           }
-          
-          // Ligne de fin (sans barre bleue supplémentaire)
-          pdf.setLineWidth(0.3);
-          pdf.line(startX - 15, startY + totalHeight - 1, startX + locations.length * colWidth, startY + totalHeight - 1);
         }
       }
       
