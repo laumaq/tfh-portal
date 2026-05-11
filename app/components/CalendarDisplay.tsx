@@ -354,7 +354,7 @@ export default function CalendarDisplay({
                   </div>
                   
                   <div className="flex border-b border-gray-200">
-                    <div className="w-[92px] bg-gray-50 border-r border-gray-200">
+                    <div className="w-[192px] bg-gray-50 border-r border-gray-200">
                       {Array.from({ length: totalHours }).map((_, i) => {
                         const hour = 8 + i;
                         return (
