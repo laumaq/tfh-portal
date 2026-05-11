@@ -575,12 +575,19 @@ export default function CalendrierTab({
               currentY += 4;
             }
             
-            // Médiateur
+            // Médiateur - Version corrigée
             if (currentY + 3 < y + height - 4) {
               pdf.setFont('helvetica', 'bold');
               pdf.text('M:', x + 2, currentY);
               pdf.setFont('helvetica', 'normal');
-              pdf.text(`${defense.mediateur_prenom?.substring(0, 1) || ''} ${defense.mediateur_nom?.substring(0, 8) || '-'}`, x + 8, currentY);
+              
+              // Récupérer les valeurs avec fallback explicite
+              const medNom = defense.mediateur_nom && defense.mediateur_nom !== '-' ? defense.mediateur_nom : '-';
+              const medPrenom = defense.mediateur_prenom && defense.mediateur_prenom !== '-' ? defense.mediateur_prenom : '';
+              const medInitial = medPrenom && medPrenom !== '-' ? medPrenom.substring(0, 1) + ' ' : '';
+              
+              pdf.text(`${medInitial}${medNom}`.substring(0, 12), x + 8, currentY);
+              currentY += 4;
             }
           }
         }
