@@ -61,11 +61,16 @@ export function useDirectionData() { // <-- SUPPRIMEZ les paramètres
         `)
         .order('classe', { ascending: true })
         .order('nom', { ascending: true });
-
+      
       if (elevesError) {
         console.error('Erreur chargement élèves direction:', elevesError);
         throw elevesError;
       }
+      
+      console.log('📊 Données brutes des élèves (premier élève):', elevesData?.[0]);
+      console.log('📊 Lecteur externe du premier élève:', elevesData?.[0]?.lecteur_externe);
+      console.log('📊 Médiateur du premier élève:', elevesData?.[0]?.mediateur);
+      console.log(`📊 Direction: ${elevesData?.length || 0} élèves chargés (TOUS)`);
 
       console.log(`📊 Direction: ${elevesData?.length || 0} élèves chargés (TOUS)`);
 
