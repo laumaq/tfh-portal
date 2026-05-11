@@ -170,91 +170,6 @@ export default function CalendrierTab({
     return container;
   };
   
-  const handleExportFull = async () => {
-    if (!calendarRef.current) {
-      alert('Le calendrier n\'est pas encore chargé');
-      return;
-    }
-    
-    setIsExporting(true);
-    setShowExportOptions(false);
-    
-    try {
-      // Sauvegarder les styles originaux
-      const originalHeight = calendarRef.current.style.height;
-      const originalOverflow = calendarRef.current.style.overflow;
-      const originalWidth = calendarRef.current.style.width;
-      
-      // Forcer les styles pour le rendu complet
-      calendarRef.current.style.height = 'auto';
-      calendarRef.current.style.overflow = 'visible';
-      calendarRef.current.style.width = '100%';
-      
-      // Attendre que le DOM se mette à jour
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Capturer avec html2canvas
-      const canvas = await html2canvas(calendarRef.current, {
-        scale: 2,
-        useCORS: true,
-        logging: true,
-        backgroundColor: '#ffffff',
-        windowWidth: calendarRef.current.scrollWidth,
-        windowHeight: calendarRef.current.scrollHeight
-      });
-      
-      console.log('Canvas size:', canvas.width, canvas.height);
-      
-      if (canvas.height === 0) {
-        throw new Error('La hauteur du canvas est 0');
-      }
-      
-      // Créer le PDF avec plusieurs pages si nécessaire
-      const imgData = canvas.toDataURL('image/jpeg', 1.0);
-      const pdf = new jsPDF({
-        orientation: 'landscape',
-        unit: 'mm',
-        format: 'a4'
-      });
-      
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = pdfWidth;
-      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-      
-      let heightLeft = imgHeight;
-      let position = 0;
-      let page = 1;
-      
-      // Ajouter la première page
-      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-      heightLeft -= pdfHeight;
-      
-      // Ajouter les pages suivantes si nécessaire
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-        heightLeft -= pdfHeight;
-        page++;
-      }
-      
-      console.log(`PDF généré avec ${page} page(s)`);
-      pdf.save(`calendrier_complet_${new Date().toISOString().split('T')[0]}.pdf`);
-      
-      // Restaurer les styles
-      calendarRef.current.style.height = originalHeight;
-      calendarRef.current.style.overflow = originalOverflow;
-      calendarRef.current.style.width = originalWidth;
-      
-    } catch (error) {
-      console.error('Erreur:', error);
-      alert('Erreur lors de l\'export: ' + (error instanceof Error ? error.message : String(error)));
-    } finally {
-      setIsExporting(false);
-    }
-  };
-  
   const handleExportByDayLocation = async () => {
     setIsExporting(true);
     setShowExportOptions(false);
@@ -285,6 +200,18 @@ export default function CalendrierTab({
         format: 'a4'
       });
       
+      // Largeurs des colonnes optimisées (total 190mm)
+      const colWidths = {
+        horaire: 15,
+        eleve: 28,
+        problematique: 45,
+        categorie: 20,
+        guide: 18,
+        lecteurInterne: 18,
+        lecteurExterne: 18,
+        mediateur: 18
+      };
+      
       let isFirstPage = true;
       const sortedDates = Object.keys(grouped).sort();
       
@@ -302,130 +229,117 @@ export default function CalendrierTab({
           }
           isFirstPage = false;
           
-          // En-tête
-          pdf.setFontSize(16);
+          // En-tête compact
+          pdf.setFontSize(12);
           pdf.setFont('helvetica', 'bold');
           pdf.text(new Date(date).toLocaleDateString('fr-FR', { 
-            weekday: 'long', 
+            weekday: 'short', 
             day: 'numeric', 
-            month: 'long', 
+            month: 'short', 
             year: 'numeric' 
-          }), 105, 20, { align: 'center' });
+          }), 105, 15, { align: 'center' });
           
-          pdf.setFontSize(12);
+          pdf.setFontSize(10);
           pdf.setFont('helvetica', 'normal');
-          pdf.text(`Local : ${location}`, 105, 30, { align: 'center' });
-          pdf.text(`Nombre de défenses : ${dayDefenses.length}`, 105, 37, { align: 'center' });
+          pdf.text(`Local : ${location}`, 105, 22, { align: 'center' });
+          pdf.setFontSize(8);
+          pdf.text(`${dayDefenses.length} défense(s)`, 105, 28, { align: 'center' });
           
           // Ligne séparatrice
-          pdf.line(10, 45, 200, 45);
+          pdf.line(10, 32, 200, 32);
           
           // En-têtes du tableau
-          const startY = 55;
-          const rowHeight = 10;
-          const colWidths = {
-            horaire: 20,
-            eleve: 30,
-            problematique: 50,
-            categorie: 25,
-            guide: 25,
-            lecteurInterne: 25,
-            lecteurExterne: 25,
-            mediateur: 25
-          };
+          let currentY = 38;
+          const rowHeight = 8;
           
-          let currentY = startY;
-          
-          // Dessiner les en-têtes
-          pdf.setFillColor(242, 242, 242);
+          pdf.setFillColor(230, 230, 230);
           pdf.rect(10, currentY, 190, rowHeight, 'F');
           pdf.setFont('helvetica', 'bold');
-          pdf.setFontSize(9);
+          pdf.setFontSize(7);
           
           let x = 10;
-          pdf.text('Horaire', x + 2, currentY + 7);
+          pdf.text('Horaire', x + 1, currentY + 5);
           x += colWidths.horaire;
-          pdf.text('Élève', x + 2, currentY + 7);
+          pdf.text('Élève', x + 1, currentY + 5);
           x += colWidths.eleve;
-          pdf.text('Problématique', x + 2, currentY + 7);
+          pdf.text('Problématique', x + 1, currentY + 5);
           x += colWidths.problematique;
-          pdf.text('Catégorie', x + 2, currentY + 7);
+          pdf.text('Cat.', x + 1, currentY + 5);
           x += colWidths.categorie;
-          pdf.text('Guide', x + 2, currentY + 7);
+          pdf.text('Guide', x + 1, currentY + 5);
           x += colWidths.guide;
-          pdf.text('Lecteur\ninterne', x + 2, currentY + 5);
+          pdf.text('Int.', x + 1, currentY + 5);
           x += colWidths.lecteurInterne;
-          pdf.text('Lecteur\nexterne', x + 2, currentY + 5);
+          pdf.text('Ext.', x + 1, currentY + 5);
           x += colWidths.lecteurExterne;
-          pdf.text('Médiateur', x + 2, currentY + 7);
+          pdf.text('Méd.', x + 1, currentY + 5);
           
           currentY += rowHeight;
           pdf.setFont('helvetica', 'normal');
-          pdf.setFontSize(8);
+          pdf.setFontSize(7);
           
           // Remplir les lignes
           for (const defense of dayDefenses) {
-            // Vérifier si on a besoin d'une nouvelle page
-            if (currentY + rowHeight > 280) {
+            // Vérifier si besoin d'une nouvelle page
+            if (currentY + rowHeight * 2 > 285) {
               pdf.addPage();
-              currentY = 20;
-              // Re-dessiner les en-têtes sur la nouvelle page
-              pdf.setFillColor(242, 242, 242);
+              currentY = 15;
+              // Re-dessiner les en-têtes
+              pdf.setFillColor(230, 230, 230);
               pdf.rect(10, currentY, 190, rowHeight, 'F');
               pdf.setFont('helvetica', 'bold');
               x = 10;
-              pdf.text('Horaire', x + 2, currentY + 7);
+              pdf.text('Horaire', x + 1, currentY + 5);
               x += colWidths.horaire;
-              pdf.text('Élève', x + 2, currentY + 7);
+              pdf.text('Élève', x + 1, currentY + 5);
               x += colWidths.eleve;
-              pdf.text('Problématique', x + 2, currentY + 7);
+              pdf.text('Problématique', x + 1, currentY + 5);
               x += colWidths.problematique;
-              pdf.text('Catégorie', x + 2, currentY + 7);
+              pdf.text('Cat.', x + 1, currentY + 5);
               x += colWidths.categorie;
-              pdf.text('Guide', x + 2, currentY + 7);
+              pdf.text('Guide', x + 1, currentY + 5);
               x += colWidths.guide;
-              pdf.text('Lecteur\ninterne', x + 2, currentY + 5);
+              pdf.text('Int.', x + 1, currentY + 5);
               x += colWidths.lecteurInterne;
-              pdf.text('Lecteur\nexterne', x + 2, currentY + 5);
+              pdf.text('Ext.', x + 1, currentY + 5);
               x += colWidths.lecteurExterne;
-              pdf.text('Médiateur', x + 2, currentY + 7);
+              pdf.text('Méd.', x + 1, currentY + 5);
               currentY += rowHeight;
               pdf.setFont('helvetica', 'normal');
             }
             
-            // Dessiner la ligne
             x = 10;
-            pdf.text(defense.heure_defense?.substring(0, 5) || '-', x + 2, currentY + 5);
+            pdf.text(defense.heure_defense?.substring(0, 5) || '-', x + 1, currentY + 4);
             x += colWidths.horaire;
             
-            const eleveText = `${defense.prenom} ${defense.nom}\n${defense.classe}`;
-            const eleveLines = pdf.splitTextToSize(eleveText, colWidths.eleve - 4);
-            pdf.text(eleveLines, x + 2, currentY + 5);
+            const eleveText = `${defense.prenom.substring(0, 10)} ${defense.nom.substring(0, 12)}\n${defense.classe}`;
+            const eleveLines = pdf.splitTextToSize(eleveText, colWidths.eleve - 2);
+            pdf.text(eleveLines, x + 1, currentY + 4);
             x += colWidths.eleve;
             
-            const problematique = (defense.problematique || '-').substring(0, 100);
-            const probLines = pdf.splitTextToSize(problematique, colWidths.problematique - 4);
-            pdf.text(probLines, x + 2, currentY + 5);
+            const problematique = (defense.problematique || '-').substring(0, 80);
+            const probLines = pdf.splitTextToSize(problematique, colWidths.problematique - 2);
+            pdf.text(probLines, x + 1, currentY + 4);
             x += colWidths.problematique;
             
-            pdf.text(defense.categorie || '-', x + 2, currentY + 5);
+            pdf.text((defense.categorie || '-').substring(0, 12), x + 1, currentY + 4);
             x += colWidths.categorie;
             
-            pdf.text(`${defense.guide_prenom || ''} ${defense.guide_nom || '-'}`.substring(0, 15), x + 2, currentY + 5);
+            pdf.text(`${defense.guide_prenom?.substring(0, 1) || ''} ${defense.guide_nom?.substring(0, 10) || '-'}`, x + 1, currentY + 4);
             x += colWidths.guide;
             
-            pdf.text(`${defense.lecteur_interne_prenom || ''} ${defense.lecteur_interne_nom || '-'}`.substring(0, 15), x + 2, currentY + 5);
+            pdf.text(`${defense.lecteur_interne_prenom?.substring(0, 1) || ''} ${defense.lecteur_interne_nom?.substring(0, 10) || '-'}`, x + 1, currentY + 4);
             x += colWidths.lecteurInterne;
             
-            pdf.text(`${defense.lecteur_externe_prenom || ''} ${defense.lecteur_externe_nom || '-'}`.substring(0, 15), x + 2, currentY + 5);
+            pdf.text(`${defense.lecteur_externe_prenom?.substring(0, 1) || ''} ${defense.lecteur_externe_nom?.substring(0, 10) || '-'}`, x + 1, currentY + 4);
             x += colWidths.lecteurExterne;
             
-            pdf.text(`${defense.mediateur_prenom || ''} ${defense.mediateur_nom || '-'}`.substring(0, 15), x + 2, currentY + 5);
+            pdf.text(`${defense.mediateur_prenom?.substring(0, 1) || ''} ${defense.mediateur_nom?.substring(0, 10) || '-'}`, x + 1, currentY + 4);
             
             currentY += rowHeight * Math.max(1, eleveLines.length, probLines.length);
           }
           
-          // Ajouter une ligne de séparation après le tableau
+          // Ligne de fin
           pdf.line(10, currentY, 200, currentY);
         }
       }
@@ -434,7 +348,93 @@ export default function CalendrierTab({
       
     } catch (error) {
       console.error('Erreur:', error);
-      alert('Erreur lors de l\'export: ' + (error instanceof Error ? error.message : String(error)));
+      alert('Erreur lors de l\'export');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+  
+  const handleExportFull = async () => {
+    if (!calendarRef.current) {
+      alert('Le calendrier n\'est pas encore chargé');
+      return;
+    }
+    
+    setIsExporting(true);
+    setShowExportOptions(false);
+    
+    try {
+      // Sauvegarder les styles originaux
+      const originalHeight = calendarRef.current.style.height;
+      const originalOverflow = calendarRef.current.style.overflow;
+      const originalWidth = calendarRef.current.style.width;
+      const originalFontSize = calendarRef.current.style.fontSize;
+      
+      // Réduire la taille de la police temporairement pour que tout tienne
+      calendarRef.current.style.fontSize = '10px';
+      calendarRef.current.style.height = 'auto';
+      calendarRef.current.style.overflow = 'visible';
+      calendarRef.current.style.width = '100%';
+      
+      // Attendre le rendu
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const canvas = await html2canvas(calendarRef.current, {
+        scale: 1.5,
+        useCORS: true,
+        logging: true,
+        backgroundColor: '#ffffff',
+        windowWidth: calendarRef.current.scrollWidth,
+        windowHeight: calendarRef.current.scrollHeight
+      });
+      
+      console.log('Canvas size:', canvas.width, canvas.height);
+      
+      if (canvas.height === 0) {
+        throw new Error('La hauteur du canvas est 0');
+      }
+      
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      
+      // Calculer le ratio pour que l'image tienne dans la largeur du PDF
+      const ratio = pdfWidth / canvas.width;
+      const imgHeight = canvas.height * ratio;
+      
+      let heightLeft = imgHeight;
+      let position = 0;
+      let page = 1;
+      
+      pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight, undefined, 'FAST');
+      heightLeft -= pdfHeight;
+      
+      while (heightLeft > 0) {
+        position = - (imgHeight - heightLeft);
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight, undefined, 'FAST');
+        heightLeft -= pdfHeight;
+        page++;
+      }
+      
+      console.log(`PDF généré avec ${page} page(s)`);
+      pdf.save(`calendrier_complet_${new Date().toISOString().split('T')[0]}.pdf`);
+      
+      // Restaurer les styles
+      calendarRef.current.style.height = originalHeight;
+      calendarRef.current.style.overflow = originalOverflow;
+      calendarRef.current.style.width = originalWidth;
+      calendarRef.current.style.fontSize = originalFontSize;
+      
+    } catch (error) {
+      console.error('Erreur:', error);
+      alert('Erreur lors de l\'export');
     } finally {
       setIsExporting(false);
     }
