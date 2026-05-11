@@ -371,95 +371,130 @@ export default function CalendrierTab({
   };
   
   const handleExportFull = async () => {
-    if (!calendarRef.current) {
-      alert('Le calendrier n\'est pas encore chargé');
-      return;
-    }
-    
     setIsExporting(true);
     setShowExportOptions(false);
     
     try {
-      // Sauvegarder les styles originaux
-      const originalHeight = calendarRef.current.style.height;
-      const originalOverflow = calendarRef.current.style.overflow;
-      const originalMaxHeight = calendarRef.current.style.maxHeight;
-      const originalWidth = calendarRef.current.style.width;
-      const originalZoom = calendarRef.current.style.zoom;
+      const defenses = getFilteredDefenses();
       
-      // Réduire temporairement la taille d'affichage pour que la capture soit plus nette
-      calendarRef.current.style.zoom = '0.7';
-      calendarRef.current.style.width = '100%';
-      calendarRef.current.style.height = 'auto';
-      calendarRef.current.style.overflow = 'visible';
-      calendarRef.current.style.maxHeight = 'none';
-      
-      // Attendre que le DOM se mette à jour
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Capturer avec html2canvas
-      const canvas = await html2canvas(calendarRef.current, {
-        scale: 2.5,
-        useCORS: true,
-        logging: true,
-        backgroundColor: '#ffffff',
-        windowWidth: calendarRef.current.scrollWidth,
-        windowHeight: calendarRef.current.scrollHeight,
-        onclone: (clonedDoc, element) => {
-          // Dans le clone, s'assurer que les styles sont appliqués
-          const clonedCalendar = clonedDoc.querySelector('[data-calendar-ref]');
-          if (clonedCalendar) {
-            clonedCalendar.style.width = '100%';
-            clonedCalendar.style.zoom = '1';
-          }
-        }
-      });
-      
-      console.log('Canvas size:', canvas.width, canvas.height);
-      
-      // Restaurer les styles
-      calendarRef.current.style.height = originalHeight;
-      calendarRef.current.style.overflow = originalOverflow;
-      calendarRef.current.style.maxHeight = originalMaxHeight;
-      calendarRef.current.style.width = originalWidth;
-      calendarRef.current.style.zoom = originalZoom;
-      
-      if (canvas.height === 0) {
-        throw new Error('La hauteur du canvas est 0');
+      if (defenses.length === 0) {
+        alert('Aucune défense à exporter avec les filtres actuels.');
+        setIsExporting(false);
+        return;
       }
       
-      const imgData = canvas.toDataURL('image/jpeg', 1.0);
+      // Grouper par jour
+      const groupedByDay: Record<string, Eleve[]> = {};
+      defenses.forEach(defense => {
+        const date = defense.date_defense!;
+        if (!groupedByDay[date]) groupedByDay[date] = [];
+        groupedByDay[date].push(defense);
+      });
+      
       const pdf = new jsPDF({
         orientation: 'landscape',
         unit: 'mm',
         format: 'a4'
       });
       
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const startHour = 8;
+      const endHour = 18;
+      const totalHours = endHour - startHour;
+      const cellHeight = 12; // mm par heure
+      const colWidth = 45; // mm par local
       
-      // Ajuster l'image pour qu'elle tienne parfaitement dans la largeur sans zoom excessif
-      let imgWidth = pdfWidth;
-      let imgHeight = (canvas.height * pdfWidth) / canvas.width;
+      let isFirstPage = true;
+      const sortedDates = Object.keys(groupedByDay).sort();
       
-      // Si l'image est trop haute, on la redimensionne proportionnellement
-      if (imgHeight > pdfHeight * 1.5) {
-        const ratio = (pdfHeight * 1.5) / imgHeight;
-        imgWidth = imgWidth * ratio;
-        imgHeight = imgHeight * ratio;
-      }
-      
-      let heightLeft = imgHeight;
-      let position = 0;
-      
-      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-      heightLeft -= pdfHeight;
-      
-      while (heightLeft > 0) {
-        position = - (imgHeight - heightLeft);
-        pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-        heightLeft -= pdfHeight;
+      for (const date of sortedDates) {
+        const dayDefenses = groupedByDay[date];
+        
+        // Récupérer tous les locaux uniques pour ce jour
+        const locations = Array.from(new Set(dayDefenses.map(d => d.localisation_defense || 'Non défini'))).sort();
+        
+        if (!isFirstPage) {
+          pdf.addPage();
+        }
+        isFirstPage = false;
+        
+        // En-tête
+        pdf.setFontSize(14);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(new Date(date).toLocaleDateString('fr-FR', { 
+          weekday: 'long', 
+          day: 'numeric', 
+          month: 'long', 
+          year: 'numeric' 
+        }), pageWidth / 2, 15, { align: 'center' });
+        
+        let startX = 30;
+        let startY = 30;
+        
+        // Dessiner l'en-tête des locaux
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Heure', startX - 15, startY + 5);
+        
+        for (let i = 0; i < locations.length; i++) {
+          const x = startX + i * colWidth;
+          pdf.rect(x, startY, colWidth, 8, 'S');
+          pdf.text(locations[i].substring(0, 20), x + 2, startY + 5);
+        }
+        
+        startY += 8;
+        
+        // Dessiner la grille horaire
+        for (let hour = startHour; hour <= endHour; hour++) {
+          const y = startY + (hour - startHour) * cellHeight;
+          pdf.setFontSize(8);
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(`${hour}h00`, startX - 15, y + 4);
+          
+          for (let i = 0; i <= locations.length; i++) {
+            const x = startX + i * colWidth;
+            pdf.line(x, y, x + colWidth, y);
+          }
+        }
+        
+        // Dessiner les événements
+        for (const defense of dayDefenses) {
+          const location = defense.localisation_defense || 'Non défini';
+          const locIndex = locations.indexOf(location);
+          if (locIndex === -1) continue;
+          
+          const [hours, minutes] = (defense.heure_defense || '08:00').split(':').map(Number);
+          const startYOffset = (hours - startHour) * cellHeight + (minutes / 60) * cellHeight;
+          const duration = 50; // minutes
+          const height = (duration / 60) * cellHeight;
+          
+          const x = startX + locIndex * colWidth;
+          const y = startY + startYOffset;
+          
+          const color = getCategoryColor(defense.categorie || '');
+          
+          pdf.setFillColor(parseInt(color.bg.slice(1, 3), 16), parseInt(color.bg.slice(3, 5), 16), parseInt(color.bg.slice(5, 7), 16));
+          pdf.rect(x + 1, y + 1, colWidth - 2, height - 1, 'F');
+          pdf.setDrawColor(parseInt(color.border.slice(1, 3), 16), parseInt(color.border.slice(3, 5), 16), parseInt(color.border.slice(5, 7), 16));
+          pdf.rect(x + 1, y + 1, colWidth - 2, height - 1, 'S');
+          
+          pdf.setFontSize(6);
+          pdf.setTextColor(0, 0, 0);
+          pdf.text(`${defense.heure_defense?.substring(0, 5)}`, x + 3, y + 4);
+          pdf.text(`${defense.prenom} ${defense.nom}`, x + 3, y + 8);
+          pdf.text(defense.classe || '', x + 3, y + 12);
+          
+          if (defense.problematique) {
+            const probText = defense.problematique.substring(0, 30);
+            pdf.text(probText, x + 3, y + 16);
+          }
+        }
+        
+        // Ajouter une légende en bas de page
+        pdf.setFontSize(8);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Guide: G | Lecteur interne: I | Lecteur externe: E | Médiateur: M', 30, pageHeight - 15);
       }
       
       pdf.save(`calendrier_visuel_${new Date().toISOString().split('T')[0]}.pdf`);
@@ -467,14 +502,6 @@ export default function CalendrierTab({
     } catch (error) {
       console.error('Erreur:', error);
       alert('Erreur lors de l\'export: ' + (error instanceof Error ? error.message : String(error)));
-      // Restaurer les styles en cas d'erreur
-      if (calendarRef.current) {
-        calendarRef.current.style.height = '';
-        calendarRef.current.style.overflow = '';
-        calendarRef.current.style.maxHeight = '';
-        calendarRef.current.style.width = '';
-        calendarRef.current.style.zoom = '';
-      }
     } finally {
       setIsExporting(false);
     }
