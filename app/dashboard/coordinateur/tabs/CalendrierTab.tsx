@@ -289,9 +289,8 @@ export default function CalendrierTab({
     setIsExporting(true);
     
     try {
-      // Importer dynamiquement html2pdf uniquement au moment du clic
-      const html2pdfModule = await import('html2pdf.js');
-      const html2pdf = html2pdfModule.default;
+      // Charger html2pdf dynamiquement avec require (évite les problèmes de typage)
+      const html2pdf = require('html2pdf.js');
       
       const opt = {
         margin: [0.5, 0.5, 0.5, 0.5],
@@ -302,13 +301,10 @@ export default function CalendrierTab({
       };
       
       const cloneContent = calendarRef.current.cloneNode(true) as HTMLElement;
-      
-      // Ajouter des styles pour le PDF
       cloneContent.style.width = '100%';
       cloneContent.style.maxWidth = '100%';
       cloneContent.style.overflow = 'visible';
       
-      // Supprimer les boutons et éléments interactifs du clone
       const buttons = cloneContent.querySelectorAll('button');
       buttons.forEach(btn => btn.remove());
       
@@ -326,13 +322,13 @@ export default function CalendrierTab({
       
       document.body.removeChild(container);
       
-        } catch (error) {
-        console.error('Erreur lors de l\'export PDF:', error);
-        alert('Une erreur est survenue lors de la génération du PDF');
-      } finally {
-        setIsExporting(false);
-      }
-    };
+    } catch (error) {
+      console.error('Erreur lors de l\'export PDF:', error);
+      alert('Une erreur est survenue lors de la génération du PDF');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
