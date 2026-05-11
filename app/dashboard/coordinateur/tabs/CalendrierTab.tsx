@@ -3,7 +3,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import html2pdf from 'html2pdf.js';
+const html2pdf = require('html2pdf.js');
 import CalendarDisplay from '@/app/components/CalendarDisplay';
 import ConflictDisplay from '../components/ConflictDisplay';
 import { Eleve, DefenseEvent, Conflict } from '../types';
