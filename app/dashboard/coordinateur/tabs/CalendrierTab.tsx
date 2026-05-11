@@ -28,7 +28,6 @@ export default function CalendrierTab({
   const [showExportOptions, setShowExportOptions] = useState(false);
   const calendarRef = useRef<HTMLDivElement>(null);
 
-  // Remplacer les calculs directs par useMemo
   const allDates = useMemo(() => 
     Array.from(
       new Set(
@@ -49,135 +48,120 @@ export default function CalendrierTab({
       )
     ), [eleves]);
 
-  const ALL_CATEGORIES_FLAG = 'toutes';
-
-  // Initialiser avec tous les locaux et catégories
   useEffect(() => {
      setSelectedCategories(categories);
-  }, [allLocations, categories]);
+  }, [categories]);
 
-
-  const generateDayLocationTables = () => {
-    // Grouper les défenses par jour et par local
-    const defenses = eleves.filter(e => 
+  const getFilteredDefenses = () => {
+    return eleves.filter(e => 
       e.date_defense && e.heure_defense && 
       (selectedDates.length === 0 || selectedDates.includes(e.date_defense!)) &&
       (selectedLocations.length === 0 || selectedLocations.includes(e.localisation_defense!)) &&
       (selectedCategories.length === 0 || selectedCategories.includes(e.categorie!))
     );
-
-    const grouped: Record<string, Record<string, Eleve[]>> = {};
-    
-    defenses.forEach(defense => {
-      const date = defense.date_defense!;
-      const location = defense.localisation_defense || 'Non défini';
-      if (!grouped[date]) grouped[date] = {};
-      if (!grouped[date][location]) grouped[date][location] = [];
-      grouped[date][location].push(defense);
-    });
-
-    return grouped;
   };
 
-  const generateFullCalendarContent = () => {
+  const generatePDFContent = (mode: 'full' | 'day-location') => {
     const container = document.createElement('div');
-    container.style.width = '100%';
     container.style.padding = '20px';
     container.style.fontFamily = 'Arial, sans-serif';
+    container.style.backgroundColor = 'white';
     
-    // Récupérer le contenu filtré du calendrier
-    const calendarContent = calendarRef.current?.cloneNode(true) as HTMLElement;
-    if (calendarContent) {
-      // Nettoyer les boutons et interactions
-      calendarContent.querySelectorAll('button').forEach(btn => btn.remove());
-      calendarContent.querySelectorAll('.animate-spin').forEach(el => el.remove());
-      calendarContent.style.width = '100%';
-      container.appendChild(calendarContent);
-    }
-    
-    return container;
-  };
-
-  const generateDayLocationContent = () => {
-    const grouped = generateDayLocationTables();
-    const container = document.createElement('div');
-    container.style.fontFamily = 'Arial, sans-serif';
-    
-    // Styles pour le PDF
-    const style = document.createElement('style');
-    style.textContent = `
-      .page { page-break-after: always; margin-bottom: 20px; }
-      .page:last-child { page-break-after: auto; }
-      .header { text-align: center; margin-bottom: 20px; }
-      .header h2 { margin: 0; color: #333; }
-      .header p { margin: 5px 0; color: #666; }
-      table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-      th, td { border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top; }
-      th { background-color: #f2f2f2; font-weight: bold; }
-      .category-badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
-    `;
-    container.appendChild(style);
-    
-    const sortedDates = Object.keys(grouped).sort();
-    
-    for (const date of sortedDates) {
-      const locations = grouped[date];
-      const sortedLocations = Object.keys(locations).sort();
+    if (mode === 'full') {
+      // Pour l'export complet, on clone le contenu du calendrier
+      const calendarContent = calendarRef.current?.cloneNode(true) as HTMLElement;
+      if (calendarContent) {
+        calendarContent.querySelectorAll('button').forEach(btn => btn.remove());
+        calendarContent.querySelectorAll('.animate-spin').forEach(el => el.remove());
+        calendarContent.style.overflow = 'visible';
+        container.appendChild(calendarContent);
+      } else {
+        container.innerHTML = '<p>Aucune donnée à afficher</p>';
+      }
+    } else {
+      // Export par jour et local
+      const defenses = getFilteredDefenses();
+      const grouped: Record<string, Record<string, Eleve[]>> = {};
       
-      for (const location of sortedLocations) {
-        const defenses = locations[location].sort((a, b) => 
-          (a.heure_defense || '').localeCompare(b.heure_defense || '')
-        );
+      defenses.forEach(defense => {
+        const date = defense.date_defense!;
+        const location = defense.localisation_defense || 'Non défini';
+        if (!grouped[date]) grouped[date] = {};
+        if (!grouped[date][location]) grouped[date][location] = [];
+        grouped[date][location].push(defense);
+      });
+      
+      const sortedDates = Object.keys(grouped).sort();
+      
+      for (const date of sortedDates) {
+        const locations = grouped[date];
+        const sortedLocations = Object.keys(locations).sort();
         
-        const pageDiv = document.createElement('div');
-        pageDiv.className = 'page';
-        
-        // En-tête
-        const header = document.createElement('div');
-        header.className = 'header';
-        header.innerHTML = `
-          <h2>${new Date(date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</h2>
-          <p><strong>Local :</strong> ${location}</p>
-          <p><strong>Nombre de défenses :</strong> ${defenses.length}</p>
-        `;
-        pageDiv.appendChild(header);
-        
-        // Tableau
-        const table = document.createElement('table');
-        const thead = document.createElement('thead');
-        thead.innerHTML = `
-          <tr>
-            <th>Horaire</th>
-            <th>Élève</th>
-            <th>Problématique</th>
-            <th>Catégorie</th>
-            <th>Guide</th>
-            <th>Lecteur interne</th>
-            <th>Lecteur externe</th>
-            <th>Médiateur</th>
-          </tr>
-        `;
-        table.appendChild(thead);
-        
-        const tbody = document.createElement('tbody');
-        for (const defense of defenses) {
-          const row = document.createElement('tr');
-          row.innerHTML = `
-            <td style="white-space: nowrap;">${defense.heure_defense?.substring(0, 5) || '-'}</td>
-            <td><strong>${defense.prenom} ${defense.nom}</strong><br><small>${defense.classe}</small></td>
-            <td style="max-width: 300px;">${defense.problematique || '-'}</td>
-            <td>${defense.categorie || '-'}</td>
-            <td>${defense.guide_prenom || ''} ${defense.guide_nom || '-'}</td>
-            <td>${defense.lecteur_interne_prenom || ''} ${defense.lecteur_interne_nom || '-'}</td>
-            <td>${defense.lecteur_externe_prenom || ''} ${defense.lecteur_externe_nom || '-'}</td>
-            <td>${defense.mediateur_prenom || ''} ${defense.mediateur_nom || '-'}</td>
+        for (const location of sortedLocations) {
+          const dayDefenses = locations[location].sort((a, b) => 
+            (a.heure_defense || '').localeCompare(b.heure_defense || '')
+          );
+          
+          const pageDiv = document.createElement('div');
+          pageDiv.style.pageBreakAfter = 'always';
+          pageDiv.style.marginBottom = '20px';
+          
+          // En-tête
+          const header = document.createElement('div');
+          header.style.textAlign = 'center';
+          header.style.marginBottom = '20px';
+          header.innerHTML = `
+            <h2 style="margin: 0; color: #333;">${new Date(date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</h2>
+            <p style="margin: 5px 0; color: #666;"><strong>Local :</strong> ${location}</p>
+            <p style="margin: 5px 0; color: #666;"><strong>Nombre de défenses :</strong> ${dayDefenses.length}</p>
           `;
-          tbody.appendChild(row);
+          pageDiv.appendChild(header);
+          
+          // Tableau
+          const table = document.createElement('table');
+          table.style.width = '100%';
+          table.style.borderCollapse = 'collapse';
+          table.style.marginBottom = '20px';
+          
+          const thead = document.createElement('thead');
+          thead.innerHTML = `
+            <tr style="background-color: #f2f2f2;">
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Horaire</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Élève</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Problématique</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Catégorie</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Guide</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Lecteur interne</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Lecteur externe</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Médiateur</th>
+            </tr>
+          `;
+          table.appendChild(thead);
+          
+          const tbody = document.createElement('tbody');
+          for (const defense of dayDefenses) {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td style="border: 1px solid #ddd; padding: 8px; white-space: nowrap;">${defense.heure_defense?.substring(0, 5) || '-'}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;"><strong>${defense.prenom} ${defense.nom}</strong><br><small>${defense.classe}</small></td>
+              <td style="border: 1px solid #ddd; padding: 8px; max-width: 300px;">${defense.problematique || '-'}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">${defense.categorie || '-'}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">${defense.guide_prenom || ''} ${defense.guide_nom || '-'}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">${defense.lecteur_interne_prenom || ''} ${defense.lecteur_interne_nom || '-'}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">${defense.lecteur_externe_prenom || ''} ${defense.lecteur_externe_nom || '-'}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">${defense.mediateur_prenom || ''} ${defense.mediateur_nom || '-'}</td>
+            `;
+            tbody.appendChild(row);
+          }
+          table.appendChild(tbody);
+          pageDiv.appendChild(table);
+          
+          container.appendChild(pageDiv);
         }
-        table.appendChild(tbody);
-        pageDiv.appendChild(table);
-        
-        container.appendChild(pageDiv);
+      }
+      
+      if (defenses.length === 0) {
+        container.innerHTML = '<p style="text-align: center;">Aucune défense trouvée avec les filtres actuels.</p>';
       }
     }
     
@@ -185,12 +169,12 @@ export default function CalendrierTab({
   };
 
   const handleExportFull = async () => {
-    if (!calendarRef.current) return;
     setIsExporting(true);
+    setShowExportOptions(false);
     
     try {
       const html2pdf = require('html2pdf.js');
-      const content = generateFullCalendarContent();
+      const content = generatePDFContent('full');
       
       const opt = {
         margin: [0.5, 0.5, 0.5, 0.5],
@@ -215,16 +199,16 @@ export default function CalendrierTab({
       alert('Erreur lors de l\'export');
     } finally {
       setIsExporting(false);
-      setShowExportOptions(false);
     }
   };
 
   const handleExportByDayLocation = async () => {
     setIsExporting(true);
+    setShowExportOptions(false);
     
     try {
       const html2pdf = require('html2pdf.js');
-      const content = generateDayLocationContent();
+      const content = generatePDFContent('day-location');
       
       const opt = {
         margin: [0.5, 0.5, 0.5, 0.5],
@@ -249,7 +233,6 @@ export default function CalendrierTab({
       alert('Erreur lors de l\'export');
     } finally {
       setIsExporting(false);
-      setShowExportOptions(false);
     }
   };
   
@@ -490,7 +473,7 @@ export default function CalendrierTab({
           <div className="relative">
             <button
               onClick={() => setShowExportOptions(!showExportOptions)}
-              disabled={isExporting || isLoading || allDates.length === 0}
+              disabled={isExporting || isLoading}
               className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm flex items-center gap-2 disabled:opacity-50"
             >
               {isExporting ? (
