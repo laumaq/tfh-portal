@@ -984,39 +984,49 @@ export default function CalendrierTab({
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Sélectionner les locaux
             </label>
-            <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto border rounded p-2">
-              <button
-                type="button"
-                onClick={() => setSelectedLocations([...allLocations])}
-                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                  selectedLocations.length === allLocations.length
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                Tous
-              </button>
+            <div className="max-h-40 overflow-y-auto border rounded p-2">
+              <div className="flex items-center mb-1 pb-1 border-b border-gray-200">
+                <input
+                  type="checkbox"
+                  id="select-all-locations"
+                  checked={selectedLocations.length === allLocations.length && allLocations.length > 0}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedLocations([...allLocations]);
+                    } else {
+                      setSelectedLocations([]);
+                    }
+                  }}
+                  className="mr-2"
+                />
+                <label htmlFor="select-all-locations" className="text-sm font-medium">
+                  {selectedLocations.length === allLocations.length && allLocations.length > 0 
+                    ? "Tout désélectionner" 
+                    : "Tout sélectionner"}
+                </label>
+              </div>
               {allLocations.map(location => {
                 const isSelected = selectedLocations.includes(location);
                 return (
-                  <button
-                    key={location}
-                    type="button"
-                    onClick={() => {
-                      if (isSelected) {
-                        setSelectedLocations(selectedLocations.filter(l => l !== location));
-                      } else {
-                        setSelectedLocations([...selectedLocations, location]);
-                      }
-                    }}
-                    className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                      isSelected
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {location}
-                  </button>
+                  <div key={location} className="flex items-center mb-1">
+                    <input
+                      type="checkbox"
+                      id={`loc-${location}`}
+                      checked={isSelected}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedLocations([...selectedLocations, location]);
+                        } else {
+                          setSelectedLocations(selectedLocations.filter(l => l !== location));
+                        }
+                      }}
+                      className="mr-2"
+                      disabled={isLoading}
+                    />
+                    <label htmlFor={`loc-${location}`} className="text-sm truncate">
+                      {location}
+                    </label>
+                  </div>
                 );
               })}
             </div>
