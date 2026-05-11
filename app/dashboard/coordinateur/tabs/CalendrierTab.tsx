@@ -983,46 +983,45 @@ export default function CalendrierTab({
           {/* Filtre des locaux */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Sélectionner les locaux
+              Locaux
             </label>
-            <div className="max-h-40 overflow-y-auto border rounded p-2">
-              {allLocations.map(location => {
-                const isSelected = selectedLocations.includes(location);
-                return (
-                  <div key={location} className="flex items-center mb-1">
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setSelectedLocations([...allLocations])}
+                  className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                >
+                  Tout sélectionner
+                </button>
+                <button
+                  onClick={() => setSelectedLocations([])}
+                  className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                >
+                  Tout désélectionner
+                </button>
+              </div>
+              <div className="max-h-40 overflow-y-auto border rounded p-2">
+                {allLocations.map(location => (
+                  <div key={location} className="flex items-center py-1">
                     <input
                       type="checkbox"
                       id={`loc-${location}`}
-                      checked={isSelected}
-                      onChange={() => {
-                        if (isSelected) {
-                          setSelectedLocations(selectedLocations.filter(l => l !== location));
+                      checked={selectedLocations.includes(location)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedLocations(prev => [...prev, location]);
                         } else {
-                          setSelectedLocations([...selectedLocations, location]);
+                          setSelectedLocations(prev => prev.filter(l => l !== location));
                         }
                       }}
                       className="mr-2"
                     />
-                    <label htmlFor={`loc-${location}`} className="text-sm truncate">
+                    <label htmlFor={`loc-${location}`} className="text-sm">
                       {location}
                     </label>
                   </div>
-                );
-              })}
-            </div>
-            <div className="flex gap-4 mt-2">
-              <button
-                onClick={() => setSelectedLocations([...allLocations])}
-                className="text-xs text-blue-600 hover:text-blue-800"
-              >
-                Tout sélectionner
-              </button>
-              <button
-                onClick={() => setSelectedLocations([])}
-                className="text-xs text-red-600 hover:text-red-800"
-              >
-                Tout désélectionner
-              </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
