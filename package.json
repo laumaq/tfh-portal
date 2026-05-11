@@ -14,7 +14,8 @@
     "react-dom": "^18",
     "lucide-react": "^0.344.0",
     "xlsx": "^0.18.5",
-    "@supabase/supabase-js": "^2.39.7"
+    "@supabase/supabase-js": "^2.39.7",
+    "html2pdf.js": "^0.10.1"
   },
   "devDependencies": {
     "typescript": "^5",
