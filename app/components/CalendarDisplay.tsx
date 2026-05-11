@@ -113,8 +113,111 @@ export default function CalendarDisplay({
   };
 
   const detectConflicts = (defenses: DefenseEvent[]) => {
-    // ... (gardez votre fonction existante)
-    return { guides: [], lecteursInternes: [], lecteursExternes: [], mediateurs: [] };
+    const guideConflicts = new Map<string, DefenseEvent[]>();
+    const lecteurInterneConflicts = new Map<string, DefenseEvent[]>();
+    const lecteurExterneConflicts = new Map<string, DefenseEvent[]>();
+    const mediateurConflicts = new Map<string, DefenseEvent[]>();
+    
+    const sortedDefenses = [...defenses].sort((a, b) => {
+      if (a.date !== b.date) return a.date.localeCompare(b.date);
+      return a.startTime.localeCompare(b.startTime);
+    });
+    
+    sortedDefenses.forEach(defense => {
+      // Guide
+      if (defense.guideNom && defense.guideNom !== '-') {
+        const guideKey = `${defense.guidePrenom} ${defense.guideNom}`;
+        const conflicts = sortedDefenses.filter(d => 
+          d.id !== defense.id && 
+          d.date === defense.date &&
+          d.guideNom === defense.guideNom &&
+          d.guidePrenom === defense.guidePrenom &&
+          ((d.startTime <= defense.startTime && d.endTime > defense.startTime) ||
+           (defense.startTime <= d.startTime && defense.endTime > d.startTime))
+        );
+        
+        if (conflicts.length > 0) {
+          const existing = guideConflicts.get(guideKey) || [];
+          guideConflicts.set(guideKey, [...existing, defense, ...conflicts]);
+        }
+      }
+      
+      // Lecteur interne
+      if (defense.lecteurInterneNom && defense.lecteurInterneNom !== '-') {
+        const lecteurKey = `${defense.lecteurInternePrenom} ${defense.lecteurInterneNom}`;
+        const conflicts = sortedDefenses.filter(d => 
+          d.id !== defense.id && 
+          d.date === defense.date &&
+          d.lecteurInterneNom === defense.lecteurInterneNom &&
+          d.lecteurInternePrenom === defense.lecteurInternePrenom &&
+          ((d.startTime <= defense.startTime && d.endTime > defense.startTime) ||
+           (defense.startTime <= d.startTime && defense.endTime > d.startTime))
+        );
+        
+        if (conflicts.length > 0) {
+          const existing = lecteurInterneConflicts.get(lecteurKey) || [];
+          lecteurInterneConflicts.set(lecteurKey, [...existing, defense, ...conflicts]);
+        }
+      }
+      
+      // Lecteur externe
+      if (defense.lecteurExterneNom && defense.lecteurExterneNom !== '-') {
+        const lecteurKey = `${defense.lecteurExternePrenom} ${defense.lecteurExterneNom}`;
+        const conflicts = sortedDefenses.filter(d => 
+          d.id !== defense.id && 
+          d.date === defense.date &&
+          d.lecteurExterneNom === defense.lecteurExterneNom &&
+          d.lecteurExternePrenom === defense.lecteurExternePrenom &&
+          ((d.startTime <= defense.startTime && d.endTime > defense.startTime) ||
+           (defense.startTime <= d.startTime && defense.endTime > d.startTime))
+        );
+        
+        if (conflicts.length > 0) {
+          const existing = lecteurExterneConflicts.get(lecteurKey) || [];
+          lecteurExterneConflicts.set(lecteurKey, [...existing, defense, ...conflicts]);
+        }
+      }
+      
+      // Médiateur
+      if (defense.mediateurNom && defense.mediateurNom !== '-') {
+        const mediateurKey = `${defense.mediateurPrenom} ${defense.mediateurNom}`;
+        const conflicts = sortedDefenses.filter(d => 
+          d.id !== defense.id && 
+          d.date === defense.date &&
+          d.mediateurNom === defense.mediateurNom &&
+          d.mediateurPrenom === defense.mediateurPrenom &&
+          ((d.startTime <= defense.startTime && d.endTime > defense.startTime) ||
+           (defense.startTime <= d.startTime && defense.endTime > d.startTime))
+        );
+        
+        if (conflicts.length > 0) {
+          const existing = mediateurConflicts.get(mediateurKey) || [];
+          mediateurConflicts.set(mediateurKey, [...existing, defense, ...conflicts]);
+        }
+      }
+    });
+    
+    const unique = (arr: DefenseEvent[]) => 
+      Array.from(new Map(arr.map(item => [item.id, item])).values());
+    
+    return {
+      guides: Array.from(guideConflicts.entries()).map(([person, conflicts]) => ({
+        person,
+        conflicts: unique(conflicts)
+      })),
+      lecteursInternes: Array.from(lecteurInterneConflicts.entries()).map(([person, conflicts]) => ({
+        person,
+        conflicts: unique(conflicts)
+      })),
+      lecteursExternes: Array.from(lecteurExterneConflicts.entries()).map(([person, conflicts]) => ({
+        person,
+        conflicts: unique(conflicts)
+      })),
+      mediateurs: Array.from(mediateurConflicts.entries()).map(([person, conflicts]) => ({
+        person,
+        conflicts: unique(conflicts)
+      }))
+    };
   };
 
   const prepareCalendarData = useCallback(() => {
@@ -232,23 +335,18 @@ export default function CalendarDisplay({
                 </p>
               </div>
               
-              <div className="overflow-x-auto relative">
+              <div className="overflow-x-auto">
                 <div className="min-w-full">
-                  {/* En-tête fixe */}
-                  <div className="sticky top-0 z-10 bg-white">
-                    <div className="flex border-t border-b border-gray-200 bg-gray-100">
-                      <div className="w-[92px] px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-100">
-                        Horaire
+                  <div className="flex border-t border-gray-200">
+                    <div className="w-[92px] bg-gray-50"></div>
+                    {day.locations.map(location => (
+                      <div
+                        key={`header-${location}`}
+                        className="flex-1 min-w-[200px] px-4 py-3 text-sm font-semibold text-gray-700 border-r border-b bg-gray-100"
+                      >
+                        {location}
                       </div>
-                      {day.locations.map(location => (
-                        <div
-                          key={`header-${location}`}
-                          className="flex-1 min-w-[200px] px-4 py-3 text-sm font-semibold text-gray-700 border-l border-gray-200 bg-gray-100"
-                        >
-                          {location}
-                        </div>
-                      ))}
-                    </div>
+                    ))}
                   </div>
                   
                   <div className="flex border-b border-gray-200">
@@ -281,7 +379,7 @@ export default function CalendarDisplay({
                       ))}
                       
                       <div className="absolute inset-0 flex">
-                        {day.locations.map((location) => (
+                        {day.locations.map((location, index) => (
                           <div
                             key={`col-${location}`}
                             className="flex-1 border-r relative"
@@ -290,31 +388,98 @@ export default function CalendarDisplay({
                             {day.defenses
                               .filter(defense => defense.location === location)
                               .map(defense => {
-                                // Rendu des événements
                                 const [startHours, startMinutes] = defense.startTime.split(':').map(Number);
                                 const hoursFrom8 = startHours - 8;
                                 const minutesFraction = startMinutes / 60;
                                 const top = (hoursFrom8 + minutesFraction) * PIXELS_PER_HOUR;
-                                const height = (50 / 60) * PIXELS_PER_HOUR;
+                                const DEFENSE_DURATION_MINUTES = 50;
+                                const height = (DEFENSE_DURATION_MINUTES / 60) * PIXELS_PER_HOUR;
                                 const color = getCategoryColor(defense.categorie);
                                 const isSelected = selectedEventIds.includes(defense.eleveId);
                                 const isBusy = busyEventIds.includes(defense.eleveId);
+                                const eleve = eleves.find(e => e.id === defense.eleveId);
+                                const isAssignedToCurrentUser = eleve?.lecteur_externe_id === userLecteurExterneId;
+                                const isClickable = onEventClick && (!isBusy || isAssignedToCurrentUser);
                                 
                                 return (
                                   <div
                                     key={defense.id}
-                                    className="absolute left-1 right-1 rounded p-2 overflow-y-auto border shadow-sm"
+                                    className={`absolute left-1 right-1 rounded p-2 overflow-y-auto border shadow-sm transition-shadow ${
+                                      isClickable ? 'hover:shadow-md cursor-pointer' : ''
+                                    } ${isSelected ? 'ring-2 ring-blue-500 ring-offset-1' : ''} ${
+                                      isBusy && !isAssignedToCurrentUser ? 'opacity-50' : ''
+                                    }`}
                                     style={{
                                       top: `${top}px`,
                                       height: `${height}px`,
-                                      backgroundColor: color.bg,
-                                      borderColor: color.border,
+                                      backgroundColor: isSelected ? '#E0F2FE' : color.bg,
+                                      borderColor: isSelected ? '#7DD3FC' : color.border,
+                                      color: isSelected ? '#0C4A6E' : color.text,
+                                      zIndex: 10,
                                       fontSize: '12px'
                                     }}
+                                    onClick={() => {
+                                      if (isClickable) {
+                                        onEventClick!(defense);
+                                      }
+                                    }}
                                   >
-                                    <div className="font-bold text-xs">{defense.startTime} - {defense.endTime}</div>
-                                    <div>{defense.elevePrenom} {defense.eleveNom}</div>
-                                    <div className="text-xs opacity-75">{defense.categorie}</div>
+                                    <div className="font-bold mb-1 flex justify-between items-center sticky top-0 bg-inherit pb-1 border-b border-gray-300">
+                                      <span className="text-xs">{defense.startTime} - {defense.endTime}</span>
+                                      <div className="flex gap-1">
+                                        {isSelected && <span className="text-xs bg-blue-500 text-white px-1 py-0.5 rounded">✓</span>}
+                                        {isBusy && !isAssignedToCurrentUser && <span className="text-xs bg-red-500 text-white px-1 py-0.5 rounded">Occupé</span>}
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="space-y-2">
+                                      <div>
+                                        <div className="font-semibold text-sm">
+                                          {defense.elevePrenom} {defense.eleveNom}
+                                        </div>
+                                        <div className="text-xs opacity-75">
+                                          {defense.categorie}
+                                        </div>
+                                      </div>
+                                      
+                                      <hr className="border-gray-400 my-1" />
+                                      
+                                      {defense.problematique && (
+                                        <>
+                                          <div className="text-xs leading-relaxed break-words">
+                                            <span className="font-medium">📝</span> {defense.problematique}
+                                          </div>
+                                          <hr className="border-gray-400 my-1" />
+                                        </>
+                                      )}
+                                      
+                                      <div className="space-y-0.5 text-xs">
+                                        {defense.guideNom !== '-' && (
+                                          <div className="flex items-start gap-1">
+                                            <span className="font-medium min-w-[85px]">Guide:</span>
+                                            <span>{defense.guidePrenom} {defense.guideNom}</span>
+                                          </div>
+                                        )}
+                                        {defense.lecteurInterneNom !== '-' && (
+                                          <div className="flex items-start gap-1">
+                                            <span className="font-medium min-w-[85px]">Lecteur interne:</span>
+                                            <span>{defense.lecteurInternePrenom} {defense.lecteurInterneNom}</span>
+                                          </div>
+                                        )}
+                                        {defense.lecteurExterneNom !== '-' && (
+                                          <div className="flex items-start gap-1">
+                                            <span className="font-medium min-w-[85px]">Lecteur externe:</span>
+                                            <span>{defense.lecteurExternePrenom} {defense.lecteurExterneNom}</span>
+                                          </div>
+                                        )}
+                                        {defense.mediateurNom !== '-' && (
+                                          <div className="flex items-start gap-1">
+                                            <span className="font-medium min-w-[85px]">Médiateur:</span>
+                                            <span>{defense.mediateurPrenom} {defense.mediateurNom}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
                                   </div>
                                 );
                               })}
