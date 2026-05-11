@@ -25,6 +25,7 @@ export default function CalendrierTab({
   const [conflicts, setConflicts] = useState<Conflict[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [showExportOptions, setShowExportOptions] = useState(false);
   const calendarRef = useRef<HTMLDivElement>(null);
 
   // Remplacer les calculs directs par useMemo
@@ -55,6 +56,202 @@ export default function CalendrierTab({
      setSelectedCategories(categories);
   }, [allLocations, categories]);
 
+
+  const generateDayLocationTables = () => {
+    // Grouper les défenses par jour et par local
+    const defenses = eleves.filter(e => 
+      e.date_defense && e.heure_defense && 
+      (selectedDates.length === 0 || selectedDates.includes(e.date_defense!)) &&
+      (selectedLocations.length === 0 || selectedLocations.includes(e.localisation_defense!)) &&
+      (selectedCategories.length === 0 || selectedCategories.includes(e.categorie!))
+    );
+
+    const grouped: Record<string, Record<string, Eleve[]>> = {};
+    
+    defenses.forEach(defense => {
+      const date = defense.date_defense!;
+      const location = defense.localisation_defense || 'Non défini';
+      if (!grouped[date]) grouped[date] = {};
+      if (!grouped[date][location]) grouped[date][location] = [];
+      grouped[date][location].push(defense);
+    });
+
+    return grouped;
+  };
+
+  const generateFullCalendarContent = () => {
+    const container = document.createElement('div');
+    container.style.width = '100%';
+    container.style.padding = '20px';
+    container.style.fontFamily = 'Arial, sans-serif';
+    
+    // Récupérer le contenu filtré du calendrier
+    const calendarContent = calendarRef.current?.cloneNode(true) as HTMLElement;
+    if (calendarContent) {
+      // Nettoyer les boutons et interactions
+      calendarContent.querySelectorAll('button').forEach(btn => btn.remove());
+      calendarContent.querySelectorAll('.animate-spin').forEach(el => el.remove());
+      calendarContent.style.width = '100%';
+      container.appendChild(calendarContent);
+    }
+    
+    return container;
+  };
+
+  const generateDayLocationContent = () => {
+    const grouped = generateDayLocationTables();
+    const container = document.createElement('div');
+    container.style.fontFamily = 'Arial, sans-serif';
+    
+    // Styles pour le PDF
+    const style = document.createElement('style');
+    style.textContent = `
+      .page { page-break-after: always; margin-bottom: 20px; }
+      .page:last-child { page-break-after: auto; }
+      .header { text-align: center; margin-bottom: 20px; }
+      .header h2 { margin: 0; color: #333; }
+      .header p { margin: 5px 0; color: #666; }
+      table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+      th, td { border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top; }
+      th { background-color: #f2f2f2; font-weight: bold; }
+      .category-badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+    `;
+    container.appendChild(style);
+    
+    const sortedDates = Object.keys(grouped).sort();
+    
+    for (const date of sortedDates) {
+      const locations = grouped[date];
+      const sortedLocations = Object.keys(locations).sort();
+      
+      for (const location of sortedLocations) {
+        const defenses = locations[location].sort((a, b) => 
+          (a.heure_defense || '').localeCompare(b.heure_defense || '')
+        );
+        
+        const pageDiv = document.createElement('div');
+        pageDiv.className = 'page';
+        
+        // En-tête
+        const header = document.createElement('div');
+        header.className = 'header';
+        header.innerHTML = `
+          <h2>${new Date(date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</h2>
+          <p><strong>Local :</strong> ${location}</p>
+          <p><strong>Nombre de défenses :</strong> ${defenses.length}</p>
+        `;
+        pageDiv.appendChild(header);
+        
+        // Tableau
+        const table = document.createElement('table');
+        const thead = document.createElement('thead');
+        thead.innerHTML = `
+          <tr>
+            <th>Horaire</th>
+            <th>Élève</th>
+            <th>Problématique</th>
+            <th>Catégorie</th>
+            <th>Guide</th>
+            <th>Lecteur interne</th>
+            <th>Lecteur externe</th>
+            <th>Médiateur</th>
+          </tr>
+        `;
+        table.appendChild(thead);
+        
+        const tbody = document.createElement('tbody');
+        for (const defense of defenses) {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td style="white-space: nowrap;">${defense.heure_defense?.substring(0, 5) || '-'}</td>
+            <td><strong>${defense.prenom} ${defense.nom}</strong><br><small>${defense.classe}</small></td>
+            <td style="max-width: 300px;">${defense.problematique || '-'}</td>
+            <td>${defense.categorie || '-'}</td>
+            <td>${defense.guide_prenom || ''} ${defense.guide_nom || '-'}</td>
+            <td>${defense.lecteur_interne_prenom || ''} ${defense.lecteur_interne_nom || '-'}</td>
+            <td>${defense.lecteur_externe_prenom || ''} ${defense.lecteur_externe_nom || '-'}</td>
+            <td>${defense.mediateur_prenom || ''} ${defense.mediateur_nom || '-'}</td>
+          `;
+          tbody.appendChild(row);
+        }
+        table.appendChild(tbody);
+        pageDiv.appendChild(table);
+        
+        container.appendChild(pageDiv);
+      }
+    }
+    
+    return container;
+  };
+
+  const handleExportFull = async () => {
+    if (!calendarRef.current) return;
+    setIsExporting(true);
+    
+    try {
+      const html2pdf = require('html2pdf.js');
+      const content = generateFullCalendarContent();
+      
+      const opt = {
+        margin: [0.5, 0.5, 0.5, 0.5],
+        filename: `calendrier_complet_${new Date().toISOString().split('T')[0]}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false, letterRendering: true },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
+      };
+      
+      const container = document.createElement('div');
+      container.style.position = 'absolute';
+      container.style.left = '-9999px';
+      container.style.top = '-9999px';
+      container.appendChild(content);
+      document.body.appendChild(container);
+      
+      await html2pdf().from(container).set(opt).save();
+      document.body.removeChild(container);
+      
+    } catch (error) {
+      console.error(error);
+      alert('Erreur lors de l\'export');
+    } finally {
+      setIsExporting(false);
+      setShowExportOptions(false);
+    }
+  };
+
+  const handleExportByDayLocation = async () => {
+    setIsExporting(true);
+    
+    try {
+      const html2pdf = require('html2pdf.js');
+      const content = generateDayLocationContent();
+      
+      const opt = {
+        margin: [0.5, 0.5, 0.5, 0.5],
+        filename: `calendrier_par_jour_local_${new Date().toISOString().split('T')[0]}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false, letterRendering: true },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+      };
+      
+      const container = document.createElement('div');
+      container.style.position = 'absolute';
+      container.style.left = '-9999px';
+      container.style.top = '-9999px';
+      container.appendChild(content);
+      document.body.appendChild(container);
+      
+      await html2pdf().from(container).set(opt).save();
+      document.body.removeChild(container);
+      
+    } catch (error) {
+      console.error(error);
+      alert('Erreur lors de l\'export');
+    } finally {
+      setIsExporting(false);
+      setShowExportOptions(false);
+    }
+  };
   
   // Détecter les conflits
   const detectConflicts = useCallback((defenses: DefenseEvent[]): Conflict[] => {
@@ -283,79 +480,45 @@ export default function CalendrierTab({
     return `${selectedCategories.length} catégories`;
   };
 
-  const handleExportPDF = async () => {
-    if (!calendarRef.current) return;
-    
-    setIsExporting(true);
-    
-    try {
-      // Charger html2pdf dynamiquement avec require (évite les problèmes de typage)
-      const html2pdf = require('html2pdf.js');
-      
-      const opt = {
-        margin: [0.5, 0.5, 0.5, 0.5],
-        filename: `calendrier_defenses_${new Date().toISOString().split('T')[0]}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-      };
-      
-      const cloneContent = calendarRef.current.cloneNode(true) as HTMLElement;
-      cloneContent.style.width = '100%';
-      cloneContent.style.maxWidth = '100%';
-      cloneContent.style.overflow = 'visible';
-      
-      const buttons = cloneContent.querySelectorAll('button');
-      buttons.forEach(btn => btn.remove());
-      
-      const loadingIndicators = cloneContent.querySelectorAll('.animate-spin');
-      loadingIndicators.forEach(el => el.remove());
-      
-      const container = document.createElement('div');
-      container.style.position = 'absolute';
-      container.style.left = '-9999px';
-      container.style.top = '-9999px';
-      container.appendChild(cloneContent);
-      document.body.appendChild(container);
-      
-      await html2pdf().from(cloneContent).set(opt).save();
-      
-      document.body.removeChild(container);
-      
-    } catch (error) {
-      console.error('Erreur lors de l\'export PDF:', error);
-      alert('Une erreur est survenue lors de la génération du PDF');
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
   return (
     <div className="space-y-6">
-      {/* Affichage des conflits */}
       <ConflictDisplay conflicts={conflicts} />
       
-      {/* Filtres */}
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-gray-800">Filtres du Calendrier</h2>
-          <button
-            onClick={handleExportPDF}
-            disabled={isExporting || isLoading || allDates.length === 0}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isExporting ? (
-              <>
-                <span className="animate-spin">⟳</span>
-                Génération...
-              </>
-            ) : (
-              <>
-                <span>📄</span>
-                Exporter PDF
-              </>
+          <div className="relative">
+            <button
+              onClick={() => setShowExportOptions(!showExportOptions)}
+              disabled={isExporting || isLoading || allDates.length === 0}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm flex items-center gap-2 disabled:opacity-50"
+            >
+              {isExporting ? (
+                <><span className="animate-spin">⟳</span> Génération...</>
+              ) : (
+                <><span>📄</span> Exporter PDF</>
+              )}
+            </button>
+            
+            {showExportOptions && !isExporting && (
+              <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border z-10">
+                <div className="p-2">
+                  <button
+                    onClick={handleExportFull}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded"
+                  >
+                    📊 Export complet (vue actuelle)
+                  </button>
+                  <button
+                    onClick={handleExportByDayLocation}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded"
+                  >
+                    📅 Export par jour et local
+                  </button>
+                </div>
+              </div>
             )}
-          </button>
+          </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
