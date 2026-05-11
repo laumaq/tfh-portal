@@ -391,7 +391,7 @@ export default function CalendarDisplay({
                   {/* En-tête fixe */}
                   <div className="sticky top-0 z-10 bg-white">
                     <div className="flex border-t border-b border-gray-200 bg-gray-100">
-                      <div className="w-24 px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-100">
+                      <div className="w-32 px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-100">
                         Horaire
                       </div>
                       {day.locations.map(location => (
@@ -406,7 +406,7 @@ export default function CalendarDisplay({
                   </div>
                   
                   <div className="flex border-b border-gray-200">
-                    <div className="w-24 bg-gray-50 border-r border-gray-200">
+                    <div className="w-32 bg-gray-50 border-r border-gray-200">
                       {Array.from({ length: totalHours }).map((_, i) => {
                         const hour = 8 + i;
                         return (
