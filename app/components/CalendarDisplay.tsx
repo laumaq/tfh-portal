@@ -340,7 +340,7 @@ export default function CalendarDisplay({
                   {/* En-tête avec deux lignes */}
                   <div className="flex border-t border-gray-200">
                     {/* Cellule vide pour la colonne horaire */}
-                    <div className="w-[92px] bg-gray-100 border-r border-b border-gray-200 px-4 py-3">
+                    <div className="w-[192px] bg-gray-100 border-r border-b border-gray-200 px-4 py-3">
                       {/* Vide */}
                     </div>
                     {day.locations.map(location => (
