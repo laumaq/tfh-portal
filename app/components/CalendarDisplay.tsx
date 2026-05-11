@@ -338,7 +338,7 @@ export default function CalendarDisplay({
               <div className="overflow-x-auto">
                 <div className="min-w-full">
                   <div className="flex border-t border-gray-200">
-                    <div className="w-[292px] bg-gray-50"></div>
+                    <div className="w-[92px] bg-gray-50"></div>
                     {day.locations.map(location => (
                       <div
                         key={`header-${location}`}
@@ -350,7 +350,7 @@ export default function CalendarDisplay({
                   </div>
                   
                   <div className="flex border-b border-gray-200">
-                    <div className="w-[92px] bg-gray-50 border-r border-gray-200">
+                    <div className="w-[292px] bg-gray-50 border-r border-gray-200">
                       {Array.from({ length: totalHours }).map((_, i) => {
                         const hour = 8 + i;
                         return (
