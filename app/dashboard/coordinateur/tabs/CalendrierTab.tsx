@@ -7,6 +7,8 @@ import CalendarDisplay from '@/app/components/CalendarDisplay';
 import ConflictDisplay from '../components/ConflictDisplay';
 import { Eleve, DefenseEvent, Conflict } from '../types';
 import { getCategoryColor } from '../utils/categoryUtils';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 interface CalendrierTabProps {
   eleves: Eleve[];
@@ -169,56 +171,63 @@ export default function CalendrierTab({
   };
   
   const handleExportFull = async () => {
-    if (!calendarRef.current) return;
+    if (!calendarRef.current) {
+      alert('Le calendrier n\'est pas encore chargé');
+      return;
+    }
     
     setIsExporting(true);
     setShowExportOptions(false);
     
     try {
-      const html2pdf = require('html2pdf.js');
+      // Sauvegarder les styles originaux
+      const originalHeight = calendarRef.current.style.height;
+      const originalOverflow = calendarRef.current.style.overflow;
       
-      // Créer un conteneur temporaire avec les bons styles
-      const tempContainer = document.createElement('div');
-      tempContainer.style.position = 'absolute';
-      tempContainer.style.left = '-9999px';
-      tempContainer.style.top = '-9999px';
-      tempContainer.style.width = '100%';
-      tempContainer.style.maxWidth = '1200px';
-      tempContainer.style.backgroundColor = 'white';
-      tempContainer.style.padding = '20px';
+      // Forcer les styles pour le rendu
+      calendarRef.current.style.height = 'auto';
+      calendarRef.current.style.overflow = 'visible';
       
-      // Copier le contenu
-      const content = calendarRef.current.cloneNode(true) as HTMLElement;
-      content.style.overflow = 'visible';
-      content.style.height = 'auto';
+      // Attendre que le DOM se mette à jour
+      await new Promise(resolve => setTimeout(resolve, 200));
       
-      tempContainer.appendChild(content);
-      document.body.appendChild(tempContainer);
+      // Capturer avec html2canvas
+      const canvas = await html2canvas(calendarRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: true,
+        backgroundColor: '#ffffff',
+        windowWidth: calendarRef.current.scrollWidth,
+        windowHeight: calendarRef.current.scrollHeight
+      });
       
-      // Attendre le rendu
-      await new Promise(resolve => setTimeout(resolve, 500));
+      console.log('Canvas size:', canvas.width, canvas.height);
       
-      const opt = {
-        margin: [0.5, 0.5, 0.5, 0.5],
-        filename: `calendrier_complet_${new Date().toISOString().split('T')[0]}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { 
-          scale: 2, 
-          useCORS: true, 
-          logging: true,
-          letterRendering: true,
-          backgroundColor: '#ffffff'
-        },
-        jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
-      };
+      if (canvas.height === 0) {
+        throw new Error('La hauteur du canvas est 0');
+      }
       
-      await html2pdf().from(tempContainer).set(opt).save();
+      // Créer le PDF
+      const imgData = canvas.toDataURL('image/jpeg', 1.0);
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      });
       
-      document.body.removeChild(tempContainer);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
+      pdf.save(`calendrier_complet_${new Date().toISOString().split('T')[0]}.pdf`);
+      
+      // Restaurer les styles
+      calendarRef.current.style.height = originalHeight;
+      calendarRef.current.style.overflow = originalOverflow;
       
     } catch (error) {
       console.error('Erreur:', error);
-      alert('Erreur lors de l\'export');
+      alert('Erreur lors de l\'export: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
       setIsExporting(false);
     }
