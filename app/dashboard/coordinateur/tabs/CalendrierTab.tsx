@@ -183,13 +183,15 @@ export default function CalendrierTab({
       // Sauvegarder les styles originaux
       const originalHeight = calendarRef.current.style.height;
       const originalOverflow = calendarRef.current.style.overflow;
+      const originalWidth = calendarRef.current.style.width;
       
-      // Forcer les styles pour le rendu
+      // Forcer les styles pour le rendu complet
       calendarRef.current.style.height = 'auto';
       calendarRef.current.style.overflow = 'visible';
+      calendarRef.current.style.width = '100%';
       
       // Attendre que le DOM se mette à jour
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Capturer avec html2canvas
       const canvas = await html2canvas(calendarRef.current, {
@@ -207,7 +209,7 @@ export default function CalendrierTab({
         throw new Error('La hauteur du canvas est 0');
       }
       
-      // Créer le PDF
+      // Créer le PDF avec plusieurs pages si nécessaire
       const imgData = canvas.toDataURL('image/jpeg', 1.0);
       const pdf = new jsPDF({
         orientation: 'landscape',
@@ -216,14 +218,34 @@ export default function CalendrierTab({
       });
       
       const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = pdfWidth;
+      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
       
-      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
+      let heightLeft = imgHeight;
+      let position = 0;
+      let page = 1;
+      
+      // Ajouter la première page
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+      heightLeft -= pdfHeight;
+      
+      // Ajouter les pages suivantes si nécessaire
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+        heightLeft -= pdfHeight;
+        page++;
+      }
+      
+      console.log(`PDF généré avec ${page} page(s)`);
       pdf.save(`calendrier_complet_${new Date().toISOString().split('T')[0]}.pdf`);
       
       // Restaurer les styles
       calendarRef.current.style.height = originalHeight;
       calendarRef.current.style.overflow = originalOverflow;
+      calendarRef.current.style.width = originalWidth;
       
     } catch (error) {
       console.error('Erreur:', error);
@@ -238,7 +260,6 @@ export default function CalendrierTab({
     setShowExportOptions(false);
     
     try {
-      const html2pdf = require('html2pdf.js');
       const defenses = getFilteredDefenses();
       
       if (defenses.length === 0) {
@@ -246,12 +267,6 @@ export default function CalendrierTab({
         setIsExporting(false);
         return;
       }
-      
-      // Créer le contenu HTML
-      const container = document.createElement('div');
-      container.style.padding = '20px';
-      container.style.fontFamily = 'Arial, sans-serif';
-      container.style.backgroundColor = 'white';
       
       // Grouper par jour et local
       const grouped: Record<string, Record<string, Eleve[]>> = {};
@@ -264,6 +279,13 @@ export default function CalendrierTab({
         grouped[date][location].push(defense);
       });
       
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      let isFirstPage = true;
       const sortedDates = Object.keys(grouped).sort();
       
       for (const date of sortedDates) {
@@ -275,90 +297,144 @@ export default function CalendrierTab({
             (a.heure_defense || '').localeCompare(b.heure_defense || '')
           );
           
-          // Page
-          const pageDiv = document.createElement('div');
-          pageDiv.style.pageBreakAfter = 'always';
-          pageDiv.style.marginBottom = '20px';
+          if (!isFirstPage) {
+            pdf.addPage();
+          }
+          isFirstPage = false;
           
           // En-tête
-          const header = document.createElement('div');
-          header.style.textAlign = 'center';
-          header.style.marginBottom = '20px';
-          header.innerHTML = `
-            <h2 style="margin: 0; color: #333;">${new Date(date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</h2>
-            <p style="margin: 5px 0; color: #666;"><strong>Local :</strong> ${location}</p>
-            <p style="margin: 5px 0; color: #666;"><strong>Nombre de défenses :</strong> ${dayDefenses.length}</p>
-          `;
-          pageDiv.appendChild(header);
+          pdf.setFontSize(16);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(new Date(date).toLocaleDateString('fr-FR', { 
+            weekday: 'long', 
+            day: 'numeric', 
+            month: 'long', 
+            year: 'numeric' 
+          }), 105, 20, { align: 'center' });
           
-          // Tableau
-          const table = document.createElement('table');
-          table.style.width = '100%';
-          table.style.borderCollapse = 'collapse';
-          table.style.marginBottom = '20px';
+          pdf.setFontSize(12);
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(`Local : ${location}`, 105, 30, { align: 'center' });
+          pdf.text(`Nombre de défenses : ${dayDefenses.length}`, 105, 37, { align: 'center' });
           
-          const thead = document.createElement('thead');
-          thead.innerHTML = `
-            <tr style="background-color: #f2f2f2;">
-              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Horaire</th>
-              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Élève</th>
-              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Problématique</th>
-              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Catégorie</th>
-              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Guide</th>
-              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Lecteur interne</th>
-              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Lecteur externe</th>
-              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Médiateur</th>
-             </tr>
-          `;
-          table.appendChild(thead);
+          // Ligne séparatrice
+          pdf.line(10, 45, 200, 45);
           
-          const tbody = document.createElement('tbody');
+          // En-têtes du tableau
+          const startY = 55;
+          const rowHeight = 10;
+          const colWidths = {
+            horaire: 20,
+            eleve: 30,
+            problematique: 50,
+            categorie: 25,
+            guide: 25,
+            lecteurInterne: 25,
+            lecteurExterne: 25,
+            mediateur: 25
+          };
+          
+          let currentY = startY;
+          
+          // Dessiner les en-têtes
+          pdf.setFillColor(242, 242, 242);
+          pdf.rect(10, currentY, 190, rowHeight, 'F');
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(9);
+          
+          let x = 10;
+          pdf.text('Horaire', x + 2, currentY + 7);
+          x += colWidths.horaire;
+          pdf.text('Élève', x + 2, currentY + 7);
+          x += colWidths.eleve;
+          pdf.text('Problématique', x + 2, currentY + 7);
+          x += colWidths.problematique;
+          pdf.text('Catégorie', x + 2, currentY + 7);
+          x += colWidths.categorie;
+          pdf.text('Guide', x + 2, currentY + 7);
+          x += colWidths.guide;
+          pdf.text('Lecteur\ninterne', x + 2, currentY + 5);
+          x += colWidths.lecteurInterne;
+          pdf.text('Lecteur\nexterne', x + 2, currentY + 5);
+          x += colWidths.lecteurExterne;
+          pdf.text('Médiateur', x + 2, currentY + 7);
+          
+          currentY += rowHeight;
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(8);
+          
+          // Remplir les lignes
           for (const defense of dayDefenses) {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-              <td style="border: 1px solid #ddd; padding: 8px; white-space: nowrap;">${defense.heure_defense?.substring(0, 5) || '-'}</td>
-              <td style="border: 1px solid #ddd; padding: 8px;"><strong>${defense.prenom} ${defense.nom}</strong><br><small>${defense.classe}</small></td>
-              <td style="border: 1px solid #ddd; padding: 8px; max-width: 300px;">${(defense.problematique || '-').substring(0, 150)}${(defense.problematique || '').length > 150 ? '...' : ''}</td>
-              <td style="border: 1px solid #ddd; padding: 8px;">${defense.categorie || '-'}</td>
-              <td style="border: 1px solid #ddd; padding: 8px;">${defense.guide_prenom || ''} ${defense.guide_nom || '-'}</td>
-              <td style="border: 1px solid #ddd; padding: 8px;">${defense.lecteur_interne_prenom || ''} ${defense.lecteur_interne_nom || '-'}</td>
-              <td style="border: 1px solid #ddd; padding: 8px;">${defense.lecteur_externe_prenom || ''} ${defense.lecteur_externe_nom || '-'}</td>
-              <td style="border: 1px solid #ddd; padding: 8px;">${defense.mediateur_prenom || ''} ${defense.mediateur_nom || '-'}</td>
-            `;
-            tbody.appendChild(row);
+            // Vérifier si on a besoin d'une nouvelle page
+            if (currentY + rowHeight > 280) {
+              pdf.addPage();
+              currentY = 20;
+              // Re-dessiner les en-têtes sur la nouvelle page
+              pdf.setFillColor(242, 242, 242);
+              pdf.rect(10, currentY, 190, rowHeight, 'F');
+              pdf.setFont('helvetica', 'bold');
+              x = 10;
+              pdf.text('Horaire', x + 2, currentY + 7);
+              x += colWidths.horaire;
+              pdf.text('Élève', x + 2, currentY + 7);
+              x += colWidths.eleve;
+              pdf.text('Problématique', x + 2, currentY + 7);
+              x += colWidths.problematique;
+              pdf.text('Catégorie', x + 2, currentY + 7);
+              x += colWidths.categorie;
+              pdf.text('Guide', x + 2, currentY + 7);
+              x += colWidths.guide;
+              pdf.text('Lecteur\ninterne', x + 2, currentY + 5);
+              x += colWidths.lecteurInterne;
+              pdf.text('Lecteur\nexterne', x + 2, currentY + 5);
+              x += colWidths.lecteurExterne;
+              pdf.text('Médiateur', x + 2, currentY + 7);
+              currentY += rowHeight;
+              pdf.setFont('helvetica', 'normal');
+            }
+            
+            // Dessiner la ligne
+            x = 10;
+            pdf.text(defense.heure_defense?.substring(0, 5) || '-', x + 2, currentY + 5);
+            x += colWidths.horaire;
+            
+            const eleveText = `${defense.prenom} ${defense.nom}\n${defense.classe}`;
+            const eleveLines = pdf.splitTextToSize(eleveText, colWidths.eleve - 4);
+            pdf.text(eleveLines, x + 2, currentY + 5);
+            x += colWidths.eleve;
+            
+            const problematique = (defense.problematique || '-').substring(0, 100);
+            const probLines = pdf.splitTextToSize(problematique, colWidths.problematique - 4);
+            pdf.text(probLines, x + 2, currentY + 5);
+            x += colWidths.problematique;
+            
+            pdf.text(defense.categorie || '-', x + 2, currentY + 5);
+            x += colWidths.categorie;
+            
+            pdf.text(`${defense.guide_prenom || ''} ${defense.guide_nom || '-'}`.substring(0, 15), x + 2, currentY + 5);
+            x += colWidths.guide;
+            
+            pdf.text(`${defense.lecteur_interne_prenom || ''} ${defense.lecteur_interne_nom || '-'}`.substring(0, 15), x + 2, currentY + 5);
+            x += colWidths.lecteurInterne;
+            
+            pdf.text(`${defense.lecteur_externe_prenom || ''} ${defense.lecteur_externe_nom || '-'}`.substring(0, 15), x + 2, currentY + 5);
+            x += colWidths.lecteurExterne;
+            
+            pdf.text(`${defense.mediateur_prenom || ''} ${defense.mediateur_nom || '-'}`.substring(0, 15), x + 2, currentY + 5);
+            
+            currentY += rowHeight * Math.max(1, eleveLines.length, probLines.length);
           }
-          table.appendChild(tbody);
-          pageDiv.appendChild(table);
           
-          container.appendChild(pageDiv);
+          // Ajouter une ligne de séparation après le tableau
+          pdf.line(10, currentY, 200, currentY);
         }
       }
       
-      // Ajouter au DOM
-      const tempContainer = document.createElement('div');
-      tempContainer.style.position = 'absolute';
-      tempContainer.style.left = '-9999px';
-      tempContainer.style.top = '-9999px';
-      tempContainer.appendChild(container);
-      document.body.appendChild(tempContainer);
-      
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      const opt = {
-        margin: [0.5, 0.5, 0.5, 0.5],
-        filename: `calendrier_par_jour_local_${new Date().toISOString().split('T')[0]}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: true, backgroundColor: '#ffffff' },
-        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-      };
-      
-      await html2pdf().from(tempContainer).set(opt).save();
-      document.body.removeChild(tempContainer);
+      pdf.save(`calendrier_par_jour_local_${new Date().toISOString().split('T')[0]}.pdf`);
       
     } catch (error) {
-      console.error('Erreur détaillée:', error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      alert('Erreur lors de l\'export: ' + errorMessage);
+      console.error('Erreur:', error);
+      alert('Erreur lors de l\'export: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
       setIsExporting(false);
     }
