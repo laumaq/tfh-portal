@@ -371,151 +371,100 @@ export default function CalendrierTab({
   };
   
   const handleExportFull = async () => {
+    if (!calendarRef.current) {
+      alert('Le calendrier n\'est pas encore chargé');
+      return;
+    }
+    
     setIsExporting(true);
     setShowExportOptions(false);
     
     try {
-      const defenses = getFilteredDefenses();
+      // Sauvegarder les styles originaux
+      const originalHeight = calendarRef.current.style.height;
+      const originalOverflow = calendarRef.current.style.overflow;
+      const originalMaxHeight = calendarRef.current.style.maxHeight;
+      const originalPosition = calendarRef.current.style.position;
       
-      if (defenses.length === 0) {
-        alert('Aucune défense à exporter avec les filtres actuels.');
-        setIsExporting(false);
-        return;
-      }
+      // Forcer les styles pour que tout le contenu soit visible
+      calendarRef.current.style.height = 'auto';
+      calendarRef.current.style.overflow = 'visible';
+      calendarRef.current.style.maxHeight = 'none';
+      calendarRef.current.style.position = 'relative';
       
-      // Grouper par jour
-      const groupedByDay: Record<string, Eleve[]> = {};
+      // Attendre que le DOM se mette à jour
+      await new Promise(resolve => setTimeout(resolve, 300));
       
-      defenses.forEach(defense => {
-        const date = defense.date_defense!;
-        if (!groupedByDay[date]) groupedByDay[date] = [];
-        groupedByDay[date].push(defense);
+      // Calculer la hauteur réelle du contenu
+      const scrollHeight = calendarRef.current.scrollHeight;
+      const rect = calendarRef.current.getBoundingClientRect();
+      
+      console.log('Hauteur réelle du calendrier:', scrollHeight, 'px');
+      
+      // Capturer avec html2canvas
+      const canvas = await html2canvas(calendarRef.current, {
+        scale: 1.5,
+        useCORS: true,
+        logging: true,
+        backgroundColor: '#ffffff',
+        windowWidth: calendarRef.current.scrollWidth,
+        windowHeight: scrollHeight,
+        height: scrollHeight,
+        y: 0
       });
       
+      console.log('Canvas size:', canvas.width, canvas.height);
+      
+      if (canvas.height === 0) {
+        throw new Error('La hauteur du canvas est 0');
+      }
+      
+      // Restaurer les styles
+      calendarRef.current.style.height = originalHeight;
+      calendarRef.current.style.overflow = originalOverflow;
+      calendarRef.current.style.maxHeight = originalMaxHeight;
+      calendarRef.current.style.position = originalPosition;
+      
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
       const pdf = new jsPDF({
         orientation: 'landscape',
         unit: 'mm',
         format: 'a4'
       });
       
-      // Largeurs des colonnes optimisées pour paysage
-      const colWidths = {
-        local: 25,
-        horaire: 15,
-        eleve: 25,
-        problematique: 35,
-        categorie: 20,
-        guide: 18,
-        lecteurInterne: 18,
-        lecteurExterne: 18,
-        mediateur: 18
-      };
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = pdfWidth;
+      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
       
-      let isFirstPage = true;
-      const sortedDates = Object.keys(groupedByDay).sort();
+      let heightLeft = imgHeight;
+      let position = 0;
+      let page = 1;
       
-      for (const date of sortedDates) {
-        const dayDefenses = groupedByDay[date].sort((a, b) => 
-          (a.heure_defense || '').localeCompare(b.heure_defense || '')
-        );
-        
-        if (!isFirstPage) {
-          pdf.addPage();
-        }
-        isFirstPage = false;
-        
-        // En-tête du jour
-        pdf.setFontSize(12);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(new Date(date).toLocaleDateString('fr-FR', { 
-          weekday: 'long', 
-          day: 'numeric', 
-          month: 'long', 
-          year: 'numeric' 
-        }), 150, 15, { align: 'center' });
-        
-        pdf.line(10, 20, 200, 20);
-        
-        // En-têtes du tableau
-        let currentY = 28;
-        const rowHeight = 8;
-        
-        // Alternance des couleurs de lignes
-        let rowIndex = 0;
-        
-        for (const defense of dayDefenses) {
-          // Vérifier si besoin d'une nouvelle page
-          if (currentY + rowHeight * 2 > 190) {
-            pdf.addPage();
-            currentY = 15;
-            rowIndex = 0;
-          }
-          
-          // Alternance des couleurs
-          if (rowIndex % 2 === 0) {
-            pdf.setFillColor(245, 245, 245);
-            pdf.rect(10, currentY, 190, rowHeight * 1.5, 'F');
-          }
-          
-          pdf.setFont('helvetica', 'normal');
-          pdf.setFontSize(7);
-          
-          let x = 10;
-          
-          // Local
-          pdf.text((defense.localisation_defense || '-').substring(0, 20), x + 1, currentY + 5);
-          x += colWidths.local;
-          
-          // Horaire
-          pdf.text(defense.heure_defense?.substring(0, 5) || '-', x + 1, currentY + 5);
-          x += colWidths.horaire;
-          
-          // Élève
-          const eleveText = `${defense.prenom.substring(0, 12)} ${defense.nom.substring(0, 12)}\n${defense.classe}`;
-          const eleveLines = pdf.splitTextToSize(eleveText, colWidths.eleve - 2);
-          pdf.text(eleveLines, x + 1, currentY + 5);
-          x += colWidths.eleve;
-          
-          // Problématique
-          const problematique = (defense.problematique || '-').substring(0, 60);
-          const probLines = pdf.splitTextToSize(problematique, colWidths.problematique - 2);
-          pdf.text(probLines, x + 1, currentY + 5);
-          x += colWidths.problematique;
-          
-          // Catégorie
-          pdf.text((defense.categorie || '-').substring(0, 15), x + 1, currentY + 5);
-          x += colWidths.categorie;
-          
-          // Guide
-          pdf.text(`${defense.guide_prenom?.substring(0, 1) || ''} ${defense.guide_nom?.substring(0, 10) || '-'}`, x + 1, currentY + 5);
-          x += colWidths.guide;
-          
-          // Lecteur interne
-          pdf.text(`${defense.lecteur_interne_prenom?.substring(0, 1) || ''} ${defense.lecteur_interne_nom?.substring(0, 10) || '-'}`, x + 1, currentY + 5);
-          x += colWidths.lecteurInterne;
-          
-          // Lecteur externe
-          pdf.text(`${defense.lecteur_externe_prenom?.substring(0, 1) || ''} ${defense.lecteur_externe_nom?.substring(0, 10) || '-'}`, x + 1, currentY + 5);
-          x += colWidths.lecteurExterne;
-          
-          // Médiateur
-          pdf.text(`${defense.mediateur_prenom?.substring(0, 1) || ''} ${defense.mediateur_nom?.substring(0, 10) || '-'}`, x + 1, currentY + 5);
-          
-          currentY += rowHeight * Math.max(1, eleveLines.length, probLines.length);
-          rowIndex++;
-        }
-        
-        // Ajouter une ligne de séparation après le jour
-        if (sortedDates.indexOf(date) < sortedDates.length - 1) {
-          pdf.line(10, currentY + 2, 200, currentY + 2);
-        }
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+      heightLeft -= pdfHeight;
+      
+      while (heightLeft > 0) {
+        position = - (imgHeight - heightLeft);
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+        heightLeft -= pdfHeight;
+        page++;
       }
       
-      pdf.save(`calendrier_complet_${new Date().toISOString().split('T')[0]}.pdf`);
+      console.log(`PDF généré avec ${page} page(s)`);
+      pdf.save(`calendrier_visuel_${new Date().toISOString().split('T')[0]}.pdf`);
       
     } catch (error) {
       console.error('Erreur:', error);
-      alert('Erreur lors de l\'export');
+      alert('Erreur lors de l\'export: ' + (error instanceof Error ? error.message : String(error)));
+      // Restaurer les styles en cas d'erreur
+      if (calendarRef.current) {
+        calendarRef.current.style.height = '';
+        calendarRef.current.style.overflow = '';
+        calendarRef.current.style.maxHeight = '';
+        calendarRef.current.style.position = '';
+      }
     } finally {
       setIsExporting(false);
     }
