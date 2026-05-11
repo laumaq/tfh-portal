@@ -392,109 +392,111 @@ export default function CalendrierTab({
       });
       
       const pdf = new jsPDF({
-        orientation: 'landscape',
+        orientation: 'portrait',
         unit: 'mm',
         format: 'a4'
       });
       
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const startHour = 8;
-      const endHour = 18;
-      const totalHours = endHour - startHour;
-      const cellHeight = 48; // mm par heure
-      const colWidth = 45; // mm par local
       
+      // Paramètres de mise en page
+      const marginX = 15;
+      const marginY = 20;
+      const boxWidth = pageWidth - marginX * 2;
+      const boxHeight = 65; // Hauteur d'une case de défense
+      const boxesPerPage = Math.floor((pageHeight - marginY * 2) / boxHeight);
+      
+      let currentPage = 1;
+      let currentBoxIndex = 0;
       let isFirstPage = true;
       const sortedDates = Object.keys(groupedByDay).sort();
       
       for (const date of sortedDates) {
         const dayDefenses = groupedByDay[date];
         
-        // Récupérer tous les locaux uniques pour ce jour
-        const locations = Array.from(new Set(dayDefenses.map(d => d.localisation_defense || 'Non défini'))).sort();
-        
-        if (!isFirstPage) {
-          pdf.addPage();
-        }
-        isFirstPage = false;
-        
-        // En-tête
-        pdf.setFontSize(14);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(new Date(date).toLocaleDateString('fr-FR', { 
-          weekday: 'long', 
-          day: 'numeric', 
-          month: 'long', 
-          year: 'numeric' 
-        }), pageWidth / 2, 15, { align: 'center' });
-        
-        let startX = 30;
-        let startY = 30;
-        
-        // Dessiner l'en-tête des locaux
-        pdf.setFontSize(9);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Heure', startX - 15, startY + 5);
-        
-        for (let i = 0; i < locations.length; i++) {
-          const x = startX + i * colWidth;
-          pdf.rect(x, startY, colWidth, 8, 'S');
-          pdf.text(locations[i].substring(0, 20), x + 2, startY + 5);
-        }
-        
-        startY += 8;
-        
-        // Dessiner la grille horaire
-        for (let hour = startHour; hour <= endHour; hour++) {
-          const y = startY + (hour - startHour) * cellHeight;
-          pdf.setFontSize(8);
-          pdf.setFont('helvetica', 'normal');
-          pdf.text(`${hour}h00`, startX - 15, y + 4);
-          
-          for (let i = 0; i <= locations.length; i++) {
-            const x = startX + i * colWidth;
-            pdf.line(x, y, x + colWidth, y);
-          }
-        }
-        
-        // Dessiner les événements
         for (const defense of dayDefenses) {
-          const location = defense.localisation_defense || 'Non défini';
-          const locIndex = locations.indexOf(location);
-          if (locIndex === -1) continue;
-          
-          const [hours, minutes] = (defense.heure_defense || '08:00').split(':').map(Number);
-          const startYOffset = (hours - startHour) * cellHeight + (minutes / 60) * cellHeight;
-          const duration = 50; // minutes
-          const height = (duration / 60) * cellHeight;
-          
-          const x = startX + locIndex * colWidth;
-          const y = startY + startYOffset;
-          
-          const color = getCategoryColor(defense.categorie || '');
-          
-          pdf.setFillColor(parseInt(color.bg.slice(1, 3), 16), parseInt(color.bg.slice(3, 5), 16), parseInt(color.bg.slice(5, 7), 16));
-          pdf.rect(x + 1, y + 1, colWidth - 2, height - 1, 'F');
-          pdf.setDrawColor(parseInt(color.border.slice(1, 3), 16), parseInt(color.border.slice(3, 5), 16), parseInt(color.border.slice(5, 7), 16));
-          pdf.rect(x + 1, y + 1, colWidth - 2, height - 1, 'S');
-          
-          pdf.setFontSize(6);
-          pdf.setTextColor(0, 0, 0);
-          pdf.text(`${defense.heure_defense?.substring(0, 5)}`, x + 3, y + 4);
-          pdf.text(`${defense.prenom} ${defense.nom}`, x + 3, y + 8);
-          pdf.text(defense.classe || '', x + 3, y + 12);
-          
-          if (defense.problematique) {
-            const probText = defense.problematique.substring(0, 30);
-            pdf.text(probText, x + 3, y + 16);
+          // Nouvelle page si nécessaire
+          if (currentBoxIndex >= boxesPerPage) {
+            pdf.addPage();
+            currentPage++;
+            currentBoxIndex = 0;
+            isFirstPage = false;
           }
+          
+          // Calculer la position Y de la case
+          const startY = marginY + currentBoxIndex * boxHeight;
+          
+          // Titre de la défense (sur plusieurs lignes)
+          pdf.setFontSize(12);
+          pdf.setFont('helvetica', 'bold');
+          
+          const title = `${defense.prenom} ${defense.nom} - ${defense.classe} - ${new Date(date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })} à ${defense.heure_defense?.substring(0, 5)}`;
+          const titleLines = pdf.splitTextToSize(title, boxWidth - 10);
+          pdf.text(titleLines, marginX + 5, startY + 8);
+          
+          let currentY = startY + 8 + (titleLines.length * 5);
+          
+          // Localisation
+          pdf.setFontSize(9);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text('Local :', marginX + 5, currentY);
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(defense.localisation_defense || 'Non défini', marginX + 30, currentY);
+          currentY += 6;
+          
+          // Catégorie
+          pdf.setFont('helvetica', 'bold');
+          pdf.text('Catégorie :', marginX + 5, currentY);
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(defense.categorie || 'Non catégorisé', marginX + 30, currentY);
+          currentY += 6;
+          
+          // Problématique (avec retour à la ligne)
+          pdf.setFont('helvetica', 'bold');
+          pdf.text('Problématique :', marginX + 5, currentY);
+          pdf.setFont('helvetica', 'normal');
+          const probLines = pdf.splitTextToSize(defense.problematique || 'Aucune', boxWidth - 40);
+          pdf.text(probLines, marginX + 35, currentY);
+          currentY += 5 + (probLines.length * 5);
+          
+          // Séparateur
+          pdf.line(marginX, currentY, marginX + boxWidth, currentY);
+          currentY += 5;
+          
+          // Guide
+          pdf.setFont('helvetica', 'bold');
+          pdf.text('Guide :', marginX + 5, currentY);
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(`${defense.guide_prenom || ''} ${defense.guide_nom || '-'}`, marginX + 25, currentY);
+          currentY += 6;
+          
+          // Lecteur interne
+          pdf.setFont('helvetica', 'bold');
+          pdf.text('Lecteur interne :', marginX + 5, currentY);
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(`${defense.lecteur_interne_prenom || ''} ${defense.lecteur_interne_nom || '-'}`, marginX + 45, currentY);
+          currentY += 6;
+          
+          // Lecteur externe
+          pdf.setFont('helvetica', 'bold');
+          pdf.text('Lecteur externe :', marginX + 5, currentY);
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(`${defense.lecteur_externe_prenom || ''} ${defense.lecteur_externe_nom || '-'}`, marginX + 45, currentY);
+          currentY += 6;
+          
+          // Médiateur
+          pdf.setFont('helvetica', 'bold');
+          pdf.text('Médiateur :', marginX + 5, currentY);
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(`${defense.mediateur_prenom || ''} ${defense.mediateur_nom || '-'}`, marginX + 35, currentY);
+          
+          // Cadre autour de la case
+          pdf.setDrawColor(200, 200, 200);
+          pdf.rect(marginX, startY, boxWidth, boxHeight - 5);
+          
+          currentBoxIndex++;
         }
-        
-        // Ajouter une légende en bas de page
-        pdf.setFontSize(8);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Guide: G | Lecteur interne: I | Lecteur externe: E | Médiateur: M', 30, pageHeight - 15);
       }
       
       pdf.save(`calendrier_visuel_${new Date().toISOString().split('T')[0]}.pdf`);
