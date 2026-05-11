@@ -494,6 +494,12 @@ export default function CalendrierTab({
           
           // Dessiner les événements
           for (const defense of slotDefenses) {
+              // LOG POUR VÉRIFIER LES MÉDIATEURS
+            console.log('Défense:', defense.prenom, defense.nom);
+            console.log('  - mediateur_nom:', defense.mediateur_nom);
+            console.log('  - mediateur_prenom:', defense.mediateur_prenom);
+            console.log('  - mediateur_id:', defense.mediateur_id);
+            
             const location = defense.localisation_defense || 'Non défini';
             const locIndex = locations.indexOf(location);
             if (locIndex === -1) continue;
