@@ -3,7 +3,6 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-const html2pdf = require('html2pdf.js');
 import CalendarDisplay from '@/app/components/CalendarDisplay';
 import ConflictDisplay from '../components/ConflictDisplay';
 import { Eleve, DefenseEvent, Conflict } from '../types';
@@ -290,6 +289,10 @@ export default function CalendrierTab({
     setIsExporting(true);
     
     try {
+      // Importer dynamiquement html2pdf uniquement au moment du clic
+      const html2pdfModule = await import('html2pdf.js');
+      const html2pdf = html2pdfModule.default;
+      
       const opt = {
         margin: [0.5, 0.5, 0.5, 0.5],
         filename: `calendrier_defenses_${new Date().toISOString().split('T')[0]}.pdf`,
@@ -323,13 +326,13 @@ export default function CalendrierTab({
       
       document.body.removeChild(container);
       
-    } catch (error) {
-      console.error('Erreur lors de l\'export PDF:', error);
-      alert('Une erreur est survenue lors de la génération du PDF');
-    } finally {
-      setIsExporting(false);
-    }
-  };
+        } catch (error) {
+        console.error('Erreur lors de l\'export PDF:', error);
+        alert('Une erreur est survenue lors de la génération du PDF');
+      } finally {
+        setIsExporting(false);
+      }
+    };
 
   return (
     <div className="space-y-6">
