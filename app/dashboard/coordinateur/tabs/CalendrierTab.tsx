@@ -369,7 +369,7 @@ export default function CalendrierTab({
       setIsExporting(false);
     }
   };
-  
+    
   const handleExportFull = async () => {
     setIsExporting(true);
     setShowExportOptions(false);
@@ -403,9 +403,9 @@ export default function CalendrierTab({
       
       // Plages horaires
       const timeSlots = [
-        { name: 'Matin (08h00 - 11h00)', startHour: 8, endHour: 11, startY: 35 },
-        { name: 'Milieu de journée (11h00 - 13h55)', startHour: 11, endHour: 13.916, startY: 35 },
-        { name: 'Après-midi (13h55 - 17h20)', startHour: 13.916, endHour: 17.333, startY: 35 }
+        { name: 'Matin (08h00 - 11h00)', startHour: 8, endHour: 11, startY: 28 },
+        { name: 'Milieu de journée (11h00 - 13h55)', startHour: 11, endHour: 13.916, startY: 28 },
+        { name: 'Après-midi (13h55 - 17h20)', startHour: 13.916, endHour: 17.333, startY: 28 }
       ];
       
       let isFirstPage = true;
@@ -434,18 +434,18 @@ export default function CalendrierTab({
           }
           isFirstPage = false;
           
-          // En-tête de la page
-          pdf.setFontSize(12);
+          // En-tête de la page (compressé)
+          pdf.setFontSize(11);
           pdf.setFont('helvetica', 'bold');
           pdf.text(new Date(date).toLocaleDateString('fr-FR', { 
             weekday: 'long', 
             day: 'numeric', 
             month: 'long', 
             year: 'numeric' 
-          }), pageWidth / 2, 15, { align: 'center' });
+          }), pageWidth / 2, 12, { align: 'center' });
           
-          pdf.setFontSize(10);
-          pdf.text(slot.name, pageWidth / 2, 23, { align: 'center' });
+          pdf.setFontSize(9);
+          pdf.text(slot.name, pageWidth / 2, 19, { align: 'center' });
           
           let startX = 35;
           let startY = slot.startY;
@@ -454,15 +454,15 @@ export default function CalendrierTab({
           // Dessiner l'en-tête des locaux
           pdf.setFontSize(8);
           pdf.setFont('helvetica', 'bold');
-          pdf.text('Heure', startX - 15, startY + 5);
+          pdf.text('Horaire', startX - 15, startY + 4);
           
           for (let i = 0; i < locations.length; i++) {
             const x = startX + i * colWidth;
-            pdf.rect(x, startY, colWidth, 8, 'S');
-            pdf.text(locations[i].substring(0, 25), x + 2, startY + 5);
+            pdf.rect(x, startY, colWidth, 7, 'S');
+            pdf.text(locations[i].substring(0, 25), x + 2, startY + 4.5);
           }
           
-          startY += 8;
+          startY += 7;
           
           // Calculer la hauteur totale de la plage horaire
           const slotDuration = slot.endHour - slot.startHour;
@@ -478,7 +478,14 @@ export default function CalendrierTab({
             
             pdf.setFontSize(7);
             pdf.setFont('helvetica', 'normal');
-            pdf.text(`${hour}h00`, startX - 15, y + 4);
+            
+            // Heure de début - heure de fin
+            const nextHour = hour + 1;
+            let endDisplay = `${nextHour}h00`;
+            if (nextHour === 11) endDisplay = '11h00';
+            else if (nextHour === 14) endDisplay = '14h00';
+            else if (nextHour === 18) endDisplay = '18h00';
+            pdf.text(`${hour}h00 - ${endDisplay}`, startX - 15, y + 3);
             
             // Demi-heure
             const halfY = y + cellHeight / 2;
@@ -489,7 +496,7 @@ export default function CalendrierTab({
           // Lignes verticales des locaux
           for (let i = 0; i <= locations.length; i++) {
             const x = startX + i * colWidth;
-            pdf.line(x, startY - 8, x, startY + totalHeight);
+            pdf.line(x, startY - 7, x, startY + totalHeight);
           }
           
           // Dessiner les événements
@@ -529,42 +536,64 @@ export default function CalendrierTab({
             pdf.text(eleveText, x + 2, currentY);
             currentY += 4;
             
+            // Problématique (retour à la ligne)
+            pdf.setFont('helvetica', 'italic');
+            pdf.setFontSize(5);
+            if (defense.problematique) {
+              const probLines = pdf.splitTextToSize(defense.problematique.substring(0, 100), colWidth - 6);
+              for (const line of probLines) {
+                if (currentY + 3 > y + height - 12) break;
+                pdf.text(line, x + 2, currentY);
+                currentY += 3;
+              }
+            }
+            currentY += 2;
+            pdf.setFontSize(6);
+            pdf.setFont('helvetica', 'normal');
+            
+            // Ligne séparatrice
+            if (currentY + 2 < y + height - 8) {
+              pdf.line(x + 2, currentY, x + colWidth - 4, currentY);
+              currentY += 3;
+            }
+            
             // Guide
             pdf.setFont('helvetica', 'bold');
             pdf.text('G:', x + 2, currentY);
             pdf.setFont('helvetica', 'normal');
-            pdf.text(`${defense.guide_prenom?.substring(0, 1) || ''} ${defense.guide_nom?.substring(0, 8) || '-'}`, x + 10, currentY);
+            pdf.text(`${defense.guide_prenom?.substring(0, 1) || ''} ${defense.guide_nom?.substring(0, 8) || '-'}`, x + 9, currentY);
             currentY += 4;
             
             // Lecteur interne
-            if (currentY + 3 < y + height - 3) {
+            if (currentY + 3 < y + height - 4) {
               pdf.setFont('helvetica', 'bold');
               pdf.text('LI:', x + 2, currentY);
               pdf.setFont('helvetica', 'normal');
-              pdf.text(`${defense.lecteur_interne_prenom?.substring(0, 1) || ''} ${defense.lecteur_interne_nom?.substring(0, 8) || '-'}`, x + 12, currentY);
+              pdf.text(`${defense.lecteur_interne_prenom?.substring(0, 1) || ''} ${defense.lecteur_interne_nom?.substring(0, 8) || '-'}`, x + 11, currentY);
               currentY += 4;
             }
             
             // Lecteur externe
-            if (currentY + 3 < y + height - 3) {
+            if (currentY + 3 < y + height - 4) {
               pdf.setFont('helvetica', 'bold');
               pdf.text('LE:', x + 2, currentY);
               pdf.setFont('helvetica', 'normal');
-              pdf.text(`${defense.lecteur_externe_prenom?.substring(0, 1) || ''} ${defense.lecteur_externe_nom?.substring(0, 8) || '-'}`, x + 12, currentY);
+              pdf.text(`${defense.lecteur_externe_prenom?.substring(0, 1) || ''} ${defense.lecteur_externe_nom?.substring(0, 8) || '-'}`, x + 11, currentY);
               currentY += 4;
             }
             
             // Médiateur
-            if (currentY + 3 < y + height - 3) {
+            if (currentY + 3 < y + height - 4) {
               pdf.setFont('helvetica', 'bold');
               pdf.text('M:', x + 2, currentY);
               pdf.setFont('helvetica', 'normal');
-              pdf.text(`${defense.mediateur_prenom?.substring(0, 1) || ''} ${defense.mediateur_nom?.substring(0, 8) || '-'}`, x + 9, currentY);
+              pdf.text(`${defense.mediateur_prenom?.substring(0, 1) || ''} ${defense.mediateur_nom?.substring(0, 8) || '-'}`, x + 8, currentY);
             }
           }
           
-          // Ligne de fin
-          pdf.line(startX - 15, startY + totalHeight, startX + locations.length * colWidth, startY + totalHeight);
+          // Ligne de fin (sans barre bleue supplémentaire)
+          pdf.setLineWidth(0.3);
+          pdf.line(startX - 15, startY + totalHeight - 1, startX + locations.length * colWidth, startY + totalHeight - 1);
         }
       }
       
