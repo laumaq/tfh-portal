@@ -402,7 +402,7 @@ export default function CalendrierTab({
       const startHour = 8;
       const endHour = 18;
       const totalHours = endHour - startHour;
-      const cellHeight = 24; // mm par heure
+      const cellHeight = 48; // mm par heure
       const colWidth = 45; // mm par local
       
       let isFirstPage = true;
