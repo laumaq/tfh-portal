@@ -388,10 +388,11 @@ export default function CalendarDisplay({
               
               <div className="overflow-x-auto relative">
                 <div className="min-w-full">
+                  
                   {/* En-tête fixe */}
                   <div className="sticky top-0 z-10 bg-white">
                     <div className="flex border-t border-b border-gray-200 bg-gray-100">
-                      <div className="w-32 px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-100">
+                      <div className="w-[92px] px-4 py-3 text-sm font-semibold text-gray-700 bg-gray-100">
                         Horaire
                       </div>
                       {day.locations.map(location => (
@@ -405,25 +406,25 @@ export default function CalendarDisplay({
                     </div>
                   </div>
                   
-                  <div className="flex border-b border-gray-200">
-                    <div className="w-32 bg-gray-50 border-r border-gray-200">
-                      {Array.from({ length: totalHours }).map((_, i) => {
-                        const hour = 8 + i;
-                        return (
-                          <div 
-                            key={`hour-${hour}`} 
-                            className="border-b border-gray-200"
-                            style={{ height: `${PIXELS_PER_HOUR}px` }}
-                          >
-                            <div className="h-full flex items-center justify-center">
-                              <div className="text-sm font-medium text-gray-700">
-                                {hour}h00
-                              </div>
+                  {/* Colonne des heures */}
+                  <div className="w-[92px] bg-gray-50 border-r border-gray-200">
+                    {Array.from({ length: totalHours }).map((_, i) => {
+                      const hour = 8 + i;
+                      return (
+                        <div 
+                          key={`hour-${hour}`} 
+                          className="border-b border-gray-200"
+                          style={{ height: `${PIXELS_PER_HOUR}px` }}
+                        >
+                          <div className="h-full flex items-center justify-center">
+                            <div className="text-sm font-medium text-gray-700">
+                              {hour}h00
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                     
                     <div className="flex-1 relative" style={{ height: `${totalHeight}px` }}>
                       {Array.from({ length: totalHours + 1 }).map((_, i) => (
