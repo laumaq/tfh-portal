@@ -384,48 +384,51 @@ export default function CalendrierTab({
       const originalHeight = calendarRef.current.style.height;
       const originalOverflow = calendarRef.current.style.overflow;
       const originalMaxHeight = calendarRef.current.style.maxHeight;
-      const originalPosition = calendarRef.current.style.position;
+      const originalWidth = calendarRef.current.style.width;
+      const originalZoom = calendarRef.current.style.zoom;
       
-      // Forcer les styles pour que tout le contenu soit visible
+      // Réduire temporairement la taille d'affichage pour que la capture soit plus nette
+      calendarRef.current.style.zoom = '0.7';
+      calendarRef.current.style.width = '100%';
       calendarRef.current.style.height = 'auto';
       calendarRef.current.style.overflow = 'visible';
       calendarRef.current.style.maxHeight = 'none';
-      calendarRef.current.style.position = 'relative';
       
       // Attendre que le DOM se mette à jour
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Calculer la hauteur réelle du contenu
-      const scrollHeight = calendarRef.current.scrollHeight;
-      const rect = calendarRef.current.getBoundingClientRect();
-      
-      console.log('Hauteur réelle du calendrier:', scrollHeight, 'px');
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Capturer avec html2canvas
       const canvas = await html2canvas(calendarRef.current, {
-        scale: 1.5,
+        scale: 2.5,
         useCORS: true,
         logging: true,
         backgroundColor: '#ffffff',
         windowWidth: calendarRef.current.scrollWidth,
-        windowHeight: scrollHeight,
-        height: scrollHeight,
-        y: 0
+        windowHeight: calendarRef.current.scrollHeight,
+        onclone: (clonedDoc, element) => {
+          // Dans le clone, s'assurer que les styles sont appliqués
+          const clonedCalendar = clonedDoc.querySelector('[data-calendar-ref]');
+          if (clonedCalendar) {
+            clonedCalendar.style.width = '100%';
+            clonedCalendar.style.zoom = '1';
+          }
+        }
       });
       
       console.log('Canvas size:', canvas.width, canvas.height);
-      
-      if (canvas.height === 0) {
-        throw new Error('La hauteur du canvas est 0');
-      }
       
       // Restaurer les styles
       calendarRef.current.style.height = originalHeight;
       calendarRef.current.style.overflow = originalOverflow;
       calendarRef.current.style.maxHeight = originalMaxHeight;
-      calendarRef.current.style.position = originalPosition;
+      calendarRef.current.style.width = originalWidth;
+      calendarRef.current.style.zoom = originalZoom;
       
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      if (canvas.height === 0) {
+        throw new Error('La hauteur du canvas est 0');
+      }
+      
+      const imgData = canvas.toDataURL('image/jpeg', 1.0);
       const pdf = new jsPDF({
         orientation: 'landscape',
         unit: 'mm',
@@ -434,12 +437,20 @@ export default function CalendrierTab({
       
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = pdfWidth;
-      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      // Ajuster l'image pour qu'elle tienne parfaitement dans la largeur sans zoom excessif
+      let imgWidth = pdfWidth;
+      let imgHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      // Si l'image est trop haute, on la redimensionne proportionnellement
+      if (imgHeight > pdfHeight * 1.5) {
+        const ratio = (pdfHeight * 1.5) / imgHeight;
+        imgWidth = imgWidth * ratio;
+        imgHeight = imgHeight * ratio;
+      }
       
       let heightLeft = imgHeight;
       let position = 0;
-      let page = 1;
       
       pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
       heightLeft -= pdfHeight;
@@ -449,10 +460,8 @@ export default function CalendrierTab({
         pdf.addPage();
         pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
         heightLeft -= pdfHeight;
-        page++;
       }
       
-      console.log(`PDF généré avec ${page} page(s)`);
       pdf.save(`calendrier_visuel_${new Date().toISOString().split('T')[0]}.pdf`);
       
     } catch (error) {
@@ -463,7 +472,8 @@ export default function CalendrierTab({
         calendarRef.current.style.height = '';
         calendarRef.current.style.overflow = '';
         calendarRef.current.style.maxHeight = '';
-        calendarRef.current.style.position = '';
+        calendarRef.current.style.width = '';
+        calendarRef.current.style.zoom = '';
       }
     } finally {
       setIsExporting(false);
@@ -937,7 +947,7 @@ export default function CalendrierTab({
             </div>
           </div>
         ) : (
-          <div ref={calendarRef}>
+          <div ref={calendarRef} data-calendar-ref>
             <CalendarDisplay
               eleves={eleves}
               selectedCategories={
