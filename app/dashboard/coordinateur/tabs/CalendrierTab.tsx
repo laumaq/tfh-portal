@@ -2,7 +2,8 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, useMemo  } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import html2pdf from 'html2pdf.js';
 import CalendarDisplay from '@/app/components/CalendarDisplay';
 import ConflictDisplay from '../components/ConflictDisplay';
 import { Eleve, DefenseEvent, Conflict } from '../types';
@@ -24,6 +25,8 @@ export default function CalendrierTab({
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [conflicts, setConflicts] = useState<Conflict[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const calendarRef = useRef<HTMLDivElement>(null);
 
   // Remplacer les calculs directs par useMemo
   const allDates = useMemo(() => 
@@ -281,6 +284,53 @@ export default function CalendrierTab({
     return `${selectedCategories.length} catégories`;
   };
 
+  const handleExportPDF = async () => {
+    if (!calendarRef.current) return;
+    
+    setIsExporting(true);
+    
+    try {
+      const opt = {
+        margin: [0.5, 0.5, 0.5, 0.5],
+        filename: `calendrier_defenses_${new Date().toISOString().split('T')[0]}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+      };
+      
+      const cloneContent = calendarRef.current.cloneNode(true) as HTMLElement;
+      
+      // Ajouter des styles pour le PDF
+      cloneContent.style.width = '100%';
+      cloneContent.style.maxWidth = '100%';
+      cloneContent.style.overflow = 'visible';
+      
+      // Supprimer les boutons et éléments interactifs du clone
+      const buttons = cloneContent.querySelectorAll('button');
+      buttons.forEach(btn => btn.remove());
+      
+      const loadingIndicators = cloneContent.querySelectorAll('.animate-spin');
+      loadingIndicators.forEach(el => el.remove());
+      
+      const container = document.createElement('div');
+      container.style.position = 'absolute';
+      container.style.left = '-9999px';
+      container.style.top = '-9999px';
+      container.appendChild(cloneContent);
+      document.body.appendChild(container);
+      
+      await html2pdf().from(cloneContent).set(opt).save();
+      
+      document.body.removeChild(container);
+      
+    } catch (error) {
+      console.error('Erreur lors de l\'export PDF:', error);
+      alert('Une erreur est survenue lors de la génération du PDF');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Affichage des conflits */}
@@ -288,7 +338,26 @@ export default function CalendrierTab({
       
       {/* Filtres */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Filtres du Calendrier</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold text-gray-800">Filtres du Calendrier</h2>
+          <button
+            onClick={handleExportPDF}
+            disabled={isExporting || isLoading || allDates.length === 0}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isExporting ? (
+              <>
+                <span className="animate-spin">⟳</span>
+                Génération...
+              </>
+            ) : (
+              <>
+                <span>📄</span>
+                Exporter PDF
+              </>
+            )}
+          </button>
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           {/* Filtre des jours */}
@@ -489,16 +558,18 @@ export default function CalendrierTab({
             </div>
           </div>
         ) : (
-          <CalendarDisplay
-            eleves={eleves}
-            selectedCategories={
-              selectedCategories.length === 0 || selectedCategories.length === categories.length
-                ? ['toutes']  // ← Tableau avec 'toutes'
-                : selectedCategories  // ← Déjà un tableau, on le garde
-            }
-            selectedDates={selectedDates}
-            selectedLocations={selectedLocations}
-          />
+          <div ref={calendarRef}>
+            <CalendarDisplay
+              eleves={eleves}
+              selectedCategories={
+                selectedCategories.length === 0 || selectedCategories.length === categories.length
+                  ? ['toutes']
+                  : selectedCategories
+              }
+              selectedDates={selectedDates}
+              selectedLocations={selectedLocations}
+            />
+          </div>
         )}
       </div>
     </div>
