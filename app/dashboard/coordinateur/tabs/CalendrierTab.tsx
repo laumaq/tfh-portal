@@ -234,7 +234,8 @@ export default function CalendrierTab({
       
     } catch (error) {
       console.error('Erreur détaillée:', error);
-      alert('Erreur lors de l\'export: ' + (error.message || error));
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      alert('Erreur lors de l\'export: ' + errorMessage);
     } finally {
       setIsExporting(false);
     }
@@ -363,8 +364,9 @@ export default function CalendrierTab({
       document.body.removeChild(tempContainer);
       
     } catch (error) {
-      console.error('Erreur:', error);
-      alert('Erreur lors de l\'export: ' + error);
+      console.error('Erreur détaillée:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      alert('Erreur lors de l\'export: ' + errorMessage);
     } finally {
       setIsExporting(false);
     }
