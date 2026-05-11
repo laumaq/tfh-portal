@@ -337,8 +337,12 @@ export default function CalendarDisplay({
               
               <div className="overflow-x-auto">
                 <div className="min-w-full">
+                  {/* En-tête avec deux lignes */}
                   <div className="flex border-t border-gray-200">
-                    <div className="w-[92px] bg-gray-50"></div>
+                    {/* Cellule vide pour la colonne horaire */}
+                    <div className="w-[92px] bg-gray-100 border-r border-b border-gray-200 px-4 py-3">
+                      {/* Vide */}
+                    </div>
                     {day.locations.map(location => (
                       <div
                         key={`header-${location}`}
@@ -350,7 +354,7 @@ export default function CalendarDisplay({
                   </div>
                   
                   <div className="flex border-b border-gray-200">
-                    <div className="w-[292px] bg-gray-50 border-r border-gray-200">
+                    <div className="w-[92px] bg-gray-50 border-r border-gray-200">
                       {Array.from({ length: totalHours }).map((_, i) => {
                         const hour = 8 + i;
                         return (
