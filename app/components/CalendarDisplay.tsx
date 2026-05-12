@@ -336,17 +336,16 @@ export default function CalendarDisplay({
               </div>
               
               <div className="overflow-x-auto">
-                <div className="min-w-full">
-                  {/* En-tête sticky */}
-                  <div className="sticky top-0 z-10 bg-white">
+                <div className="min-w-full" style={{ position: 'relative' }}>
+                  {/* En-tête */}
+                  <div className="sticky top-0 z-10" style={{ position: 'sticky', top: 0, backgroundColor: 'white' }}>
                     <div className="flex border-t border-gray-200">
-                      {/* Cellule vide pour la colonne horaire */}
-                      <div className="w-[150px] flex-shrink-0 bg-gray-100 border-r border-b border-gray-200 px-4 py-3">
+                      <div className="w-[92px] flex-shrink-0 bg-gray-100 border-r border-b border-gray-200 px-4 py-3">
                         {/* Vide */}
                       </div>
                       {day.locations.map(location => (
                         <div
-                          key={`header-${location}`}
+                          key={location}
                           className="min-w-[200px] px-4 py-3 text-sm font-semibold text-gray-700 border-r border-b bg-gray-100"
                         >
                           {location}
