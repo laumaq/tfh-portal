@@ -64,6 +64,8 @@ export default function CalendarDisplay({
 
   const containerRefs = useRef<(HTMLDivElement | null)[]>([]);
   const headerRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const headerScrollRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const bodyScrollRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const PIXELS_PER_HOUR = 350;
 
@@ -341,7 +343,18 @@ export default function CalendarDisplay({
                     {day.defenses.length} {pluralize(day.defenses.length, 'défense', 'défenses')} • {day.locations.length} {pluralize(day.locations.length, 'local', 'locaux')}
                   </p>
                 </div>
-                <div className="overflow-x-auto">
+                
+                {/* overflow-x-auto de l'en-tête */}
+                <div
+                  ref={el => { headerRefs.current[dayIndex] = el; }}
+                  style={{
+                    position: 'absolute',
+                    top: 0, left: 0, right: 0,
+                    zIndex: 20,
+                    backgroundColor: 'white',
+                    transition: 'transform 40ms linear'  // juste assez pour lisser sans lag
+                  }}
+                >
                   <div
                     className="flex border-b border-gray-200 bg-gray-100"
                     style={{ minWidth: day.locations.length * 200 + 92 }}
@@ -370,7 +383,15 @@ export default function CalendarDisplay({
                   }
                 }}
               >
-                <div className="overflow-x-auto">
+                {/* overflow-x-auto du corps */}
+                <div
+                  ref={el => { bodyScrollRefs.current[dayIndex] = el; }}
+                  className="overflow-x-auto"
+                  onScroll={e => {
+                    const header = headerScrollRefs.current[dayIndex];
+                    if (header) header.scrollLeft = (e.target as HTMLDivElement).scrollLeft;
+                  }}
+                >
                   <div
                     className="flex"
                     style={{ minWidth: day.locations.length * 200 + 92 }}
