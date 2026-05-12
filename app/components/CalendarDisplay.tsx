@@ -328,11 +328,12 @@ export default function CalendarDisplay({
               key={day.date}
               ref={el => { containerRefs.current[dayIndex] = el; }}
               className="bg-white rounded-lg shadow overflow-hidden"
+              style={{ position: 'relative' }}
             >
               {/* En-tête sticky géré en JS */}
               <div
                 ref={el => { headerRefs.current[dayIndex] = el; }}
-                style={{ position: 'relative', zIndex: 10, backgroundColor: 'white' }}
+                style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20, backgroundColor: 'white' }}
               >
                 <div className="px-6 py-4 bg-gray-50 border-b">
                   <h3 className="text-lg font-semibold text-gray-800">{day.displayDate}</h3>
@@ -361,122 +362,131 @@ export default function CalendarDisplay({
               </div>
 
               {/* Corps */}
-              <div className="overflow-x-auto">
-                <div
-                  className="flex"
-                  style={{ minWidth: day.locations.length * 200 + 92 }}
-                >
-                  <div className="w-[92px] flex-shrink-0 bg-gray-50 border-r border-gray-200">
-                    {Array.from({ length: totalHours }).map((_, i) => {
-                      const hour = 8 + i;
-                      return (
-                        <div
-                          key={`hour-${hour}`}
-                          className="border-b border-gray-200"
-                          style={{ height: `${PIXELS_PER_HOUR}px` }}
-                        >
-                          <div className="h-full flex items-center justify-center">
-                            <div className="text-sm font-medium text-gray-700">{hour}h00</div>
+              <div
+                ref={el => {
+                  // On mesure la hauteur de l'en-tête pour le padding initial
+                  if (el && headerRefs.current[dayIndex]) {
+                    el.style.paddingTop = `${headerRefs.current[dayIndex]!.offsetHeight}px`;
+                  }
+                }}
+              >
+                <div className="overflow-x-auto">
+                  <div
+                    className="flex"
+                    style={{ minWidth: day.locations.length * 200 + 92 }}
+                  >
+                    <div className="w-[92px] flex-shrink-0 bg-gray-50 border-r border-gray-200">
+                      {Array.from({ length: totalHours }).map((_, i) => {
+                        const hour = 8 + i;
+                        return (
+                          <div
+                            key={`hour-${hour}`}
+                            className="border-b border-gray-200"
+                            style={{ height: `${PIXELS_PER_HOUR}px` }}
+                          >
+                            <div className="h-full flex items-center justify-center">
+                              <div className="text-sm font-medium text-gray-700">{hour}h00</div>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  <div className="flex-1 relative" style={{ height: `${totalHeight}px` }}>
-                    <div className="absolute inset-0 flex">
-                      {day.locations.map((location) => (
-                        <div
-                          key={`col-${location}`}
-                          className="flex-1 border-r relative"
-                          style={{ minWidth: '200px' }}
-                        >
-                          {day.defenses
-                            .filter(defense => defense.location === location)
-                            .map(defense => {
-                              const [startHours, startMinutes] = defense.startTime.split(':').map(Number);
-                              const top = (startHours - 8 + startMinutes / 60) * PIXELS_PER_HOUR;
-                              const height = (50 / 60) * PIXELS_PER_HOUR;
-                              const color = getCategoryColor(defense.categorie);
-                              const isSelected = selectedEventIds.includes(defense.eleveId);
-                              const isBusy = busyEventIds.includes(defense.eleveId);
-                              const eleve = eleves.find(e => e.id === defense.eleveId);
-                              const isAssignedToCurrentUser = eleve?.lecteur_externe_id === userLecteurExterneId;
-                              const isClickable = onEventClick && (!isBusy || isAssignedToCurrentUser);
-
-                              return (
-                                <div
-                                  key={defense.id}
-                                  className={`absolute left-1 right-1 rounded p-2 overflow-y-auto border shadow-sm transition-shadow ${
-                                    isClickable ? 'hover:shadow-md cursor-pointer' : ''
-                                  } ${isSelected ? 'ring-2 ring-blue-500 ring-offset-1' : ''} ${
-                                    isBusy && !isAssignedToCurrentUser ? 'opacity-50' : ''
-                                  }`}
-                                  style={{
-                                    top: `${top}px`,
-                                    height: `${height}px`,
-                                    backgroundColor: isSelected ? '#E0F2FE' : color.bg,
-                                    borderColor: isSelected ? '#7DD3FC' : color.border,
-                                    color: isSelected ? '#0C4A6E' : color.text,
-                                    zIndex: 10,
-                                    fontSize: '12px'
-                                  }}
-                                  onClick={() => { if (isClickable) onEventClick!(defense); }}
-                                >
-                                  <div className="font-bold mb-1 flex justify-between items-center sticky top-0 bg-inherit pb-1 border-b border-gray-300">
-                                    <span className="text-xs">{defense.startTime} - {defense.endTime}</span>
-                                    <div className="flex gap-1">
-                                      {isSelected && <span className="text-xs bg-blue-500 text-white px-1 py-0.5 rounded">✓</span>}
-                                      {isBusy && !isAssignedToCurrentUser && <span className="text-xs bg-red-500 text-white px-1 py-0.5 rounded">Occupé</span>}
+                        );
+                      })}
+                    </div>
+  
+                    <div className="flex-1 relative" style={{ height: `${totalHeight}px` }}>
+                      <div className="absolute inset-0 flex">
+                        {day.locations.map((location) => (
+                          <div
+                            key={`col-${location}`}
+                            className="flex-1 border-r relative"
+                            style={{ minWidth: '200px' }}
+                          >
+                            {day.defenses
+                              .filter(defense => defense.location === location)
+                              .map(defense => {
+                                const [startHours, startMinutes] = defense.startTime.split(':').map(Number);
+                                const top = (startHours - 8 + startMinutes / 60) * PIXELS_PER_HOUR;
+                                const height = (50 / 60) * PIXELS_PER_HOUR;
+                                const color = getCategoryColor(defense.categorie);
+                                const isSelected = selectedEventIds.includes(defense.eleveId);
+                                const isBusy = busyEventIds.includes(defense.eleveId);
+                                const eleve = eleves.find(e => e.id === defense.eleveId);
+                                const isAssignedToCurrentUser = eleve?.lecteur_externe_id === userLecteurExterneId;
+                                const isClickable = onEventClick && (!isBusy || isAssignedToCurrentUser);
+  
+                                return (
+                                  <div
+                                    key={defense.id}
+                                    className={`absolute left-1 right-1 rounded p-2 overflow-y-auto border shadow-sm transition-shadow ${
+                                      isClickable ? 'hover:shadow-md cursor-pointer' : ''
+                                    } ${isSelected ? 'ring-2 ring-blue-500 ring-offset-1' : ''} ${
+                                      isBusy && !isAssignedToCurrentUser ? 'opacity-50' : ''
+                                    }`}
+                                    style={{
+                                      top: `${top}px`,
+                                      height: `${height}px`,
+                                      backgroundColor: isSelected ? '#E0F2FE' : color.bg,
+                                      borderColor: isSelected ? '#7DD3FC' : color.border,
+                                      color: isSelected ? '#0C4A6E' : color.text,
+                                      zIndex: 10,
+                                      fontSize: '12px'
+                                    }}
+                                    onClick={() => { if (isClickable) onEventClick!(defense); }}
+                                  >
+                                    <div className="font-bold mb-1 flex justify-between items-center sticky top-0 bg-inherit pb-1 border-b border-gray-300">
+                                      <span className="text-xs">{defense.startTime} - {defense.endTime}</span>
+                                      <div className="flex gap-1">
+                                        {isSelected && <span className="text-xs bg-blue-500 text-white px-1 py-0.5 rounded">✓</span>}
+                                        {isBusy && !isAssignedToCurrentUser && <span className="text-xs bg-red-500 text-white px-1 py-0.5 rounded">Occupé</span>}
+                                      </div>
+                                    </div>
+  
+                                    <div className="space-y-2">
+                                      <div>
+                                        <div className="font-semibold text-sm">{defense.elevePrenom} {defense.eleveNom}</div>
+                                        <div className="text-xs opacity-75">{defense.categorie}</div>
+                                      </div>
+                                      <hr className="border-gray-400 my-1" />
+                                      {defense.problematique && (
+                                        <>
+                                          <div className="text-xs leading-relaxed break-words">
+                                            <span className="font-medium">📝</span> {defense.problematique}
+                                          </div>
+                                          <hr className="border-gray-400 my-1" />
+                                        </>
+                                      )}
+                                      <div className="space-y-0.5 text-xs">
+                                        {defense.guideNom !== '-' && (
+                                          <div className="flex items-start gap-1">
+                                            <span className="font-medium min-w-[85px]">Guide:</span>
+                                            <span>{defense.guidePrenom} {defense.guideNom}</span>
+                                          </div>
+                                        )}
+                                        {defense.lecteurInterneNom !== '-' && (
+                                          <div className="flex items-start gap-1">
+                                            <span className="font-medium min-w-[85px]">Lecteur interne:</span>
+                                            <span>{defense.lecteurInternePrenom} {defense.lecteurInterneNom}</span>
+                                          </div>
+                                        )}
+                                        {defense.lecteurExterneNom !== '-' && (
+                                          <div className="flex items-start gap-1">
+                                            <span className="font-medium min-w-[85px]">Lecteur externe:</span>
+                                            <span>{defense.lecteurExternePrenom} {defense.lecteurExterneNom}</span>
+                                          </div>
+                                        )}
+                                        {defense.mediateurNom !== '-' && (
+                                          <div className="flex items-start gap-1">
+                                            <span className="font-medium min-w-[85px]">Médiateur:</span>
+                                            <span>{defense.mediateurPrenom} {defense.mediateurNom}</span>
+                                          </div>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
-
-                                  <div className="space-y-2">
-                                    <div>
-                                      <div className="font-semibold text-sm">{defense.elevePrenom} {defense.eleveNom}</div>
-                                      <div className="text-xs opacity-75">{defense.categorie}</div>
-                                    </div>
-                                    <hr className="border-gray-400 my-1" />
-                                    {defense.problematique && (
-                                      <>
-                                        <div className="text-xs leading-relaxed break-words">
-                                          <span className="font-medium">📝</span> {defense.problematique}
-                                        </div>
-                                        <hr className="border-gray-400 my-1" />
-                                      </>
-                                    )}
-                                    <div className="space-y-0.5 text-xs">
-                                      {defense.guideNom !== '-' && (
-                                        <div className="flex items-start gap-1">
-                                          <span className="font-medium min-w-[85px]">Guide:</span>
-                                          <span>{defense.guidePrenom} {defense.guideNom}</span>
-                                        </div>
-                                      )}
-                                      {defense.lecteurInterneNom !== '-' && (
-                                        <div className="flex items-start gap-1">
-                                          <span className="font-medium min-w-[85px]">Lecteur interne:</span>
-                                          <span>{defense.lecteurInternePrenom} {defense.lecteurInterneNom}</span>
-                                        </div>
-                                      )}
-                                      {defense.lecteurExterneNom !== '-' && (
-                                        <div className="flex items-start gap-1">
-                                          <span className="font-medium min-w-[85px]">Lecteur externe:</span>
-                                          <span>{defense.lecteurExternePrenom} {defense.lecteurExterneNom}</span>
-                                        </div>
-                                      )}
-                                      {defense.mediateurNom !== '-' && (
-                                        <div className="flex items-start gap-1">
-                                          <span className="font-medium min-w-[85px]">Médiateur:</span>
-                                          <span>{defense.mediateurPrenom} {defense.mediateurNom}</span>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                        </div>
-                      ))}
+                                );
+                              })}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
