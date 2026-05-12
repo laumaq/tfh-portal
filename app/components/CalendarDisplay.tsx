@@ -334,37 +334,32 @@ export default function CalendarDisplay({
                   {day.locations.length} {pluralize(day.locations.length, 'local', 'locaux')}
                 </p>
               </div>
+              <div className="overflow-x-auto">
+                <div style={{ minWidth: day.locations.length * 200 + 92 }}>
               
-              <div className="relative" style={{ height: 'auto' }}>
-                {/* En-tête fixe en utilisant position sticky sur un wrapper */}
-                <div className="sticky top-0 z-10" style={{ position: 'sticky', top: 0, backgroundColor: 'white' }}>
-                  <div className="flex border-b border-gray-200 bg-gray-100">
+                  {/* En-tête sticky — dans le même overflow-x-auto que le corps */}
+                  <div className="sticky top-0 z-10 flex border-b border-gray-200 bg-gray-100">
                     <div className="w-[92px] flex-shrink-0 px-4 py-3 text-sm font-semibold text-gray-700 border-r border-gray-200 bg-gray-100">
                       Horaire
                     </div>
-                    <div className="flex-1 flex overflow-x-auto">
-                      {day.locations.map(location => (
-                        <div
-                          key={`header-${location}`}
-                          className="min-w-[200px] px-4 py-3 text-sm font-semibold text-gray-700 border-r bg-gray-100"
-                        >
-                          {location}
-                        </div>
-                      ))}
-                    </div>
+                    {day.locations.map(location => (
+                      <div
+                        key={`header-${location}`}
+                        className="min-w-[200px] px-4 py-3 text-sm font-semibold text-gray-700 border-r bg-gray-100"
+                      >
+                        {location}
+                      </div>
+                    ))}
                   </div>
-                </div>
-                
-                {/* Corps - scroll horizontal uniquement ici */}
-                <div className="overflow-x-auto">
+              
+                  {/* Corps */}
                   <div className="flex">
                     <div className="w-[92px] flex-shrink-0 bg-gray-50 border-r border-gray-200">
-                      {/* Heures */}
                       {Array.from({ length: totalHours }).map((_, i) => {
                         const hour = 8 + i;
                         return (
-                          <div 
-                            key={`hour-${hour}`} 
+                          <div
+                            key={`hour-${hour}`}
                             className="border-b border-gray-200"
                             style={{ height: `${PIXELS_PER_HOUR}px` }}
                           >
@@ -377,19 +372,12 @@ export default function CalendarDisplay({
                         );
                       })}
                     </div>
-                    
-                    <div className="flex-1 relative" style={{ height: `${totalHeight}px`, minWidth: day.locations.length * 200 }}>
+              
+                    <div className="flex-1 relative" style={{ height: `${totalHeight}px` }}>
                       <div className="absolute inset-0 flex">
                         {day.locations.map((location) => (
                           <div
                             key={`col-${location}`}
-                            className="flex-1 border-r relative"
-                            style={{ minWidth: '200px' }}
-                          >
-                            {/* Défenses */}
-                            {day.defenses
-                              .filter(defense => defense.location === location)
-                              .map(defense => {
                             className="flex-1 border-r relative"
                             style={{ minWidth: '200px' }}
                           >
@@ -408,7 +396,7 @@ export default function CalendarDisplay({
                                 const eleve = eleves.find(e => e.id === defense.eleveId);
                                 const isAssignedToCurrentUser = eleve?.lecteur_externe_id === userLecteurExterneId;
                                 const isClickable = onEventClick && (!isBusy || isAssignedToCurrentUser);
-                                
+              
                                 return (
                                   <div
                                     key={defense.id}
@@ -439,7 +427,7 @@ export default function CalendarDisplay({
                                         {isBusy && !isAssignedToCurrentUser && <span className="text-xs bg-red-500 text-white px-1 py-0.5 rounded">Occupé</span>}
                                       </div>
                                     </div>
-                                    
+              
                                     <div className="space-y-2">
                                       <div>
                                         <div className="font-semibold text-sm">
@@ -449,9 +437,9 @@ export default function CalendarDisplay({
                                           {defense.categorie}
                                         </div>
                                       </div>
-                                      
+              
                                       <hr className="border-gray-400 my-1" />
-                                      
+              
                                       {defense.problematique && (
                                         <>
                                           <div className="text-xs leading-relaxed break-words">
@@ -460,7 +448,7 @@ export default function CalendarDisplay({
                                           <hr className="border-gray-400 my-1" />
                                         </>
                                       )}
-                                      
+              
                                       <div className="space-y-0.5 text-xs">
                                         {defense.guideNom !== '-' && (
                                           <div className="flex items-start gap-1">
@@ -496,8 +484,10 @@ export default function CalendarDisplay({
                       </div>
                     </div>
                   </div>
+              
                 </div>
-              </div>
+              </div>              
+              
             </div>
           );
         })
