@@ -90,7 +90,7 @@ export default function CalendarDisplay({
       });
     };
 
-    mainEl.addEventListener('scroll', handleScroll);
+    mainEl.addEventListener('scroll', handleScroll, { passive: true });
     return () => mainEl.removeEventListener('scroll', handleScroll);
   }, [dayDefenses]);
 
@@ -99,12 +99,10 @@ export default function CalendarDisplay({
     const [hours, minutes] = time.split(':').map(Number);
     let newHours = hours;
     let newMinutes = minutes + 50;
-
     if (newMinutes >= 60) {
       newHours += Math.floor(newMinutes / 60);
       newMinutes = newMinutes % 60;
     }
-
     return `${newHours.toString().padStart(2, '0')}:${newMinutes.toString().padStart(2, '0')}`;
   };
 
@@ -131,11 +129,9 @@ export default function CalendarDisplay({
       { bg: '#FAF5FF', border: '#E9D5FF', text: '#7C3AED' },
       { bg: '#FFFBEB', border: '#FDE68A', text: '#B45309' },
     ];
-
     if (!categorie || categorie === 'Non catégorisé') {
       return { bg: '#F3F4F6', border: '#D1D5DB', text: '#374151' };
     }
-
     const hash = categorie.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     return colors[hash % colors.length];
   };
@@ -155,64 +151,49 @@ export default function CalendarDisplay({
       if (defense.guideNom && defense.guideNom !== '-') {
         const guideKey = `${defense.guidePrenom} ${defense.guideNom}`;
         const conflicts = sortedDefenses.filter(d =>
-          d.id !== defense.id &&
-          d.date === defense.date &&
-          d.guideNom === defense.guideNom &&
-          d.guidePrenom === defense.guidePrenom &&
+          d.id !== defense.id && d.date === defense.date &&
+          d.guideNom === defense.guideNom && d.guidePrenom === defense.guidePrenom &&
           ((d.startTime <= defense.startTime && d.endTime > defense.startTime) ||
            (defense.startTime <= d.startTime && defense.endTime > d.startTime))
         );
         if (conflicts.length > 0) {
-          const existing = guideConflicts.get(guideKey) || [];
-          guideConflicts.set(guideKey, [...existing, defense, ...conflicts]);
+          guideConflicts.set(guideKey, [...(guideConflicts.get(guideKey) || []), defense, ...conflicts]);
         }
       }
-
       if (defense.lecteurInterneNom && defense.lecteurInterneNom !== '-') {
-        const lecteurKey = `${defense.lecteurInternePrenom} ${defense.lecteurInterneNom}`;
+        const key = `${defense.lecteurInternePrenom} ${defense.lecteurInterneNom}`;
         const conflicts = sortedDefenses.filter(d =>
-          d.id !== defense.id &&
-          d.date === defense.date &&
-          d.lecteurInterneNom === defense.lecteurInterneNom &&
-          d.lecteurInternePrenom === defense.lecteurInternePrenom &&
+          d.id !== defense.id && d.date === defense.date &&
+          d.lecteurInterneNom === defense.lecteurInterneNom && d.lecteurInternePrenom === defense.lecteurInternePrenom &&
           ((d.startTime <= defense.startTime && d.endTime > defense.startTime) ||
            (defense.startTime <= d.startTime && defense.endTime > d.startTime))
         );
         if (conflicts.length > 0) {
-          const existing = lecteurInterneConflicts.get(lecteurKey) || [];
-          lecteurInterneConflicts.set(lecteurKey, [...existing, defense, ...conflicts]);
+          lecteurInterneConflicts.set(key, [...(lecteurInterneConflicts.get(key) || []), defense, ...conflicts]);
         }
       }
-
       if (defense.lecteurExterneNom && defense.lecteurExterneNom !== '-') {
-        const lecteurKey = `${defense.lecteurExternePrenom} ${defense.lecteurExterneNom}`;
+        const key = `${defense.lecteurExternePrenom} ${defense.lecteurExterneNom}`;
         const conflicts = sortedDefenses.filter(d =>
-          d.id !== defense.id &&
-          d.date === defense.date &&
-          d.lecteurExterneNom === defense.lecteurExterneNom &&
-          d.lecteurExternePrenom === defense.lecteurExternePrenom &&
+          d.id !== defense.id && d.date === defense.date &&
+          d.lecteurExterneNom === defense.lecteurExterneNom && d.lecteurExternePrenom === defense.lecteurExternePrenom &&
           ((d.startTime <= defense.startTime && d.endTime > defense.startTime) ||
            (defense.startTime <= d.startTime && defense.endTime > d.startTime))
         );
         if (conflicts.length > 0) {
-          const existing = lecteurExterneConflicts.get(lecteurKey) || [];
-          lecteurExterneConflicts.set(lecteurKey, [...existing, defense, ...conflicts]);
+          lecteurExterneConflicts.set(key, [...(lecteurExterneConflicts.get(key) || []), defense, ...conflicts]);
         }
       }
-
       if (defense.mediateurNom && defense.mediateurNom !== '-') {
-        const mediateurKey = `${defense.mediateurPrenom} ${defense.mediateurNom}`;
+        const key = `${defense.mediateurPrenom} ${defense.mediateurNom}`;
         const conflicts = sortedDefenses.filter(d =>
-          d.id !== defense.id &&
-          d.date === defense.date &&
-          d.mediateurNom === defense.mediateurNom &&
-          d.mediateurPrenom === defense.mediateurPrenom &&
+          d.id !== defense.id && d.date === defense.date &&
+          d.mediateurNom === defense.mediateurNom && d.mediateurPrenom === defense.mediateurPrenom &&
           ((d.startTime <= defense.startTime && d.endTime > defense.startTime) ||
            (defense.startTime <= d.startTime && defense.endTime > d.startTime))
         );
         if (conflicts.length > 0) {
-          const existing = mediateurConflicts.get(mediateurKey) || [];
-          mediateurConflicts.set(mediateurKey, [...existing, defense, ...conflicts]);
+          mediateurConflicts.set(key, [...(mediateurConflicts.get(key) || []), defense, ...conflicts]);
         }
       }
     });
@@ -230,37 +211,27 @@ export default function CalendarDisplay({
 
   const prepareCalendarData = useCallback(() => {
     setIsProcessing(true);
-
     const defensesWithSchedule = eleves.filter(e =>
       e.date_defense && e.heure_defense && e.tfh_non_rendu !== true
     );
-
     const defenseEvents: DefenseEvent[] = defensesWithSchedule.map(eleve => {
       const startTime = eleve.heure_defense!.substring(0, 5);
       return {
-        id: eleve.id,
-        eleveId: eleve.id,
-        date: eleve.date_defense!,
-        startTime,
+        id: eleve.id, eleveId: eleve.id,
+        date: eleve.date_defense!, startTime,
         endTime: add50Minutes(startTime),
         location: eleve.localisation_defense || 'Non défini',
-        eleveNom: eleve.nom,
-        elevePrenom: eleve.prenom,
-        guideNom: eleve.guide_nom || '-',
-        guidePrenom: eleve.guide_prenom || '-',
-        lecteurInterneNom: eleve.lecteur_interne_nom || '-',
-        lecteurInternePrenom: eleve.lecteur_interne_prenom || '-',
-        lecteurExterneNom: eleve.lecteur_externe_nom || '-',
-        lecteurExternePrenom: eleve.lecteur_externe_prenom || '-',
-        mediateurNom: eleve.mediateur_nom || '-',
-        mediateurPrenom: eleve.mediateur_prenom || '-',
+        eleveNom: eleve.nom, elevePrenom: eleve.prenom,
+        guideNom: eleve.guide_nom || '-', guidePrenom: eleve.guide_prenom || '-',
+        lecteurInterneNom: eleve.lecteur_interne_nom || '-', lecteurInternePrenom: eleve.lecteur_interne_prenom || '-',
+        lecteurExterneNom: eleve.lecteur_externe_nom || '-', lecteurExternePrenom: eleve.lecteur_externe_prenom || '-',
+        mediateurNom: eleve.mediateur_nom || '-', mediateurPrenom: eleve.mediateur_prenom || '-',
         categorie: eleve.categorie || 'Non catégorisé',
         problematique: eleve.problematique || ''
       };
     });
 
     let filteredDefenses = defenseEvents;
-
     if (selectedCategories.length > 0 && !selectedCategories.includes('toutes')) {
       filteredDefenses = filteredDefenses.filter(d => selectedCategories.includes(d.categorie));
     }
@@ -274,18 +245,13 @@ export default function CalendarDisplay({
     setConflicts(detectConflicts(filteredDefenses));
 
     const dates = Array.from(new Set(filteredDefenses.map(d => d.date))).sort();
-
     const daysData: DayDefenses[] = dates.map(date => {
       const dateDefenses = filteredDefenses.filter(d => d.date === date);
       const locations = Array.from(new Set(dateDefenses.map(d => d.location)))
         .sort((a, b) => a.charAt(0).localeCompare(b.charAt(0)));
       return {
         date,
-        displayDate: new Date(date).toLocaleDateString('fr-FR', {
-          weekday: 'long',
-          day: 'numeric',
-          month: 'long'
-        }),
+        displayDate: new Date(date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }),
         locations,
         defenses: dateDefenses.sort((a, b) => a.startTime.localeCompare(b.startTime))
       };
@@ -332,10 +298,16 @@ export default function CalendarDisplay({
               className="bg-white rounded-lg shadow overflow-hidden"
               style={{ position: 'relative' }}
             >
-              {/* En-tête sticky géré en JS */}
+              {/* En-tête — position absolute, translate géré en JS */}
               <div
                 ref={el => { headerRefs.current[dayIndex] = el; }}
-                style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20, backgroundColor: 'white' }}
+                style={{
+                  position: 'absolute',
+                  top: 0, left: 0, right: 0,
+                  zIndex: 20,
+                  backgroundColor: 'white',
+                  willChange: 'transform',
+                }}
               >
                 <div className="px-6 py-4 bg-gray-50 border-b">
                   <h3 className="text-lg font-semibold text-gray-800">{day.displayDate}</h3>
@@ -343,16 +315,14 @@ export default function CalendarDisplay({
                     {day.defenses.length} {pluralize(day.defenses.length, 'défense', 'défenses')} • {day.locations.length} {pluralize(day.locations.length, 'local', 'locaux')}
                   </p>
                 </div>
-                
-                {/* overflow-x-auto de l'en-tête */}
+                {/* Scroll horizontal de l'en-tête — synchronisé avec le corps */}
                 <div
-                  ref={el => { headerRefs.current[dayIndex] = el; }}
-                  style={{
-                    position: 'absolute',
-                    top: 0, left: 0, right: 0,
-                    zIndex: 20,
-                    backgroundColor: 'white',
-                    transition: 'transform 40ms linear'  // juste assez pour lisser sans lag
+                  ref={el => { headerScrollRefs.current[dayIndex] = el; }}
+                  className="overflow-x-auto"
+                  style={{ scrollbarWidth: 'none' }}
+                  onScroll={e => {
+                    const body = bodyScrollRefs.current[dayIndex];
+                    if (body) body.scrollLeft = (e.target as HTMLDivElement).scrollLeft;
                   }}
                 >
                   <div
@@ -374,16 +344,15 @@ export default function CalendarDisplay({
                 </div>
               </div>
 
-              {/* Corps */}
+              {/* Corps — padding-top calculé après le premier rendu pour laisser place à l'en-tête */}
               <div
                 ref={el => {
-                  // On mesure la hauteur de l'en-tête pour le padding initial
                   if (el && headerRefs.current[dayIndex]) {
                     el.style.paddingTop = `${headerRefs.current[dayIndex]!.offsetHeight}px`;
                   }
                 }}
               >
-                {/* overflow-x-auto du corps */}
+                {/* Scroll horizontal du corps — synchronisé avec l'en-tête */}
                 <div
                   ref={el => { bodyScrollRefs.current[dayIndex] = el; }}
                   className="overflow-x-auto"
@@ -412,7 +381,7 @@ export default function CalendarDisplay({
                         );
                       })}
                     </div>
-  
+
                     <div className="flex-1 relative" style={{ height: `${totalHeight}px` }}>
                       <div className="absolute inset-0 flex">
                         {day.locations.map((location) => (
@@ -433,7 +402,7 @@ export default function CalendarDisplay({
                                 const eleve = eleves.find(e => e.id === defense.eleveId);
                                 const isAssignedToCurrentUser = eleve?.lecteur_externe_id === userLecteurExterneId;
                                 const isClickable = onEventClick && (!isBusy || isAssignedToCurrentUser);
-  
+
                                 return (
                                   <div
                                     key={defense.id}
@@ -460,7 +429,7 @@ export default function CalendarDisplay({
                                         {isBusy && !isAssignedToCurrentUser && <span className="text-xs bg-red-500 text-white px-1 py-0.5 rounded">Occupé</span>}
                                       </div>
                                     </div>
-  
+
                                     <div className="space-y-2">
                                       <div>
                                         <div className="font-semibold text-sm">{defense.elevePrenom} {defense.eleveNom}</div>
