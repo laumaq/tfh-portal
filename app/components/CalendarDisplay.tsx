@@ -335,28 +335,31 @@ export default function CalendarDisplay({
                 </p>
               </div>
               
-              <div className="relative">
-                {/* En-tête séparé  */}
-                <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
-                  <div className="flex">
-                    <div className="w-[92px] flex-shrink-0 bg-gray-100 border-r border-gray-200 px-4 py-3">
+              <div className="relative" style={{ height: 'auto' }}>
+                {/* En-tête fixe en utilisant position sticky sur un wrapper */}
+                <div className="sticky top-0 z-10" style={{ position: 'sticky', top: 0, backgroundColor: 'white' }}>
+                  <div className="flex border-b border-gray-200 bg-gray-100">
+                    <div className="w-[92px] flex-shrink-0 px-4 py-3 text-sm font-semibold text-gray-700 border-r border-gray-200 bg-gray-100">
                       Horaire
                     </div>
-                    {day.locations.map(location => (
-                      <div
-                        key={`header-${location}`}
-                        className="min-w-[200px] px-4 py-3 text-sm font-semibold text-gray-700 border-r bg-gray-100"
-                      >
-                        {location}
-                      </div>
-                    ))}
+                    <div className="flex-1 flex overflow-x-auto">
+                      {day.locations.map(location => (
+                        <div
+                          key={`header-${location}`}
+                          className="min-w-[200px] px-4 py-3 text-sm font-semibold text-gray-700 border-r bg-gray-100"
+                        >
+                          {location}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
                 
-                {/* Corps défilant */}
+                {/* Corps - scroll horizontal uniquement ici */}
                 <div className="overflow-x-auto">
                   <div className="flex">
                     <div className="w-[92px] flex-shrink-0 bg-gray-50 border-r border-gray-200">
+                      {/* Heures */}
                       {Array.from({ length: totalHours }).map((_, i) => {
                         const hour = 8 + i;
                         return (
@@ -377,9 +380,16 @@ export default function CalendarDisplay({
                     
                     <div className="flex-1 relative" style={{ height: `${totalHeight}px`, minWidth: day.locations.length * 200 }}>
                       <div className="absolute inset-0 flex">
-                        {day.locations.map((location, idx) => (
+                        {day.locations.map((location) => (
                           <div
                             key={`col-${location}`}
+                            className="flex-1 border-r relative"
+                            style={{ minWidth: '200px' }}
+                          >
+                            {/* Défenses */}
+                            {day.defenses
+                              .filter(defense => defense.location === location)
+                              .map(defense => {
                             className="flex-1 border-r relative"
                             style={{ minWidth: '200px' }}
                           >
