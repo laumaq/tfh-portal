@@ -337,16 +337,16 @@ export default function CalendarDisplay({
               
               <div className="overflow-x-auto">
                 <div className="min-w-full">
-                  {/* En-tête avec deux lignes */}
                   <div className="flex border-t border-gray-200">
-                    {/* Cellule vide pour la colonne horaire */}
-                    <div className="w-[192px] bg-gray-100 border-r border-b border-gray-200 px-4 py-3">
+                    {/* Cellule vide pour la colonne horaire - largeur fixe */}
+                    <div className="w-[92px] flex-shrink-0 bg-gray-100 border-r border-b border-gray-200 px-4 py-3">
                       {/* Vide */}
                     </div>
                     {day.locations.map(location => (
                       <div
                         key={`header-${location}`}
-                        className="flex-1 min-w-[200px] px-4 py-3 text-sm font-semibold text-gray-700 border-r border-b bg-gray-100"
+                        className="min-w-[200px] px-4 py-3 text-sm font-semibold text-gray-700 border-r border-b bg-gray-100"
+                        style={{ width: 'auto' }}
                       >
                         {location}
                       </div>
