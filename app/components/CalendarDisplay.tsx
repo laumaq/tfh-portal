@@ -335,27 +335,28 @@ export default function CalendarDisplay({
                 </p>
               </div>
               
-              <div className="overflow-x-auto">
-                <div className="min-w-full" style={{ position: 'relative' }}>
-                  {/* En-tête */}
-                  <div className="sticky top-0 z-10" style={{ position: 'sticky', top: 0, backgroundColor: 'white' }}>
-                    <div className="flex border-t border-gray-200">
-                      <div className="w-[92px] flex-shrink-0 bg-gray-100 border-r border-b border-gray-200 px-4 py-3">
-                        {/* Vide */}
-                      </div>
-                      {day.locations.map(location => (
-                        <div
-                          key={location}
-                          className="min-w-[200px] px-4 py-3 text-sm font-semibold text-gray-700 border-r border-b bg-gray-100"
-                        >
-                          {location}
-                        </div>
-                      ))}
+              <div className="relative">
+                {/* En-tête séparé  */}
+                <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
+                  <div className="flex">
+                    <div className="w-[92px] flex-shrink-0 bg-gray-100 border-r border-gray-200 px-4 py-3">
+                      Horaire
                     </div>
+                    {day.locations.map(location => (
+                      <div
+                        key={`header-${location}`}
+                        className="min-w-[200px] px-4 py-3 text-sm font-semibold text-gray-700 border-r bg-gray-100"
+                      >
+                        {location}
+                      </div>
+                    ))}
                   </div>
-                  
-                  <div className="flex border-b border-gray-200">
-                    <div className="w-[92px] bg-gray-50 border-r border-gray-200">
+                </div>
+                
+                {/* Corps défilant */}
+                <div className="overflow-x-auto">
+                  <div className="flex">
+                    <div className="w-[92px] flex-shrink-0 bg-gray-50 border-r border-gray-200">
                       {Array.from({ length: totalHours }).map((_, i) => {
                         const hour = 8 + i;
                         return (
@@ -374,17 +375,9 @@ export default function CalendarDisplay({
                       })}
                     </div>
                     
-                    <div className="flex-1 relative" style={{ height: `${totalHeight}px` }}>
-                      {Array.from({ length: totalHours + 1 }).map((_, i) => (
-                        <div
-                          key={`line-${i}`}
-                          className="absolute left-0 right-0 border-t border-gray-100"
-                          style={{ top: `${i * PIXELS_PER_HOUR}px` }}
-                        />
-                      ))}
-                      
+                    <div className="flex-1 relative" style={{ height: `${totalHeight}px`, minWidth: day.locations.length * 200 }}>
                       <div className="absolute inset-0 flex">
-                        {day.locations.map((location, index) => (
+                        {day.locations.map((location, idx) => (
                           <div
                             key={`col-${location}`}
                             className="flex-1 border-r relative"
