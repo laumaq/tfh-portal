@@ -77,6 +77,7 @@ export default function CoordinateurDashboard() {
           <DashboardTab 
             eleves={eleves}
             guides={guides}
+            externes={externes}
             onTabChange={setActiveTab}
             userName={userName}
             coordinateurNom={currentCoordinateur?.nom || ''}
