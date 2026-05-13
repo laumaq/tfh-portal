@@ -36,9 +36,16 @@ export default function CalendrierTab({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const calendarRef = useRef<HTMLDivElement>(null);
-  const [selectedDates, setSelectedDates] = useState<string[]>([]);
-  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedDates, setSelectedDates] = useState<string[]>(() => {
+    // Fonction d'initialisation - s'exécute UNE SEULE fois au montage
+    return allDates;
+  });
+  const [selectedLocations, setSelectedLocations] = useState<string[]>(() => {
+    return allLocations;
+  });
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(() => {
+    return categories;
+  });
   const initialized = useRef(false);  
   
 
@@ -63,14 +70,22 @@ export default function CalendrierTab({
     ), [eleves]);
    
   useEffect(() => {
-    if (!initialized.current && allLocations.length > 0 && categories.length > 0) {
-      setSelectedLocations(allLocations);
-      setSelectedCategories(categories);
+    if (selectedDates.length === 0 && allDates.length > 0) {
       setSelectedDates(allDates);
-      initialized.current = true;
     }
-  }, [allLocations, categories, allDates]); // ← Les dépendances sont là mais ne feront rien après init
-      
+  }, [allDates]);
+  
+  useEffect(() => {
+    if (selectedLocations.length === 0 && allLocations.length > 0) {
+      setSelectedLocations(allLocations);
+    }
+  }, [allLocations]);
+  
+  useEffect(() => {
+    if (selectedCategories.length === 0 && categories.length > 0) {
+      setSelectedCategories(categories);
+    }
+  }, [categories]);
 
   const getFilteredDefenses = () => {
     return eleves.filter(e => 
