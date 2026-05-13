@@ -14,6 +14,7 @@ import {
 interface DashboardTabProps {
   eleves: Eleve[];
   guides: Guide[];
+  externes: Externe[];
   onTabChange: (tab: TabType) => void;
   userName: string;
   coordinateurNom: string; 
@@ -23,6 +24,7 @@ interface DashboardTabProps {
 export default function DashboardTab({ 
   eleves, 
   guides, 
+  externes,
   onTabChange,
   userName,
   coordinateurNom,
