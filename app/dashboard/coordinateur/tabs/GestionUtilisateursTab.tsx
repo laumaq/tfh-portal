@@ -1,9 +1,13 @@
+// /app/dashboard/coordinateur/tabs/GestionUtilisateursTab.tsx
+
+// /app/dashboard/coordinateur/tabs/GestionUtilisateursTab.tsx
+
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import * as XLSX from 'xlsx';
-import { Plus, Upload, Trash2, UserPlus, AlertTriangle, Check, Lock, Unlock, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Upload, Trash2, UserPlus, AlertTriangle, Check, Lock, Unlock, CheckCircle, XCircle, Phone, Mail } from 'lucide-react';
 import { Eleve, Guide, Externe, Coordinateur } from '../types';
 
 interface GestionUtilisateursTabProps {
@@ -14,13 +18,14 @@ interface GestionUtilisateursTabProps {
   onRefresh: () => void;
 }
 
-type UserType = 'eleves' | 'guides' | 'lecteurs-externes' | 'mediateurs' | 'coordinateurs' | 'direction';
+type UserType = 'eleves' | 'guides' | 'externes' | 'coordinateurs' | 'direction';
 
 interface NewUser {
   nom: string;
   prenom: string;
   classe: string;
   email: string;
+  telephone: string;
   initiale: string;
   categorie: string;
 }
@@ -45,6 +50,7 @@ export default function GestionUtilisateursTab({
     prenom: '',
     classe: '',
     email: '',
+    telephone: '',
     initiale: '',
     categorie: ''
   });
@@ -79,10 +85,8 @@ export default function GestionUtilisateursTab({
         return eleves;
       case 'guides':
         return guides;
-      case 'lecteurs-externes':
-        return externes.filter(e => e.lecteur_externe_id);
-      case 'mediateurs':
-        return externes.filter(e => e.mediateur_id);
+      case 'externes':
+        return externes;
       case 'coordinateurs':
         return coordinateurs;
       case 'direction':
@@ -168,52 +172,26 @@ export default function GestionUtilisateursTab({
           if (guideError) throw guideError;
           break;
 
-        case 'lecteurs-externes':
+        case 'externes':
           if (!newUser.prenom.trim()) {
-            setErrorMessage('Le prénom est requis pour un lecteur externe');
+            setErrorMessage('Le prénom est requis pour un externe');
             clearMessages();
             setLoading(false);
             return;
           }
           
-          const lecteurExterneId = crypto.randomUUID();
-          
-          const { error: lecteurError } = await supabase
+          const { error: externeError } = await supabase
             .from('externes')
             .insert([{
               id: crypto.randomUUID(),
               nom: newUser.nom,
               prenom: newUser.prenom,
               email: newUser.email || null,
-              lecteur_externe_id: lecteurExterneId,
+              telephone: newUser.telephone || null,
               mot_de_passe: null
             }]);
 
-          if (lecteurError) throw lecteurError;
-          break;
-
-        case 'mediateurs':
-          if (!newUser.prenom.trim()) {
-            setErrorMessage('Le prénom est requis pour un médiateur');
-            clearMessages();
-            setLoading(false);
-            return;
-          }
-          
-          const mediateurId = crypto.randomUUID();
-          
-          const { error: mediateurError } = await supabase
-            .from('externes')
-            .insert([{
-              id: crypto.randomUUID(),
-              nom: newUser.nom,
-              prenom: newUser.prenom,
-              email: newUser.email || null,
-              mediateur_id: mediateurId,
-              mot_de_passe: null
-            }]);
-
-          if (mediateurError) throw mediateurError;
+          if (externeError) throw externeError;
           break;
 
         case 'coordinateurs':
@@ -247,6 +225,7 @@ export default function GestionUtilisateursTab({
         prenom: '',
         classe: '',
         email: '',
+        telephone: '',
         initiale: '',
         categorie: ''
       });
@@ -363,8 +342,7 @@ export default function GestionUtilisateursTab({
           case 'guides':
             await supabase.from('guides').delete().eq('id', id);
             break;
-          case 'lecteurs-externes':
-          case 'mediateurs':
+          case 'externes':
             await supabase.from('externes').delete().eq('id', id);
             break;
           case 'coordinateurs':
@@ -399,8 +377,7 @@ export default function GestionUtilisateursTab({
         case 'guides':
           tableName = 'guides';
           break;
-        case 'lecteurs-externes':
-        case 'mediateurs':
+        case 'externes':
           tableName = 'externes';
           break;
         case 'coordinateurs':
@@ -576,44 +553,23 @@ export default function GestionUtilisateursTab({
           }
           break;
 
-        case 'lecteurs-externes':
-          const externesLecteursToInsert = dataRows.map(row => {
+        case 'externes':
+          const externesToInsert = dataRows.map(row => {
             const values = row.split(',').map(v => v.trim());
             return {
               id: crypto.randomUUID(),
               nom: values[0] || '',
               prenom: values[1] || '',
               email: values[2] || null,
-              lecteur_externe_id: crypto.randomUUID(),
+              telephone: values[3] || null,
               mot_de_passe: null
             };
-          }).filter(l => l.nom && l.prenom);
+          }).filter(e => e.nom && e.prenom);
 
-          if (externesLecteursToInsert.length > 0) {
+          if (externesToInsert.length > 0) {
             const { error } = await supabase
               .from('externes')
-              .insert(externesLecteursToInsert);
-            if (error) throw error;
-          }
-          break;
-
-        case 'mediateurs':
-          const externesMediateursToInsert = dataRows.map(row => {
-            const values = row.split(',').map(v => v.trim());
-            return {
-              id: crypto.randomUUID(),
-              nom: values[0] || '',
-              prenom: values[1] || '',
-              email: values[2] || null,
-              mediateur_id: crypto.randomUUID(),
-              mot_de_passe: null
-            };
-          }).filter(m => m.nom && m.prenom);
-
-          if (externesMediateursToInsert.length > 0) {
-            const { error } = await supabase
-              .from('externes')
-              .insert(externesMediateursToInsert);
+              .insert(externesToInsert);
             if (error) throw error;
           }
           break;
@@ -704,8 +660,7 @@ export default function GestionUtilisateursTab({
     switch (selectedUserType) {
       case 'eleves': return 'Élèves';
       case 'guides': return 'Guides';
-      case 'lecteurs-externes': return 'Lecteurs externes';
-      case 'mediateurs': return 'Médiateurs';
+      case 'externes': return 'Externes';
       case 'coordinateurs': return 'Coordinateurs';
       case 'direction': return 'Membres direction';
       default: return '';
@@ -773,11 +728,10 @@ export default function GestionUtilisateursTab({
               }}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
-              <option value="eleves">Élève</option>
-              <option value="guides">Guide</option>
-              <option value="lecteurs-externes">Lecteur externe</option>
-              <option value="mediateurs">Médiateur</option>
-              <option value="coordinateurs">Coordinateur</option>
+              <option value="eleves">Élèves</option>
+              <option value="guides">Guides</option>
+              <option value="externes">Externes</option>
+              <option value="coordinateurs">Coordinateurs</option>
               <option value="direction">Direction</option>
             </select>
           </div>
@@ -858,7 +812,7 @@ export default function GestionUtilisateursTab({
                 </>
               )}
               
-              {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && (
+              {selectedUserType === 'externes' && (
                 <>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -893,6 +847,18 @@ export default function GestionUtilisateursTab({
                       placeholder="Email"
                       value={newUser.email}
                       onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Téléphone
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="Téléphone"
+                      value={newUser.telephone}
+                      onChange={(e) => setNewUser({...newUser, telephone: e.target.value})}
                       className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
@@ -1019,7 +985,7 @@ export default function GestionUtilisateursTab({
                     </th>
                   </>
                 )}
-                {selectedUserType === 'lecteurs-externes' && (
+                {selectedUserType === 'externes' && (
                   <>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       Nom
@@ -1031,23 +997,7 @@ export default function GestionUtilisateursTab({
                       Email
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Connecté
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </>
-                )}
-                {selectedUserType === 'mediateurs' && (
-                  <>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Nom
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Prénom
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      Email
+                      Téléphone
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       Connecté
@@ -1129,7 +1079,16 @@ export default function GestionUtilisateursTab({
                         {user.prenom}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-500">
-                        {user.email || '-'}
+                        {user.email ? (
+                          <a 
+                            href={`mailto:${user.email}`}
+                            className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+                            title={`Envoyer un email à ${user.email}`}
+                          >
+                            <Mail className="w-3 h-3" />
+                            {user.email}
+                          </a>
+                        ) : '-'}
                       </td>
                       <td className="px-4 py-3">
                         {renderConnectionStatus(user)}
@@ -1145,7 +1104,7 @@ export default function GestionUtilisateursTab({
                       </td>
                     </>
                   )}
-                  {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && (
+                  {selectedUserType === 'externes' && (
                     <>
                       <td className="px-4 py-3 text-sm font-medium text-gray-900">
                         {user.nom}
@@ -1154,7 +1113,28 @@ export default function GestionUtilisateursTab({
                         {user.prenom}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-500">
-                        {user.email || '-'}
+                        {user.email ? (
+                          <a 
+                            href={`mailto:${user.email}`}
+                            className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+                            title={`Envoyer un email à ${user.email}`}
+                          >
+                            <Mail className="w-3 h-3" />
+                            {user.email}
+                          </a>
+                        ) : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500">
+                        {user.telephone ? (
+                          <a 
+                            href={`tel:${user.telephone.replace(/\s/g, '')}`}
+                            className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+                            title={`Appeler ${user.telephone}`}
+                          >
+                            <Phone className="w-3 h-3" />
+                            {user.telephone}
+                          </a>
+                        ) : '-'}
                       </td>
                       <td className="px-4 py-3">
                         {renderConnectionStatus(user)}
@@ -1222,10 +1202,10 @@ export default function GestionUtilisateursTab({
                     </>
                   )}
                   
-                </tr>
+                </td>
               ))}
             </tbody>
-          </table>
+           </table>
         </div>
       </div>
 
@@ -1244,7 +1224,7 @@ export default function GestionUtilisateursTab({
                 <div className="text-sm text-gray-600 mb-3">
                   {selectedUserType === 'eleves' && 'Colonnes: nom, prenom, classe, categorie (optionnel)'}
                   {selectedUserType === 'guides' && 'Colonnes: nom, prenom, email (optionnel)'}
-                  {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && 'Colonnes: nom, prenom, email'}
+                  {selectedUserType === 'externes' && 'Colonnes: nom, prenom, email, telephone'}
                   {selectedUserType === 'coordinateurs' && 'Colonnes: nom, prenom'}
                 </div>
                 
