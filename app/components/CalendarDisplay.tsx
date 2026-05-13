@@ -325,24 +325,20 @@ export default function CalendarDisplay({
                     if (body) body.scrollLeft = (e.target as HTMLDivElement).scrollLeft;
                   }}
                 >
-                  <div
-                    className="flex border-b border-gray-200 bg-gray-100"
-                    style={{ minWidth: day.locations.length * 200 + 92, width: 'max-content' }}
-                  >
+                  <div className="flex border-b border-gray-200 bg-gray-100">
                     <div className="w-[92px] flex-shrink-0 px-4 py-3 text-sm font-semibold text-gray-700 border-r border-gray-200">
                       Horaire
                     </div>
                     {day.locations.map(location => (
                       <div
                         key={`header-${location}`}
-                        className="w-[200px] flex-shrink-0 px-4 py-3 text-sm font-semibold text-gray-700 border-r border-gray-200"
+                        className="flex-1 min-w-[150px] px-4 py-3 text-sm font-semibold text-gray-700 border-r border-gray-200"
                       >
                         {location}
                       </div>
                     ))}
                   </div>
                 </div>
-              </div>
 
               {/* Corps */}
               <div
@@ -360,10 +356,8 @@ export default function CalendarDisplay({
                     if (header) header.scrollLeft = (e.target as HTMLDivElement).scrollLeft;
                   }}
                 >
-                  <div
-                    className="flex"
-                    style={{ minWidth: day.locations.length * 200 + 92, width: 'max-content' }}
-                  >
+                  <div className="flex">
+                    {/* Colonne des heures - largeur fixe */}
                     <div className="w-[92px] flex-shrink-0 bg-gray-50 border-r border-gray-200">
                       {Array.from({ length: totalHours }).map((_, i) => {
                         const hour = 8 + i;
@@ -380,12 +374,13 @@ export default function CalendarDisplay({
                         );
                       })}
                     </div>
-
-                    <div className="flex relative" style={{ width: day.locations.length * 200 }}>
+              
+                    {/* Colonnes des locaux - flexibles mais avec largeur minimale */}
+                    <div className="flex flex-1">
                       {day.locations.map((location) => (
                         <div
                           key={`col-${location}`}
-                          className="w-[200px] flex-shrink-0 border-r relative"
+                          className="flex-1 min-w-[200px] border-r relative"
                           style={{ height: `${totalHeight}px` }}
                         >
                           {day.defenses
