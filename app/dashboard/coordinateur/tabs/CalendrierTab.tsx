@@ -9,6 +9,7 @@ import { Eleve, DefenseEvent, Conflict } from '../types';
 import { getCategoryColor } from '../utils/categoryUtils';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import DefenseEditModal from '@/app/components/DefenseEditModal';
 
 interface CalendrierTabProps {
   eleves: Eleve[];
@@ -28,7 +29,10 @@ export default function CalendrierTab({
   const [isLoading, setIsLoading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [showExportOptions, setShowExportOptions] = useState(false);
+  const [selectedEleve, setSelectedEleve] = useState<Eleve | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const calendarRef = useRef<HTMLDivElement>(null);
+  
 
   const allDates = useMemo(() => 
     Array.from(
@@ -176,6 +180,7 @@ export default function CalendrierTab({
     
     return container;
   };
+  
   
   const handleExportByDayLocation = async () => {
     setIsExporting(true);
@@ -602,6 +607,25 @@ export default function CalendrierTab({
     } finally {
       setIsExporting(false);
     }
+  };
+
+  const handleEventClick = (event: DefenseEvent) => {
+    const eleve = eleves.find(e => e.id === event.eleveId);
+    if (eleve) {
+      setSelectedEleve(eleve);
+      setIsModalOpen(true);
+    }
+  };
+  
+  // Ajouter la fonction de sauvegarde
+  const handleSaveDefense = async (eleveId: string, updates: Partial<Eleve>) => {
+    const updatePromises = Object.entries(updates).map(([field, value]) => {
+      if (value !== undefined) {
+        return onUpdate(eleveId, field, value === '' ? '' : value);
+      }
+      return Promise.resolve();
+    });
+    await Promise.all(updatePromises);
   };
   
   // Détecter les conflits
@@ -1086,10 +1110,24 @@ export default function CalendrierTab({
               }
               selectedDates={selectedDates}
               selectedLocations={selectedLocations}
+              onEventClick={handleEventClick}
             />
           </div>
         )}
       </div>
     </div>
+    <DefenseEditModal
+      isOpen={isModalOpen}
+      onClose={() => {
+        setIsModalOpen(false);
+        setSelectedEleve(null);
+      }}
+      eleve={selectedEleve}
+      guides={guides}
+      externes={externes}
+      allEleves={eleves}
+      onSave={handleSaveDefense}
+      onRefresh={onRefresh}
+    />
   );
 }
