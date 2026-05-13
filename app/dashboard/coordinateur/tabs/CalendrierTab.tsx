@@ -63,23 +63,6 @@ export default function CalendrierTab({
       )
     ), [eleves]);
    
-  useEffect(() => {
-    if (selectedDates.length === 0 && allDates.length > 0) {
-      setSelectedDates(allDates);
-    }
-  }, [allDates]);
-  
-  useEffect(() => {
-    if (selectedLocations.length === 0 && allLocations.length > 0) {
-      setSelectedLocations(allLocations);
-    }
-  }, [allLocations]);
-  
-  useEffect(() => {
-    if (selectedCategories.length === 0 && categories.length > 0) {
-      setSelectedCategories(categories);
-    }
-  }, [categories]);
 
   const getFilteredDefenses = () => {
     return eleves.filter(e => 
