@@ -60,44 +60,20 @@ export default function CalendrierTab({
           .sort((a, b) => a.charAt(0).localeCompare(b.charAt(0)))
       )
     ), [eleves]);
-
-  // Ref pour savoir si le composant est initialisé
-  const isInitialized = useRef(false);
-  const prevAllLocations = useRef<string[]>([]);
-  const prevCategories = useRef<string[]>([]);
-
-  // Initialisation unique
+  
+  // Ref pour l'initialisation unique
+  const initialized = useRef(false);
+  
+  // Initialisation unique au premier chargement complet
   useEffect(() => {
-    if (!isInitialized.current && categories.length > 0 && allLocations.length > 0) {
+    if (!initialized.current && categories.length > 0 && allLocations.length > 0 && allDates.length > 0) {
       setSelectedCategories(categories);
       setSelectedLocations(allLocations);
-      setSelectedDates([...allDates]); // Ajoute aussi les dates
-      isInitialized.current = true;
+      setSelectedDates([...allDates]);
+      initialized.current = true;
     }
   }, [categories, allLocations, allDates]);
-  
-  // Ne pas réinitialiser quand allLocations change après initialisation
-  useEffect(() => {
-    if (isInitialized.current && allLocations.length > 0) {
-      // Si des nouveaux locaux apparaissent, on les ajoute à la sélection
-      const newLocations = allLocations.filter(loc => !prevAllLocations.current.includes(loc));
-      if (newLocations.length > 0) {
-        setSelectedLocations(prev => [...prev, ...newLocations]);
-      }
-      prevAllLocations.current = allLocations;
-    }
-  }, [allLocations]);
-  
-  // Pareil pour les catégories
-  useEffect(() => {
-    if (isInitialized.current && categories.length > 0) {
-      const newCategories = categories.filter(cat => !prevCategories.current.includes(cat));
-      if (newCategories.length > 0) {
-        setSelectedCategories(prev => [...prev, ...newCategories]);
-      }
-      prevCategories.current = categories;
-    }
-  }, [categories]);
+
 
   const getFilteredDefenses = () => {
     return eleves.filter(e => 
