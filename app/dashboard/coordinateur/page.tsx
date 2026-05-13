@@ -138,6 +138,8 @@ export default function CoordinateurDashboard() {
         return (
           <CalendrierTab
             eleves={eleves}
+            guides={guides}
+            externes={externes}
             categories={categories}
             onRefresh={refreshData}
             onUpdate={handleUpdate}
