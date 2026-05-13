@@ -90,6 +90,7 @@ export interface Guide {
   initiale: string;
   email?: string;
   mot_de_passe?: string | null;
+  accepte_numerique?: boolean;
 }
 
 export interface Externe {
@@ -98,6 +99,7 @@ export interface Externe {
   prenom: string;
   lecteur_externe_id?: string;
   mediateur_id?: string;
+  accepte_numerique?: boolean;
 }
 
 export interface LecteurExterne {
