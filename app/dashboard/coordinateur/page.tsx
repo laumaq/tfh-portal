@@ -20,7 +20,7 @@ import ListeTFHTab from './tabs/ListeTFHTab';
 import GestionUtilisateursTab from './tabs/GestionUtilisateursTab';
 import { useCoordinateurData } from './hooks/useCoordinateurData';
 import { useElevesOperations } from './hooks/useElevesOperations';
-import { TabType, Eleve } from './types';
+import { TabType, Eleve, UserType } from './types'; 
 
 export default function CoordinateurDashboard() {
   const router = useRouter();
