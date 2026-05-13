@@ -139,6 +139,7 @@ export default function CoordinateurDashboard() {
             eleves={eleves}
             categories={categories}
             onRefresh={refreshData}
+            onUpdate={handleUpdate}
           />
         );
 
