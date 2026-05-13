@@ -61,24 +61,23 @@ export default function CalendrierTab({
       )
     ), [eleves]);
   
-  // Ref pour l'initialisation unique
   const initialized = useRef(false);
-    
-  // Au début du composant, après les useState
-  console.log('🔵 CalendrierTab render - selectedLocations:', selectedLocations);
   
-  // Dans le useEffect d'initialisation
   useEffect(() => {
-    console.log('🟢 useEffect [categories, allLocations, allDates] - initialisation');
-    if (!initialized.current && categories.length > 0 && allLocations.length > 0 && allDates.length > 0) {
-      console.log('🟢 INITIALISATION - set selectedLocations to:', allLocations);
-      setSelectedCategories(categories);
-      setSelectedLocations(allLocations);
-      setSelectedDates([...allDates]);
-      initialized.current = true;
+    if (!initialized.current) {
+      if (categories.length > 0 && allLocations.length > 0 && allDates.length > 0) {
+        console.log('🟢 INITIALISATION UNIQUE');
+        setSelectedCategories(categories);
+        setSelectedLocations(allLocations);
+        setSelectedDates([...allDates]);
+        initialized.current = true;
+      }
+    } else {
+      // Après initialisation, ne jamais réinitialiser
+      console.log('⏭️ Skip re-initialization');
     }
-  }, [categories, allLocations, allDates]);
-  
+  }, [categories, allLocations, allDates]); // Les dépendances sont là mais on ne fait rien après init
+    
 
   const getFilteredDefenses = () => {
     return eleves.filter(e => 
