@@ -298,7 +298,7 @@ export default function CalendarDisplay({
               className="bg-white rounded-lg shadow overflow-hidden"
               style={{ position: 'relative' }}
             >
-              {/* En-tête — position absolute, translate géré en JS */}
+              {/* En-tête */}
               <div
                 ref={el => { headerRefs.current[dayIndex] = el; }}
                 style={{
@@ -315,7 +315,7 @@ export default function CalendarDisplay({
                     {day.defenses.length} {pluralize(day.defenses.length, 'défense', 'défenses')} • {day.locations.length} {pluralize(day.locations.length, 'local', 'locaux')}
                   </p>
                 </div>
-                {/* Scroll horizontal de l'en-tête — synchronisé avec le corps */}
+                
                 <div
                   ref={el => { headerScrollRefs.current[dayIndex] = el; }}
                   className="overflow-x-auto"
@@ -327,7 +327,7 @@ export default function CalendarDisplay({
                 >
                   <div
                     className="flex border-b border-gray-200 bg-gray-100"
-                    style={{ minWidth: day.locations.length * 200 + 92 }}
+                    style={{ minWidth: day.locations.length * 200 + 92, width: 'max-content' }}
                   >
                     <div className="w-[92px] flex-shrink-0 px-4 py-3 text-sm font-semibold text-gray-700 border-r border-gray-200">
                       Horaire
@@ -335,7 +335,7 @@ export default function CalendarDisplay({
                     {day.locations.map(location => (
                       <div
                         key={`header-${location}`}
-                        className="min-w-[200px] px-4 py-3 text-sm font-semibold text-gray-700 border-r"
+                        className="w-[200px] flex-shrink-0 px-4 py-3 text-sm font-semibold text-gray-700 border-r border-gray-200"
                       >
                         {location}
                       </div>
@@ -344,17 +344,16 @@ export default function CalendarDisplay({
                 </div>
               </div>
 
-              {/* Corps — padding-top calculé après le premier rendu pour laisser place à l'en-tête */}
+              {/* Corps */}
               <div
                 ref={el => {
+                  bodyScrollRefs.current[dayIndex] = el;
                   if (el && headerRefs.current[dayIndex]) {
                     el.style.paddingTop = `${headerRefs.current[dayIndex]!.offsetHeight}px`;
                   }
                 }}
               >
-                {/* Scroll horizontal du corps — synchronisé avec l'en-tête */}
                 <div
-                  ref={el => { bodyScrollRefs.current[dayIndex] = el; }}
                   className="overflow-x-auto"
                   onScroll={e => {
                     const header = headerScrollRefs.current[dayIndex];
@@ -363,7 +362,7 @@ export default function CalendarDisplay({
                 >
                   <div
                     className="flex"
-                    style={{ minWidth: day.locations.length * 200 + 92 }}
+                    style={{ minWidth: day.locations.length * 200 + 92, width: 'max-content' }}
                   >
                     <div className="w-[92px] flex-shrink-0 bg-gray-50 border-r border-gray-200">
                       {Array.from({ length: totalHours }).map((_, i) => {
@@ -382,101 +381,99 @@ export default function CalendarDisplay({
                       })}
                     </div>
 
-                    <div className="flex-1 relative" style={{ height: `${totalHeight}px` }}>
-                      <div className="absolute inset-0 flex">
-                        {day.locations.map((location) => (
-                          <div
-                            key={`col-${location}`}
-                            className="flex-1 border-r relative"
-                            style={{ minWidth: '200px' }}
-                          >
-                            {day.defenses
-                              .filter(defense => defense.location === location)
-                              .map(defense => {
-                                const [startHours, startMinutes] = defense.startTime.split(':').map(Number);
-                                const top = (startHours - 8 + startMinutes / 60) * PIXELS_PER_HOUR;
-                                const height = (50 / 60) * PIXELS_PER_HOUR;
-                                const color = getCategoryColor(defense.categorie);
-                                const isSelected = selectedEventIds.includes(defense.eleveId);
-                                const isBusy = busyEventIds.includes(defense.eleveId);
-                                const eleve = eleves.find(e => e.id === defense.eleveId);
-                                const isAssignedToCurrentUser = eleve?.lecteur_externe_id === userLecteurExterneId;
-                                const isClickable = onEventClick && (!isBusy || isAssignedToCurrentUser);
+                    <div className="flex relative" style={{ width: day.locations.length * 200 }}>
+                      {day.locations.map((location) => (
+                        <div
+                          key={`col-${location}`}
+                          className="w-[200px] flex-shrink-0 border-r relative"
+                          style={{ height: `${totalHeight}px` }}
+                        >
+                          {day.defenses
+                            .filter(defense => defense.location === location)
+                            .map(defense => {
+                              const [startHours, startMinutes] = defense.startTime.split(':').map(Number);
+                              const top = (startHours - 8 + startMinutes / 60) * PIXELS_PER_HOUR;
+                              const height = (50 / 60) * PIXELS_PER_HOUR;
+                              const color = getCategoryColor(defense.categorie);
+                              const isSelected = selectedEventIds.includes(defense.eleveId);
+                              const isBusy = busyEventIds.includes(defense.eleveId);
+                              const eleve = eleves.find(e => e.id === defense.eleveId);
+                              const isAssignedToCurrentUser = eleve?.lecteur_externe_id === userLecteurExterneId;
+                              const isClickable = onEventClick && (!isBusy || isAssignedToCurrentUser);
 
-                                return (
-                                  <div
-                                    key={defense.id}
-                                    className={`absolute left-1 right-1 rounded p-2 overflow-y-auto border shadow-sm transition-shadow ${
-                                      isClickable ? 'hover:shadow-md cursor-pointer' : ''
-                                    } ${isSelected ? 'ring-2 ring-blue-500 ring-offset-1' : ''} ${
-                                      isBusy && !isAssignedToCurrentUser ? 'opacity-50' : ''
-                                    }`}
-                                    style={{
-                                      top: `${top}px`,
-                                      height: `${height}px`,
-                                      backgroundColor: isSelected ? '#E0F2FE' : color.bg,
-                                      borderColor: isSelected ? '#7DD3FC' : color.border,
-                                      color: isSelected ? '#0C4A6E' : color.text,
-                                      zIndex: 10,
-                                      fontSize: '12px'
-                                    }}
-                                    onClick={() => { if (isClickable) onEventClick!(defense); }}
-                                  >
-                                    <div className="font-bold mb-1 flex justify-between items-center sticky top-0 bg-inherit pb-1 border-b border-gray-300">
-                                      <span className="text-xs">{defense.startTime} - {defense.endTime}</span>
-                                      <div className="flex gap-1">
-                                        {isSelected && <span className="text-xs bg-blue-500 text-white px-1 py-0.5 rounded">✓</span>}
-                                        {isBusy && !isAssignedToCurrentUser && <span className="text-xs bg-red-500 text-white px-1 py-0.5 rounded">Occupé</span>}
-                                      </div>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                      <div>
-                                        <div className="font-semibold text-sm">{defense.elevePrenom} {defense.eleveNom}</div>
-                                        <div className="text-xs opacity-75">{defense.categorie}</div>
-                                      </div>
-                                      <hr className="border-gray-400 my-1" />
-                                      {defense.problematique && (
-                                        <>
-                                          <div className="text-xs leading-relaxed break-words">
-                                            <span className="font-medium">📝</span> {defense.problematique}
-                                          </div>
-                                          <hr className="border-gray-400 my-1" />
-                                        </>
-                                      )}
-                                      <div className="space-y-0.5 text-xs">
-                                        {defense.guideNom !== '-' && (
-                                          <div className="flex items-start gap-1">
-                                            <span className="font-medium min-w-[85px]">Guide:</span>
-                                            <span>{defense.guidePrenom} {defense.guideNom}</span>
-                                          </div>
-                                        )}
-                                        {defense.lecteurInterneNom !== '-' && (
-                                          <div className="flex items-start gap-1">
-                                            <span className="font-medium min-w-[85px]">Lecteur interne:</span>
-                                            <span>{defense.lecteurInternePrenom} {defense.lecteurInterneNom}</span>
-                                          </div>
-                                        )}
-                                        {defense.lecteurExterneNom !== '-' && (
-                                          <div className="flex items-start gap-1">
-                                            <span className="font-medium min-w-[85px]">Lecteur externe:</span>
-                                            <span>{defense.lecteurExternePrenom} {defense.lecteurExterneNom}</span>
-                                          </div>
-                                        )}
-                                        {defense.mediateurNom !== '-' && (
-                                          <div className="flex items-start gap-1">
-                                            <span className="font-medium min-w-[85px]">Médiateur:</span>
-                                            <span>{defense.mediateurPrenom} {defense.mediateurNom}</span>
-                                          </div>
-                                        )}
-                                      </div>
+                              return (
+                                <div
+                                  key={defense.id}
+                                  className={`absolute left-1 right-1 rounded p-2 overflow-y-auto border shadow-sm transition-shadow ${
+                                    isClickable ? 'hover:shadow-md cursor-pointer' : ''
+                                  } ${isSelected ? 'ring-2 ring-blue-500 ring-offset-1' : ''} ${
+                                    isBusy && !isAssignedToCurrentUser ? 'opacity-50' : ''
+                                  }`}
+                                  style={{
+                                    top: `${top}px`,
+                                    height: `${height}px`,
+                                    backgroundColor: isSelected ? '#E0F2FE' : color.bg,
+                                    borderColor: isSelected ? '#7DD3FC' : color.border,
+                                    color: isSelected ? '#0C4A6E' : color.text,
+                                    zIndex: 10,
+                                    fontSize: '12px'
+                                  }}
+                                  onClick={() => { if (isClickable) onEventClick!(defense); }}
+                                >
+                                  <div className="font-bold mb-1 flex justify-between items-center sticky top-0 bg-inherit pb-1 border-b border-gray-300">
+                                    <span className="text-xs">{defense.startTime} - {defense.endTime}</span>
+                                    <div className="flex gap-1">
+                                      {isSelected && <span className="text-xs bg-blue-500 text-white px-1 py-0.5 rounded">✓</span>}
+                                      {isBusy && !isAssignedToCurrentUser && <span className="text-xs bg-red-500 text-white px-1 py-0.5 rounded">Occupé</span>}
                                     </div>
                                   </div>
-                                );
-                              })}
-                          </div>
-                        ))}
-                      </div>
+
+                                  <div className="space-y-2">
+                                    <div>
+                                      <div className="font-semibold text-sm">{defense.elevePrenom} {defense.eleveNom}</div>
+                                      <div className="text-xs opacity-75">{defense.categorie}</div>
+                                    </div>
+                                    <hr className="border-gray-400 my-1" />
+                                    {defense.problematique && (
+                                      <>
+                                        <div className="text-xs leading-relaxed break-words">
+                                          <span className="font-medium">📝</span> {defense.problematique}
+                                        </div>
+                                        <hr className="border-gray-400 my-1" />
+                                      </>
+                                    )}
+                                    <div className="space-y-0.5 text-xs">
+                                      {defense.guideNom !== '-' && (
+                                        <div className="flex items-start gap-1">
+                                          <span className="font-medium min-w-[85px]">Guide:</span>
+                                          <span>{defense.guidePrenom} {defense.guideNom}</span>
+                                        </div>
+                                      )}
+                                      {defense.lecteurInterneNom !== '-' && (
+                                        <div className="flex items-start gap-1">
+                                          <span className="font-medium min-w-[85px]">Lecteur interne:</span>
+                                          <span>{defense.lecteurInternePrenom} {defense.lecteurInterneNom}</span>
+                                        </div>
+                                      )}
+                                      {defense.lecteurExterneNom !== '-' && (
+                                        <div className="flex items-start gap-1">
+                                          <span className="font-medium min-w-[85px]">Lecteur externe:</span>
+                                          <span>{defense.lecteurExternePrenom} {defense.lecteurExterneNom}</span>
+                                        </div>
+                                      )}
+                                      {defense.mediateurNom !== '-' && (
+                                        <div className="flex items-start gap-1">
+                                          <span className="font-medium min-w-[85px]">Médiateur:</span>
+                                          <span>{defense.mediateurPrenom} {defense.mediateurNom}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
