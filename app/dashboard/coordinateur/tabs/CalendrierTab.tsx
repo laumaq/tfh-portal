@@ -63,17 +63,22 @@ export default function CalendrierTab({
   
   // Ref pour l'initialisation unique
   const initialized = useRef(false);
+    
+  // Au début du composant, après les useState
+  console.log('🔵 CalendrierTab render - selectedLocations:', selectedLocations);
   
-  // Initialisation unique au premier chargement complet
+  // Dans le useEffect d'initialisation
   useEffect(() => {
+    console.log('🟢 useEffect [categories, allLocations, allDates] - initialisation');
     if (!initialized.current && categories.length > 0 && allLocations.length > 0 && allDates.length > 0) {
+      console.log('🟢 INITIALISATION - set selectedLocations to:', allLocations);
       setSelectedCategories(categories);
       setSelectedLocations(allLocations);
       setSelectedDates([...allDates]);
       initialized.current = true;
     }
   }, [categories, allLocations, allDates]);
-
+  
 
   const getFilteredDefenses = () => {
     return eleves.filter(e => 
@@ -846,10 +851,14 @@ export default function CalendrierTab({
     }
   };
 
+  // Dans le toggle
   const toggleAllLocations = () => {
+    console.log('🔴 toggleAllLocations - avant:', selectedLocations);
     if (selectedLocations.length === allLocations.length) {
+      console.log('🔴 setting to []');
       setSelectedLocations([]);
     } else {
+      console.log('🔴 setting to all:', allLocations);
       setSelectedLocations([...allLocations]);
     }
   };
