@@ -420,7 +420,7 @@ export default function CalendarDisplay({
                                     zIndex: 10,
                                     fontSize: '12px'
                                   }}
-                                  onClick={() => { if (isClickable) onEventClick!(defense); }}
+                                  onDoubleClick={() => { if (isClickable) onEventClick!(defense); }}
                                 >
                                   <div className="font-bold mb-1 flex justify-between items-center sticky top-0 bg-inherit pb-1 border-b border-gray-300">
                                     <span className="text-xs">{defense.startTime} - {defense.endTime}</span>
