@@ -36,16 +36,10 @@ export default function CalendrierTab({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const calendarRef = useRef<HTMLDivElement>(null);
-  const [selectedDates, setSelectedDates] = useState<string[]>(() => {
-    // Fonction d'initialisation - s'exécute UNE SEULE fois au montage
-    return allDates;
-  });
-  const [selectedLocations, setSelectedLocations] = useState<string[]>(() => {
-    return allLocations;
-  });
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(() => {
-    return categories;
-  });
+  const [selectedDates, setSelectedDates] = useState<string[]>(allDates);
+  const [selectedLocations, setSelectedLocations] = useState<string[]>(allLocations);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(categories);
+
   const initialized = useRef(false);  
   
 
