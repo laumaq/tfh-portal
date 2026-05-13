@@ -5,7 +5,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import * as XLSX from 'xlsx';
-import { Plus, Upload, Trash2, UserPlus, AlertTriangle, Check, Lock, Unlock, CheckCircle, XCircle, Phone, Mail } from 'lucide-react';
+import { Plus, Upload, Trash2, UserPlus, AlertTriangle, Check, CheckCircle, XCircle, Phone, Mail } from 'lucide-react';
 import { Eleve, Guide, Externe, Coordinateur } from '../types';
 
 interface GestionUtilisateursTabProps {
@@ -359,6 +359,49 @@ export default function GestionUtilisateursTab({
     }
   };
 
+  const handleClearAll = async (type: 'eleves' | 'guides') => {
+    const userName = localStorage.getItem('userName') || '';
+    
+    if (!clearConfirmations.includes(userName)) {
+      setClearConfirmations([...clearConfirmations, userName]);
+      setSuccessMessage(`Confirmation 1/3 enregistrée. Demandez à 2 autres coordinateurs de confirmer.`);
+      clearMessages();
+      return;
+    }
+
+    if (clearConfirmations.length < 2) {
+      setSuccessMessage(`Confirmation ${clearConfirmations.length}/3 enregistrée. ${3 - clearConfirmations.length} confirmation(s) restante(s).`);
+      clearMessages();
+      return;
+    }
+
+    try {
+      if (type === 'eleves') {
+        const { error } = await supabase
+          .from('eleves')
+          .delete()
+          .neq('id', '00000000-0000-0000-0000-000000000000');
+        if (error) throw error;
+      } else if (type === 'guides') {
+        const { error } = await supabase
+          .from('guides')
+          .delete()
+          .neq('id', '00000000-0000-0000-0000-000000000000');
+        if (error) throw error;
+      }
+
+      setSuccessMessage(`Tous les ${type} ont été supprimés avec succès!`);
+      clearMessages();
+      setShowClearConfirmations(false);
+      setClearConfirmations([]);
+      onRefresh();
+    } catch (err) {
+      console.error(`Erreur suppression ${type}:`, err);
+      setErrorMessage(`Erreur lors de la suppression des ${type}`);
+      clearMessages();
+    }
+  };
+
   const handleDeletePassword = async () => {
     if (!deletePasswordModal.userId || !deletePasswordModal.userType) return;
 
@@ -495,6 +538,152 @@ export default function GestionUtilisateursTab({
     );
   };
 
+  const handleMassImport = async () => {
+    setLoading(true);
+    setSuccessMessage('');
+    setErrorMessage('');
+    
+    try {
+      const rows = massImportData.trim().split('\n').filter(row => row.trim());
+      if (rows.length === 0) {
+        setErrorMessage('Aucune donnée à importer');
+        clearMessages();
+        setLoading(false);
+        return;
+      }
+
+      const firstRow = rows[0].split(',').map(c => c.trim().toLowerCase());
+      const hasHeaders = firstRow.includes('nom') || firstRow.includes('prenom') || firstRow.includes('classe');
+      
+      const dataRows = hasHeaders ? rows.slice(1) : rows;
+      
+      switch (selectedUserType) {
+        case 'eleves':
+          const elevesToInsert = dataRows.map(row => {
+            const values = row.split(',').map(v => v.trim());
+            return {
+              nom: values[0] || '',
+              prenom: values[1] || '',
+              classe: values[2] || '',
+              initiale: (values[1] || '').charAt(0).toUpperCase(),
+              categorie: values[3] || null,
+              guide_id: null,
+              mot_de_passe: null
+            };
+          }).filter(e => e.nom && e.prenom && e.classe);
+
+          if (elevesToInsert.length > 0) {
+            const { error } = await supabase
+              .from('eleves')
+              .insert(elevesToInsert);
+            if (error) throw error;
+          }
+          break;
+
+        case 'guides':
+          const guidesToInsert = dataRows.map(row => {
+            const values = row.split(',').map(v => v.trim());
+            return {
+              nom: values[0] || '',
+              prenom: values[1] || '',
+              initiale: (values[1] || '').charAt(0).toUpperCase(),
+              email: values[2] || null,
+              mot_de_passe: null
+            };
+          }).filter(g => g.nom && g.prenom);
+
+          if (guidesToInsert.length > 0) {
+            const { error } = await supabase
+              .from('guides')
+              .insert(guidesToInsert);
+            if (error) throw error;
+          }
+          break;
+
+        case 'externes':
+          const externesToInsert = dataRows.map(row => {
+            const values = row.split(',').map(v => v.trim());
+            return {
+              id: crypto.randomUUID(),
+              nom: values[0] || '',
+              prenom: values[1] || '',
+              email: values[2] || null,
+              telephone: values[3] || null,
+              mot_de_passe: null
+            };
+          }).filter(e => e.nom && e.prenom);
+
+          if (externesToInsert.length > 0) {
+            const { error } = await supabase
+              .from('externes')
+              .insert(externesToInsert);
+            if (error) throw error;
+          }
+          break;
+
+        case 'coordinateurs':
+          const coordinateursToInsert = dataRows.map(row => {
+            const values = row.split(',').map(v => v.trim());
+            const coordData: any = {
+              nom: values[0] || '',
+              prenom: values[1] || '',
+              mot_de_passe: null
+            };
+            
+            if (values[1]) {
+              coordData.initiale = values[1].charAt(0).toUpperCase();
+            }
+            
+            return coordData;
+          }).filter(c => c.nom && c.prenom);
+
+          if (coordinateursToInsert.length > 0) {
+            const { error } = await supabase
+              .from('coordinateurs')
+              .insert(coordinateursToInsert);
+            if (error) throw error;
+          }
+          break;
+      }
+
+      setSuccessMessage(`${dataRows.length} utilisateur${dataRows.length > 1 ? 's' : ''} importé${dataRows.length > 1 ? 's' : ''} avec succès!`);
+      clearMessages();
+      setShowMassImport(false);
+      setMassImportData('');
+      onRefresh();
+    } catch (err) {
+      console.error('Erreur import massif:', err);
+      setErrorMessage('Erreur lors de l\'importation: ' + (err as Error).message);
+      clearMessages();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as string[][];
+        
+        const csvText = jsonData.map(row => row.join(',')).join('\n');
+        setMassImportData(csvText);
+        setShowMassImport(true);
+      } catch (err) {
+        console.error('Erreur lecture fichier:', err);
+        setErrorMessage('Erreur lors de la lecture du fichier');
+        clearMessages();
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
   return (
     <div className="space-y-6">
       {renderMessages()}
@@ -578,33 +767,15 @@ export default function GestionUtilisateursTab({
                 <>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Nom *</label>
-                    <input
-                      type="text"
-                      placeholder="Nom"
-                      value={newUser.nom}
-                      onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
+                    <input type="text" placeholder="Nom" value={newUser.nom} onChange={(e) => setNewUser({...newUser, nom: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Prénom *</label>
-                    <input
-                      type="text"
-                      placeholder="Prénom"
-                      value={newUser.prenom}
-                      onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
+                    <input type="text" placeholder="Prénom" value={newUser.prenom} onChange={(e) => setNewUser({...newUser, prenom: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Classe *</label>
-                    <input
-                      type="text"
-                      placeholder="Classe"
-                      value={newUser.classe}
-                      onChange={(e) => setNewUser({...newUser, classe: e.target.value})}
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
+                    <input type="text" placeholder="Classe" value={newUser.classe} onChange={(e) => setNewUser({...newUser, classe: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
                   </div>
                 </>
               )}
@@ -613,43 +784,19 @@ export default function GestionUtilisateursTab({
                 <>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Nom *</label>
-                    <input
-                      type="text"
-                      placeholder="Nom"
-                      value={newUser.nom}
-                      onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
+                    <input type="text" placeholder="Nom" value={newUser.nom} onChange={(e) => setNewUser({...newUser, nom: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Prénom *</label>
-                    <input
-                      type="text"
-                      placeholder="Prénom"
-                      value={newUser.prenom}
-                      onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
+                    <input type="text" placeholder="Prénom" value={newUser.prenom} onChange={(e) => setNewUser({...newUser, prenom: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
-                    <input
-                      type="email"
-                      placeholder="Email"
-                      value={newUser.email}
-                      onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
+                    <input type="email" placeholder="Email" value={newUser.email} onChange={(e) => setNewUser({...newUser, email: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Téléphone</label>
-                    <input
-                      type="tel"
-                      placeholder="Téléphone"
-                      value={newUser.telephone}
-                      onChange={(e) => setNewUser({...newUser, telephone: e.target.value})}
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
+                    <input type="tel" placeholder="Téléphone" value={newUser.telephone} onChange={(e) => setNewUser({...newUser, telephone: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
                   </div>
                 </>
               )}
@@ -658,45 +805,23 @@ export default function GestionUtilisateursTab({
                 <>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Nom *</label>
-                    <input
-                      type="text"
-                      placeholder="Nom"
-                      value={newUser.nom}
-                      onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
+                    <input type="text" placeholder="Nom" value={newUser.nom} onChange={(e) => setNewUser({...newUser, nom: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Prénom *</label>
-                    <input
-                      type="text"
-                      placeholder="Prénom"
-                      value={newUser.prenom}
-                      onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
+                    <input type="text" placeholder="Prénom" value={newUser.prenom} onChange={(e) => setNewUser({...newUser, prenom: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
                   </div>
                   {selectedUserType === 'guides' && (
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
-                      <input
-                        type="email"
-                        placeholder="Email"
-                        value={newUser.email}
-                        onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      />
+                      <input type="email" placeholder="Email" value={newUser.email} onChange={(e) => setNewUser({...newUser, email: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
                     </div>
                   )}
                 </>
               )}
             </div>
 
-            <button
-              onClick={handleAddUser}
-              disabled={loading}
-              className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full md:w-auto"
-            >
+            <button onClick={handleAddUser} disabled={loading} className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full md:w-auto">
               {loading ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -716,9 +841,7 @@ export default function GestionUtilisateursTab({
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium text-gray-700">
-              Liste des {getUserTypeLabel().toLowerCase()} ({getCurrentUserCount()})
-            </h3>
+            <h3 className="text-lg font-medium text-gray-700">Liste des {getUserTypeLabel().toLowerCase()} ({getCurrentUserCount()})</h3>
             <span className="text-sm text-gray-500">
               <CheckCircle className="w-4 h-4 inline text-green-600 mr-1" /> = Connecté
               <XCircle className="w-4 h-4 inline text-red-600 mr-1 ml-3" /> = Non connecté
@@ -851,16 +974,8 @@ export default function GestionUtilisateursTab({
                       <td className="px-4 py-3">{renderConnectionStatus(user)}</td>
                       <td className="px-4 py-3">
                         <label className="flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={user.isInDirection || false}
-                            onChange={(e) => handleDirectionToggle(user.id, e.target.checked)}
-                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                            disabled={loading}
-                          />
-                          <span className="ml-2 text-sm text-gray-700">
-                            {user.isInDirection ? 'Membre' : 'Non membre'}
-                          </span>
+                          <input type="checkbox" checked={user.isInDirection || false} onChange={(e) => handleDirectionToggle(user.id, e.target.checked)} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" disabled={loading} />
+                          <span className="ml-2 text-sm text-gray-700">{user.isInDirection ? 'Membre' : 'Non membre'}</span>
                         </label>
                       </td>
                     </>
@@ -879,59 +994,25 @@ export default function GestionUtilisateursTab({
             <div className="px-6 py-4 border-b">
               <h3 className="text-lg font-semibold text-gray-800">Import massif depuis CSV/Excel</h3>
             </div>
-            
             <div className="p-6">
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Format attendu pour les {getUserTypeLabel().toLowerCase()}:
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Format attendu pour les {getUserTypeLabel().toLowerCase()}:</label>
                 <div className="text-sm text-gray-600 mb-3">
                   {selectedUserType === 'eleves' && 'Colonnes: nom, prenom, classe, categorie (optionnel)'}
                   {selectedUserType === 'guides' && 'Colonnes: nom, prenom, email (optionnel)'}
                   {selectedUserType === 'externes' && 'Colonnes: nom, prenom, email, telephone'}
                   {selectedUserType === 'coordinateurs' && 'Colonnes: nom, prenom'}
                 </div>
-                
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileUpload}
-                  accept=".csv,.xlsx,.xls"
-                  className="w-full border rounded px-3 py-2 text-sm"
-                />
+                <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv,.xlsx,.xls" className="w-full border rounded px-3 py-2 text-sm" />
               </div>
-              
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Données CSV (vous pouvez aussi coller directement):
-                </label>
-                <textarea
-                  value={massImportData}
-                  onChange={(e) => setMassImportData(e.target.value)}
-                  rows={10}
-                  className="w-full border rounded px-3 py-2 text-sm font-mono"
-                  placeholder="Collez vos données CSV ici..."
-                />
+                <label className="block text-sm font-medium text-gray-700 mb-2">Données CSV (vous pouvez aussi coller directement):</label>
+                <textarea value={massImportData} onChange={(e) => setMassImportData(e.target.value)} rows={10} className="w-full border rounded px-3 py-2 text-sm font-mono" placeholder="Collez vos données CSV ici..." />
               </div>
             </div>
-            
             <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
-              <button
-                onClick={() => {
-                  setShowMassImport(false);
-                  setMassImportData('');
-                }}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleMassImport}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={!massImportData.trim() || loading}
-              >
-                {loading ? 'Importation...' : 'Importer'}
-              </button>
+              <button onClick={() => { setShowMassImport(false); setMassImportData(''); }} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm">Annuler</button>
+              <button onClick={handleMassImport} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled={!massImportData.trim() || loading}>{loading ? 'Importation...' : 'Importer'}</button>
             </div>
           </div>
         </div>
@@ -941,53 +1022,20 @@ export default function GestionUtilisateursTab({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
             <div className="px-6 py-4 border-b bg-red-50">
-              <h3 className="text-lg font-semibold text-red-800">
-                ⚠️ Confirmation nécessaire
-              </h3>
+              <h3 className="text-lg font-semibold text-red-800">⚠️ Confirmation nécessaire</h3>
             </div>
-            
             <div className="p-6">
               <div className="mb-4">
-                <p className="text-gray-700 mb-3">
-                  Vous êtes sur le point de supprimer <strong>TOUS</strong> les {selectedUserType === 'eleves' ? 'élèves' : 'guides'}.
-                  Cette action est irréversible.
-                </p>
-                
-                <p className="text-sm text-gray-600 mb-4">
-                  Pour des raisons de sécurité, cette opération nécessite la confirmation de 3 coordinateurs différents.
-                </p>
-                
+                <p className="text-gray-700 mb-3">Vous êtes sur le point de supprimer <strong>TOUS</strong> les {selectedUserType === 'eleves' ? 'élèves' : 'guides'}. Cette action est irréversible.</p>
+                <p className="text-sm text-gray-600 mb-4">Pour des raisons de sécurité, cette opération nécessite la confirmation de 3 coordinateurs différents.</p>
                 <div className="bg-yellow-50 border border-yellow-200 rounded p-3 mb-4">
-                  <p className="text-sm text-yellow-800">
-                    Confirmations reçues: {clearConfirmations.length}/3
-                    {clearConfirmations.length > 0 && (
-                      <div className="mt-1 space-y-1">
-                        {clearConfirmations.map((name, index) => (
-                          <div key={index} className="text-xs">• {name}</div>
-                        ))}
-                      </div>
-                    )}
-                  </p>
+                  <p className="text-sm text-yellow-800">Confirmations reçues: {clearConfirmations.length}/3</p>
                 </div>
               </div>
             </div>
-            
             <div className="px-6 py-4 border-t bg-gray-50 flex justify-between">
-              <button
-                onClick={() => {
-                  setShowClearConfirmations(false);
-                  setClearConfirmations([]);
-                }}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={() => handleClearAll(selectedUserType as 'eleves' | 'guides')}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
-              >
-                Confirmer ({clearConfirmations.length}/3)
-              </button>
+              <button onClick={() => { setShowClearConfirmations(false); setClearConfirmations([]); }} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm">Annuler</button>
+              <button onClick={() => handleClearAll(selectedUserType as 'eleves' | 'guides')} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm">Confirmer ({clearConfirmations.length}/3)</button>
             </div>
           </div>
         </div>
@@ -997,590 +1045,24 @@ export default function GestionUtilisateursTab({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
             <div className="px-6 py-4 border-b bg-yellow-50">
-              <h3 className="text-lg font-semibold text-yellow-800">
-                🔐 Supprimer le mot de passe
-              </h3>
+              <h3 className="text-lg font-semibold text-yellow-800">🔐 Supprimer le mot de passe</h3>
             </div>
-            
             <div className="p-6">
               <div className="mb-4">
-                <p className="text-gray-700 mb-3">
-                  Vous êtes sur le point de supprimer le mot de passe de <strong>{deletePasswordModal.userName}</strong>.
-                </p>
-                
-                <p className="text-sm text-gray-600 mb-4">
-                  Cette action permettra à l'utilisateur de créer un nouveau mot de passe lors de sa prochaine connexion.
-                  Elle est utile si l'utilisateur a oublié son mot de passe.
-                </p>
-                
+                <p className="text-gray-700 mb-3">Vous êtes sur le point de supprimer le mot de passe de <strong>{deletePasswordModal.userName}</strong>.</p>
+                <p className="text-sm text-gray-600 mb-4">Cette action permettra à l'utilisateur de créer un nouveau mot de passe lors de sa prochaine connexion.</p>
                 <div className="bg-blue-50 border border-blue-200 rounded p-3 mb-4">
-                  <p className="text-sm text-blue-800">
-                    <strong>⚠️ Attention :</strong> L'utilisateur devra réinitialiser son mot de passe pour pouvoir se reconnecter.
-                  </p>
+                  <p className="text-sm text-blue-800"><strong>⚠️ Attention :</strong> L'utilisateur devra réinitialiser son mot de passe pour pouvoir se reconnecter.</p>
                 </div>
               </div>
             </div>
-            
             <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
-              <button
-                onClick={closeDeletePasswordModal}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm"
-                disabled={loading}
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleDeletePassword}
-                className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={loading}
-              >
-                {loading ? 'Suppression...' : 'Supprimer le mot de passe'}
-              </button>
-
-  return (
-    <div className="space-y-6">
-      {renderMessages()}
-      
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-800">
-              Gestion des utilisateurs
-            </h2>
-            <p className="text-gray-600">
-              Ajout, modification et suppression des utilisateurs du système
-            </p>
-          </div>
-          <div className="text-sm text-gray-500">
-            {getCurrentUserCount()} {getUserTypeLabel().toLowerCase()}
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Type d'utilisateur
-            </label>
-            <select
-              value={selectedUserType}
-              onChange={(e) => {
-                setSelectedUserType(e.target.value as UserType);
-                if (e.target.value === 'direction') {
-                  loadDirectionData();
-                }
-              }}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="eleves">Élèves</option>
-              <option value="guides">Guides</option>
-              <option value="externes">Externes</option>
-              <option value="coordinateurs">Coordinateurs</option>
-              <option value="direction">Direction</option>
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Import / Suppression
-            </label>
-            {selectedUserType !== 'direction' && (
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setShowMassImport(true)}
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-sm transition-colors"
-                >
-                  <Upload className="w-4 h-4" />
-                  Importer CSV
-                </button>
-                {(selectedUserType === 'eleves' || selectedUserType === 'guides') && (
-                  <button
-                    onClick={() => setShowClearConfirmations(true)}
-                    className="flex items-center justify-center gap-2 px-3 py-2 bg-red-50 text-red-700 hover:bg-red-100 rounded-lg text-sm transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Tout supprimer
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-        
-        {selectedUserType !== 'direction' && (
-          <div className="border rounded-lg p-4 bg-gray-50">
-            <h3 className="text-sm font-medium text-gray-700 mb-4 flex items-center gap-2">
-              <UserPlus className="w-4 h-4" />
-              Ajouter un {getUserTypeLabel().toLowerCase()}
-            </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-              {selectedUserType === 'eleves' && (
-                <>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Nom *</label>
-                    <input
-                      type="text"
-                      placeholder="Nom"
-                      value={newUser.nom}
-                      onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Prénom *</label>
-                    <input
-                      type="text"
-                      placeholder="Prénom"
-                      value={newUser.prenom}
-                      onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Classe *</label>
-                    <input
-                      type="text"
-                      placeholder="Classe"
-                      value={newUser.classe}
-                      onChange={(e) => setNewUser({...newUser, classe: e.target.value})}
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-                </>
-              )}
-              
-              {selectedUserType === 'externes' && (
-                <>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Nom *</label>
-                    <input
-                      type="text"
-                      placeholder="Nom"
-                      value={newUser.nom}
-                      onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Prénom *</label>
-                    <input
-                      type="text"
-                      placeholder="Prénom"
-                      value={newUser.prenom}
-                      onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
-                    <input
-                      type="email"
-                      placeholder="Email"
-                      value={newUser.email}
-                      onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Téléphone</label>
-                    <input
-                      type="tel"
-                      placeholder="Téléphone"
-                      value={newUser.telephone}
-                      onChange={(e) => setNewUser({...newUser, telephone: e.target.value})}
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-                </>
-              )}
-              
-              {(selectedUserType === 'guides' || selectedUserType === 'coordinateurs') && (
-                <>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Nom *</label>
-                    <input
-                      type="text"
-                      placeholder="Nom"
-                      value={newUser.nom}
-                      onChange={(e) => setNewUser({...newUser, nom: e.target.value})}
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Prénom *</label>
-                    <input
-                      type="text"
-                      placeholder="Prénom"
-                      value={newUser.prenom}
-                      onChange={(e) => setNewUser({...newUser, prenom: e.target.value})}
-                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-                  {selectedUserType === 'guides' && (
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
-                      <input
-                        type="email"
-                        placeholder="Email"
-                        value={newUser.email}
-                        onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      />
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-
-            <button
-              onClick={handleAddUser}
-              disabled={loading}
-              className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full md:w-auto"
-            >
-              {loading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Ajout en cours...
-                </>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4" />
-                  Ajouter
-                </>
-              )}
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium text-gray-700">
-              Liste des {getUserTypeLabel().toLowerCase()} ({getCurrentUserCount()})
-            </h3>
-            <span className="text-sm text-gray-500">
-              <CheckCircle className="w-4 h-4 inline text-green-600 mr-1" /> = Connecté
-              <XCircle className="w-4 h-4 inline text-red-600 mr-1 ml-3" /> = Non connecté
-            </span>
-          </div>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                {selectedUserType === 'eleves' && (
-                  <>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Classe</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Nom</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Prénom</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Connecté</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
-                  </>
-                )}
-                {selectedUserType === 'guides' && (
-                  <>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Nom</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Prénom</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Email</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Connecté</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
-                  </>
-                )}
-                {selectedUserType === 'externes' && (
-                  <>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Nom</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Prénom</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Email</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Téléphone</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Connecté</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
-                  </>
-                )}
-                {selectedUserType === 'coordinateurs' && (
-                  <>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Nom</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Prénom</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Connecté</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
-                  </>
-                )}
-                {selectedUserType === 'direction' && (
-                  <>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Nom</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Prénom</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Connecté</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Membre direction</th>
-                  </>
-                )}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {getCurrentUsers().map((user: any) => (
-                <tr key={user.id} className="hover:bg-gray-50 transition-colors">
-                  {selectedUserType === 'eleves' && (
-                    <>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{user.classe}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900">{user.nom}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900">{user.prenom}</td>
-                      <td className="px-4 py-3">{renderConnectionStatus(user)}</td>
-                      <td className="px-4 py-3">
-                        <button onClick={() => handleDeleteUser(user.id, user.nom, user.prenom)} className="px-3 py-1 bg-red-50 text-red-700 hover:bg-red-100 rounded text-sm transition-colors">✕</button>
-                      </td>
-                    </>
-                  )}
-                  {selectedUserType === 'guides' && (
-                    <>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{user.nom}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900">{user.prenom}</td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
-                        {user.email ? (
-                          <a href={`mailto:${user.email}`} className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1">
-                            <Mail className="w-3 h-3" />
-                            {user.email}
-                          </a>
-                        ) : '-'}
-                      </td>
-                      <td className="px-4 py-3">{renderConnectionStatus(user)}</td>
-                      <td className="px-4 py-3">
-                        <button onClick={() => handleDeleteUser(user.id, user.nom)} className="px-3 py-1 bg-red-50 text-red-700 hover:bg-red-100 rounded text-sm transition-colors">✕</button>
-                      </td>
-                    </>
-                  )}
-                  {selectedUserType === 'externes' && (
-                    <>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{user.nom}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900">{user.prenom}</td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
-                        {user.email ? (
-                          <a href={`mailto:${user.email}`} className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1">
-                            <Mail className="w-3 h-3" />
-                            {user.email}
-                          </a>
-                        ) : '-'}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
-                        {user.telephone ? (
-                          <a href={`tel:${user.telephone.replace(/\s/g, '')}`} className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1">
-                            <Phone className="w-3 h-3" />
-                            {user.telephone}
-                          </a>
-                        ) : '-'}
-                      </td>
-                      <td className="px-4 py-3">{renderConnectionStatus(user)}</td>
-                      <td className="px-4 py-3">
-                        <button onClick={() => handleDeleteUser(user.id, user.nom, user.prenom)} className="px-3 py-1 bg-red-50 text-red-700 hover:bg-red-100 rounded text-sm transition-colors">✕</button>
-                      </td>
-                    </>
-                  )}
-                  {selectedUserType === 'coordinateurs' && (
-                    <>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{user.nom}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900">{user.prenom}</td>
-                      <td className="px-4 py-3">{renderConnectionStatus(user)}</td>
-                      <td className="px-4 py-3">
-                        <button onClick={() => handleDeleteUser(user.id, user.nom, user.prenom)} className="px-3 py-1 bg-red-50 text-red-700 hover:bg-red-100 rounded text-sm transition-colors">✕</button>
-                      </td>
-                    </>
-                  )}
-                  {selectedUserType === 'direction' && (
-                    <>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{user.nom}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900">{user.prenom}</td>
-                      <td className="px-4 py-3">{renderConnectionStatus(user)}</td>
-                      <td className="px-4 py-3">
-                        <label className="flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={user.isInDirection || false}
-                            onChange={(e) => handleDirectionToggle(user.id, e.target.checked)}
-                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                            disabled={loading}
-                          />
-                          <span className="ml-2 text-sm text-gray-700">
-                            {user.isInDirection ? 'Membre' : 'Non membre'}
-                          </span>
-                        </label>
-                      </td>
-                    </>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {showMassImport && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
-              <div className="px-6 py-4 border-b">
-                <h3 className="text-lg font-semibold text-gray-800">Import massif depuis CSV/Excel</h3>
-              </div>
-              
-              <div className="p-6">
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Format attendu pour les {getUserTypeLabel().toLowerCase()}:
-                  </label>
-                  <div className="text-sm text-gray-600 mb-3">
-                    {selectedUserType === 'eleves' && 'Colonnes: nom, prenom, classe, categorie (optionnel)'}
-                    {selectedUserType === 'guides' && 'Colonnes: nom, prenom, email (optionnel)'}
-                    {(selectedUserType === 'lecteurs-externes' || selectedUserType === 'mediateurs') && 'Colonnes: nom, prenom, email'}
-                    {selectedUserType === 'coordinateurs' && 'Colonnes: nom, prenom'}
-                  </div>
-                  
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileUpload}
-                    accept=".csv,.xlsx,.xls"
-                    className="w-full border rounded px-3 py-2 text-sm"
-                  />
-                </div>
-                
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Données CSV (vous pouvez aussi coller directement):
-                  </label>
-                  <textarea
-                    value={massImportData}
-                    onChange={(e) => setMassImportData(e.target.value)}
-                    rows={10}
-                    className="w-full border rounded px-3 py-2 text-sm font-mono"
-                    placeholder="Collez vos données CSV ici..."
-                  />
-                </div>
-              </div>
-              
-              <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
-                <button
-                  onClick={() => {
-                    setShowMassImport(false);
-                    setMassImportData('');
-                  }}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm"
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={handleMassImport}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={!massImportData.trim() || loading}
-                >
-                  {loading ? 'Importation...' : 'Importer'}
-                </button>
-              </div>
+              <button onClick={closeDeletePasswordModal} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm" disabled={loading}>Annuler</button>
+              <button onClick={handleDeletePassword} className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 text-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled={loading}>{loading ? 'Suppression...' : 'Supprimer le mot de passe'}</button>
             </div>
           </div>
-        )}
-  
-        {showClearConfirmations && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-              <div className="px-6 py-4 border-b bg-red-50">
-                <h3 className="text-lg font-semibold text-red-800">
-                  ⚠️ Confirmation nécessaire
-                </h3>
-              </div>
-              
-              <div className="p-6">
-                <div className="mb-4">
-                  <p className="text-gray-700 mb-3">
-                    Vous êtes sur le point de supprimer <strong>TOUS</strong> les {selectedUserType === 'eleves' ? 'élèves' : 'guides'}.
-                    Cette action est irréversible.
-                  </p>
-                  
-                  <p className="text-sm text-gray-600 mb-4">
-                    Pour des raisons de sécurité, cette opération nécessite la confirmation de 3 coordinateurs différents.
-                  </p>
-                  
-                  <div className="bg-yellow-50 border border-yellow-200 rounded p-3 mb-4">
-                    <p className="text-sm text-yellow-800">
-                      Confirmations reçues: {clearConfirmations.length}/3
-                      {clearConfirmations.length > 0 && (
-                        <div className="mt-1 space-y-1">
-                          {clearConfirmations.map((name, index) => (
-                            <div key={index} className="text-xs">• {name}</div>
-                          ))}
-                        </div>
-                      )}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="px-6 py-4 border-t bg-gray-50 flex justify-between">
-                <button
-                  onClick={() => {
-                    setShowClearConfirmations(false);
-                    setClearConfirmations([]);
-                  }}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm"
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={() => handleClearAll(selectedUserType as 'eleves' | 'guides')}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
-                >
-                  Confirmer ({clearConfirmations.length}/3)
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-  
-        {deletePasswordModal.isOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-              <div className="px-6 py-4 border-b bg-yellow-50">
-                <h3 className="text-lg font-semibold text-yellow-800">
-                  🔐 Supprimer le mot de passe
-                </h3>
-              </div>
-              
-              <div className="p-6">
-                <div className="mb-4">
-                  <p className="text-gray-700 mb-3">
-                    Vous êtes sur le point de supprimer le mot de passe de <strong>{deletePasswordModal.userName}</strong>.
-                  </p>
-                  
-                  <p className="text-sm text-gray-600 mb-4">
-                    Cette action permettra à l'utilisateur de créer un nouveau mot de passe lors de sa prochaine connexion.
-                    Elle est utile si l'utilisateur a oublié son mot de passe.
-                  </p>
-                  
-                  <div className="bg-blue-50 border border-blue-200 rounded p-3 mb-4">
-                    <p className="text-sm text-blue-800">
-                      <strong>⚠️ Attention :</strong> L'utilisateur devra réinitialiser son mot de passe pour pouvoir se reconnecter.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
-                <button
-                  onClick={closeDeletePasswordModal}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm"
-                  disabled={loading}
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={handleDeletePassword}
-                  className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={loading}
-                >
-                  {loading ? 'Suppression...' : 'Supprimer le mot de passe'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}      
+        </div>
+      )}
     </div>
   );
 }
