@@ -623,7 +623,8 @@ export default function CalendrierTab({
   const handleSaveDefense = async (eleveId: string, updates: Partial<Eleve>) => {
     const updatePromises = Object.entries(updates).map(([field, value]) => {
       if (value !== undefined) {
-        return onUpdate(eleveId, field, value === '' ? '' : value);
+        const stringValue = value === null || value === '' ? '' : String(value);
+        return onUpdate(eleveId, field, stringValue);
       }
       return Promise.resolve();
     });
