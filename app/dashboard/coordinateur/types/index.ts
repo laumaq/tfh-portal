@@ -210,4 +210,4 @@ export interface DisplaySettings {
 }
 
 export type TabType = 'dashboard' | 'convocations'| 'presences' | 'defenses' | 'calendrier' | 'gestion-utilisateurs' | 'parametres' | 'stats' | 'controle'  | 'liste-tfh';
-export type UserType = 'eleves' | 'guides' | 'lecteurs-externes' | 'mediateurs' | 'coordinateurs';
+export type UserType = 'eleves' | 'guides' | 'externes' | 'coordinateurs' | 'direction';
