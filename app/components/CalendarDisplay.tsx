@@ -303,7 +303,9 @@ export default function CalendarDisplay({
                 ref={el => { headerRefs.current[dayIndex] = el; }}
                 style={{
                   position: 'absolute',
-                  top: 0, left: 0, right: 0,
+                  top: 0,
+                  left: 0,
+                  right: 0,
                   zIndex: 20,
                   backgroundColor: 'white',
                   willChange: 'transform',
@@ -339,6 +341,7 @@ export default function CalendarDisplay({
                     ))}
                   </div>
                 </div>
+              </div>
 
               {/* Corps */}
               <div
@@ -374,8 +377,8 @@ export default function CalendarDisplay({
                         );
                       })}
                     </div>
-              
-                    {/* Colonnes des locaux - flexibles mais avec largeur minimale */}
+                  
+                    {/* Colonnes des locaux */}
                     <div className="flex flex-1">
                       {day.locations.map((location) => (
                         <div
