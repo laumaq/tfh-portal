@@ -29,6 +29,7 @@ export default function CoordinateurDashboard() {
   const [userName, setUserName] = useState('');
   const [editingModeConvocations, setEditingModeConvocations] = useState(false);
   const [editingModeDefenses, setEditingModeDefenses] = useState(false);
+  const [selectedUserType, setSelectedUserType] = useState<UserType>('eleves');
 
   
   // Utiliser les hooks custom
@@ -149,6 +150,8 @@ export default function CoordinateurDashboard() {
             externes={externes}
             coordinateurs={coordinateurs}
             onRefresh={refreshData}
+            selectedUserType={selectedUserType}
+            onSelectedUserTypeChange={setSelectedUserType}
           />
         );
 
