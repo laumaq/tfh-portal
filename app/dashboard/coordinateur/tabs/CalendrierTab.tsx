@@ -1077,44 +1077,45 @@ export default function CalendrierTab({
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Locaux
                 </label>
-                <div className="space-y-2">
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setSelectedLocations([...allLocations])}
-                      className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
-                    >
-                      Tout sélectionner
-                    </button>
-                    <button
-                      onClick={() => setSelectedLocations([])}
-                      className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
-                    >
-                      Tout désélectionner
-                    </button>
-                  </div>
-                  <div className="max-h-40 overflow-y-auto border rounded p-2">
-                    {allLocations.map(location => (
-                      <div key={location} className="flex items-center py-1">
-                        <input
-                          type="checkbox"
-                          id={`loc-${location}`}
-                          checked={selectedLocations.includes(location)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedLocations(prev => [...prev, location]);
-                            } else {
-                              setSelectedLocations(prev => prev.filter(l => l !== location));
-                            }
-                          }}
-                          className="mr-2"
-                        />
-                        <label htmlFor={`loc-${location}`} className="text-sm">
-                          {location}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
+                <div className="max-h-40 overflow-y-auto border rounded p-2">
+                  {allLocations.map(location => (
+                    <div key={location} className="flex items-center mb-1">
+                      <input
+                        type="checkbox"
+                        id={`loc-${location}`}
+                        checked={selectedLocations.includes(location)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedLocations([...selectedLocations, location]);
+                          } else {
+                            setSelectedLocations(selectedLocations.filter(l => l !== location));
+                          }
+                        }}
+                        className="mr-2"
+                        disabled={isLoading}
+                      />
+                      <label htmlFor={`loc-${location}`} className="text-sm">
+                        {location}
+                      </label>
+                    </div>
+                  ))}
+                  {allLocations.length === 0 && (
+                    <p className="text-sm text-gray-500">Aucun local défini</p>
+                  )}
                 </div>
+                <button
+                  onClick={() => {
+                    if (selectedLocations.length === allLocations.length) {
+                      setSelectedLocations([]);
+                    } else {
+                      setSelectedLocations([...allLocations]);
+                    }
+                  }}
+                  className="mt-2 text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                  disabled={isLoading || allLocations.length === 0}
+                >
+                  {selectedLocations.length === allLocations.length ? "Tout désélectionner" : "Tout sélectionner"}
+                </button>
               </div>
             </div>
           </div>
