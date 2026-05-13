@@ -14,6 +14,8 @@ interface GestionUtilisateursTabProps {
   externes: Externe[];
   coordinateurs: Coordinateur[];
   onRefresh: () => void;
+  selectedUserType: UserType;
+  onSelectedUserTypeChange: (type: UserType) => void;
 }
 
 type UserType = 'eleves' | 'guides' | 'externes' | 'coordinateurs' | 'direction';
@@ -42,7 +44,7 @@ export default function GestionUtilisateursTab({
   coordinateurs,
   onRefresh
 }: GestionUtilisateursTabProps) {
-  const [selectedUserType, setSelectedUserType] = useState<UserType>('eleves');
+  const { selectedUserType, onSelectedUserTypeChange } = props;
   const [newUser, setNewUser] = useState<NewUser>({
     nom: '',
     prenom: '',
@@ -68,21 +70,6 @@ export default function GestionUtilisateursTab({
     userType: null
   });
 
-  // Sauvegarder la sélection dans localStorage
-  useEffect(() => {
-    localStorage.setItem('selectedUserType', selectedUserType);
-  }, [selectedUserType]);
-  
-  // Restaurer la sélection au chargement
-  useEffect(() => {
-    const saved = localStorage.getItem('selectedUserType') as UserType;
-    if (saved && ['eleves', 'guides', 'externes', 'coordinateurs', 'direction'].includes(saved)) {
-      setSelectedUserType(saved);
-      if (saved === 'direction') {
-        loadDirectionData();
-      }
-    }
-  }, []);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
