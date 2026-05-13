@@ -28,21 +28,6 @@ export default function CalendrierTab({
   onRefresh,
   onUpdate,
 }: CalendrierTabProps) {
-  const [conflicts, setConflicts] = useState<Conflict[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-  const [showExportOptions, setShowExportOptions] = useState(false);
-  const [selectedEleve, setSelectedEleve] = useState<Eleve | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
-  const calendarRef = useRef<HTMLDivElement>(null);
-  const [selectedDates, setSelectedDates] = useState<string[]>(allDates);
-  const [selectedLocations, setSelectedLocations] = useState<string[]>(allLocations);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(categories);
-
-  const initialized = useRef(false);  
-  
-
   const allDates = useMemo(() => 
     Array.from(
       new Set(
@@ -62,7 +47,21 @@ export default function CalendrierTab({
           .sort((a, b) => a.charAt(0).localeCompare(b.charAt(0)))
       )
     ), [eleves]);
-   
+
+  const [selectedDates, setSelectedDates] = useState<string[]>(allDates);
+  const [selectedLocations, setSelectedLocations] = useState<string[]>(allLocations);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(categories);
+  
+  const [conflicts, setConflicts] = useState<Conflict[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [showExportOptions, setShowExportOptions] = useState(false);
+  const [selectedEleve, setSelectedEleve] = useState<Eleve | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const calendarRef = useRef<HTMLDivElement>(null);
+  const initialized = useRef(false);
+  
 
   const getFilteredDefenses = () => {
     return eleves.filter(e => 
@@ -810,21 +809,16 @@ export default function CalendrierTab({
     return conflicts.sort((a, b) => b.conflictingDefenses.length - a.conflictingDefenses.length);
   }, []);
 
-  // Mettre à jour les conflits quand les filtres changent
+  // Met à jour les conflits quand les filtres changent
   useEffect(() => {
     setIsLoading(true);
-
-    setSelectedLocations(allLocations);
     
     // Simuler un délai pour la détection
     setTimeout(() => {
-      // Ici, vous devrez calculer les défenses filtrées
-      // Pour l'instant, on met un tableau vide
       const detectedConflicts = detectConflicts([]);
       setConflicts(detectedConflicts);
       setIsLoading(false);
     }, 500);
-    
   }, [selectedDates, selectedLocations, selectedCategories, detectConflicts]);
 
   const toggleAllDates = () => {
