@@ -42,9 +42,10 @@ export default function GestionUtilisateursTab({
   guides,
   externes,
   coordinateurs,
-  onRefresh
+  onRefresh,
+  selectedUserType,
+  onSelectedUserTypeChange
 }: GestionUtilisateursTabProps) {
-  const { selectedUserType, onSelectedUserTypeChange } = props;
   const [newUser, setNewUser] = useState<NewUser>({
     nom: '',
     prenom: '',
@@ -716,7 +717,7 @@ export default function GestionUtilisateursTab({
             <select
               value={selectedUserType}
               onChange={(e) => {
-                setSelectedUserType(e.target.value as UserType);
+                onSelectedUserTypeChange(e.target.value as UserType);
                 if (e.target.value === 'direction') {
                   loadDirectionData();
                 }
