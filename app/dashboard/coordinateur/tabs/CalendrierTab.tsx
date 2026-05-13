@@ -13,6 +13,8 @@ import DefenseEditModal from '@/app/components/DefenseEditModal';
 
 interface CalendrierTabProps {
   eleves: Eleve[];
+  guides: Guide[]; 
+  externes: Externe[];
   categories: string[];
   onRefresh: () => void;
   onUpdate: (eleveId: string, field: string, value: string) => Promise<void>;
@@ -20,6 +22,8 @@ interface CalendrierTabProps {
 
 export default function CalendrierTab({
   eleves,
+  guides,
+  externes,
   categories,
   onRefresh,
   onUpdate,
