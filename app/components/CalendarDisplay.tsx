@@ -298,7 +298,7 @@ export default function CalendarDisplay({
               className="bg-white rounded-lg shadow overflow-hidden"
               style={{ position: 'relative' }}
             >
-              {/* En-tête */}
+              {/* En-tête - on garde la position absolute mais on utilise la même largeur que le corps */}
               <div
                 ref={el => { headerRefs.current[dayIndex] = el; }}
                 style={{
@@ -327,27 +327,31 @@ export default function CalendarDisplay({
                     if (body) body.scrollLeft = (e.target as HTMLDivElement).scrollLeft;
                   }}
                 >
+                  {/* Utiliser la même structure que le corps */}
                   <div className="flex border-b border-gray-200 bg-gray-100">
                     <div className="w-[92px] flex-shrink-0 px-4 py-3 text-sm font-semibold text-gray-700 border-r border-gray-200">
                       Horaire
                     </div>
-                    {day.locations.map(location => (
-                      <div
-                        key={`header-${location}`}
-                        className="flex-1 min-w-[150px] px-4 py-3 text-sm font-semibold text-gray-700 border-r border-gray-200"
-                      >
-                        {location}
-                      </div>
-                    ))}
+                    <div className="flex flex-1">
+                      {day.locations.map(location => (
+                        <div
+                          key={`header-${location}`}
+                          className="flex-1 min-w-[150px] px-4 py-3 text-sm font-semibold text-gray-700 border-r border-gray-200"
+                        >
+                          {location}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
-
-              {/* Corps */}
+          
+              {/* Corps - pas de padding-top pour que l'en-tête soit au-dessus */}
               <div
                 ref={el => {
                   bodyScrollRefs.current[dayIndex] = el;
                   if (el && headerRefs.current[dayIndex]) {
+                    // On ajoute un padding-top égal à la hauteur de l'en-tête
                     el.style.paddingTop = `${headerRefs.current[dayIndex]!.offsetHeight}px`;
                   }
                 }}
@@ -360,7 +364,7 @@ export default function CalendarDisplay({
                   }}
                 >
                   <div className="flex">
-                    {/* Colonne des heures - largeur fixe */}
+                    {/* Colonne des heures */}
                     <div className="w-[92px] flex-shrink-0 bg-gray-50 border-r border-gray-200">
                       {Array.from({ length: totalHours }).map((_, i) => {
                         const hour = 8 + i;
