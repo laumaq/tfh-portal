@@ -15,12 +15,14 @@ interface CalendrierTabProps {
   eleves: Eleve[];
   categories: string[];
   onRefresh: () => void;
+  onUpdate: (eleveId: string, field: string, value: string) => Promise<void>;
 }
 
 export default function CalendrierTab({
   eleves,
   categories,
   onRefresh,
+  onUpdate,
 }: CalendrierTabProps) {
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
