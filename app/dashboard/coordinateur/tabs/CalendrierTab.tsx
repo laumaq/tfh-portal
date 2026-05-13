@@ -61,9 +61,14 @@ export default function CalendrierTab({
       )
     ), [eleves]);
 
+  const isInitialized = useRef(false);
+  
   useEffect(() => {
-    setSelectedCategories(categories);
-    setSelectedLocations(allLocations);
+    if (!isInitialized.current && categories.length > 0 && allLocations.length > 0) {
+      setSelectedCategories(categories);
+      setSelectedLocations(allLocations);
+      isInitialized.current = true;
+    }
   }, [categories, allLocations]);
 
   useEffect(() => {
