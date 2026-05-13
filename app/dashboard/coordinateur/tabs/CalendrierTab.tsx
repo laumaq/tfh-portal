@@ -5,7 +5,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import CalendarDisplay from '@/app/components/CalendarDisplay';
 import ConflictDisplay from '../components/ConflictDisplay';
-import { Eleve, DefenseEvent, Conflict } from '../types';
+import { Eleve, DefenseEvent, Conflict, Guide, Externe } from '../types';
 import { getCategoryColor } from '../utils/categoryUtils';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
