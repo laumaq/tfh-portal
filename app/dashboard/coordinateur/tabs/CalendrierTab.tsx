@@ -37,6 +37,7 @@ export default function CalendrierTab({
   const [showExportOptions, setShowExportOptions] = useState(false);
   const [selectedEleve, setSelectedEleve] = useState<Eleve | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const calendarRef = useRef<HTMLDivElement>(null);
   
 
@@ -867,238 +868,261 @@ export default function CalendrierTab({
       <div className="space-y-6">
         <ConflictDisplay conflicts={conflicts} />
         
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-gray-800">Filtres du Calendrier</h2>
-            <div className="relative">
+        {/* Barre d'outils */}
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              {/* Bouton Filtres */}
               <button
-                onClick={() => setShowExportOptions(!showExportOptions)}
-                disabled={isExporting || isLoading}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm flex items-center gap-2 disabled:opacity-50"
+                onClick={() => setShowFilters(!showFilters)}
+                className={`px-4 py-2 rounded-lg text-sm flex items-center gap-2 transition-colors ${
+                  showFilters 
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
               >
-                {isExporting ? (
-                  <><span className="animate-spin">⟳</span> Génération...</>
-                ) : (
-                  <><span>📄</span> Exporter PDF</>
-                )}
+                <span>🔍</span>
+                Filtres
+                <span className={`text-xs transition-transform ${showFilters ? 'rotate-180' : ''}`}>▼</span>
               </button>
               
-              {showExportOptions && !isExporting && (
-                <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border z-10">
-                  <div className="p-2">
-                    <button
-                      onClick={handleExportFull}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded"
-                    >
-                      📊 Export complet (vue actuelle)
-                    </button>
-                    <button
-                      onClick={handleExportByDayLocation}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded"
-                    >
-                      📅 Export par jour et local
-                    </button>
+              {/* Bouton Exporter PDF */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowExportOptions(!showExportOptions)}
+                  disabled={isExporting || isLoading}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm flex items-center gap-2 disabled:opacity-50"
+                >
+                  {isExporting ? (
+                    <><span className="animate-spin">⟳</span> Génération...</>
+                  ) : (
+                    <><span>📄</span> Exporter PDF</>
+                  )}
+                </button>
+                
+                {showExportOptions && !isExporting && (
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border z-10">
+                    <div className="p-2">
+                      <button
+                        onClick={handleExportFull}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded"
+                      >
+                        📊 Export complet (vue actuelle)
+                      </button>
+                      <button
+                        onClick={handleExportByDayLocation}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded"
+                      >
+                        📅 Export par jour et local
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          {/* Grille des filtres */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            {/* Filtre des jours */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Sélectionner les jours
-              </label>
-              <div className="max-h-40 overflow-y-auto border rounded p-2">
-                {allDates.map(date => (
-                  <div key={date} className="flex items-center mb-1">
-                    <input
-                      type="checkbox"
-                      id={`date-${date}`}
-                      checked={selectedDates.includes(date)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedDates([...selectedDates, date]);
-                        } else {
-                          setSelectedDates(selectedDates.filter(d => d !== date));
-                        }
-                      }}
-                      className="mr-2"
-                      disabled={isLoading}
-                    />
-                    <label htmlFor={`date-${date}`} className="text-sm">
-                      {new Date(date).toLocaleDateString('fr-FR', { 
-                        weekday: 'short', 
-                        day: 'numeric', 
-                        month: 'short' 
-                      })}
-                    </label>
-                  </div>
-                ))}
-                {allDates.length === 0 && (
-                  <p className="text-sm text-gray-500">Aucune date de défense programmée</p>
                 )}
               </div>
+              
+              {/* Bouton Rafraîchir */}
               <button
-                onClick={toggleAllDates}
-                className="mt-2 text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50"
-                disabled={isLoading || allDates.length === 0}
+                onClick={onRefresh}
+                disabled={isLoading}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center gap-2 disabled:opacity-50"
               >
-                {selectedDates.length === allDates.length ? "Tout désélectionner" : "Tout sélectionner"}
+                {isLoading ? (
+                  <>
+                    <span className="animate-spin">⟳</span>
+                    Chargement...
+                  </>
+                ) : (
+                  <>
+                    <span>🔄</span>
+                    Rafraîchir
+                  </>
+                )}
               </button>
             </div>
             
-            {/* Filtre des catégories */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Catégories (sélection multiple)
-              </label>
-              <div className="max-h-40 overflow-y-auto border rounded p-2">
-                {categories.map(cat => {
-                  const color = getCategoryColor(cat);
-                  const isSelected = selectedCategories.includes(cat);
-                  
-                  return (
-                    <div key={cat} className="flex items-center mb-1">
+            {/* Résumé rapide des filtres actifs */}
+            <div className="text-sm text-gray-500">
+              {allDates.length} jour{allDates.length > 1 ? 's' : ''} • 
+              {selectedLocations.length > 0 
+                ? ` ${selectedLocations.length} local${selectedLocations.length > 1 ? 'x' : ''}` 
+                : ' Tous locaux'} • 
+              {selectedCategories.length === 0 
+                ? ' Toutes catégories' 
+                : selectedCategories.length === 1 
+                  ? ` ${selectedCategories[0]}` 
+                  : ` ${selectedCategories.length} catégories`}
+              {conflicts.length > 0 && (
+                <span className="ml-2 text-amber-600 font-medium">
+                  ⚠️ {conflicts.length} conflit{conflicts.length > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        {/* Panneau des filtres (affiché uniquement si showFilters est true) */}
+        {showFilters && (
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">Filtres du Calendrier</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Filtre des jours */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Sélectionner les jours
+                </label>
+                <div className="max-h-40 overflow-y-auto border rounded p-2">
+                  {allDates.map(date => (
+                    <div key={date} className="flex items-center mb-1">
                       <input
                         type="checkbox"
-                        id={`cat-${cat}`}
-                        checked={isSelected}
+                        id={`date-${date}`}
+                        checked={selectedDates.includes(date)}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            setSelectedCategories([...selectedCategories, cat]);
+                            setSelectedDates([...selectedDates, date]);
                           } else {
-                            setSelectedCategories(selectedCategories.filter(c => c !== cat));
+                            setSelectedDates(selectedDates.filter(d => d !== date));
                           }
                         }}
                         className="mr-2"
                         disabled={isLoading}
                       />
-                      <label 
-                        htmlFor={`cat-${cat}`} 
-                        className="text-sm cursor-pointer flex items-center group"
-                      >
-                        <div 
-                          className="w-4 h-4 rounded mr-2 border group-hover:opacity-80 transition-opacity"
-                          style={{ 
-                            backgroundColor: color.bg,
-                            borderColor: color.border
-                          }}
-                          title={cat}
-                        ></div>
-                        <span className="truncate">{cat}</span>
-                      </label>
-                    </div>
-                  );
-                })}
-                {categories.length === 0 && (
-                  <p className="text-sm text-gray-500">Aucune catégorie définie</p>
-                )}
-              </div>
-              <button
-                onClick={() => {
-                  if (selectedCategories.length === categories.length) {
-                    setSelectedCategories([]);
-                  } else {
-                    setSelectedCategories([...categories]);
-                  }
-                }}
-                className="mt-2 text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50"
-                disabled={isLoading || categories.length === 0}
-              >
-                {selectedCategories.length === categories.length ? "Tout désélectionner" : "Tout sélectionner"}
-              </button>
-            </div>
-            
-            {/* Filtre des locaux */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Locaux
-              </label>
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setSelectedLocations([...allLocations])}
-                    className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
-                  >
-                    Tout sélectionner
-                  </button>
-                  <button
-                    onClick={() => setSelectedLocations([])}
-                    className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
-                  >
-                    Tout désélectionner
-                  </button>
-                </div>
-                <div className="max-h-40 overflow-y-auto border rounded p-2">
-                  {allLocations.map(location => (
-                    <div key={location} className="flex items-center py-1">
-                      <input
-                        type="checkbox"
-                        id={`loc-${location}`}
-                        checked={selectedLocations.includes(location)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedLocations(prev => [...prev, location]);
-                          } else {
-                            setSelectedLocations(prev => prev.filter(l => l !== location));
-                          }
-                        }}
-                        className="mr-2"
-                      />
-                      <label htmlFor={`loc-${location}`} className="text-sm">
-                        {location}
+                      <label htmlFor={`date-${date}`} className="text-sm">
+                        {new Date(date).toLocaleDateString('fr-FR', { 
+                          weekday: 'short', 
+                          day: 'numeric', 
+                          month: 'short' 
+                        })}
                       </label>
                     </div>
                   ))}
+                  {allDates.length === 0 && (
+                    <p className="text-sm text-gray-500">Aucune date de défense programmée</p>
+                  )}
+                </div>
+                <button
+                  onClick={toggleAllDates}
+                  className="mt-2 text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                  disabled={isLoading || allDates.length === 0}
+                >
+                  {selectedDates.length === allDates.length ? "Tout désélectionner" : "Tout sélectionner"}
+                </button>
+              </div>
+              
+              {/* Filtre des catégories */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Catégories (sélection multiple)
+                </label>
+                <div className="max-h-40 overflow-y-auto border rounded p-2">
+                  {categories.map(cat => {
+                    const color = getCategoryColor(cat);
+                    const isSelected = selectedCategories.includes(cat);
+                    
+                    return (
+                      <div key={cat} className="flex items-center mb-1">
+                        <input
+                          type="checkbox"
+                          id={`cat-${cat}`}
+                          checked={isSelected}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedCategories([...selectedCategories, cat]);
+                            } else {
+                              setSelectedCategories(selectedCategories.filter(c => c !== cat));
+                            }
+                          }}
+                          className="mr-2"
+                          disabled={isLoading}
+                        />
+                        <label 
+                          htmlFor={`cat-${cat}`} 
+                          className="text-sm cursor-pointer flex items-center group"
+                        >
+                          <div 
+                            className="w-4 h-4 rounded mr-2 border group-hover:opacity-80 transition-opacity"
+                            style={{ 
+                              backgroundColor: color.bg,
+                              borderColor: color.border
+                            }}
+                            title={cat}
+                          ></div>
+                          <span className="truncate">{cat}</span>
+                        </label>
+                      </div>
+                    );
+                  })}
+                  {categories.length === 0 && (
+                    <p className="text-sm text-gray-500">Aucune catégorie définie</p>
+                  )}
+                </div>
+                <button
+                  onClick={() => {
+                    if (selectedCategories.length === categories.length) {
+                      setSelectedCategories([]);
+                    } else {
+                      setSelectedCategories([...categories]);
+                    }
+                  }}
+                  className="mt-2 text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                  disabled={isLoading || categories.length === 0}
+                >
+                  {selectedCategories.length === categories.length ? "Tout désélectionner" : "Tout sélectionner"}
+                </button>
+              </div>
+              
+              {/* Filtre des locaux */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Locaux
+                </label>
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setSelectedLocations([...allLocations])}
+                      className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                    >
+                      Tout sélectionner
+                    </button>
+                    <button
+                      onClick={() => setSelectedLocations([])}
+                      className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                    >
+                      Tout désélectionner
+                    </button>
+                  </div>
+                  <div className="max-h-40 overflow-y-auto border rounded p-2">
+                    {allLocations.map(location => (
+                      <div key={location} className="flex items-center py-1">
+                        <input
+                          type="checkbox"
+                          id={`loc-${location}`}
+                          checked={selectedLocations.includes(location)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedLocations(prev => [...prev, location]);
+                            } else {
+                              setSelectedLocations(prev => prev.filter(l => l !== location));
+                            }
+                          }}
+                          className="mr-2"
+                        />
+                        <label htmlFor={`loc-${location}`} className="text-sm">
+                          {location}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-          
-          {/* Résumé des filtres */}
-          <div className="text-sm text-gray-600">
-            <p>
-              Affichage de {allDates.length} {pluralize(allDates.length, 'jour', 'jours')}
-              {' • '}
-              {selectedLocations.length > 0 
-                ? `${selectedLocations.length} ${pluralize(selectedLocations.length, 'local', 'locaux')} sélectionné${selectedLocations.length > 1 ? 's' : ''}`
-                : 'Tous les locaux'}
-              {' • '}
-              {getCategoriesSummary()}
-            </p>
-            {conflicts.length > 0 && (
-              <p className="mt-1 text-amber-600 font-medium">
-                ⚠️ {conflicts.length} conflit{conflicts.length > 1 ? 's' : ''} détecté{conflicts.length > 1 ? 's' : ''}
-              </p>
-            )}
-          </div>
-        </div>
+        )}
         
         {/* Calendrier */}
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold text-gray-800">Vue Calendrier</h3>
-            <button
-              onClick={onRefresh}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center gap-2 disabled:opacity-50"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <span className="animate-spin">⟳</span>
-                  Chargement...
-                </>
-              ) : (
-                <>
-                  <span>🔄</span>
-                  Rafraîchir
-                </>
-              )}
-            </button>
-          </div>
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Vue Calendrier</h3>
           
           {isLoading ? (
             <div className="flex justify-center items-center py-12">
@@ -1124,6 +1148,7 @@ export default function CalendrierTab({
           )}
         </div>
       </div>
+      
       <DefenseEditModal
         isOpen={isModalOpen}
         onClose={() => {
