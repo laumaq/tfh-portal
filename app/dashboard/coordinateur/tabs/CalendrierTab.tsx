@@ -28,9 +28,6 @@ export default function CalendrierTab({
   onRefresh,
   onUpdate,
 }: CalendrierTabProps) {
-  const [selectedDates, setSelectedDates] = useState<string[]>([]);
-  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [conflicts, setConflicts] = useState<Conflict[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -39,6 +36,10 @@ export default function CalendrierTab({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const calendarRef = useRef<HTMLDivElement>(null);
+  const [selectedDates, setSelectedDates] = useState<string[]>([]);
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const initialized = useRef(false);  
   
 
   const allDates = useMemo(() => 
@@ -60,24 +61,16 @@ export default function CalendrierTab({
           .sort((a, b) => a.charAt(0).localeCompare(b.charAt(0)))
       )
     ), [eleves]);
-  
-  const initialized = useRef(false);
-  
+   
   useEffect(() => {
-    if (!initialized.current) {
-      if (categories.length > 0 && allLocations.length > 0 && allDates.length > 0) {
-        console.log('🟢 INITIALISATION UNIQUE');
-        setSelectedCategories(categories);
-        setSelectedLocations(allLocations);
-        setSelectedDates([...allDates]);
-        initialized.current = true;
-      }
-    } else {
-      // Après initialisation, ne jamais réinitialiser
-      console.log('⏭️ Skip re-initialization');
+    if (!initialized.current && allLocations.length > 0 && categories.length > 0) {
+      setSelectedLocations(allLocations);
+      setSelectedCategories(categories);
+      setSelectedDates(allDates);
+      initialized.current = true;
     }
-  }, [categories, allLocations, allDates]); // Les dépendances sont là mais on ne fait rien après init
-    
+  }, [allLocations, categories, allDates]); // ← Les dépendances sont là mais ne feront rien après init
+      
 
   const getFilteredDefenses = () => {
     return eleves.filter(e => 
