@@ -67,6 +67,22 @@ export default function GestionUtilisateursTab({
     userName: '',
     userType: null
   });
+
+  // Sauvegarder la sélection dans localStorage
+  useEffect(() => {
+    localStorage.setItem('selectedUserType', selectedUserType);
+  }, [selectedUserType]);
+  
+  // Restaurer la sélection au chargement
+  useEffect(() => {
+    const saved = localStorage.getItem('selectedUserType') as UserType;
+    if (saved && ['eleves', 'guides', 'externes', 'coordinateurs', 'direction'].includes(saved)) {
+      setSelectedUserType(saved);
+      if (saved === 'direction') {
+        loadDirectionData();
+      }
+    }
+  }, []);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
