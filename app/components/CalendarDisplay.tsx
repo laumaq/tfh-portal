@@ -67,7 +67,7 @@ export default function CalendarDisplay({
   const headerScrollRefs = useRef<(HTMLDivElement | null)[]>([]);
   const bodyScrollRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  const PIXELS_PER_HOUR = 350;
+  const PIXELS_PER_HOUR = 380;
 
   useEffect(() => {
     const mainEl = containerRefs.current[0]?.closest('main');
