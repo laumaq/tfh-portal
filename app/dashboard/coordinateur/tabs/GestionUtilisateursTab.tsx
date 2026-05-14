@@ -241,6 +241,38 @@ export default function GestionUtilisateursTab({
       setLoading(false);
     }
   };
+ 
+  // Fonction pour mettre à jour le statut "accepte_numerique"
+  const handleNumeriqueToggle = async (userId: string, userType: UserType, currentValue: boolean) => {
+    setLoading(true);
+    try {
+      let tableName = '';
+      if (userType === 'guides') {
+        tableName = 'guides';
+      } else if (userType === 'externes') {
+        tableName = 'externes';
+      } else {
+        return;
+      }
+      
+      const { error } = await supabase
+        .from(tableName)
+        .update({ accepte_numerique: !currentValue })
+        .eq('id', userId);
+      
+      if (error) throw error;
+      
+      setSuccessMessage(`Préférence numérique mise à jour pour ${userType === 'guides' ? 'le guide' : 'l\'externe'}`);
+      clearMessages();
+      onRefresh();
+    } catch (err) {
+      console.error('Erreur mise à jour numérique:', err);
+      setErrorMessage('Erreur lors de la mise à jour');
+      clearMessages();
+    } finally {
+      setLoading(false);
+    }
+  };  
 
   const loadDirectionData = useCallback(async () => {
     try {
@@ -871,6 +903,7 @@ export default function GestionUtilisateursTab({
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Nom</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Prénom</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Email</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Numérique</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Connecté</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
                   </>
@@ -881,6 +914,7 @@ export default function GestionUtilisateursTab({
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Prénom</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Email</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Téléphone</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Numérique</th>   
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Connecté</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
                   </>
@@ -929,6 +963,28 @@ export default function GestionUtilisateursTab({
                           </a>
                         ) : '-'}
                       </td>
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          onClick={() => handleNumeriqueToggle(user.id, 'guides', user.accepte_numerique || false)}
+                          disabled={loading}
+                          className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all ${
+                            user.accepte_numerique 
+                              ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
+                              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                          }`}
+                          title={user.accepte_numerique ? 'Accepte le format numérique' : 'Préfère le format papier'}
+                        >
+                          {user.accepte_numerique ? (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                          ) : (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                            </svg>
+                          )}
+                        </button>
+                      </td>
                       <td className="px-4 py-3">{renderConnectionStatus(user)}</td>
                       <td className="px-4 py-3">
                         <button onClick={() => handleDeleteUser(user.id, user.nom)} className="px-3 py-1 bg-red-50 text-red-700 hover:bg-red-100 rounded text-sm transition-colors">✕</button>
@@ -954,6 +1010,28 @@ export default function GestionUtilisateursTab({
                             {user.telephone}
                           </a>
                         ) : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          onClick={() => handleNumeriqueToggle(user.id, 'externes', user.accepte_numerique || false)}
+                          disabled={loading}
+                          className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all ${
+                            user.accepte_numerique 
+                              ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
+                              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                          }`}
+                          title={user.accepte_numerique ? 'Accepte le format numérique' : 'Préfère le format papier'}
+                        >
+                          {user.accepte_numerique ? (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                          ) : (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                            </svg>
+                          )}
+                        </button>
                       </td>
                       <td className="px-4 py-3">{renderConnectionStatus(user)}</td>
                       <td className="px-4 py-3">
