@@ -1,5 +1,3 @@
-// /app/dashboard/externe/page.tsx
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -58,7 +56,7 @@ interface DefenseEvent {
   problematique: string;
 }
 
-type ViewMode = 'choice' | 'planning' | 'list' | 'calendar' | 'question-view' | 'question-dates' | 'question-categories';
+type ViewMode = 'choice' | 'planning' | 'list' | 'calendar' | 'question-view' | 'question-dates' | 'question-categories' | 'question-format' | 'thankyou';
 
 export default function ExterneDashboard() {
   const [eleves, setEleves] = useState<Eleve[]>([]);
@@ -88,6 +86,8 @@ export default function ExterneDashboard() {
   const [selectedMultipleDates, setSelectedMultipleDates] = useState<string[]>([]);
   const [selectedMultipleCategories, setSelectedMultipleCategories] = useState<string[]>([]);
   const [selectedMultipleLocations, setSelectedMultipleLocations] = useState<string[]>([]);
+  const [tempFormatChoice, setTempFormatChoice] = useState<'papier' | 'numerique' | null>(null);
+  const [accepteNumerique, setAccepteNumerique] = useState<boolean>(false);
   const router = useRouter();
 
   const [displaySettings, setDisplaySettings] = useState({
@@ -122,7 +122,7 @@ export default function ExterneDashboard() {
     try {
       const { data, error } = await supabase
         .from('externes')
-        .select('id, lecteur_externe_id, mediateur_id')
+        .select('id, lecteur_externe_id, mediateur_id, accepte_numerique')
         .eq('id', storedUserId)
         .single();
   
@@ -131,14 +131,10 @@ export default function ExterneDashboard() {
         return;
       }
   
-      console.log('=== loadUserRoles ===');
-      console.log('data reçu:', data);
-      console.log('lecteur_externe_id:', data.lecteur_externe_id);
-      console.log('mediateur_id:', data.mediateur_id);
-  
       setExterneId(data.id);
       setLecteurExterneId(data.lecteur_externe_id || '');
       setMediateurId(data.mediateur_id || '');
+      setAccepteNumerique(data.accepte_numerique || false);
       await loadData(data.lecteur_externe_id || '', data.mediateur_id || '');
     } catch (err) {
       console.error(err);
@@ -150,7 +146,6 @@ export default function ExterneDashboard() {
     try {
       setLoading(true);
   
-      // Charger les paramètres d'affichage
       const { data: settingsData } = await supabase
         .from('system_settings')
         .select('setting_key, setting_value')
@@ -169,7 +164,6 @@ export default function ExterneDashboard() {
         setDisplaySettings(prev => ({ ...prev, ...settings }));
       }
   
-      // Charger les élèves assignés à l'utilisateur (comme lecteur OU médiateur)
       let allAssigned: Eleve[] = [];
   
       if (lecteurExterneIdVal) {
@@ -202,7 +196,6 @@ export default function ExterneDashboard() {
       }));
       setEleves(elevesFormatted);
   
-      // Charger les élèves disponibles pour sélection (sans jointures)
       const { data: allElevesData, error: elevesError } = await supabase
         .from('eleves')
         .select('*')
@@ -215,7 +208,6 @@ export default function ExterneDashboard() {
   
       if (elevesError) throw elevesError;
   
-      // Récupérer tous les guides en une seule requête
       const { data: allGuides } = await supabase
         .from('guides')
         .select('id, nom, prenom');
@@ -227,7 +219,6 @@ export default function ExterneDashboard() {
         });
       }
   
-      // Récupérer tous les externes en une seule requête
       const { data: allExternes } = await supabase
         .from('externes')
         .select('id, nom, prenom, lecteur_externe_id, mediateur_id');
@@ -245,24 +236,19 @@ export default function ExterneDashboard() {
         });
       }
   
-      // Formater les données
       const allElevesFormatted = (allElevesData || []).map(eleve => {
-        // Guide
         const guide = guidesMap.get(eleve.guide_id);
         const guide_nom = guide?.nom || '-';
         const guide_prenom = guide?.prenom || '-';
   
-        // Lecteur interne
         const lecteurInterne = guidesMap.get(eleve.lecteur_interne_id);
         const lecteur_interne_nom = lecteurInterne?.nom || '-';
         const lecteur_interne_prenom = lecteurInterne?.prenom || '-';
   
-        // Lecteur externe
         const lecteurExterne = externesByLecteurId.get(eleve.lecteur_externe_id);
         const lecteur_externe_nom = lecteurExterne?.nom || '-';
         const lecteur_externe_prenom = lecteurExterne?.prenom || '-';
   
-        // Médiateur
         const mediateur = externesByMediateurId.get(eleve.mediateur_id);
         const mediateur_nom = mediateur?.nom || '-';
         const mediateur_prenom = mediateur?.prenom || '-';
@@ -308,7 +294,6 @@ export default function ExterneDashboard() {
       setSelectedMultipleCategories(uniqueCategories);
       setSelectedMultipleLocations(uniqueLocations);
   
-      // Pré-sélectionner les élèves déjà assignés
       const preSelectedLecteur = allElevesFormatted
         .filter(e => e.lecteur_externe_id === lecteurExterneIdVal)
         .map(e => e.id);
@@ -412,7 +397,6 @@ export default function ExterneDashboard() {
     const busySlots = role === 'lecteur' ? busySlotsLecteur : busySlotsMediateur;
     const busyElevesIds = busySlots.get(slotKey) || [];
     
-    // Vérifier s'il y a d'autres TFH sur ce créneau (hors le sien)
     const otherBusyIds = busyElevesIds.filter(id => id !== eleve.id);
     return otherBusyIds.length > 0;
   };
@@ -427,22 +411,11 @@ export default function ExterneDashboard() {
       ? selectedElevesAsLecteur.includes(eleveId)
       : selectedElevesAsMediateur.includes(eleveId);
   
-    console.log('=== handleToggleSelection ===');
-    console.log('eleveId:', eleveId);
-    console.log('role:', role);
-    console.log('field:', field);
-    console.log('currentId:', currentId);
-    console.log('isCurrentlySelected:', isCurrentlySelected);
-    console.log('lecteurExterneId:', lecteurExterneId);
-    console.log('mediateurId:', mediateurId);
-  
-    // Vérifier les conflits de créneaux
     if (isTimeSlotBusy(eleve, role) && !isCurrentlySelected) {
       alert(`Vous avez déjà une défense en tant que ${role === 'lecteur' ? 'lecteur externe' : 'médiateur'} à ce créneau horaire !`);
       return;
     }
   
-    // Vérifier si le rôle est déjà pris par quelqu'un d'autre
     const isAlreadyTaken = role === 'lecteur'
       ? (eleve.lecteur_externe_id && eleve.lecteur_externe_id !== lecteurExterneId)
       : (eleve.mediateur_id && eleve.mediateur_id !== mediateurId);
@@ -454,7 +427,6 @@ export default function ExterneDashboard() {
   
     try {
       if (isCurrentlySelected) {
-        // Désélectionner
         await supabase
           .from('eleves')
           .update({ [field]: null })
@@ -466,7 +438,6 @@ export default function ExterneDashboard() {
           setSelectedElevesAsMediateur(prev => prev.filter(id => id !== eleveId));
         }
       } else {
-        // Si l'autre rôle est sélectionné, le désélectionner d'abord
         const otherRole = role === 'lecteur' ? 'mediateur' : 'lecteur';
         const otherField = otherRole === 'lecteur' ? 'lecteur_externe_id' : 'mediateur_id';
         const isOtherSelected = otherRole === 'lecteur'
@@ -486,7 +457,6 @@ export default function ExterneDashboard() {
           }
         }
         
-        // Sélectionner le nouveau rôle
         await supabase
           .from('eleves')
           .update({ [field]: currentId })
@@ -499,7 +469,6 @@ export default function ExterneDashboard() {
         }
       }
   
-      // Recharger les données en arrière-plan pour synchroniser
       setTimeout(() => {
         loadData(lecteurExterneId, mediateurId);
       }, 500);
@@ -557,26 +526,21 @@ export default function ExterneDashboard() {
   };
 
   const filteredElevesDisponibles = elevesDisponibles.filter(eleve => {
-    // Filtre par catégories
     if (selectedMultipleCategories.length > 0 && !selectedMultipleCategories.includes(eleve.categorie)) {
       return false;
     }
     
-    // Filtre par dates
     if (selectedMultipleDates.length > 0 && eleve.date_defense && !selectedMultipleDates.includes(eleve.date_defense)) {
       return false;
     }
     
-    // Filtre par locaux
     if (selectedMultipleLocations.length > 0 && eleve.localisation_defense && !selectedMultipleLocations.includes(eleve.localisation_defense)) {
       return false;
     }
     
-    // Vérifier si les deux rôles sont déjà pris par d'autres personnes
     const hasLecteurExterneTaken = eleve.lecteur_externe_id && eleve.lecteur_externe_id !== lecteurExterneId;
     const hasMediateurTaken = eleve.mediateur_id && eleve.mediateur_id !== mediateurId;
     
-    // Si les deux rôles (lecteur ET médiateur) sont déjà attribués à d'autres, on masque le TFH
     if (hasLecteurExterneTaken && hasMediateurTaken) {
       return false;
     }
@@ -670,23 +634,19 @@ export default function ExterneDashboard() {
     const lecteurTaken = eleve.lecteur_externe_id && eleve.lecteur_externe_id !== lecteurExterneId;
     const mediateurTaken = eleve.mediateur_id && eleve.mediateur_id !== mediateurId;
   
-    // Si déjà sélectionné comme lecteur
     if (lecteurSelected) {
       await handleToggleSelection(eleve.id, 'lecteur');
       return;
     }
     
-    // Si déjà sélectionné comme médiateur
     if (mediateurSelected) {
       await handleToggleSelection(eleve.id, 'mediateur');
       return;
     }
   
-    // Sinon, proposer un choix
     let roleChoice: 'lecteur' | 'mediateur' | null = null;
     
     if (!lecteurBusy && !lecteurTaken && !mediateurBusy && !mediateurTaken) {
-      // Les deux rôles sont disponibles → demander à l'utilisateur
       roleChoice = window.confirm(`Choisir ${eleve.prenom} ${eleve.nom} comme :\n\nOK = Lecteur externe\nAnnuler = Médiateur`) 
         ? 'lecteur' 
         : 'mediateur';
@@ -713,6 +673,35 @@ export default function ExterneDashboard() {
     setSelectedMultipleLocations(locations);
     
     setViewMode(tempViewMode);
+  };
+
+  const handleSaveFormatPreference = async () => {
+    if (!tempFormatChoice) return;
+    
+    const newAccepteNumerique = tempFormatChoice === 'numerique';
+    
+    try {
+      const { error } = await supabase
+        .from('externes')
+        .update({ accepte_numerique: newAccepteNumerique })
+        .eq('id', externeId);
+      
+      if (error) throw error;
+      
+      setAccepteNumerique(newAccepteNumerique);
+      
+      // Mettre à jour le localStorage si nécessaire
+      if (newAccepteNumerique) {
+        localStorage.setItem('userFormat', 'numerique');
+      } else {
+        localStorage.removeItem('userFormat');
+      }
+      
+      setViewMode('thankyou');
+    } catch (err) {
+      console.error('Erreur sauvegarde préférence:', err);
+      alert('Erreur lors de l\'enregistrement de votre préférence');
+    }
   };
 
   const handleLogout = () => {
@@ -777,6 +766,26 @@ export default function ExterneDashboard() {
                   </p>
                 </div>
                 <div className="ml-auto text-gray-400 group-hover:text-green-600">
+                  →
+                </div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => setShowProfileEditor(true)}
+              className="w-full p-6 bg-white rounded-xl shadow-sm border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all text-left group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-gray-200 transition-colors">
+                  <span className="text-2xl">⚙️</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800">Mes paramètres</h3>
+                  <p className="text-gray-600 text-sm mt-1">
+                    Modifier mes informations personnelles et préférences
+                  </p>
+                </div>
+                <div className="ml-auto text-gray-400 group-hover:text-gray-600">
                   →
                 </div>
               </div>
@@ -983,7 +992,7 @@ export default function ExterneDashboard() {
             <button
               onClick={() => {
                 setTempSelectedCategories(categories);
-                goToFinalView();
+                setViewMode('question-format');
               }}
               className={`w-full p-4 rounded-lg border text-left ${
                 tempSelectedCategories.length === categories.length
@@ -1047,11 +1056,156 @@ export default function ExterneDashboard() {
               ← Retour
             </button>
             <button
-              onClick={goToFinalView}
+              onClick={() => setViewMode('question-format')}
               className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
-              Voir les TFH →
+              Continuer →
             </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Question 4: Préférence de format (papier ou numérique)
+  if (viewMode === 'question-format') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-gray-50 flex items-center justify-center p-4">
+        <div className="max-w-2xl w-full">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Préférence de format</h1>
+            <p className="text-gray-600">Comment souhaitez-vous recevoir les TFH ?</p>
+          </div>
+
+          <div className="space-y-4">
+            <button
+              onClick={() => setTempFormatChoice('papier')}
+              className={`w-full p-6 rounded-xl shadow-sm border-2 transition-all text-left ${
+                tempFormatChoice === 'papier'
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-200 bg-white hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                  <span className="text-2xl">📄</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800">Version papier</h3>
+                  <p className="text-gray-600 text-sm mt-1">
+                    Je reçois une copie papier des TFH
+                  </p>
+                </div>
+                {tempFormatChoice === 'papier' && (
+                  <div className="ml-auto text-blue-500">✓</div>
+                )}
+              </div>
+            </button>
+
+            <button
+              onClick={() => setTempFormatChoice('numerique')}
+              className={`w-full p-6 rounded-xl shadow-sm border-2 transition-all text-left ${
+                tempFormatChoice === 'numerique'
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-200 bg-white hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                  <span className="text-2xl">💻</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800">Version numérique</h3>
+                  <p className="text-gray-600 text-sm mt-1">
+                    Je préfère consulter les TFH en ligne
+                  </p>
+                  <p className="text-xs text-green-600 mt-2">
+                    🌱 Ce choix diminue le nombre d'impressions que les élèves doivent prendre en charge à leurs frais
+                  </p>
+                </div>
+                {tempFormatChoice === 'numerique' && (
+                  <div className="ml-auto text-green-500">✓</div>
+                )}
+              </div>
+            </button>
+          </div>
+
+          <div className="flex gap-3 mt-8">
+            <button
+              onClick={() => setViewMode('question-categories')}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+            >
+              ← Retour
+            </button>
+            <button
+              onClick={handleSaveFormatPreference}
+              disabled={!tempFormatChoice}
+              className={`flex-1 px-4 py-2 rounded-lg ${
+                tempFormatChoice
+                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              Confirmer →
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Écran de remerciement
+  if (viewMode === 'thankyou') {
+    const isNumerique = tempFormatChoice === 'numerique';
+    
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-gray-50 flex items-center justify-center p-4">
+        <div className="max-w-2xl w-full text-center">
+          <div className="bg-white rounded-xl shadow-lg p-8">
+            {isNumerique ? (
+              <>
+                <div className="text-6xl mb-4">💚</div>
+                <h1 className="text-2xl md:text-3xl font-bold text-green-700 mb-4">
+                  Merci pour votre choix responsable !
+                </h1>
+                <p className="text-gray-700 mb-4">
+                  En optant pour la version numérique, vous contribuez à réduire l'impact environnemental
+                  et les frais d'impression des élèves.
+                </p>
+                <p className="text-gray-600 text-sm mb-6">
+                  Vous pourrez accéder aux TFH numériques en cliquant sur les problématiques dans votre planning.
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="text-6xl mb-4">📚</div>
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4">
+                  Préférence enregistrée
+                </h1>
+                <p className="text-gray-700 mb-6">
+                  Vous recevrez les TFH au format papier comme vous l'avez indiqué.
+                </p>
+              </>
+            )}
+            
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => {
+                  setTempSelectedDates(dates);
+                  setTempSelectedCategories(categories);
+                  goToFinalView();
+                }}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+              >
+                Voir les TFH disponibles →
+              </button>
+              <button
+                onClick={() => setViewMode('choice')}
+                className="px-6 py-3 text-gray-600 hover:text-gray-800"
+              >
+                Retour au menu principal
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1066,7 +1220,7 @@ export default function ExterneDashboard() {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Mon planning ({eleves.length} défense{eleves.length > 1 ? 's' : ''})</h1>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <p className="text-gray-600 mt-1">Connecté en tant que {userName}</p>
                 <button
                   onClick={() => setShowProfileEditor(true)}
@@ -1100,6 +1254,23 @@ export default function ExterneDashboard() {
               </button>
             </div>
           </div>
+
+          {/* Note pour les utilisateurs en version numérique */}
+          {accepteNumerique && eleves.length > 0 && (
+            <div className="mb-4 p-4 bg-green-50 rounded-lg border border-green-200">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 text-green-600 text-xl">💻</div>
+                <div className="flex-1">
+                  <p className="text-sm text-green-800 font-medium">
+                    Vous avez choisi la version numérique.
+                  </p>
+                  <p className="text-sm text-green-700">
+                    Vous ne recevrez <strong>pas de version papier</strong> des TFH. Les versions numériques sont accessibles en cliquant sur les problématiques dans votre planning ci-dessous.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {eleves.length === 0 ? (
             <div className="bg-white rounded-lg shadow p-8 text-center">
@@ -1209,6 +1380,7 @@ export default function ExterneDashboard() {
               <span>
                 Ce tableau affiche les TFH qui vous sont assignés. Vous pouvez être lecteur externe (📖) ou médiateur (⚖️).
                 Pour modifier votre sélection, utilisez le bouton "Choisir des TFH".
+                {accepteNumerique && " Les problématiques avec 📄 sont des liens vers les versions numériques."}
               </span>
             </p>
           </div>
@@ -1219,9 +1391,16 @@ export default function ExterneDashboard() {
             userId={externeId}
             userType="externe"
             onClose={() => setShowProfileEditor(false)}
-            onUpdate={() => {
+            onUpdate={async () => {
               const name = localStorage.getItem('userName');
               if (name) setUserName(name);
+              // Recharger la préférence numérique
+              const { data } = await supabase
+                .from('externes')
+                .select('accepte_numerique')
+                .eq('id', externeId)
+                .single();
+              if (data) setAccepteNumerique(data.accepte_numerique || false);
             }}
           />
         )}
@@ -1253,7 +1432,6 @@ export default function ExterneDashboard() {
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
-
                 <button
                   onClick={() => setViewMode('planning')}
                   className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 text-sm"
@@ -1399,11 +1577,9 @@ export default function ExterneDashboard() {
                           <tr key={eleve.id} className={`hover:bg-gray-50 ${hasConflict ? 'bg-gray-100 opacity-60' : ''}`}>
                             <td className="px-4 py-3">
                               <div className="flex gap-2">
-                                {/* Bouton Lecteur (bleu) */}
                                 <button
                                   onClick={() => {
                                     if (isMediateurSelected) {
-                                      // D'abord désélectionner le rôle médiateur
                                       handleToggleSelection(eleve.id, 'mediateur');
                                     }
                                     handleToggleSelection(eleve.id, 'lecteur');
@@ -1421,11 +1597,9 @@ export default function ExterneDashboard() {
                                   📖 Lecteur
                                 </button>
                                 
-                                {/* Bouton Médiateur (violet) */}
                                 <button
                                   onClick={() => {
                                     if (isLecteurSelected) {
-                                      // D'abord désélectionner le rôle lecteur
                                       handleToggleSelection(eleve.id, 'lecteur');
                                     }
                                     handleToggleSelection(eleve.id, 'mediateur');
@@ -1521,9 +1695,15 @@ export default function ExterneDashboard() {
             userId={externeId}
             userType="externe"
             onClose={() => setShowProfileEditor(false)}
-            onUpdate={() => {
+            onUpdate={async () => {
               const name = localStorage.getItem('userName');
               if (name) setUserName(name);
+              const { data } = await supabase
+                .from('externes')
+                .select('accepte_numerique')
+                .eq('id', externeId)
+                .single();
+              if (data) setAccepteNumerique(data.accepte_numerique || false);
             }}
           />
         )}
