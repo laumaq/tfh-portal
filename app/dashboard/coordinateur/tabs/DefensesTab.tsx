@@ -332,6 +332,22 @@ export default function DefensesTab({
       .sort((a, b) => a.label.localeCompare(b.label));
   };
 
+  // Vérifie si un guide accepte le numérique
+  const isGuideAccepteNumerique = (guideId: string | null | undefined): boolean => {
+    if (!guideId) return false;
+    const guide = guides.find(g => g.id === guideId);
+    return guide?.accepte_numerique === true;
+  };
+  
+  // Vérifie si un externe (lecteur externe ou médiateur) accepte le numérique
+  const isExterneAccepteNumerique = (externeId: string | null | undefined): boolean => {
+    if (!externeId) return false;
+    const externe = externes.find(e => 
+      e.lecteur_externe_id === externeId || e.mediateur_id === externeId
+    );
+    return externe?.accepte_numerique === true;
+  };  
+
   const renderSelectOrLabel = (
     eleve: Eleve,
     field: 'lecteur_interne_id' | 'lecteur_externe_id' | 'mediateur_id',
@@ -556,8 +572,46 @@ export default function DefensesTab({
                       </span>
                     </td>
                     <td className="px-3 py-3 text-xs md:text-sm max-w-xs break-words">{eleve.problematique || '-'}</td>
+                    {/* Colonne Guide */}
                     <td className="px-3 py-3 text-xs md:text-sm whitespace-nowrap">
-                      {eleve.guide_nom ? `${eleve.guide_nom} ${eleve.guide_prenom}` : '-'}
+                      {eleve.guide_id ? (
+                        <span className={isGuideAccepteNumerique(eleve.guide_id) ? 'text-blue-600 font-medium' : ''}>
+                          {eleve.guide_nom} {eleve.guide_prenom}
+                        </span>
+                      ) : '-'}
+                    </td>
+                    
+                    {/* Colonne Lecteur Interne */}
+                    <td className="px-3 py-3">
+                      {!editingMode ? (
+                        <span className={isGuideAccepteNumerique(eleve.lecteur_interne_id) ? 'text-blue-600 font-medium' : ''}>
+                          {lecteurInterneLabel || '-'}
+                        </span>
+                      ) : (
+                        renderSelectOrLabel(eleve, 'lecteur_interne_id', 'lecteur_interne', () => lecteurInterneLabel)
+                      )}
+                    </td>
+                    
+                    {/* Colonne Lecteur Externe */}
+                    <td className="px-3 py-3">
+                      {!editingMode ? (
+                        <span className={isExterneAccepteNumerique(eleve.lecteur_externe_id) ? 'text-blue-600 font-medium' : ''}>
+                          {lecteurExterneLabel || '-'}
+                        </span>
+                      ) : (
+                        renderSelectOrLabel(eleve, 'lecteur_externe_id', 'lecteur_externe', () => lecteurExterneLabel)
+                      )}
+                    </td>
+                    
+                    {/* Colonne Médiateur */}
+                    <td className="px-3 py-3">
+                      {!editingMode ? (
+                        <span className={isExterneAccepteNumerique(eleve.mediateur_id) ? 'text-blue-600 font-medium' : ''}>
+                          {mediateurLabel || '-'}
+                        </span>
+                      ) : (
+                        renderSelectOrLabel(eleve, 'mediateur_id', 'mediateur', () => mediateurLabel)
+                      )}
                     </td>
                     <td className="px-3 py-3">
                       {renderSelectOrLabel(eleve, 'lecteur_interne_id', 'lecteur_interne', () => lecteurInterneLabel)}
