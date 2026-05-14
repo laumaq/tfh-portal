@@ -47,7 +47,7 @@ interface Guide {
 }
 
 
-type TabType = 'suivi' | 'lecteur-interne' | 'defenses';
+type TabType = 'suivi' | 'lecteur-interne' | 'defenses' | 'parametres';
 
 export default function GuideDashboard() {
   const [eleves, setEleves] = useState<Eleve[]>([]);
@@ -605,7 +605,7 @@ export default function GuideDashboard() {
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              Lecteur interne
+              👥 Lecteur interne
             </button>
           )}
           
@@ -617,11 +617,40 @@ export default function GuideDashboard() {
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            Défenses programmées
+            📅 Défenses programmées
+          </button>
+          
+          {/* Nouvel onglet Paramètres */}
+          <button
+            onClick={() => setActiveTab('parametres')}
+            className={`px-4 py-2 font-medium text-sm md:text-base ${
+              activeTab === 'parametres'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            ⚙️ Paramètres
           </button>
         </div>
 
         {/* Contenu selon l'onglet */}
+
+        {/* Onglet Paramètres */}
+        {activeTab === 'parametres' && (
+          <div className="max-w-2xl mx-auto">
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <span>⚙️</span>
+                Paramètres personnels
+              </h2>
+              <p className="text-gray-600 mb-6">
+                Gérez vos informations personnelles et vos préférences.
+              </p>
+              <ProfileSettings guideId={userGuideId} onRefresh={() => loadData(userGuideId)} />
+            </div>
+          </div>
+        )}
+        
         {activeTab === 'suivi' ? (
           <>
             {/* Objectif général et légende - côte à côte sur desktop */}
@@ -1027,17 +1056,6 @@ export default function GuideDashboard() {
         ) : (
           /* Onglet Défenses programmées */
           <div className="space-y-6">
-            {/* Paramètres personnels - occupe 1/3 */}
-            <div className="lg:col-span-1">
-              <div className="bg-white rounded-lg shadow p-6 sticky top-4">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <span>⚙️</span>
-                  Paramètres personnels
-                </h2>
-                <ProfileSettings guideId={userGuideId} onRefresh={() => loadData(userGuideId)} />
-              </div>
-            </div>
-
             {loadingDefenses ? (
               <div className="text-center py-12">
                 <div className="text-xl">Chargement des données...</div>
