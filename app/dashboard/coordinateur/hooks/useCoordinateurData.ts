@@ -29,7 +29,7 @@ export function useCoordinateurData() {
       // Charger les guides
       const { data: guidesData, error: guidesError } = await supabase
         .from('guides')
-        .select('id, nom, prenom, initiale, email, mot_de_passe')
+        .select('id, nom, prenom, initiale, email, mot_de_passe, accepte_numerique')
         .order('nom', { ascending: true });
       
       if (guidesError) throw guidesError;
@@ -38,7 +38,7 @@ export function useCoordinateurData() {
       // Charger les lecteurs externes (à garder pour compatibilité)
       const { data: lecteursExternesData, error: lecteursError } = await supabase
         .from('lecteurs_externes')
-        .select('id, nom, prenom, email, mot_de_passe');
+        .select('id, nom, prenom, email, telephone, lecteur_externe_id, mediateur_id, accepte_numerique')
 
       if (lecteursError) throw lecteursError;
       setLecteursExternes(lecteursExternesData || []);
