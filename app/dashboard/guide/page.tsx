@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getJourneesFromSupabase, detecterSessions } from '@/app/dashboard/coordinateur/utils/sessionUtils';
 import { getConvocationColor, getConvocationLabelShort } from '@/app/dashboard/coordinateur/utils/convocationUtils';
+import ProfileSettings from './components/ProfileSettings';
 
 interface Eleve {
   id: string;
@@ -39,11 +40,14 @@ interface Eleve {
 interface Guide {
   id: string;
   nom: string;
+  prenom: string; 
   initiale: string;
+  telephone?: string;
+  accepte_numerique?: boolean;
 }
 
 
-type TabType = 'guide' | 'lecteur-interne' | 'defenses';
+type TabType = 'suivi' | 'lecteur-interne' | 'defenses';
 
 export default function GuideDashboard() {
   const [eleves, setEleves] = useState<Eleve[]>([]);
@@ -581,9 +585,9 @@ export default function GuideDashboard() {
         {/* Onglets */}
         <div className="flex border-b border-gray-200 mb-6">
           <button
-            onClick={() => setActiveTab('guide')}
+            onClick={() => setActiveTab('suivi')}
             className={`px-4 py-2 font-medium text-sm md:text-base ${
-              activeTab === 'guide'
+              activeTab === 'suivi'
                 ? 'text-blue-600 border-b-2 border-blue-600'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
@@ -618,7 +622,7 @@ export default function GuideDashboard() {
         </div>
 
         {/* Contenu selon l'onglet */}
-        {activeTab === 'guide' ? (
+        {activeTab === 'suivi' ? (
           <>
             {/* Objectif général et légende - côte à côte sur desktop */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
@@ -1023,11 +1027,15 @@ export default function GuideDashboard() {
         ) : (
           /* Onglet Défenses programmées */
           <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold text-gray-800">Défenses programmées</h2>
-              <p className="text-gray-600 mt-1">
-                Liste de tous vos élèves (en tant que guide ou lecteur interne).
-              </p>
+            {/* Paramètres personnels - occupe 1/3 */}
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-lg shadow p-6 sticky top-4">
+                <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <span>⚙️</span>
+                  Paramètres personnels
+                </h2>
+                <ProfileSettings guideId={userGuideId} onRefresh={() => loadData(userGuideId)} />
+              </div>
             </div>
 
             {loadingDefenses ? (
