@@ -1,4 +1,5 @@
 // app/dashboard/guide/page.tsx
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -46,7 +47,6 @@ interface Guide {
   accepte_numerique?: boolean;
 }
 
-
 type TabType = 'suivi' | 'lecteur-interne' | 'defenses' | 'parametres';
 
 export default function GuideDashboard() {
@@ -68,7 +68,6 @@ export default function GuideDashboard() {
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [objectifGeneral, setObjectifGeneral] = useState<string>('');
   const [defensesNonRendus, setDefensesNonRendus] = useState<Eleve[]>([]);
-  // Modal d'objectif
   const [showObjectifModal, setShowObjectifModal] = useState(false);
   const [selectedEleveForObjectif, setSelectedEleveForObjectif] = useState<Eleve | null>(null);
   const [objectifParticulier, setObjectifParticulier] = useState('');
@@ -87,7 +86,6 @@ export default function GuideDashboard() {
   
   const router = useRouter();
 
-  // Options de convocation identiques à celles du coordinateur
   const CONVOCATION_OPTIONS = [
     { value: '', label: '-', color: 'bg-gray-100' },
     { 
@@ -134,7 +132,6 @@ export default function GuideDashboard() {
         const journeesData = await getJourneesFromSupabase(supabase);
         const sessionsDetectees = detecterSessions(journeesData);
         
-        // Prendre TOUTES les sessions détectées
         const toutesSessions = sessionsDetectees.map(session => {
           const match = session.id.match(/session_(\d+)/);
           const index = match ? parseInt(match[1]) : 0;
@@ -158,14 +155,11 @@ export default function GuideDashboard() {
     try {
       setLoading(true);
       
-      // Charger les guides (pour le dropdown des lecteurs internes)
       const { data: guidesData } = await supabase
         .from('guides')
         .select('id, nom, prenom, initiale');
       setGuides(guidesData || []);
 
-
-      // Charger les élèves assignés à ce guide
       const { data: elevesData, error: elevesError } = await supabase
         .from('eleves')
         .select(`
@@ -181,7 +175,6 @@ export default function GuideDashboard() {
 
       if (elevesError) throw elevesError;
 
-      // Formater les données des élèves
       const elevesFormatted = (elevesData || []).map(eleve => ({
         ...eleve,
         guide_nom: eleve.guide?.nom || '-',
@@ -196,8 +189,6 @@ export default function GuideDashboard() {
 
       setEleves(elevesFormatted);
 
-      // Pour l'onglet Lecteur interne: charger les élèves qui n'ont pas encore de lecteur interne
-      // OU dont le lecteur interne est l'utilisateur actuel
       const { data: elevesDispoData, error: elevesDispoError } = await supabase
         .from('eleves')
         .select(`
@@ -206,7 +197,6 @@ export default function GuideDashboard() {
         `)
         .or(`lecteur_interne_id.is.null,lecteur_interne_id.eq.${guideId}`)
         .neq('guide_id', guideId)
-        // Filtrer les élèves qui ont une catégorie
         .not('categorie', 'is', null)
         .not('categorie', 'eq', '')
         .order('classe', { ascending: true })
@@ -222,13 +212,11 @@ export default function GuideDashboard() {
 
       setElevesDisponibles(elevesDispoFormatted);
 
-      // Extraire les catégories uniques pour le filtre
       const uniqueCategories = Array.from(
         new Set(elevesDispoFormatted.map(e => e.categorie).filter(Boolean))
       ).sort();
       setCategories(uniqueCategories);
 
-      // Pré-sélectionner les élèves où l'utilisateur est déjà lecteur interne
       const preSelected = elevesDispoFormatted
         .filter(e => e.lecteur_interne_id === guideId)
         .map(e => e.id);
@@ -243,7 +231,6 @@ export default function GuideDashboard() {
 
   const loadSystemSettings = async () => {
     try {
-      // Charger le paramètre d'activation de l'onglet
       const { data: enabledData, error: enabledError } = await supabase
         .from('system_settings')
         .select('setting_value')
@@ -254,7 +241,6 @@ export default function GuideDashboard() {
         setLecteurInterneEnabled(enabledData.setting_value === 'true');
       }
   
-      // Charger l'objectif général
       const { data: objectifData, error: objectifError } = await supabase
         .from('system_settings')
         .select('setting_value')
@@ -265,7 +251,6 @@ export default function GuideDashboard() {
         setObjectifGeneral(objectifData.setting_value || '');
       }
   
-      // Charger les paramètres d'affichage pour les guides
       const { data: displayData, error: displayError } = await supabase
           .from('system_settings')
           .select('setting_key, setting_value')
@@ -292,31 +277,23 @@ export default function GuideDashboard() {
   
   const calculateColspan = (isProgrammed: boolean) => {
     let count = 0;
-    
-    // Colonnes toujours visibles
-    count += 1; // Checkbox
-    count += 2; // date heure
-
-    
-    // Colonnes conditionnelles
+    count += 1;
+    count += 2;
     if (displaySettings.lecteur_interne_voir_eleves) {
-      count += isProgrammed ? 2 : 2; // Classe + Élève (2 colonnes)
+      count += isProgrammed ? 2 : 2;
     }
-    
-    count += 2; // Catégorie + Problématique (toujours visibles)
-    
+    count += 2;
     if (displaySettings.lecteur_interne_voir_guides) count += 1;
     if (displaySettings.lecteur_interne_voir_lecteurs_externes) count += 1;
     if (displaySettings.lecteur_interne_voir_mediateurs) count += 1;
-    
     return count;
   };
 
   const calculateColspanNonRendu = () => {
     let count = 0;
-    if (displaySettings.lecteur_interne_voir_eleves) count += 2; // classe + élève
-    count += 1; // catégorie
-    count += 1; // problématique
+    if (displaySettings.lecteur_interne_voir_eleves) count += 2;
+    count += 1;
+    count += 1;
     if (displaySettings.lecteur_interne_voir_guides) count += 1;
     if (displaySettings.lecteur_interne_voir_guides) count += 1;
     if (displaySettings.lecteur_interne_voir_lecteurs_externes) count += 1;
@@ -328,7 +305,6 @@ export default function GuideDashboard() {
     try {
       setLoadingDefenses(true);
       
-      // Charger tous les élèves où l'utilisateur est soit guide, soit lecteur interne
       const { data: defensesData, error: defensesError } = await supabase
         .from('eleves')
         .select(`
@@ -358,7 +334,6 @@ export default function GuideDashboard() {
         mediateur_prenom: eleve.mediateur?.prenom || '-'
       }));
 
-      // Séparer les défenses programmées et non programmées
       const nonRendus = defensesFormatted.filter(eleve => eleve.tfh_non_rendu === true);
       const programmees = defensesFormatted.filter(eleve => 
         eleve.tfh_non_rendu !== true && eleve.date_defense && eleve.heure_defense
@@ -384,7 +359,6 @@ export default function GuideDashboard() {
     }
   }, [activeTab, userGuideId]);
 
-  // Filtrer les élèves disponibles par catégorie
   const filteredElevesDisponibles = elevesDisponibles.filter(eleve => {
     if (selectedCategorie === 'toutes') return true;
     return eleve.categorie === selectedCategorie;
@@ -410,7 +384,6 @@ export default function GuideDashboard() {
 
   const handleSaveLecteurInterne = async () => {
     try {
-      // D'abord, retirer ce guide comme lecteur interne de tous les élèves
       const { error: clearError } = await supabase
         .from('eleves')
         .update({ lecteur_interne_id: null })
@@ -418,7 +391,6 @@ export default function GuideDashboard() {
 
       if (clearError) throw clearError;
 
-      // Ensuite, ajouter ce guide comme lecteur interne aux élèves sélectionnés
       if (selectedEleves.length > 0) {
         const { error: updateError } = await supabase
           .from('eleves')
@@ -428,9 +400,7 @@ export default function GuideDashboard() {
         if (updateError) throw updateError;
       }
 
-      // Recharger les données
       await loadData(userGuideId);
-      
       alert('Modifications enregistrées avec succès !');
     } catch (err) {
       console.error('Erreur lors de la sauvegarde:', err);
@@ -438,7 +408,6 @@ export default function GuideDashboard() {
     }
   };
 
-  // Fonction ORIGINALE pour la problématique (ne pas modifier)
   const handleUpdateProblematique = async (eleveId: string, value: string) => {
     try {
       const { error } = await supabase
@@ -458,7 +427,6 @@ export default function GuideDashboard() {
     }
   };
 
-  // NOUVELLE fonction pour les sessions
   const handleUpdateSessionConvocation = async (eleveId: string, sessionIndex: number, value: string) => {
     try {
       const columnName = `session_${sessionIndex}_convoque`;
@@ -488,14 +456,12 @@ export default function GuideDashboard() {
     }
   };
   
-  // Ouvrir le modal d'objectif
   const openObjectifModal = (eleve: Eleve) => {
     setSelectedEleveForObjectif(eleve);
     setObjectifParticulier(eleve.objectif_particulier || '');
     setShowObjectifModal(true);
   };
   
-  // Sauvegarder l'objectif
   const saveObjectifParticulier = async () => {
     if (!selectedEleveForObjectif) return;
   
@@ -510,7 +476,6 @@ export default function GuideDashboard() {
   
       if (error) throw error;
   
-      // Mettre à jour l'état local
       const updatedEleves = eleves.map(eleve => 
         eleve.id === selectedEleveForObjectif.id 
           ? { ...eleve, objectif_particulier: objectifParticulier.trim() || null }
@@ -518,10 +483,8 @@ export default function GuideDashboard() {
       );
       setEleves(updatedEleves);
   
-      // Fermer le modal
       setShowObjectifModal(false);
       setSelectedEleveForObjectif(null);
-      
       alert('Objectif sauvegardé avec succès !');
       
     } catch (err) {
@@ -532,14 +495,12 @@ export default function GuideDashboard() {
     }
   };
   
-  // Fermer le modal
   const closeObjectifModal = () => {
     setShowObjectifModal(false);
     setSelectedEleveForObjectif(null);
     setObjectifParticulier('');
   };
 
-  // Fonction pour obtenir le label court
   const getShortLabel = (value: string) => {
     return getConvocationLabelShort(value);
   };
@@ -569,6 +530,7 @@ export default function GuideDashboard() {
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
+        {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-800">TFH : Page de suivi des encadrants internes</h1>
@@ -583,7 +545,7 @@ export default function GuideDashboard() {
         </div>
 
         {/* Onglets */}
-        <div className="flex border-b border-gray-200 mb-6">
+        <div className="flex border-b border-gray-200 mb-6 flex-wrap gap-1">
           <button
             onClick={() => setActiveTab('suivi')}
             className={`px-4 py-2 font-medium text-sm md:text-base ${
@@ -595,7 +557,6 @@ export default function GuideDashboard() {
             📋 Suivi des élèves ({eleves.length})
           </button>
           
-          {/* Afficher l'onglet seulement si autorisé */}
           {settingsLoaded && lecteurInterneEnabled && (
             <button
               onClick={() => setActiveTab('lecteur-interne')}
@@ -620,7 +581,6 @@ export default function GuideDashboard() {
             📅 Défenses programmées
           </button>
           
-          {/* Nouvel onglet Paramètres */}
           <button
             onClick={() => setActiveTab('parametres')}
             className={`px-4 py-2 font-medium text-sm md:text-base ${
@@ -634,8 +594,6 @@ export default function GuideDashboard() {
         </div>
 
         {/* Contenu selon l'onglet */}
-
-        {/* Onglet Paramètres */}
         {activeTab === 'parametres' && (
           <div className="max-w-2xl mx-auto">
             <div className="bg-white rounded-lg shadow p-6">
@@ -649,13 +607,11 @@ export default function GuideDashboard() {
               <ProfileSettings guideId={userGuideId} onRefresh={() => loadData(userGuideId)} />
             </div>
           </div>
-        ):
-        activeTab === 'suivi' ? (
+        )}
+
+        {activeTab === 'suivi' && (
           <>
-            {/* Objectif général et légende - côte à côte sur desktop */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-              
-              {/* Objectif général */}
               <div className="bg-white rounded-lg shadow p-4 md:p-6 border border-blue-200 h-full">
                 <div className="mb-3">
                   <h2 className="text-lg font-semibold text-blue-800 flex items-center gap-2 mb-2">
@@ -675,29 +631,22 @@ export default function GuideDashboard() {
                             </div>
                           </div>
                           <div className="flex-1">
-                            <p className="text-sm text-blue-800 whitespace-pre-wrap">
-                              {objectifGeneral}
-                            </p>
+                            <p className="text-sm text-blue-800 whitespace-pre-wrap">{objectifGeneral}</p>
                           </div>
                         </div>
                       </div>
                     </>
                   ) : (
                     <>
-                      <p className="text-sm text-gray-600 mb-3">
-                        Aucun objectif général n'a été défini pour le moment.
-                      </p>
+                      <p className="text-sm text-gray-600 mb-3">Aucun objectif général n'a été défini pour le moment.</p>
                       <div className="bg-gray-50 border border-gray-100 rounded-lg p-4 text-center">
-                        <p className="text-sm text-gray-500">
-                          Les objectifs généraux seront définis par les coordinateurs.
-                        </p>
+                        <p className="text-sm text-gray-500">Les objectifs généraux seront définis par les coordinateurs.</p>
                       </div>
                     </>
                   )}
                 </div>
               </div>
 
-              {/* Légende des convocations */}
               <div className="bg-white rounded-lg shadow p-4 md:p-6 border border-gray-200 h-full">
                 <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2 mb-3">
                   <span className="text-xl">📋</span>
@@ -705,10 +654,7 @@ export default function GuideDashboard() {
                 </h2>
                 <div className="space-y-2">
                   {CONVOCATION_OPTIONS.filter(opt => opt.value).map((opt) => (
-                    <div 
-                      key={opt.value} 
-                      className={`${opt.color} px-3 py-2 rounded-lg flex items-center gap-3`}
-                    >
+                    <div key={opt.value} className={`${opt.color} px-3 py-2 rounded-lg flex items-center gap-3`}>
                       <div className="flex-shrink-0">
                         <div className="w-3 h-3 rounded-full" style={{
                           backgroundColor: opt.color.includes('green') ? '#10B981' :
@@ -718,9 +664,7 @@ export default function GuideDashboard() {
                         }}></div>
                       </div>
                       <div className="flex-1">
-                        <div className="text-sm font-medium">
-                          {getShortLabel(opt.label)}
-                        </div>
+                        <div className="text-sm font-medium">{getShortLabel(opt.label)}</div>
                       </div>
                     </div>
                   ))}
@@ -728,8 +672,6 @@ export default function GuideDashboard() {
               </div>
             </div>
 
-
-            {/* Tableau des élèves assignés */}
             <div className="bg-white rounded-lg shadow overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-100 border-b">
@@ -739,7 +681,6 @@ export default function GuideDashboard() {
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Prénom</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Problématique</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Objectif particulier</th>
-                    {/* En-têtes dynamiques des sessions */}
                     {sessions.map(session => (
                       <th key={session.index} className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
                         {session.nom}
@@ -767,8 +708,7 @@ export default function GuideDashboard() {
                               <button
                                 onClick={async () => {
                                   const textarea = document.getElementById(`textarea-${eleve.id}`) as HTMLTextAreaElement;
-                                  const newValue = textarea.value;
-                                  await handleUpdateProblematique(eleve.id, newValue);
+                                  await handleUpdateProblematique(eleve.id, textarea.value);
                                   setEditingCell(null);
                                 }}
                                 className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
@@ -785,9 +725,7 @@ export default function GuideDashboard() {
                           </div>
                         ) : (
                           <div className="flex items-start gap-2">
-                            <div className="flex-1 whitespace-pre-wrap break-words">
-                              {eleve.problematique || '-'}
-                            </div>
+                            <div className="flex-1 whitespace-pre-wrap break-words">{eleve.problematique || '-'}</div>
                             <div className="flex gap-1 flex-shrink-0">
                               <button
                                 onClick={() => setEditingCell({id: eleve.id, field: 'problematique'})}
@@ -812,7 +750,6 @@ export default function GuideDashboard() {
                           </div>
                         )}
                       </td>
-
                       <td className="px-4 py-3 text-sm">
                         <div className="space-y-1">
                           <button
@@ -822,20 +759,16 @@ export default function GuideDashboard() {
                                 ? 'bg-green-100 text-green-700 hover:bg-green-200'
                                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                             }`}
-                            title={eleve.objectif_particulier || "Cliquer pour définir un objectif"}
                           >
-                            <span className={`text-lg ${eleve.objectif_particulier ? 'text-green-600' : 'text-gray-400'}`}>
-                              🎯
-                            </span>
+                            <span className={`text-lg ${eleve.objectif_particulier ? 'text-green-600' : 'text-gray-400'}`}>🎯</span>
                             <span className="text-xs">
                               {eleve.objectif_particulier 
-                                ? (eleve.objectif_particulier.length > 20 
-                                    ? eleve.objectif_particulier.substring(0, 20) + '...' 
-                                    : eleve.objectif_particulier)
+                                ? eleve.objectif_particulier.length > 20 
+                                  ? eleve.objectif_particulier.substring(0, 20) + '...' 
+                                  : eleve.objectif_particulier
                                 : 'Définir'}
                             </span>
                           </button>
-                          
                           {eleve.objectif_particulier && (
                             <div className="text-xs text-gray-500 text-center">
                               {eleve.objectif_particulier.length > 100 
@@ -845,21 +778,16 @@ export default function GuideDashboard() {
                           )}
                         </div>
                       </td>
-                      
-                      {/* Toutes les sessions détectées */}
                       {sessions.map(session => {
                         const columnName = `session_${session.index}_convoque`;
                         const valeur = (eleve as any)[columnName] as string | undefined;
-                        const statut = valeur || '';
-                        
                         return (
                           <td key={session.index} className="px-4 py-3">
                             <div className="space-y-1">
                               <select
-                                value={statut}
+                                value={valeur || ''}
                                 onChange={(e) => handleUpdateSessionConvocation(eleve.id, session.index, e.target.value)}
-                                className={`w-full border rounded px-2 py-1 text-sm ${getConvocationColor(statut)}`}
-                                title={statut || 'Non défini'}
+                                className={`w-full border rounded px-2 py-1 text-sm ${getConvocationColor(valeur || '')}`}
                               >
                                 {CONVOCATION_OPTIONS.map(opt => (
                                   <option key={opt.value} value={opt.value} className={opt.color}>
@@ -867,8 +795,8 @@ export default function GuideDashboard() {
                                   </option>
                                 ))}
                               </select>
-                              <div className={`text-xs px-2 py-1 rounded truncate ${getConvocationColor(statut)}`}>
-                                {getConvocationLabelShort(statut)}
+                              <div className={`text-xs px-2 py-1 rounded truncate ${getConvocationColor(valeur || '')}`}>
+                                {getConvocationLabelShort(valeur || '')}
                               </div>
                             </div>
                           </td>
@@ -880,15 +808,14 @@ export default function GuideDashboard() {
               </table>
             </div>
           </>
-        ) : activeTab === 'lecteur-interne' ? (
+        )}
+
+        {activeTab === 'lecteur-interne' && (
           <div className="space-y-6">
-            {/* Indicateur d'état */}
             <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-medium text-purple-800">
-                    Mode sélection lecteur interne
-                  </h3>
+                  <h3 className="font-medium text-purple-800">Mode sélection lecteur interne</h3>
                   <p className="text-sm text-purple-600 mt-1">
                     Sélectionnez les élèves pour lesquels vous serez lecteur interne.
                     Cet onglet est activé par l'administration.
@@ -900,7 +827,6 @@ export default function GuideDashboard() {
               </div>
             </div>
 
-            {/* En-tête avec filtres et bouton de sauvegarde */}
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="flex-1">
@@ -912,11 +838,8 @@ export default function GuideDashboard() {
                   </p>
                 </div>
                 <div className="flex flex-col md:items-end gap-3">
-                  {/* Filtre par catégorie */}
                   <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
-                      Filtrer par catégorie:
-                    </label>
+                    <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Filtrer par catégorie:</label>
                     <select
                       value={selectedCategorie}
                       onChange={(e) => setSelectedCategorie(e.target.value)}
@@ -924,17 +847,12 @@ export default function GuideDashboard() {
                     >
                       <option value="toutes">Toutes les catégories</option>
                       {categories.map(categorie => (
-                        <option key={categorie} value={categorie}>
-                          {categorie}
-                        </option>
+                        <option key={categorie} value={categorie}>{categorie}</option>
                       ))}
                     </select>
                   </div>
-                  
                   <div className="flex items-center gap-3">
-                    <span className="text-sm text-gray-600 whitespace-nowrap">
-                      {selectedEleves.length} élève(s) sélectionné(s)
-                    </span>
+                    <span className="text-sm text-gray-600 whitespace-nowrap">{selectedEleves.length} élève(s) sélectionné(s)</span>
                     <button
                       onClick={handleSaveLecteurInterne}
                       className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
@@ -946,7 +864,6 @@ export default function GuideDashboard() {
               </div>
             </div>
 
-            {/* Tableau des élèves disponibles */}
             <div className="bg-white rounded-lg shadow overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-100 border-b">
@@ -981,7 +898,7 @@ export default function GuideDashboard() {
                         {selectedCategorie === 'toutes' 
                           ? "Aucun élève disponible pour le moment."
                           : `Aucun élève trouvé dans la catégorie "${selectedCategorie}".`}
-                      </td>
+                       </td>
                     </tr>
                   ) : (
                     filteredElevesDisponibles.map((eleve) => (
@@ -994,7 +911,6 @@ export default function GuideDashboard() {
                             className="w-4 h-4 text-blue-600 rounded"
                           />
                         </td>
-                        
                         {displaySettings.lecteur_interne_voir_eleves && ( 
                           <>
                             <td className="px-4 py-3 text-sm">{eleve.classe}</td>
@@ -1006,45 +922,29 @@ export default function GuideDashboard() {
                             </td>
                           </>
                         )}
-                        
                         <td className="px-4 py-3 text-sm">
                           {eleve.categorie ? (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                               {eleve.categorie}
                             </span>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
+                          ) : '-'}
                         </td>
-                        
                         <td className="px-4 py-3 text-sm">
-                          <div className="max-w-xs whitespace-pre-wrap break-words min-h-[40px]">
-                            {eleve.problematique || '-'}
-                          </div>
+                          <div className="max-w-xs whitespace-pre-wrap break-words min-h-[40px]">{eleve.problematique || '-'}</div>
                         </td>
-
                         <td className="px-4 py-3 text-sm">
                           {eleve.date_defense 
-                            ? new Date(eleve.date_defense).toLocaleDateString('fr-FR', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric'
-                              })
+                            ? new Date(eleve.date_defense).toLocaleDateString('fr-FR')
                             : 'Non définie'}
                         </td>
-                        
                         <td className="px-4 py-3 text-sm">
-                          {eleve.heure_defense 
-                            ? eleve.heure_defense.substring(0, 5) // Format "HH:MM"
-                            : 'Non définie'}
+                          {eleve.heure_defense ? eleve.heure_defense.substring(0, 5) : 'Non définie'}
                         </td>
-                        
                         {displaySettings.lecteur_interne_voir_guides && ( 
                           <td className="px-4 py-3 text-sm">
                             {eleve.guide_nom} {eleve.guide_initiale}.
                           </td>
                         )}
-                        
                       </tr>
                     ))
                   )}
@@ -1052,24 +952,20 @@ export default function GuideDashboard() {
               </table>
             </div>
           </div>
-        ) : (
-          /* Onglet Défenses programmées */
+        )}
+
+        {activeTab === 'defenses' && (
           <div className="space-y-6">
             {loadingDefenses ? (
-              <div className="text-center py-12">
-                <div className="text-xl">Chargement des données...</div>
-              </div>
+              <div className="text-center py-12"><div className="text-xl">Chargement des données...</div></div>
             ) : defensesProgrammees.length === 0 && defensesNonProgrammees.length === 0 ? (
               <div className="bg-white rounded-lg shadow p-8 text-center">
                 <div className="text-gray-400 text-4xl mb-4">📅</div>
                 <h3 className="text-lg font-medium text-gray-700 mb-2">Aucun élève trouvé</h3>
-                <p className="text-gray-500">
-                  Vous n'avez pas d'élèves assignés (en tant que guide ou lecteur interne).
-                </p>
+                <p className="text-gray-500">Vous n'avez pas d'élèves assignés (en tant que guide ou lecteur interne).</p>
               </div>
             ) : (
               <div className="space-y-8">
-                {/* Section des défenses programmées */}
                 {defensesProgrammees.length > 0 && (
                   <div>
                     <div className="mb-4">
@@ -1077,11 +973,8 @@ export default function GuideDashboard() {
                         <span className="w-3 h-3 bg-green-500 rounded-full"></span>
                         Défenses programmées ({defensesProgrammees.length})
                       </h3>
-                      <p className="text-sm text-gray-600 mt-1">
-                        Défenses avec date, heure et localisation définies.
-                      </p>
+                      <p className="text-sm text-gray-600 mt-1">Défenses avec date, heure et localisation définies.</p>
                     </div>
-                    
                     <div className="bg-white rounded-lg shadow overflow-x-auto">
                       <table className="w-full">
                         <thead className="bg-gray-100 border-b">
@@ -1095,45 +988,23 @@ export default function GuideDashboard() {
                                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Classe</th>
                               </>
                             )}                            
-                            
                             <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Catégorie</th>
                             <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-96">Problématique</th>
-                            
-                            {displaySettings.lecteur_interne_voir_guides && (
-                              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Guide</th>
-                            )}
-                            
-                            {displaySettings.lecteur_interne_voir_guides && (
-                              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur interne</th>
-                            )}
-                            
-                            {displaySettings.lecteur_interne_voir_lecteurs_externes && (
-                              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur externe</th>
-                            )}
-                            
-                            {displaySettings.lecteur_interne_voir_mediateurs && (
-                              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Médiateur</th>
-                            )}
-                            
+                            {displaySettings.lecteur_interne_voir_guides && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Guide</th>}
+                            {displaySettings.lecteur_interne_voir_guides && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur interne</th>}
+                            {displaySettings.lecteur_interne_voir_lecteurs_externes && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur externe</th>}
+                            {displaySettings.lecteur_interne_voir_mediateurs && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Médiateur</th>}
                           </tr>
                         </thead>
                         <tbody>
                           {defensesProgrammees.map((eleve) => {
                             const isGuide = eleve.guide_id === userGuideId;
                             const isLecteurInterne = eleve.lecteur_interne_id === userGuideId;
-                            
                             return (
                               <tr key={eleve.id} className="border-b hover:bg-gray-50">
-                                <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">
-                                  {formatDate(eleve.date_defense)}
-                                </td>
-                                <td className="px-4 py-3 text-sm whitespace-nowrap">
-                                  {eleve.heure_defense || '-'}
-                                </td>
-                                <td className="px-4 py-3 text-sm">
-                                  {eleve.localisation_defense || '-'}
-                                </td>
-
+                                <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">{formatDate(eleve.date_defense)}</td>
+                                <td className="px-4 py-3 text-sm whitespace-nowrap">{eleve.heure_defense || '-'}</td>
+                                <td className="px-4 py-3 text-sm">{eleve.localisation_defense || '-'}</td>
                                 {displaySettings.lecteur_interne_voir_eleves && (
                                   <>
                                     <td className="px-4 py-3 text-sm">
@@ -1145,7 +1016,6 @@ export default function GuideDashboard() {
                                     <td className="px-4 py-3 text-sm">{eleve.classe}</td>
                                   </>
                                 )}
-                                                   
                                 <td className="px-4 py-3 text-sm">
                                   {eleve.categorie ? (
                                     <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 whitespace-nowrap">
@@ -1153,72 +1023,41 @@ export default function GuideDashboard() {
                                     </span>
                                   ) : '-'}
                                 </td>
-                        
                                 <td className="px-4 py-3 text-sm">
                                   <div className="whitespace-pre-wrap break-words min-h-[40px] max-w-96">
                                     {eleve.url_tfh ? (
-                                      <a
-                                        href={eleve.url_tfh}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-blue-600 hover:underline"
-                                      >
+                                      <a href={eleve.url_tfh} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
                                         {eleve.problematique || '-'}
                                       </a>
-                                    ) : (
-                                      eleve.problematique || '-'
-                                    )}
+                                    ) : (eleve.problematique || '-')}
                                   </div>
                                 </td>
-                        
                                 {displaySettings.lecteur_interne_voir_guides && (
                                   <td className="px-4 py-3 text-sm whitespace-nowrap">
                                     {eleve.guide_nom} {eleve.guide_initiale}.
-                                    {isGuide && (
-                                      <span className="ml-1 text-xs text-blue-600">(vous)</span>
-                                    )}
+                                    {isGuide && <span className="ml-1 text-xs text-blue-600">(vous)</span>}
                                   </td>
                                 )}
-                        
                                 {displaySettings.lecteur_interne_voir_guides && ( 
                                   <td className="px-4 py-3 text-sm whitespace-nowrap">
                                     {eleve.lecteur_interne_nom ? (
                                       <span>
                                         {eleve.lecteur_interne_nom} {eleve.lecteur_interne_initiale}
-                                        {isLecteurInterne && (
-                                          <span className="ml-1 text-xs text-blue-600">(vous)</span>
-                                        )}
+                                        {isLecteurInterne && <span className="ml-1 text-xs text-blue-600">(vous)</span>}
                                       </span>
-                                    ) : (
-                                      '-'
-                                    )}
+                                    ) : '-'}
                                   </td>
                                 )}
-                        
                                 {displaySettings.lecteur_interne_voir_lecteurs_externes && (
                                   <td className="px-4 py-3 text-sm whitespace-nowrap">
-                                    {eleve.lecteur_externe_nom ? (
-                                      <span>
-                                        {eleve.lecteur_externe_prenom} {eleve.lecteur_externe_nom}
-                                      </span>
-                                    ) : (
-                                      '-'
-                                    )}
+                                    {eleve.lecteur_externe_nom ? `${eleve.lecteur_externe_prenom} ${eleve.lecteur_externe_nom}` : '-'}
                                   </td>
                                 )}
-                        
                                 {displaySettings.lecteur_interne_voir_mediateurs && (
                                   <td className="px-4 py-3 text-sm whitespace-nowrap">
-                                    {eleve.mediateur_nom ? (
-                                      <span>
-                                        {eleve.mediateur_prenom} {eleve.mediateur_nom}
-                                      </span>
-                                    ) : (
-                                      '-'
-                                    )}
+                                    {eleve.mediateur_nom ? `${eleve.mediateur_prenom} ${eleve.mediateur_nom}` : '-'}
                                   </td>
                                 )}
-                        
                               </tr>
                             );
                           })}
@@ -1228,7 +1067,6 @@ export default function GuideDashboard() {
                   </div>
                 )}
 
-                {/* Section des défenses non programmées */}
                 {defensesNonProgrammees.length > 0 && (
                   <div>
                     <div className="mb-4">
@@ -1236,11 +1074,8 @@ export default function GuideDashboard() {
                         <span className="w-3 h-3 bg-gray-400 rounded-full"></span>
                         Défenses non programmées ({defensesNonProgrammees.length})
                       </h3>
-                      <p className="text-sm text-gray-600 mt-1">
-                        Défenses en attente de programmation.
-                      </p>
+                      <p className="text-sm text-gray-600 mt-1">Défenses en attente de programmation.</p>
                     </div>
-                    
                     <div className="bg-white rounded-lg shadow overflow-x-auto">
                       <table className="w-full">
                         <thead className="bg-gray-100 border-b">
@@ -1253,25 +1088,16 @@ export default function GuideDashboard() {
                             )}
                             <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Catégorie</th>
                             <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-96">Problématique</th>
-                            {displaySettings.lecteur_interne_voir_guides && (
-                              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Guide</th>
-                            )}
-                            {displaySettings.lecteur_interne_voir_guides && (
-                              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur interne</th>
-                            )}
-                            {displaySettings.lecteur_interne_voir_lecteurs_externes && (
-                              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur externe</th>
-                            )}
-                            {displaySettings.lecteur_interne_voir_mediateurs && (
-                              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Médiateur</th>
-                            )}
+                            {displaySettings.lecteur_interne_voir_guides && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Guide</th>}
+                            {displaySettings.lecteur_interne_voir_guides && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur interne</th>}
+                            {displaySettings.lecteur_interne_voir_lecteurs_externes && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur externe</th>}
+                            {displaySettings.lecteur_interne_voir_mediateurs && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Médiateur</th>}
                           </tr>
                         </thead>
                         <tbody>
                           {defensesNonProgrammees.map((eleve) => {
                             const isGuide = eleve.guide_id === userGuideId;
                             const isLecteurInterne = eleve.lecteur_interne_id === userGuideId;
-                            
                             return (
                               <tr key={eleve.id} className="border-b hover:bg-gray-50">
                                 {displaySettings.lecteur_interne_voir_eleves && (
@@ -1292,30 +1118,19 @@ export default function GuideDashboard() {
                                     </span>
                                   ) : '-'}
                                 </td>
-                                
                                 <td className="px-4 py-3 text-sm">
                                   <div className="whitespace-pre-wrap break-words min-h-[40px] max-w-96">
                                     {eleve.url_tfh ? (
-                                      <a
-                                        href={eleve.url_tfh}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-blue-600 hover:underline"
-                                      >
+                                      <a href={eleve.url_tfh} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
                                         {eleve.problematique || '-'}
                                       </a>
-                                    ) : (
-                                      eleve.problematique || '-'
-                                    )}
+                                    ) : (eleve.problematique || '-')}
                                   </div>
                                 </td>
-                                
                                 {displaySettings.lecteur_interne_voir_guides && (
                                   <td className="px-4 py-3 text-sm whitespace-nowrap">
                                     {eleve.guide_nom} {eleve.guide_initiale}.
-                                    {isGuide && (
-                                      <span className="ml-1 text-xs text-blue-600">(vous)</span>
-                                    )}
+                                    {isGuide && <span className="ml-1 text-xs text-blue-600">(vous)</span>}
                                   </td>
                                 )}
                                 {displaySettings.lecteur_interne_voir_guides && (
@@ -1323,35 +1138,19 @@ export default function GuideDashboard() {
                                     {eleve.lecteur_interne_nom ? (
                                       <span>
                                         {eleve.lecteur_interne_nom} {eleve.lecteur_interne_initiale}.
-                                        {isLecteurInterne && (
-                                          <span className="ml-1 text-xs text-blue-600">(vous)</span>
-                                        )}
+                                        {isLecteurInterne && <span className="ml-1 text-xs text-blue-600">(vous)</span>}
                                       </span>
-                                    ) : (
-                                      '-'
-                                    )}
+                                    ) : '-'}
                                   </td>
                                 )}
                                 {displaySettings.lecteur_interne_voir_lecteurs_externes && (
                                   <td className="px-4 py-3 text-sm whitespace-nowrap">
-                                    {eleve.lecteur_externe_nom ? (
-                                      <span>
-                                        {eleve.lecteur_externe_prenom} {eleve.lecteur_externe_nom}
-                                      </span>
-                                    ) : (
-                                      '-'
-                                    )}
+                                    {eleve.lecteur_externe_nom ? `${eleve.lecteur_externe_prenom} ${eleve.lecteur_externe_nom}` : '-'}
                                   </td>
                                 )}
                                 {displaySettings.lecteur_interne_voir_mediateurs && (
                                   <td className="px-4 py-3 text-sm whitespace-nowrap">
-                                    {eleve.mediateur_nom ? (
-                                      <span>
-                                        {eleve.mediateur_prenom} {eleve.mediateur_nom}
-                                      </span>
-                                    ) : (
-                                      '-'
-                                    )}
+                                    {eleve.mediateur_nom ? `${eleve.mediateur_prenom} ${eleve.mediateur_nom}` : '-'}
                                   </td>
                                 )}
                               </tr>
@@ -1370,11 +1169,8 @@ export default function GuideDashboard() {
                         <span className="w-3 h-3 bg-red-500 rounded-full"></span>
                         TFH non rendus ({defensesNonRendus.length})
                       </h3>
-                      <p className="text-sm text-gray-600 mt-1">
-                        Ces élèves n’ont pas rendu leur travail. Leur soutenance n’aura pas lieu.
-                      </p>
+                      <p className="text-sm text-gray-600 mt-1">Ces élèves n’ont pas rendu leur travail. Leur soutenance n’aura pas lieu.</p>
                     </div>
-                    
                     <div className="bg-white rounded-lg shadow overflow-x-auto">
                       <table className="w-full">
                         <thead className="bg-gray-100 border-b">
@@ -1387,25 +1183,16 @@ export default function GuideDashboard() {
                             )}
                             <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Catégorie</th>
                             <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-96">Problématique</th>
-                            {displaySettings.lecteur_interne_voir_guides && (
-                              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Guide</th>
-                            )}
-                            {displaySettings.lecteur_interne_voir_guides && (
-                              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur interne</th>
-                            )}
-                            {displaySettings.lecteur_interne_voir_lecteurs_externes && (
-                              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur externe</th>
-                            )}
-                            {displaySettings.lecteur_interne_voir_mediateurs && (
-                              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Médiateur</th>
-                            )}
+                            {displaySettings.lecteur_interne_voir_guides && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Guide</th>}
+                            {displaySettings.lecteur_interne_voir_guides && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur interne</th>}
+                            {displaySettings.lecteur_interne_voir_lecteurs_externes && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur externe</th>}
+                            {displaySettings.lecteur_interne_voir_mediateurs && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Médiateur</th>}
                           </tr>
                         </thead>
                         <tbody>
                           {defensesNonRendus.map((eleve) => {
                             const isGuide = eleve.guide_id === userGuideId;
                             const isLecteurInterne = eleve.lecteur_interne_id === userGuideId;
-                            
                             return (
                               <React.Fragment key={eleve.id}>
                                 <tr className="border-b bg-red-50">
@@ -1428,9 +1215,7 @@ export default function GuideDashboard() {
                                     ) : '-'}
                                   </td>
                                   <td className="px-4 py-3 text-sm">
-                                    <div className="whitespace-pre-wrap break-words min-h-[40px] max-w-96">
-                                      {eleve.problematique || '-'}
-                                    </div>
+                                    <div className="whitespace-pre-wrap break-words min-h-[40px] max-w-96">{eleve.problematique || '-'}</div>
                                   </td>
                                   {displaySettings.lecteur_interne_voir_guides && (
                                     <td className="px-4 py-3 text-sm whitespace-nowrap">
@@ -1450,16 +1235,12 @@ export default function GuideDashboard() {
                                   )}
                                   {displaySettings.lecteur_interne_voir_lecteurs_externes && (
                                     <td className="px-4 py-3 text-sm whitespace-nowrap">
-                                      {eleve.lecteur_externe_nom ? (
-                                        <span>{eleve.lecteur_externe_prenom} {eleve.lecteur_externe_nom}</span>
-                                      ) : '-'}
+                                      {eleve.lecteur_externe_nom ? `${eleve.lecteur_externe_prenom} ${eleve.lecteur_externe_nom}` : '-'}
                                     </td>
                                   )}
                                   {displaySettings.lecteur_interne_voir_mediateurs && (
                                     <td className="px-4 py-3 text-sm whitespace-nowrap">
-                                      {eleve.mediateur_nom ? (
-                                        <span>{eleve.mediateur_prenom} {eleve.mediateur_nom}</span>
-                                      ) : '-'}
+                                      {eleve.mediateur_nom ? `${eleve.mediateur_prenom} ${eleve.mediateur_nom}` : '-'}
                                     </td>
                                   )}
                                 </tr>
@@ -1500,32 +1281,20 @@ export default function GuideDashboard() {
       {showObjectifModal && selectedEleveForObjectif && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
-            {/* En-tête */}
             <div className="px-6 py-4 border-b">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-bold text-gray-800">
-                    🎯 Objectif particulier
-                  </h2>
+                  <h2 className="text-xl font-bold text-gray-800">🎯 Objectif particulier</h2>
                   <p className="text-sm text-gray-600 mt-1">
                     {selectedEleveForObjectif.prenom} {selectedEleveForObjectif.nom} - {selectedEleveForObjectif.classe}
                   </p>
                 </div>
-                <button
-                  onClick={closeObjectifModal}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  ✕
-                </button>
+                <button onClick={closeObjectifModal} className="text-gray-400 hover:text-gray-600">✕</button>
               </div>
             </div>
-      
-            {/* Contenu */}
             <div className="px-6 py-4 flex-1 overflow-y-auto">
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Objectif spécifique pour cet élève :
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Objectif spécifique pour cet élève :</label>
                 <textarea
                   value={objectifParticulier}
                   onChange={(e) => setObjectifParticulier(e.target.value)}
@@ -1533,48 +1302,20 @@ export default function GuideDashboard() {
                   placeholder="Définir un objectif pédagogique spécifique pour cet élève..."
                   autoFocus
                 />
-                <p className="text-xs text-gray-500 mt-2">
-                  Cet objectif n'est visible que par vous (guide) et l'administration.
-                </p>
+                <p className="text-xs text-gray-500 mt-2">Cet objectif n'est visible que par vous (guide) et l'administration.</p>
               </div>
-      
               {selectedEleveForObjectif.problematique && (
                 <div className="mb-4 p-4 bg-gray-50 rounded-lg">
                   <h4 className="text-sm font-medium text-gray-700 mb-2">Problématique de l'élève :</h4>
-                  <p className="text-sm text-gray-600 whitespace-pre-wrap">
-                    {selectedEleveForObjectif.problematique}
-                  </p>
+                  <p className="text-sm text-gray-600 whitespace-pre-wrap">{selectedEleveForObjectif.problematique}</p>
                 </div>
               )}
             </div>
-      
-            {/* Pied de page */}
             <div className="px-6 py-4 border-t bg-gray-50 rounded-b-lg">
               <div className="flex justify-end gap-3">
-                <button
-                  onClick={closeObjectifModal}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium"
-                  disabled={savingObjectif}
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={saveObjectifParticulier}
-                  disabled={savingObjectif}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
-                    !savingObjectif
-                      ? 'bg-blue-600 text-white hover:bg-blue-700'
-                      : 'bg-blue-400 text-white cursor-not-allowed'
-                  }`}
-                >
-                  {savingObjectif ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      Sauvegarde...
-                    </>
-                  ) : (
-                    'Sauvegarder l\'objectif'
-                  )}
+                <button onClick={closeObjectifModal} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium" disabled={savingObjectif}>Annuler</button>
+                <button onClick={saveObjectifParticulier} disabled={savingObjectif} className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${!savingObjectif ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-blue-400 text-white cursor-not-allowed'}`}>
+                  {savingObjectif ? <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>Sauvegarde...</> : 'Sauvegarder l\'objectif'}
                 </button>
               </div>
             </div>
@@ -1584,4 +1325,3 @@ export default function GuideDashboard() {
     </div>
   );
 }
-
