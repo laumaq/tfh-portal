@@ -1491,6 +1491,7 @@ export default function GuideDashboard() {
               {activeTab === 'suivi' && 'Vous pouvez modifier la problématique en cliquant dessus (sauf si l’élève a déposé un lien, auquel cas il est cliquable vers sa version numérique). Les convocations se gèrent via les menus déroulants.'}
               {activeTab === 'lecteur-interne' && 'Sélectionnez les élèves pour lesquels vous serez lecteur interne. Un élève ne peut avoir qu\'un seul lecteur interne.'}
               {activeTab === 'defenses' && 'Les élèves en rouge n’ont pas rendu leur TFH → soutenance annulée. Les problématiques bleues sont cliquables pour accéder à la version digitale du TFH (si disponible).'}
+              {activeTab === 'parametres' && 'Modifiez vos informations personnelles et vos préférences de format (papier ou numérique).'}
             </span>
           </p>
         </div>
