@@ -89,6 +89,7 @@ export interface Guide {
   prenom: string; 
   initiale: string;
   email?: string;
+  telephone?: string;
   mot_de_passe?: string | null;
   accepte_numerique?: boolean;
 }
