@@ -649,9 +649,8 @@ export default function GuideDashboard() {
               <ProfileSettings guideId={userGuideId} onRefresh={() => loadData(userGuideId)} />
             </div>
           </div>
-        )}
-        
-        {activeTab === 'suivi' ? (
+        ):
+        activeTab === 'suivi' ? (
           <>
             {/* Objectif général et légende - côte à côte sur desktop */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
