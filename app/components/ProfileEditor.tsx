@@ -1,141 +1,77 @@
-// app/components/ProfileEditor.tsx
+// /app/components/ProfileEditor.tsx
 
 'use client';
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { X, Save, Mail, Phone, Monitor, BookOpen } from 'lucide-react';
 
 interface ProfileEditorProps {
   userId: string;
-  userType: 'lecteur_externe' | 'guide' | 'coordinateur' | 'mediateur' | 'eleve' | 'externe'
+  userType: 'externe' | 'guide';
   onClose: () => void;
-  onUpdate?: () => void;
+  onUpdate: () => void;
 }
 
 export default function ProfileEditor({ userId, userType, onClose, onUpdate }: ProfileEditorProps) {
-  const [nom, setNom] = useState('');
-  const [prenom, setPrenom] = useState('');
   const [email, setEmail] = useState('');
   const [telephone, setTelephone] = useState('');
+  const [accepteNumerique, setAccepteNumerique] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
-    loadUserData();
+    loadProfile();
   }, [userId, userType]);
 
-  const loadUserData = async () => {
+  const loadProfile = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      setError('');
-
-      let tableName = '';
-      switch (userType) {
-        case 'lecteur_externe':
-          tableName = 'lecteurs_externes';
-          break;
-        case 'guide':
-          tableName = 'guides';
-          break;
-        case 'coordinateur':
-          tableName = 'coordinateurs';
-          break;
-        case 'mediateur':
-          tableName = 'mediateurs';
-          break;
-        case 'eleve':
-          tableName = 'eleves';
-          break;
-        case 'externe':
-          tableName = 'externes';
-          break;
-        default:
-          throw new Error('Type d\'utilisateur non supporté');
-      }
-
-      const { data, error: fetchError } = await supabase
-        .from(tableName)
-        .select('nom, prenom, email, telephone')
+      const table = userType === 'externe' ? 'externes' : 'guides';
+      const { data, error } = await supabase
+        .from(table)
+        .select('email, telephone, accepte_numerique')
         .eq('id', userId)
         .single();
 
-      if (fetchError) throw fetchError;
+      if (error) throw error;
 
-      if (data) {
-        setNom(data.nom || '');
-        setPrenom(data.prenom || '');
-        setEmail(data.email || '');
-        setTelephone(data.telephone || '');
-      }
-    } catch (err: any) {
-      console.error('Erreur chargement données:', err);
-      setError('Impossible de charger vos informations');
+      setEmail(data?.email || '');
+      setTelephone(data?.telephone || '');
+      setAccepteNumerique(data?.accepte_numerique || false);
+    } catch (err) {
+      console.error('Erreur chargement profil:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = async () => {
     setSaving(true);
-    setError('');
-    setSuccess('');
+    setMessage(null);
 
     try {
-      let tableName = '';
-      switch (userType) {
-        case 'lecteur_externe':
-          tableName = 'lecteurs_externes';
-          break;
-        case 'guide':
-          tableName = 'guides';
-          break;
-        case 'coordinateur':
-          tableName = 'coordinateurs';
-          break;
-        case 'mediateur':
-          tableName = 'mediateurs';
-          break;
-        case 'eleve':
-          tableName = 'eleves';
-          break;
-        case 'externe':
-          tableName = 'externes';
-          break;
-      }
-
-      const { error: updateError } = await supabase
-        .from(tableName)
+      const table = userType === 'externe' ? 'externes' : 'guides';
+      const { error } = await supabase
+        .from(table)
         .update({
-          email: email.trim(),
+          email: email.trim() || null,
           telephone: telephone.trim() || null,
-          updated_at: new Date().toISOString()
+          accepte_numerique: accepteNumerique
         })
         .eq('id', userId);
 
-      if (updateError) throw updateError;
+      if (error) throw error;
 
-      setSuccess('Vos informations ont été mises à jour avec succès !');
-      
-      const currentUserName = localStorage.getItem('userName');
-      const newUserName = `${prenom} ${nom}`;
-      if (currentUserName !== newUserName) {
-        localStorage.setItem('userName', newUserName);
-      }
+      setMessage({ type: 'success', text: 'Profil mis à jour avec succès !' });
+      onUpdate();
 
-      if (onUpdate) {
-        onUpdate();
-      }
-
-      setTimeout(() => {
-        onClose();
-      }, 2000);
-
-    } catch (err: any) {
-      console.error('Erreur mise à jour:', err);
-      setError(err.message || 'Erreur lors de la mise à jour');
+      setTimeout(() => setMessage(null), 3000);
+    } catch (err) {
+      console.error('Erreur sauvegarde:', err);
+      setMessage({ type: 'error', text: 'Erreur lors de la sauvegarde' });
+      setTimeout(() => setMessage(null), 3000);
     } finally {
       setSaving(false);
     }
@@ -144,10 +80,9 @@ export default function ProfileEditor({ userId, userType, onClose, onUpdate }: P
   if (loading) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl p-6 max-w-md w-full">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Chargement de vos informations...</p>
+        <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+          <div className="flex justify-center items-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           </div>
         </div>
       </div>
@@ -156,112 +91,141 @@ export default function ProfileEditor({ userId, userType, onClose, onUpdate }: P
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-bold text-gray-800">Modifier mon profil</h3>
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        {/* En-tête */}
+        <div className="px-6 py-4 border-b flex justify-between items-center sticky top-0 bg-white">
+          <h2 className="text-xl font-semibold text-gray-800">
+            {userType === 'externe' ? 'Mes informations' : 'Mes paramètres'}
+          </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-2xl"
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
-            &times;
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nom
-            </label>
-            <input
-              type="text"
-              value={nom}
-              readOnly
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
-            />
-            <p className="text-xs text-gray-400 mt-1">Le nom ne peut pas être modifié</p>
-          </div>
+        {/* Corps */}
+        <div className="p-6 space-y-6">
+          {message && (
+            <div className={`p-3 rounded-lg ${
+              message.type === 'success' 
+                ? 'bg-green-50 text-green-800 border border-green-200' 
+                : 'bg-red-50 text-red-800 border border-red-200'
+            }`}>
+              {message.text}
+            </div>
+          )}
 
+          {/* Email */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Prénom
-            </label>
-            <input
-              type="text"
-              value={prenom}
-              readOnly
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
-            />
-            <p className="text-xs text-gray-400 mt-1">Le prénom ne peut pas être modifié</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email *
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <Mail className="w-4 h-4 inline mr-2" />
+              Email
             </label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              required
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="votre.email@example.com"
             />
             <p className="text-xs text-gray-500 mt-1">
-              Votre adresse email principale
+              Cet email sera visible par l'administration.
             </p>
           </div>
 
+          {/* Téléphone */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <Phone className="w-4 h-4 inline mr-2" />
               Téléphone
             </label>
             <input
               type="tel"
               value={telephone}
               onChange={(e) => setTelephone(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Facultatif"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="+32 123 45 67 89"
             />
             <p className="text-xs text-gray-500 mt-1">
-              Numéro pour contact urgent
+              Format international recommandé (ex: +32 123 45 67 89).
             </p>
           </div>
 
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm">
-              {error}
+          {/* Préférence numérique - visible pour les deux types */}
+          <div className="border-t pt-4">
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Préférence de format
+            </label>
+            <div className="flex gap-4">
+              <button
+                type="button"
+                onClick={() => setAccepteNumerique(false)}
+                className={`flex-1 flex items-center justify-center gap-3 px-4 py-3 rounded-lg border-2 transition-all ${
+                  !accepteNumerique
+                    ? 'border-gray-400 bg-gray-50 text-gray-700'
+                    : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                }`}
+              >
+                <BookOpen className="w-5 h-5" />
+                <div className="text-left">
+                  <div className="font-medium">Version papier</div>
+                  <div className="text-xs opacity-75">Reçoit une copie papier</div>
+                </div>
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => setAccepteNumerique(true)}
+                className={`flex-1 flex items-center justify-center gap-3 px-4 py-3 rounded-lg border-2 transition-all ${
+                  accepteNumerique
+                    ? 'border-blue-400 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                }`}
+              >
+                <Monitor className="w-5 h-5" />
+                <div className="text-left">
+                  <div className="font-medium">Version numérique</div>
+                  <div className="text-xs opacity-75">Préfère le format numérique</div>
+                </div>
+              </button>
             </div>
-          )}
-
-          {success && (
-            <div className="p-3 bg-green-50 border border-green-200 text-green-600 rounded-lg text-sm">
-              {success}
-            </div>
-          )}
-
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
-              disabled={saving}
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
-            >
-              {saving ? 'Enregistrement...' : 'Enregistrer'}
-            </button>
+            <p className="text-xs text-gray-500 mt-3">
+              {userType === 'externe' 
+                ? "Cette préférence indique à l'administration votre choix de format. La version numérique permet de réduire les impressions."
+                : "Cette préférence indique à l'administration votre choix de format pour les documents."
+              }
+            </p>
           </div>
-        </form>
+        </div>
 
-        <div className="mt-6 pt-6 border-t border-gray-100">
-          <p className="text-xs text-gray-500 text-center">
-            Seules certaines informations peuvent être modifiées.
-            Pour d'autres modifications, contactez les coordinateurs TFH.
-          </p>
+        {/* Boutons */}
+        <div className="px-6 py-4 border-t bg-gray-50 rounded-b-lg flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium"
+            disabled={saving}
+          >
+            Annuler
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+          >
+            {saving ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Sauvegarde...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                Sauvegarder
+              </>
+            )}
+          </button>
         </div>
       </div>
     </div>
