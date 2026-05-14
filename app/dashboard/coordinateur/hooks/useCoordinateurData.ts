@@ -35,29 +35,10 @@ export function useCoordinateurData() {
       if (guidesError) throw guidesError;
       setGuides(guidesData || []);
 
-      // Charger les lecteurs externes (à garder pour compatibilité)
-      const { data: lecteursExternesData, error: lecteursError } = await supabase
-        .from('lecteurs_externes')
-        .select('id, nom, prenom, email, telephone, lecteur_externe_id, mediateur_id, accepte_numerique')
-
-      if (lecteursError) throw lecteursError;
-      setLecteursExternes(lecteursExternesData || []);
-
-      // Charger les médiateurs (à garder pour compatibilité)
-      const { data: mediateursData, error: mediateursError } = await supabase
-        .from('mediateurs')
-        .select('id, nom, prenom, email, mot_de_passe');
-
-      if (mediateursError) {
-        setMediateurs([]);
-      } else {
-        setMediateurs(mediateursData || []);
-      }
-
-      // ← NOUVEAU : Charger les externes (table unifiée)
+      // Charger les externes 
       const { data: externesData, error: externesError } = await supabase
         .from('externes')
-        .select('*')
+        .select('id, nom, prenom, email, telephone, lecteur_externe_id, mediateur_id, accepte_numerique')
         .order('nom', { ascending: true });
 
       if (externesError) {
