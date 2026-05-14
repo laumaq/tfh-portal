@@ -161,7 +161,7 @@ export default function GuideDashboard() {
       // Charger les guides (pour le dropdown des lecteurs internes)
       const { data: guidesData } = await supabase
         .from('guides')
-        .select('id, nom, initiale');
+        .select('id, nom, prenom, initiale');
       setGuides(guidesData || []);
 
 
