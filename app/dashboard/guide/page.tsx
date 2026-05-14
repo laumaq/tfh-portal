@@ -60,7 +60,7 @@ export default function GuideDashboard() {
   const [userName, setUserName] = useState('');
   const [userGuideId, setUserGuideId] = useState<string>('');
   const [editingCell, setEditingCell] = useState<{id: string, field: string} | null>(null);
-  const [activeTab, setActiveTab] = useState<TabType>('guide');
+  const [activeTab, setActiveTab] = useState<TabType>('suivi');
   const [selectedEleves, setSelectedEleves] = useState<string[]>([]);
   const [selectedCategorie, setSelectedCategorie] = useState<string>('toutes');
   const [categories, setCategories] = useState<string[]>([]);
@@ -558,7 +558,7 @@ export default function GuideDashboard() {
     }
   };
 
-  if (loading && activeTab === 'guide') {
+  if (loading && activeTab === 'suivi') {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-xl">Chargement de vos élèves...</div>
@@ -571,7 +571,7 @@ export default function GuideDashboard() {
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Dashboard Guide</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">TFH : Page de suivi des encadrants internes</h1>
             <p className="text-gray-600 mt-1">Connecté en tant que {userName}</p>
           </div>
           <button
@@ -592,7 +592,7 @@ export default function GuideDashboard() {
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            Guide ({eleves.length} élève(s))
+            📋 Suivi des élèves ({eleves.length})
           </button>
           
           {/* Afficher l'onglet seulement si autorisé */}
@@ -1470,7 +1470,7 @@ export default function GuideDashboard() {
           <p className="text-sm text-blue-700 flex items-start gap-2">
             <span className="text-lg">💡</span>
             <span>
-              {activeTab === 'guide' && 'Vous pouvez modifier la problématique en cliquant dessus (sauf si l’élève a déposé un lien, auquel cas il est cliquable vers sa version numérique). Les convocations se gèrent via les menus déroulants.'}
+              {activeTab === 'suivi' && 'Vous pouvez modifier la problématique en cliquant dessus (sauf si l’élève a déposé un lien, auquel cas il est cliquable vers sa version numérique). Les convocations se gèrent via les menus déroulants.'}
               {activeTab === 'lecteur-interne' && 'Sélectionnez les élèves pour lesquels vous serez lecteur interne. Un élève ne peut avoir qu\'un seul lecteur interne.'}
               {activeTab === 'defenses' && 'Les élèves en rouge n’ont pas rendu leur TFH → soutenance annulée. Les problématiques bleues sont cliquables pour accéder à la version digitale du TFH (si disponible).'}
             </span>
