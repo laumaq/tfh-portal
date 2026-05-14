@@ -770,26 +770,6 @@ export default function ExterneDashboard() {
                 </div>
               </div>
             </button>
-
-            <button
-              onClick={() => setShowProfileEditor(true)}
-              className="w-full p-6 bg-white rounded-xl shadow-sm border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all text-left group"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-gray-200 transition-colors">
-                  <span className="text-2xl">⚙️</span>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800">Mes paramètres</h3>
-                  <p className="text-gray-600 text-sm mt-1">
-                    Modifier mes informations personnelles et préférences
-                  </p>
-                </div>
-                <div className="ml-auto text-gray-400 group-hover:text-gray-600">
-                  →
-                </div>
-              </div>
-            </button>
           </div>
 
           <div className="mt-8 text-center">
