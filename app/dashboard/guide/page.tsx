@@ -646,30 +646,47 @@ export default function GuideDashboard() {
                   )}
                 </div>
               </div>
-
+              
+              {/* LÉGENDE */}
               <div className="bg-white rounded-lg shadow p-4 md:p-6 border border-gray-200 h-full">
                 <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2 mb-3">
                   <span className="text-xl">📋</span>
                   Légende des convocations
                 </h2>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {CONVOCATION_OPTIONS.filter(opt => opt.value).map((opt) => (
-                    <div key={opt.value} className={`${opt.color} px-3 py-2 rounded-lg flex items-center gap-3`}>
-                      <div className="flex-shrink-0">
-                        <div className="w-3 h-3 rounded-full" style={{
-                          backgroundColor: opt.color.includes('green') ? '#10B981' :
-                                         opt.color.includes('yellow') ? '#F59E0B' :
-                                         opt.color.includes('orange') ? '#F97316' :
-                                         opt.color.includes('red') ? '#EF4444' : '#6B7280'
-                        }}></div>
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-sm font-medium">{getShortLabel(opt.label)}</div>
+                    <div key={opt.value} className={`${opt.color} px-3 py-2 rounded-lg`}>
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0 mt-0.5">
+                          <div className="w-3 h-3 rounded-full" style={{
+                            backgroundColor: opt.color.includes('green') ? '#10B981' :
+                                           opt.color.includes('yellow') ? '#F59E0B' :
+                                           opt.color.includes('orange') ? '#F97316' :
+                                           opt.color.includes('red') ? '#EF4444' : '#6B7280'
+                          }}></div>
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-sm font-medium">
+                            {opt.label}
+                          </div>
+                          <div className="text-xs opacity-75 mt-0.5">
+                            {opt.value === 'Non, l\'élève atteint bien les objectifs' && '✓ L\'élève a bien travaillé → Pas de convocation'}
+                            {opt.value === 'Oui, l\'élève n\'atteint pas les objectifs' && '⚠️ L\'élève a avancé mais n\'atteint pas les objectifs → Convocation'}
+                            {opt.value === 'Oui, l\'élève n\'a pas avancé' && '🔴 L\'élève n\'a pas avancé (ou très peu) → Convocation urgente'}
+                            {opt.value === 'Oui, l\'élève n\'a pas communiqué' && '📢 L\'élève n\'a pas communiqué → Convocation pour échange'}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <p className="text-xs text-gray-500 italic">
+                    La convocation est une invitation à un entretien avec l'élève pour faire le point sur son avancement.
+                  </p>
+                </div>
               </div>
+            </div>
             </div>
 
             <div className="bg-white rounded-lg shadow overflow-x-auto">
@@ -778,27 +795,53 @@ export default function GuideDashboard() {
                           )}
                         </div>
                       </td>
+                      
+                      {/* Colonnes des sessions - avec affichage des présences */}
                       {sessions.map(session => {
                         const columnName = `session_${session.index}_convoque`;
                         const valeur = (eleve as any)[columnName] as string | undefined;
+                        const estConvoque = valeur?.startsWith('Oui') === true;
+                        
+                        // Récupérer les présences pour les journées de cette session
+                        // Pour simplifier, on affiche un indicateur de présence si l'élève est convoqué
+                        // Dans une version plus avancée, on pourrait charger les présences réelles
+                        
                         return (
                           <td key={session.index} className="px-4 py-3">
-                            <div className="space-y-1">
-                              <select
-                                value={valeur || ''}
-                                onChange={(e) => handleUpdateSessionConvocation(eleve.id, session.index, e.target.value)}
-                                className={`w-full border rounded px-2 py-1 text-sm ${getConvocationColor(valeur || '')}`}
-                              >
-                                {CONVOCATION_OPTIONS.map(opt => (
-                                  <option key={opt.value} value={opt.value} className={opt.color}>
-                                    {opt.label}
-                                  </option>
-                                ))}
-                              </select>
-                              <div className={`text-xs px-2 py-1 rounded truncate ${getConvocationColor(valeur || '')}`}>
-                                {getConvocationLabelShort(valeur || '')}
+                            {estConvoque ? (
+                              <div className="flex flex-col gap-1">
+                                <select
+                                  value={valeur || ''}
+                                  onChange={(e) => handleUpdateSessionConvocation(eleve.id, session.index, e.target.value)}
+                                  className={`w-full border rounded px-2 py-1 text-sm ${getConvocationColor(valeur || '')}`}
+                                >
+                                  {CONVOCATION_OPTIONS.map(opt => (
+                                    <option key={opt.value} value={opt.value} className={opt.color}>
+                                      {opt.label}
+                                    </option>
+                                  ))}
+                                </select>
+                                {/* Indicateur de présence à remplacer par les vraies données quand disponibles */}
+                                <div className="flex items-center justify-center gap-2 mt-1">
+                                  <div className="w-2 h-2 rounded-full bg-gray-300" title="Présence à confirmer"></div>
+                                  <span className="text-xs text-gray-400">Présence à renseigner</span>
+                                </div>
                               </div>
-                            </div>
+                            ) : (
+                              <div className="flex flex-col gap-1">
+                                <select
+                                  value={valeur || ''}
+                                  onChange={(e) => handleUpdateSessionConvocation(eleve.id, session.index, e.target.value)}
+                                  className={`w-full border rounded px-2 py-1 text-sm ${getConvocationColor(valeur || '')}`}
+                                >
+                                  {CONVOCATION_OPTIONS.map(opt => (
+                                    <option key={opt.value} value={opt.value} className={opt.color}>
+                                      {opt.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
                           </td>
                         );
                       })}
