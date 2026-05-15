@@ -11,7 +11,7 @@ import {
   Shield, FileText, UserCheck, Calendar, 
   Users, Settings, BarChart, ChevronRight, BookOpen,
   AlertCircle, CheckCircle, XCircle, Clock, UserMinus, MessageCircle,
-  Eye, History, Filter, AlertTriangle, Link as LinkIcon
+  Eye, History, Filter, AlertTriangle, Link as LinkIcon, RefreshCw
 } from 'lucide-react';
 
 interface DashboardTabProps {
@@ -50,6 +50,7 @@ export default function DashboardTab({
   const [commentaire, setCommentaire] = useState('');
   const [actionType, setActionType] = useState<'approuver' | 'refuser' | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [conflitRole, setConflitRole] = useState<{ aConflit: boolean; message: string }>({ aConflit: false, message: '' });
   
   // Nouveaux états pour le modal d'historique
   const [historiqueModalOpen, setHistoriqueModalOpen] = useState(false);
@@ -77,22 +78,6 @@ export default function DashboardTab({
     return demande.commentaire_demandeur?.startsWith('CHANGEMENT_DE_ROLE_LIE|') || false;
   };
   
-  // Trouver la demande liée (pour un changement de rôle)
-  const trouverDemandeLiee = (demande: DemandeDesinscription): DemandeDesinscription | undefined => {
-    if (!estChangementDeRole(demande)) return undefined;
-    
-    // Extraire l'ID du commentaire ou chercher par similarité
-    const toutesDemandes = [...demandesEnAttente, ...demandesTraitees];
-    
-    // Chercher une autre demande avec le même commentaire (même demande de changement)
-    return toutesDemandes.find(d => 
-      d.id !== demande.id && 
-      d.commentaire_demandeur === demande.commentaire_demandeur &&
-      d.eleve_id === demande.eleve_id &&
-      d.demandeur_id === demande.demandeur_id
-    );
-  };
-  
   // Récupérer le nouveau rôle depuis le commentaire
   const getNouveauRoleFromCommentaire = (commentaire: string | null): string | null => {
     if (!commentaire || !commentaire.startsWith('CHANGEMENT_DE_ROLE_LIE|')) return null;
@@ -107,64 +92,139 @@ export default function DashboardTab({
     return parts.length > 2 ? parts[2] : null;
   };
   
+  // Trouver la demande liée (pour un changement de rôle)
+  const trouverDemandeLiee = (demande: DemandeDesinscription): DemandeDesinscription | undefined => {
+    if (!estChangementDeRole(demande)) return undefined;
+    
+    const toutesDemandes = [...demandesEnAttente, ...demandesTraitees];
+    
+    // Chercher une autre demande avec le même commentaire (même demande de changement)
+    return toutesDemandes.find(d => 
+      d.id !== demande.id && 
+      d.commentaire_demandeur === demande.commentaire_demandeur &&
+      d.eleve_id === demande.eleve_id &&
+      d.demandeur_id === demande.demandeur_id
+    );
+  };
+  
+  // Vérifier si le rôle demandé est toujours disponible
+  const verifierDisponibiliteRole = (demande: DemandeDesinscription): { disponible: boolean; message: string } => {
+    if (!estChangementDeRole(demande)) {
+      return { disponible: true, message: '' };
+    }
+    
+    const nouveauRole = getNouveauRoleFromCommentaire(demande.commentaire_demandeur);
+    const eleve = eleves.find(e => e.id === demande.eleve_id);
+    
+    if (!eleve || !nouveauRole) {
+      return { disponible: true, message: '' };
+    }
+    
+    // Vérifier si quelqu'un d'autre a pris le rôle entre temps
+    let estPris = false;
+    let nomPris = '';
+    
+    switch (nouveauRole) {
+      case 'lecteur_externe':
+        if (eleve.lecteur_externe_id && eleve.lecteur_externe_id !== demande.demandeur_id) {
+          estPris = true;
+          const externe = externes.find(e => e.id === eleve.lecteur_externe_id);
+          nomPris = externe ? `${externe.prenom} ${externe.nom}` : 'quelqu\'un d\'autre';
+        }
+        break;
+      case 'mediateur':
+        if (eleve.mediateur_id && eleve.mediateur_id !== demande.demandeur_id) {
+          estPris = true;
+          const externe = externes.find(e => e.id === eleve.mediateur_id);
+          nomPris = externe ? `${externe.prenom} ${externe.nom}` : 'quelqu\'un d\'autre';
+        }
+        break;
+    }
+    
+    if (estPris) {
+      return { 
+        disponible: false, 
+        message: `Le rôle ${getRoleLabel(nouveauRole)} a déjà été pris par ${nomPris}. L'utilisateur ne pourra que se désinscrire de son rôle actuel.` 
+      };
+    }
+    
+    return { disponible: true, message: '' };
+  };
+  
   // Traiter les deux demandes liées simultanément
   const traiterDemandesLiees = async (demande: DemandeDesinscription, action: 'approuver' | 'refuser', commentaire?: string) => {
     const demandeLiee = trouverDemandeLiee(demande);
+    const nouveauRole = getNouveauRoleFromCommentaire(demande.commentaire_demandeur);
+    const ancienRole = getAncienRoleFromCommentaire(demande.commentaire_demandeur);
+    const eleve = eleves.find(e => e.id === demande.eleve_id);
     
     if (action === 'approuver') {
-      // Approuver les deux demandes
-      let success1 = await onApprouverDemande(demande.id, commentaire);
-      let success2 = demandeLiee ? await onApprouverDemande(demandeLiee.id, commentaire) : true;
+      // Vérifier si le rôle demandé est toujours disponible
+      const disponibilite = verifierDisponibiliteRole(demande);
       
-      if (success1 && success2) {
-        // Mettre à jour la base de données pour le changement de rôle
-        const nouveauRole = getNouveauRoleFromCommentaire(demande.commentaire_demandeur);
-        const ancienRole = getAncienRoleFromCommentaire(demande.commentaire_demandeur);
+      // 1. Désinscrire de l'ancien rôle
+      let colonneAncien = '';
+      switch (ancienRole) {
+        case 'lecteur_externe': colonneAncien = 'lecteur_externe_id'; break;
+        case 'mediateur': colonneAncien = 'mediateur_id'; break;
+      }
+      
+      if (colonneAncien && eleve && eleve[colonneAncien as keyof Eleve] === demande.demandeur_id) {
+        await supabase
+          .from('eleves')
+          .update({ [colonneAncien]: null })
+          .eq('id', demande.eleve_id);
+      }
+      
+      // 2. Si le nouveau rôle est toujours disponible, l'assigner
+      if (disponibilite.disponible && nouveauRole) {
+        let colonneNouveau = '';
+        switch (nouveauRole) {
+          case 'lecteur_externe': colonneNouveau = 'lecteur_externe_id'; break;
+          case 'mediateur': colonneNouveau = 'mediateur_id'; break;
+        }
         
-        if (nouveauRole && ancienRole) {
-          // Déterminer les colonnes
-          let colonneAncien = '';
-          let colonneNouveau = '';
-          
-          switch (ancienRole) {
-            case 'lecteur_externe': colonneAncien = 'lecteur_externe_id'; break;
-            case 'mediateur': colonneAncien = 'mediateur_id'; break;
-          }
-          
-          switch (nouveauRole) {
-            case 'lecteur_externe': colonneNouveau = 'lecteur_externe_id'; break;
-            case 'mediateur': colonneNouveau = 'mediateur_id'; break;
-          }
-          
-          // Échanger les rôles
-          if (colonneAncien && colonneNouveau) {
-            // Enlever l'ancien rôle et mettre le nouveau
-            await supabase
-              .from('eleves')
-              .update({ 
-                [colonneAncien]: null,
-                [colonneNouveau]: demande.demandeur_id
-              })
-              .eq('id', demande.eleve_id);
-          }
+        if (colonneNouveau) {
+          await supabase
+            .from('eleves')
+            .update({ [colonneNouveau]: demande.demandeur_id })
+            .eq('id', demande.eleve_id);
         }
       }
+      
+      // 3. Marquer les deux demandes comme approuvées
+      await onApprouverDemande(demande.id, commentaire || (disponibilite.disponible ? `Changement de rôle effectué : ${ancienRole} → ${nouveauRole}` : `Désinscription uniquement, le poste de ${nouveauRole} a été pris entre temps`));
+      if (demandeLiee) {
+        await onApprouverDemande(demandeLiee.id, commentaire || (disponibilite.disponible ? `Changement de rôle effectué : ${ancienRole} → ${nouveauRole}` : `Désinscription uniquement, le poste de ${nouveauRole} a été pris entre temps`));
+      }
+      
+      // 4. Notifier l'utilisateur via un système de notification (optionnel)
+      
     } else {
       // Refuser les deux demandes
-      await onRefuserDemande(demande.id, commentaire);
+      await onRefuserDemande(demande.id, commentaire || 'Demande de changement de rôle refusée');
       if (demandeLiee) {
-        await onRefuserDemande(demandeLiee.id, commentaire);
+        await onRefuserDemande(demandeLiee.id, commentaire || 'Demande de changement de rôle refusée');
       }
     }
     
     onRefresh();
   };
   
-  // Ouvrir le modal de traitement
-  const openTraitementModal = (demande: DemandeDesinscription, action: 'approuver' | 'refuser') => {
+  // Ouvrir le modal de traitement et vérifier les conflits
+  const openTraitementModal = async (demande: DemandeDesinscription, action: 'approuver' | 'refuser') => {
     setSelectedDemande(demande);
     setActionType(action);
     setCommentaire('');
+    
+    // Vérifier les conflits de disponibilité
+    if (estChangementDeRole(demande) && action === 'approuver') {
+      const disponibilite = verifierDisponibiliteRole(demande);
+      setConflitRole({ aConflit: !disponibilite.disponible, message: disponibilite.message });
+    } else {
+      setConflitRole({ aConflit: false, message: '' });
+    }
+    
     setModalOpen(true);
   };
   
@@ -194,6 +254,7 @@ export default function DashboardTab({
     setSelectedDemande(null);
     setActionType(null);
     setCommentaire('');
+    setConflitRole({ aConflit: false, message: '' });
   };
   
   // Vérifier si un poste n'a pas été pourvu après désinscription
@@ -245,9 +306,11 @@ export default function DashboardTab({
         if (liee) {
           demandesLiees.add(liee.id);
           // Créer un objet virtuel pour représenter le groupe
+          const ancienRole = getAncienRoleFromCommentaire(demande.commentaire_demandeur);
+          const nouveauRole = getNouveauRoleFromCommentaire(demande.commentaire_demandeur);
           result.push({
             ...demande,
-            commentaire_demandeur: `🔄 CHANGEMENT DE RÔLE: ${getAncienRoleFromCommentaire(demande.commentaire_demandeur)} → ${getNouveauRoleFromCommentaire(demande.commentaire_demandeur)}`
+            commentaire_demandeur: `Changement de rôle : ${getRoleLabel(ancienRole || '')} → ${getRoleLabel(nouveauRole || '')}`
           } as DemandeDesinscription);
           continue;
         }
@@ -473,7 +536,7 @@ export default function DashboardTab({
                     <div className="flex-1">
                       <div className="flex items-start gap-3">
                         <div className={`p-2 rounded-lg ${isChangement ? 'bg-indigo-100 text-indigo-700' : getRoleColor(demande.role_type)}`}>
-                          {isChangement ? <LinkIcon className="w-4 h-4" /> : <UserMinus className="w-4 h-4" />}
+                          {isChangement ? <RefreshCw className="w-4 h-4" /> : <UserMinus className="w-4 h-4" />}
                         </div>
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
@@ -495,7 +558,7 @@ export default function DashboardTab({
                             </span>
                           </div>
                           {isChangement ? (
-                            <p className="text-sm text-gray-600 mt-1">
+                            <p className="text-sm text-gray-700 mt-1 font-medium">
                               {demande.commentaire_demandeur}
                             </p>
                           ) : (
@@ -517,7 +580,7 @@ export default function DashboardTab({
                           {demandeLiee && (
                             <div className="mt-2 p-2 bg-indigo-50 rounded-lg text-sm text-indigo-700 flex items-start gap-2">
                               <LinkIcon className="w-3 h-3 text-indigo-400 mt-0.5" />
-                              <span>Demande liée pour le rôle {getRoleLabel(demandeLiee.role_type)}</span>
+                              <span>Demande liée : {getRoleLabel(demandeLiee.role_type)}</span>
                             </div>
                           )}
                         </div>
@@ -994,9 +1057,24 @@ export default function DashboardTab({
                   <span className="font-medium">Défense :</span> {new Date(selectedDemande.defense_date).toLocaleDateString('fr-FR')} à {selectedDemande.defense_horaire} - {selectedDemande.defense_localisation}
                 </p>
                 {estChangementDeRole(selectedDemande) && (
-                  <p className="text-sm text-red-600 mt-2 font-medium">
-                    ⚠️ Cette demande fait partie d'un changement de rôle. Les deux demandes seront traitées simultanément.
-                  </p>
+                  <>
+                    <div className="mt-3 p-2 bg-indigo-50 rounded-lg">
+                      <p className="text-sm text-indigo-800 font-medium">
+                        {selectedDemande.commentaire_demandeur}
+                      </p>
+                    </div>
+                    {conflitRole.aConflit && (
+                      <div className="mt-3 p-2 bg-yellow-50 rounded-lg border border-yellow-200">
+                        <p className="text-sm text-yellow-700 flex items-start gap-2">
+                          <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                          <span>{conflitRole.message}</span>
+                        </p>
+                      </div>
+                    )}
+                    <p className="text-xs text-red-500 mt-2">
+                      ⚠️ L'utilisateur sera désinscrit de son rôle actuel. Le nouveau rôle ne sera assigné que s'il est toujours disponible.
+                    </p>
+                  </>
                 )}
               </div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Commentaire (optionnel) :</label>
@@ -1010,11 +1088,6 @@ export default function DashboardTab({
               {actionType === 'approuver' && !estChangementDeRole(selectedDemande) && (
                 <p className="text-xs text-red-500 mt-2">
                   ⚠️ L'utilisateur sera immédiatement désinscrit et le créneau deviendra disponible.
-                </p>
-              )}
-              {actionType === 'approuver' && estChangementDeRole(selectedDemande) && (
-                <p className="text-xs text-red-500 mt-2">
-                  ⚠️ L'utilisateur changera de rôle : l'ancien rôle sera supprimé et le nouveau sera assigné.
                 </p>
               )}
             </div>
