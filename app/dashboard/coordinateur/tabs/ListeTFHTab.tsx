@@ -1,9 +1,10 @@
-// Fichier : ./tabs/ListeTFHTab.tsx
+// /app/dashboard/coordinateur/tabs/ListeTFHTab.tsx
+
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Eleve } from '../types';
-import { ExternalLink, Edit, ChevronDown, Trash2 } from 'lucide-react';
+import { ExternalLink, Edit, ChevronDown, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 
 interface ListeTFHTabProps {
   eleves: Eleve[];
@@ -11,44 +12,136 @@ interface ListeTFHTabProps {
   onRefresh: () => void;
 }
 
+type SortField = 'classe' | 'eleve' | 'thematique' | 'problematique' | 'categorie';
+
+interface SortRule {
+  field: SortField;
+  direction: 'asc' | 'desc';
+}
+
 export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTabProps) {
   // États pour la gestion
   const [editingMode, setEditingMode] = useState(false);
   const [filteredClass, setFilteredClass] = useState<string>('all');
-  const [isProcessing, setIsProcessing] = useState<string | null>(null); // ID de l'élève en cours de traitement
-  const [localEleves, setLocalEleves] = useState<Eleve[]>(eleves);
+  const [isProcessing, setIsProcessing] = useState<string | null>(null);
+  const [localEleves, setLocalEleves] = useState<Eleve[]>([]);
   const [renduFilter, setRenduFilter] = useState<'all' | 'rendu' | 'non_rendu'>('all');
-  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortRules, setSortRules] = useState<SortRule[]>([
+    { field: 'classe', direction: 'asc' },
+    { field: 'eleve', direction: 'asc' }
+  ]);
+
   // Extraire toutes les classes uniques
-  const classesUniques = Array.from(new Set(eleves.map(e => e.classe || '').filter(c => c))).sort();
-  
-  // Trier les élèves par classe, puis nom
-  const elevesTries = [...eleves].sort((a, b) => {
-    if (a.classe !== b.classe) {
-      return (a.classe || '').localeCompare(b.classe || '');
-    }
-    return a.nom.localeCompare(b.nom);
-  });
+  const classesUniques = useMemo(() => 
+    Array.from(new Set(eleves.map(e => e.classe || '').filter(c => c))).sort(),
+    [eleves]
+  );
 
   // Synchroniser les données locales
   useEffect(() => {
-    setLocalEleves(elevesTries);
+    setLocalEleves(eleves);
   }, [eleves]);
 
-  // Filtrer les élèves par classe et par état de rendu
-  const elevesFiltres = (() => {
-    let result = filteredClass === 'all' 
-      ? localEleves 
-      : localEleves.filter(e => e.classe === filteredClass);
+  // Fonction pour obtenir la valeur d'un champ pour le tri
+  const getFieldValue = (eleve: Eleve, field: SortField): string => {
+    switch (field) {
+      case 'classe':
+        return eleve.classe || '';
+      case 'eleve':
+        return `${eleve.nom} ${eleve.prenom}`.toLowerCase();
+      case 'thematique':
+        return eleve.thematique || '';
+      case 'problematique':
+        return eleve.problematique || '';
+      case 'categorie':
+        return eleve.categorie || '';
+      default:
+        return '';
+    }
+  };
+
+  // Fonction de comparaison pour le tri
+  const compareValues = (valA: string, valB: string, direction: 'asc' | 'desc'): number => {
+    const isEmpty = (v: string) => v === undefined || v === null || v === '';
+    const aEmpty = isEmpty(valA);
+    const bEmpty = isEmpty(valB);
+
+    if (aEmpty && bEmpty) return 0;
+    if (aEmpty) return direction === 'asc' ? 1 : -1;
+    if (bEmpty) return direction === 'asc' ? -1 : 1;
+
+    const comparison = valA.localeCompare(valB);
+    return direction === 'asc' ? comparison : -comparison;
+  };
+
+  // Trier les données
+  const sortData = (data: Eleve[], rules: SortRule[]): Eleve[] => {
+    return [...data].sort((a, b) => {
+      for (const rule of rules) {
+        const valA = getFieldValue(a, rule.field);
+        const valB = getFieldValue(b, rule.field);
+        const cmp = compareValues(valA, valB, rule.direction);
+        if (cmp !== 0) return cmp;
+      }
+      return 0;
+    });
+  };
+
+  // Gérer le clic sur un en-tête pour trier
+  const handleSort = (field: SortField) => {
+    const currentFirst = sortRules[0];
+    let newDirection: 'asc' | 'desc';
     
+    if (currentFirst.field === field) {
+      // Même colonne : inverser la direction
+      newDirection = currentFirst.direction === 'asc' ? 'desc' : 'asc';
+      setSortRules([{ field, direction: newDirection }]);
+    } else {
+      // Nouvelle colonne : tri ascendant
+      setSortRules([{ field, direction: 'asc' }]);
+    }
+  };
+
+  // Obtenir l'icône de tri pour une colonne
+  const getSortIcon = (field: SortField) => {
+    const firstRule = sortRules[0];
+    if (firstRule.field !== field) {
+      return <ArrowUpDown className="w-3 h-3 ml-1 inline" />;
+    }
+    return firstRule.direction === 'asc'
+      ? <ArrowUp className="w-3 h-3 ml-1 inline" />
+      : <ArrowDown className="w-3 h-3 ml-1 inline" />;
+  };
+
+  // Filtrer et trier les élèves
+  const elevesFiltres = useMemo(() => {
+    let result = [...localEleves];
+    
+    // Filtre par recherche (nom ou prénom)
+    if (searchQuery.trim() !== '') {
+      const query = searchQuery.toLowerCase().trim();
+      result = result.filter(eleve => 
+        eleve.nom?.toLowerCase().includes(query) || 
+        eleve.prenom?.toLowerCase().includes(query)
+      );
+    }
+    
+    // Filtre par classe
+    if (filteredClass !== 'all') {
+      result = result.filter(e => e.classe === filteredClass);
+    }
+    
+    // Filtre par état de rendu
     if (renduFilter === 'rendu') {
       result = result.filter(e => e.tfh_non_rendu !== true);
     } else if (renduFilter === 'non_rendu') {
       result = result.filter(e => e.tfh_non_rendu === true);
     }
     
-    return result;
-  })();
+    // Appliquer le tri
+    return sortData(result, sortRules);
+  }, [localEleves, filteredClass, renduFilter, searchQuery, sortRules]);
 
   // Fonction pour formater le nom complet
   const formatNomComplet = (eleve: Eleve) => {
@@ -62,31 +155,26 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
     try {
       setIsProcessing(eleveId);
       
-      // Mise à jour locale IMMÉDIATE
       setLocalEleves(prev => prev.map(eleve => 
         eleve.id === eleveId 
           ? { ...eleve, [field]: value === '' ? null : value }
           : eleve
       ));
       
-      // Mise à jour en base de données
       await onUpdate(eleveId, field, value === '' ? '' : value);
       
     } catch (err) {
       console.error('Erreur lors de la mise à jour:', err);
-      // Recharger les données en cas d'erreur
       onRefresh();
     } finally {
       setIsProcessing(null);
     }
   };
 
-  // Fonction pour effacer un champ
   const handleClearField = (eleveId: string, field: string) => {
     handleInstantUpdate(eleveId, field, '');
   };
 
-  // Fonction pour rendre les sources avec édition instantanée
   const renderSources = (eleve: Eleve) => {
     const sourceFields = ['source_1', 'source_2', 'source_3', 'source_4', 'source_5'];
     
@@ -107,9 +195,7 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
                 disabled={!editingMode || isProcessingField}
               />
               {editingMode && (
-                <div className="w-6 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {/* Espace réservé pour l'alignement */}
-                </div>
+                <div className="w-6 opacity-0 group-hover:opacity-100 transition-opacity" />
               )}
             </div>
           </div>
@@ -117,7 +203,6 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
       }
 
       const isUrl = source.startsWith('http://') || source.startsWith('https://');
-      const displayText = source.length > 40 ? `${source.substring(0, 37)}...` : source;
       
       return (
         <div key={idx} className="py-0.5 group">
@@ -131,14 +216,7 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
                 title={source}
               >
                 <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                <input
-                  type="text"
-                  value={source}
-                  onChange={(e) => handleInstantUpdate(eleve.id, field, e.target.value)}
-                  className={`w-full text-xs border rounded px-2 py-1 min-h-[100px] ${editingMode ? 'border-gray-300' : 'border-transparent bg-transparent'} ${isProcessingField ? 'opacity-50' : ''}`}
-                  disabled={!editingMode || isProcessingField}
-                  title={source}
-                />
+                <span className="text-xs truncate">{source}</span>
               </a>
             ) : (
               <input
@@ -167,14 +245,11 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
     });
   };
 
-  // Fonction pour rendre une cellule éditable
   const renderEditableCell = (eleve: Eleve, field: keyof Eleve, value: string) => {
     const isProcessingField = isProcessing === eleve.id;
     const displayValue = value || '';
     
-    // Cas spécial pour problématique (textarea)
     if (field === 'problematique') {
-      // Hors mode édition, afficher un lien si url_tfh existe
       if (!editingMode && eleve.url_tfh) {
         return (
           <div className="text-sm">
@@ -190,7 +265,6 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
         );
       }
       
-      // Sinon, afficher le textarea normal (mode édition) ou texte simple (hors édition sans lien)
       if (!editingMode) {
         return <div className="text-sm whitespace-pre-wrap break-words">{displayValue || '-'}</div>;
       }
@@ -220,7 +294,6 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
       );
     }
     
-    // Pour tous les autres champs (classe, thématique, catégorie) - input simple
     return (
       <div className="relative group">
         <input
@@ -263,6 +336,25 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
           </div>
           
           <div className="flex flex-wrap items-center gap-4">
+            {/* Champ de recherche */}
+            <div className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="🔍 Rechercher un élève..."
+                className="w-48 md:w-64 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
             {/* Filtre par classe */}
             <div className="flex items-center gap-2">
               <label htmlFor="classFilter" className="text-sm font-medium text-gray-700">
@@ -285,7 +377,6 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
                 <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
-
 
             {/* Filtre par état de rendu */}
             <div className="flex items-center gap-2">
@@ -342,63 +433,77 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
-                  Classe
+                <th 
+                  scope="col" 
+                  className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={() => handleSort('classe')}
+                >
+                  Classe {getSortIcon('classe')}
                 </th>
-                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-44">
-                  Élève
+                <th 
+                  scope="col" 
+                  className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={() => handleSort('eleve')}
+                >
+                  Élève {getSortIcon('eleve')}
                 </th>
-                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
-                  Thématique
+                <th 
+                  scope="col" 
+                  className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={() => handleSort('thematique')}
+                >
+                  Thématique {getSortIcon('thematique')}
                 </th>
-                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-80">
-                  Problématique
+                <th 
+                  scope="col" 
+                  className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={() => handleSort('problematique')}
+                >
+                  Problématique {getSortIcon('problematique')}
                 </th> 
-                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-56">
+                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Sources
                 </th> 
-                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
-                  Catégorie
+                <th 
+                  scope="col" 
+                  className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={() => handleSort('categorie')}
+                >
+                  Catégorie {getSortIcon('categorie')}
                 </th>
-              </tr>  
+              </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {elevesFiltres.map((eleve) => (
                 <tr key={eleve.id} className={`hover:bg-gray-50 ${eleve.tfh_non_rendu ? 'bg-red-50' : ''}`}>
-                  {/* Classe */}
                   <td className="px-3 py-3 whitespace-nowrap">
                     {renderEditableCell(eleve, 'classe', eleve.classe || '')}
                   </td>
                   
-                  {/* Élève */}
                   <td className="px-3 py-3">
                     <div className="text-sm font-semibold text-gray-900">
                       {formatNomComplet(eleve)}
                     </div>
                   </td>
                   
-                  {/* Thématique */}
                   <td className="px-3 py-3">
                     <div className="text-sm">
                       {renderEditableCell(eleve, 'thematique', eleve.thematique || '')}
                     </div>
                   </td>
                   
-                  {/* Problématique */}
                   <td className="px-3 py-3">
                     <div className="text-sm">
                       {renderEditableCell(eleve, 'problematique', eleve.problematique || '')}
                     </div>
                   </td>
                   
-                  {/* Sources */}
                   <td className="px-3 py-3">
                     <div className="text-sm space-y-1">
                       {renderSources(eleve)}
                     </div>
                   </td>
                   
-                  {/* Catégorie */}
                   <td className="px-3 py-3">
                     {renderEditableCell(eleve, 'categorie', eleve.categorie || '')}
                   </td>
@@ -412,7 +517,8 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
           <div className="text-center py-12">
             <div className="text-gray-400 mb-2">Aucun TFH trouvé</div>
             <p className="text-gray-500 text-sm">
-              {filteredClass !== 'all' 
+              {searchQuery ? 'Aucun élève ne correspond à votre recherche.' :
+                filteredClass !== 'all' 
                 ? `Aucun élève dans la classe ${filteredClass}`
                 : 'Les données des élèves apparaîtront ici une fois importées'}
             </p>
@@ -432,12 +538,13 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
             <h3 className="text-sm font-medium text-blue-800">Mode d'emploi</h3>
             <div className="mt-2 text-sm text-blue-700">
               <ul className="list-disc pl-5 space-y-1">
+                <li><strong>Tri</strong> : Cliquez sur les en-têtes de colonnes pour trier (ascendant/descendant)</li>
+                <li><strong>Recherche</strong> : Utilisez la barre de recherche pour filtrer par nom ou prénom</li>
                 <li><strong>Filtre classe</strong> : Sélectionnez une classe pour afficher seulement ses TFH</li>
                 <li><strong>Mode édition</strong> : Activez pour modifier tous les champs</li>
                 <li><strong>Édition instantanée</strong> : Les modifications sont sauvegardées automatiquement</li>
                 <li><strong>Effacer un champ</strong> : Survolez un champ et cliquez sur l'icône 🗑️ pour le vider</li>
                 <li><strong>Sources</strong> : Les URLs sont cliquables et s'ouvrent dans un nouvel onglet</li>
-                <li><strong>Indicateur</strong> : Un message apparaît pendant la mise à jour en base</li>
               </ul>
             </div>
           </div>
