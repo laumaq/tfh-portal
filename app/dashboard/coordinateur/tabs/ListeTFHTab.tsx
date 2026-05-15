@@ -339,7 +339,7 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
           <div>
             <h2 className="text-2xl font-bold text-gray-800">Liste des TFH</h2>
             <p className="text-gray-600 mt-1">
-              Vue d'ensemble de tous les travaux de fin d'humanité
+              Vue d'ensemble des TFH
             </p>
           </div>
           
