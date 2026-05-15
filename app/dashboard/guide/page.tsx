@@ -930,11 +930,6 @@ export default function GuideDashboard() {
                                 ))}
                               </select>
                               
-                              {/* Statut global de la session */}
-                              <div className={`text-center text-xs font-medium py-1 rounded ${statusDisplay.bgColor} ${statusDisplay.textColor}`}>
-                                {statusDisplay.text}
-                              </div>
-                              
                               {/* Détail des présences par journée */}
                               <div className="flex flex-wrap gap-1 justify-center">
                                 {session.journees.map((journeeKey, idx) => {
