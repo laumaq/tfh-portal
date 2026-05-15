@@ -82,6 +82,11 @@ export default function CoordinateurDashboard() {
             userName={userName}
             coordinateurNom={currentCoordinateur?.nom || ''}
             coordinateurPrenom={currentCoordinateur?.prenom || ''}
+            demandesEnAttente={demandesEnAttente}
+            demandesTraitees={demandesTraitees}
+            onApprouverDemande={approuverDemande}
+            onRefuserDemande={refuserDemande}
+            onRefresh={refreshData}
           />
         );
         
