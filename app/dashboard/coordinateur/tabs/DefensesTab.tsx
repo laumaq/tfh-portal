@@ -245,14 +245,7 @@ export default function DefensesTab({
     type: 'lecteur_interne' | 'lecteur_externe' | 'mediateur',
     currentEleve: Eleve,
     allEleves: Eleve[]
-  ): { id: string; label: string }[] => {
-    // Logs pour FERRO
-    if (currentEleve.nom === 'FERRO') {
-      console.log(`🔧 getAvailableOptions pour ${type} (élève: ${currentEleve.nom})`);
-      console.log('  currentEleve.date_defense:', currentEleve.date_defense);
-      console.log('  currentEleve.heure_defense:', currentEleve.heure_defense);
-    }
-    
+  ): { id: string; label: string }[] => {   
     const currentDate = currentEleve.date_defense?.trim();
     const currentTime = currentEleve.heure_defense?.trim();
     
@@ -273,9 +266,6 @@ export default function DefensesTab({
             label: `${e.nom} ${e.prenom}`,
             externeId: e.id 
           }));
-        if (currentEleve.nom === 'FERRO') {
-          console.log('  lecteurs externes disponibles:', lecteurs);
-        }
         return lecteurs;
       } else {
         const mediateurs = externes
@@ -285,9 +275,6 @@ export default function DefensesTab({
             label: `${e.nom} ${e.prenom}`,
             externeId: e.id 
           }));
-        if (currentEleve.nom === 'FERRO') {
-          console.log('  médiateurs disponibles:', mediateurs);
-        }
         return mediateurs;
       }
     };
@@ -296,9 +283,6 @@ export default function DefensesTab({
       const options = getAllOptions()
         .map(opt => ({ id: opt.id, label: opt.label }))
         .sort((a, b) => a.label.localeCompare(b.label));
-      if (currentEleve.nom === 'FERRO') {
-        console.log('  Aucune date/heure → toutes options:', options);
-      }
       return options;
     }
   
@@ -311,10 +295,6 @@ export default function DefensesTab({
       const eTimestamp = new Date(`${eDate}T${eTime}`).getTime();
       return eTimestamp === currentTimestamp;
     });
-  
-    if (currentEleve.nom === 'FERRO') {
-      console.log('  conflits trouvés:', conflits.map(c => `${c.nom} ${c.prenom}`));
-    }
   
     // Récupérer les IDs des externes déjà occupés sur ce créneau
     const externesIdsPris: string[] = [];
@@ -334,10 +314,6 @@ export default function DefensesTab({
       }
     });
   
-    if (currentEleve.nom === 'FERRO') {
-      console.log('  externesIdsPris:', externesIdsPris);
-    }
-  
     const allOptions = getAllOptions();
     const currentExterne = externes.find(ext => 
       (type === 'lecteur_externe' && ext.lecteur_externe_id === currentEleve.lecteur_externe_id) ||
@@ -345,17 +321,9 @@ export default function DefensesTab({
     );
     const currentExterneId = currentExterne?.id || '';
   
-    if (currentEleve.nom === 'FERRO') {
-      console.log('  currentExterneId:', currentExterneId);
-    }
-  
     const availableOptions = allOptions.filter(opt =>
       !externesIdsPris.includes(opt.externeId) || opt.externeId === currentExterneId
     );
-  
-    if (currentEleve.nom === 'FERRO') {
-      console.log('  availableOptions après filtrage:', availableOptions);
-    }
   
     return availableOptions
       .map(opt => ({ id: opt.id, label: opt.label }))
@@ -387,26 +355,8 @@ export default function DefensesTab({
     const currentId = eleve[field] || '';
     const currentLabel = getCurrentLabel();
     
-    // Logs spécifiques pour l'élève FERRO
-    if (eleve.nom === 'FERRO') {
-      console.log(`🔍 === renderSelectOrLabel pour ${type} (élève: ${eleve.nom} ${eleve.prenom}) ===`);
-      console.log('  eleve.id:', eleve.id);
-      console.log('  field:', field);
-      console.log('  currentId:', currentId);
-      console.log('  currentLabel:', currentLabel);
-      console.log('  editingMode:', editingMode);
-      console.log('  mediateur_id dans eleve:', eleve.mediateur_id);
-      console.log('  lecteur_externe_id dans eleve:', eleve.lecteur_externe_id);
-      console.log('  lecteur_interne_id dans eleve:', eleve.lecteur_interne_id);
-    }
-    
     const availableOptions = getAvailableOptions(type, eleve, localEleves);
     
-    if (eleve.nom === 'FERRO') {
-      console.log(`  availableOptions pour ${type}:`, availableOptions);
-      console.log('  ---');
-    }
-  
     if (!editingMode) {
       return <div className="text-xs md:text-sm">{currentLabel || '-'}</div>;
     }
@@ -587,19 +537,6 @@ export default function DefensesTab({
             </thead>
             <tbody>
               {filteredAndSortedEleves.map((eleve) => {
-                // Log détaillé pour FERRO
-                if (eleve.nom === 'FERRO') {
-                  console.log('=== Élève FERRO ===');
-                  console.log('mediateur_id (direct):', eleve.mediateur_id);
-                  console.log('mediateur_id (string):', JSON.stringify(eleve.mediateur_id));
-                  console.log('mediateur_nom:', eleve.mediateur_nom);
-                  console.log('mediateur_prenom:', eleve.mediateur_prenom);
-                  
-                  // Chercher manuellement dans externes
-                  const manuel = externes.find(e => e.mediateur_id === eleve.mediateur_id);
-                  console.log('Recherche manuelle dans externes:', manuel);
-                  console.log('Tous les externes avec mediateur_id:', externes.filter(e => e.mediateur_id).map(e => ({ mediateur_id: e.mediateur_id, nom: e.nom, prenom: e.prenom })));
-                }
                 const categoryStyle = getCategoryStyle(eleve.categorie || 'Non catégorisé');
                 const lecteurInterneLabel = guides.find(g => g.id === eleve.lecteur_interne_id)
                   ? `${guides.find(g => g.id === eleve.lecteur_interne_id)!.nom} ${guides.find(g => g.id === eleve.lecteur_interne_id)!.initiale}.`
