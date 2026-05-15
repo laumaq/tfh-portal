@@ -397,10 +397,10 @@ export default function ExterneDashboard() {
     setSubmittingDesinscription(true);
     try {
       let response;
-            
+      
       if (changementDeRoleData) {
         // Changement de rôle - crée deux demandes
-        const response = await supabase.rpc('create_changement_role_demande', {
+        const { data, error } = await supabase.rpc('create_changement_role_demande', {
           p_eleve_id: changementDeRoleData.eleve.id,
           p_demandeur_id: externeId,
           p_demandeur_type: 'externe',
@@ -409,22 +409,23 @@ export default function ExterneDashboard() {
           p_commentaire: desinscriptionComment || null
         });
         
-        if (response.error) throw response.error;
+        if (error) throw error;
         
         addToast('Demande de changement de rôle envoyée à la coordination', 'success');
       } else {
         // Désinscription simple
-        response = await supabase.rpc('create_desinscription_demande', {
+        const { data, error } = await supabase.rpc('create_desinscription_demande', {
           p_eleve_id: selectedEleveForDesinscription.id,
           p_demandeur_id: externeId,
           p_demandeur_type: 'externe',
           p_role_type: selectedRoleTypeForDesinscription,
           p_commentaire: desinscriptionComment || null
         });
+        
+        if (error) throw error;
+        
         addToast('Demande de désinscription envoyée à la coordination', 'success');
       }
-      
-      if (response.error) throw response.error;
       
       setShowDesinscriptionModal(false);
       setSelectedEleveForDesinscription(null);
