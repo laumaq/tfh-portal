@@ -78,7 +78,42 @@ export default function GuideDashboard() {
     lecteur_interne_voir_lecteurs_externes: true,
     lecteur_interne_voir_mediateurs: true,
   });
+  const [presences, setPresences] = useState<Record<string, Record<number, boolean | null>>>({});
   
+  // Ajoute cette fonction pour charger les présences
+  const loadPresences = async (eleveId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('eleves')
+        .select('journee_1_present, journee_2_present, journee_3_present, journee_4_present, journee_5_present')
+        .eq('id', eleveId)
+        .single();
+      
+      if (error) throw error;
+      
+      return data;
+    } catch (err) {
+      console.error('Erreur chargement présences:', err);
+      return null;
+    }
+  };
+  
+  // Dans l'effet, charge les présences pour tous les élèves
+  useEffect(() => {
+    if (eleves.length > 0) {
+      const loadAllPresences = async () => {
+        const presencesMap: Record<string, Record<number, boolean | null>> = {};
+        for (const eleve of eleves) {
+          const pres = await loadPresences(eleve.id);
+          if (pres) {
+            presencesMap[eleve.id] = pres;
+          }
+        }
+        setPresences(presencesMap);
+      };
+      loadAllPresences();
+    }
+  }, [eleves]);  
   const [sessions, setSessions] = useState<Array<{
     index: number;
     nom: string;
