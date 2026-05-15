@@ -613,15 +613,6 @@ export default function DefensesTab({
                         renderSelectOrLabel(eleve, 'mediateur_id', 'mediateur', () => mediateurLabel)
                       )}
                     </td>
-                    <td className="px-3 py-3">
-                      {renderSelectOrLabel(eleve, 'lecteur_interne_id', 'lecteur_interne', () => lecteurInterneLabel)}
-                    </td>
-                    <td className="px-3 py-3">
-                      {renderSelectOrLabel(eleve, 'lecteur_externe_id', 'lecteur_externe', () => lecteurExterneLabel)}
-                    </td>
-                    <td className="px-3 py-3">
-                      {renderSelectOrLabel(eleve, 'mediateur_id', 'mediateur', () => mediateurLabel)}
-                    </td>
                     <td className="px-3 py-3">{renderInputOrLabel(eleve, 'date_defense', 'date', eleve.date_defense || '')}</td>
                     <td className="px-3 py-3">{renderInputOrLabel(eleve, 'heure_defense', 'time', eleve.heure_defense || '')}</td>
                     <td className="px-3 py-3">{renderInputOrLabel(eleve, 'localisation_defense', 'text', eleve.localisation_defense || '', 'Salle, bâtiment...')}</td>
