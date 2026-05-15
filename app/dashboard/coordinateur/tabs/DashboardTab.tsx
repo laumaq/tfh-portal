@@ -10,7 +10,8 @@ import { useState, useEffect } from 'react';
 import { 
   Shield, FileText, UserCheck, Calendar, 
   Users, Settings, BarChart, ChevronRight, BookOpen,
-  AlertCircle, CheckCircle, XCircle, Clock, UserMinus, MessageCircle
+  AlertCircle, CheckCircle, XCircle, Clock, UserMinus, MessageCircle,
+  Eye, History, Filter, AlertTriangle
 } from 'lucide-react';
 
 interface DashboardTabProps {
@@ -49,6 +50,11 @@ export default function DashboardTab({
   const [commentaire, setCommentaire] = useState('');
   const [actionType, setActionType] = useState<'approuver' | 'refuser' | null>(null);
   const [processing, setProcessing] = useState(false);
+  
+  // Nouveaux états pour le modal d'historique
+  const [historiqueModalOpen, setHistoriqueModalOpen] = useState(false);
+  const [filterStatut, setFilterStatut] = useState<'toutes' | 'approuvee' | 'refusee'>('toutes');
+  const [filterNonPourvus, setFilterNonPourvus] = useState(false);
 
   // Charger les journées et sessions
   useEffect(() => {
@@ -75,6 +81,27 @@ export default function DashboardTab({
       return finSession >= maintenant;
     });
     return prochaineSession;
+  };
+  
+  // Vérifier si un poste n'a pas été pourvu après désinscription
+  const isPosteNonPourvu = (demande: DemandeDesinscription): boolean => {
+    // Trouver l'élève concerné
+    const eleve = eleves.find(e => e.id === demande.eleve_id);
+    if (!eleve) return false;
+    
+    // Vérifier si le poste est toujours vacant selon le rôle
+    switch (demande.role_type) {
+      case 'guide':
+        return !eleve.guide_id;
+      case 'lecteur_interne':
+        return !eleve.lecteur_interne_id;
+      case 'lecteur_externe':
+        return !eleve.lecteur_externe_id;
+      case 'mediateur':
+        return !eleve.mediateur_id;
+      default:
+        return false;
+    }
   };
   
   // Ouvrir le modal de traitement
@@ -129,6 +156,28 @@ export default function DashboardTab({
       case 'mediateur': return 'bg-orange-100 text-orange-700';
       default: return 'bg-gray-100 text-gray-700';
     }
+  };
+  
+  // Filtrer les demandes pour l'historique
+  const filteredDemandesTraitees = demandesTraitees.filter(demande => {
+    // Filtre par statut
+    if (filterStatut !== 'toutes' && demande.statut !== filterStatut) {
+      return false;
+    }
+    
+    // Filtre "postes non pourvus" (uniquement pour les demandes approuvées)
+    if (filterNonPourvus && demande.statut === 'approuvee') {
+      return isPosteNonPourvu(demande);
+    }
+    
+    return true;
+  });
+  
+  // Compter les postes non pourvus parmi les demandes approuvées
+  const countPostesNonPourvus = () => {
+    return demandesTraitees.filter(d => 
+      d.statut === 'approuvee' && isPosteNonPourvu(d)
+    ).length;
   };
   
   // Calcul des statistiques pour l'aperçu du système
@@ -479,11 +528,26 @@ export default function DashboardTab({
       {/* Demandes traitées récemment */}
       {demandesTraitees.length > 0 && (
         <div className="mb-8">
-          <div className="flex items-center gap-2 mb-4">
-            <Clock className="w-4 h-4 text-gray-500" />
-            <h2 className="text-lg font-semibold text-gray-800">
-              Demandes traitées récemment ({demandesTraitees.length})
-            </h2>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <History className="w-5 h-5 text-gray-500" />
+              <h2 className="text-lg font-semibold text-gray-800">
+                Demandes traitées récemment
+              </h2>
+              {countPostesNonPourvus() > 0 && (
+                <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" />
+                  {countPostesNonPourvus()} poste(s) non pourvu(s)
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => setHistoriqueModalOpen(true)}
+              className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+            >
+              <Eye className="w-4 h-4" />
+              Voir tout l'historique ({demandesTraitees.length})
+            </button>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <table className="w-full text-sm">
@@ -494,42 +558,71 @@ export default function DashboardTab({
                   <th className="px-4 py-3 text-left text-gray-600 font-medium">Rôle</th>
                   <th className="px-4 py-3 text-left text-gray-600 font-medium">Élève</th>
                   <th className="px-4 py-3 text-left text-gray-600 font-medium">Décision</th>
+                  <th className="px-4 py-3 text-left text-gray-600 font-medium">Statut poste</th>
                 </tr>
               </thead>
               <tbody>
-                {demandesTraitees.map((demande) => (
-                  <tr key={demande.id} className="border-b hover:bg-gray-50">
-                    <td className="px-4 py-3 text-gray-500">
-                      {new Date(demande.traitee_le!).toLocaleDateString('fr-FR')}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="font-medium">{demande.demandeur_prenom} {demande.demandeur_nom}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getRoleColor(demande.role_type)}`}>
-                        {getRoleLabel(demande.role_type)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      {demande.eleve_prenom} {demande.eleve_nom} ({demande.eleve_classe})
-                    </td>
-                    <td className="px-4 py-3">
-                      {demande.statut === 'approuvee' ? (
-                        <span className="inline-flex items-center gap-1 text-green-600">
-                          <CheckCircle className="w-4 h-4" />
-                          Approuvée
+                {demandesTraitees.slice(0, 5).map((demande) => {
+                  const posteNonPourvu = demande.statut === 'approuvee' && isPosteNonPourvu(demande);
+                  return (
+                    <tr key={demande.id} className="border-b hover:bg-gray-50">
+                      <td className="px-4 py-3 text-gray-500">
+                        {new Date(demande.traitee_le!).toLocaleDateString('fr-FR')}
+                       </td>
+                      <td className="px-4 py-3">
+                        <span className="font-medium">{demande.demandeur_prenom} {demande.demandeur_nom}</span>
+                       </td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getRoleColor(demande.role_type)}`}>
+                          {getRoleLabel(demande.role_type)}
                         </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-red-600">
-                          <XCircle className="w-4 h-4" />
-                          Refusée
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                       </td>
+                      <td className="px-4 py-3">
+                        {demande.eleve_prenom} {demande.eleve_nom} ({demande.eleve_classe})
+                       </td>
+                      <td className="px-4 py-3">
+                        {demande.statut === 'approuvee' ? (
+                          <span className="inline-flex items-center gap-1 text-green-600">
+                            <CheckCircle className="w-4 h-4" />
+                            Approuvée
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-red-600">
+                            <XCircle className="w-4 h-4" />
+                            Refusée
+                          </span>
+                        )}
+                       </td>
+                      <td className="px-4 py-3">
+                        {posteNonPourvu ? (
+                          <span className="inline-flex items-center gap-1 text-yellow-600">
+                            <AlertTriangle className="w-4 h-4" />
+                            Poste vacant
+                          </span>
+                        ) : demande.statut === 'approuvee' ? (
+                          <span className="inline-flex items-center gap-1 text-green-600">
+                            <CheckCircle className="w-4 h-4" />
+                            Pourvu
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                       </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
+            {demandesTraitees.length > 5 && (
+              <div className="p-3 text-center border-t">
+                <button
+                  onClick={() => setHistoriqueModalOpen(true)}
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  + {demandesTraitees.length - 5} autres demandes
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -572,6 +665,172 @@ export default function DashboardTab({
           </div>
         ))}
       </div>
+
+      {/* Modal d'historique complet */}
+      {historiqueModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-6xl w-full max-h-[90vh] flex flex-col">
+            {/* En-tête */}
+            <div className="px-6 py-4 border-b flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                  <History className="w-5 h-5" />
+                  Historique complet des demandes traitées
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  {filteredDemandesTraitees.length} demande(s) sur {demandesTraitees.length}
+                </p>
+              </div>
+              <button 
+                onClick={() => setHistoriqueModalOpen(false)} 
+                className="text-gray-400 hover:text-gray-600 p-2"
+              >
+                ✕
+              </button>
+            </div>
+            
+            {/* Filtres */}
+            <div className="px-6 py-3 border-b bg-gray-50 flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-gray-500" />
+                <span className="text-sm font-medium text-gray-700">Filtres:</span>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setFilterStatut('toutes')}
+                  className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                    filterStatut === 'toutes'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Toutes
+                </button>
+                <button
+                  onClick={() => setFilterStatut('approuvee')}
+                  className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                    filterStatut === 'approuvee'
+                      ? 'bg-green-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Approuvées
+                </button>
+                <button
+                  onClick={() => setFilterStatut('refusee')}
+                  className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                    filterStatut === 'refusee'
+                      ? 'bg-red-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Refusées
+                </button>
+              </div>
+              <label className="flex items-center gap-2 ml-auto">
+                <input
+                  type="checkbox"
+                  checked={filterNonPourvus}
+                  onChange={(e) => setFilterNonPourvus(e.target.checked)}
+                  className="w-4 h-4 text-yellow-600 rounded"
+                />
+                <span className="text-sm text-gray-700 flex items-center gap-1">
+                  <AlertTriangle className="w-4 h-4 text-yellow-600" />
+                  Uniquement les postes non pourvus
+                </span>
+              </label>
+            </div>
+            
+            {/* Liste des demandes avec scroll */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {filteredDemandesTraitees.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  Aucune demande ne correspond aux critères sélectionnés.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {filteredDemandesTraitees.map((demande) => {
+                    const posteNonPourvu = demande.statut === 'approuvee' && isPosteNonPourvu(demande);
+                    return (
+                      <div 
+                        key={demande.id} 
+                        className={`bg-white rounded-lg border p-4 transition-shadow hover:shadow-md ${
+                          posteNonPourvu ? 'border-yellow-300 bg-yellow-50/30' : 'border-gray-200'
+                        }`}
+                      >
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 flex-wrap mb-1">
+                              <span className="font-semibold text-gray-800">
+                                {demande.demandeur_prenom} {demande.demandeur_nom}
+                              </span>
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getRoleColor(demande.role_type)}`}>
+                                {getRoleLabel(demande.role_type)}
+                              </span>
+                              {demande.statut === 'approuvee' ? (
+                                <span className="inline-flex items-center gap-1 text-green-600 text-xs">
+                                  <CheckCircle className="w-3 h-3" />
+                                  Approuvée
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-red-600 text-xs">
+                                  <XCircle className="w-3 h-3" />
+                                  Refusée
+                                </span>
+                              )}
+                              {posteNonPourvu && (
+                                <span className="inline-flex items-center gap-1 text-yellow-600 text-xs">
+                                  <AlertTriangle className="w-3 h-3" />
+                                  Poste non pourvu
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-600">
+                              <span className="font-medium">Élève:</span> {demande.eleve_prenom} {demande.eleve_nom} ({demande.eleve_classe})
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              <span className="font-medium">Défense:</span> {new Date(demande.defense_date).toLocaleDateString('fr-FR')} à {demande.defense_horaire} - {demande.defense_localisation}
+                            </p>
+                            <div className="text-xs text-gray-400 mt-1">
+                              Demandé le {new Date(deme.created_at).toLocaleString('fr-FR')}
+                              {demande.traitee_le && ` • Traité le ${new Date(demande.traitee_le).toLocaleString('fr-FR')}`}
+                            </div>
+                            {demande.commentaire_demandeur && (
+                              <div className="mt-2 p-2 bg-gray-100 rounded-lg text-sm text-gray-600">
+                                <span className="font-medium">Commentaire du demandeur:</span> "{demande.commentaire_demandeur}"
+                              </div>
+                            )}
+                            {demande.commentaire_coordinateur && (
+                              <div className="mt-1 p-2 bg-blue-50 rounded-lg text-sm text-blue-700">
+                                <span className="font-medium">Décision de coordination:</span> "{demande.commentaire_coordinateur}"
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            
+            {/* Pied du modal */}
+            <div className="px-6 py-4 border-t bg-gray-50 rounded-b-lg">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-500">
+                  {filteredDemandesTraitees.length} demande(s) affichée(s)
+                </span>
+                <button
+                  onClick={() => setHistoriqueModalOpen(false)}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de traitement */}
       {modalOpen && selectedDemande && actionType && (
