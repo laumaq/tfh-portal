@@ -514,7 +514,7 @@ export default function ExterneDashboard() {
       : selectedElevesAsMediateur.includes(eleveId);
     const demandeEnAttente = hasDemandeEnAttente(eleveId, roleType);
   
-    // Si déjà sélectionné et demande en attente, annuler la demande
+    // Cas 1: Annuler une demande en attente
     if (isCurrentlySelected && demandeEnAttente) {
       const demande = demandesEnAttente[eleveId]?.find(d => d.role_type === roleType);
       if (demande) {
@@ -525,7 +525,7 @@ export default function ExterneDashboard() {
       return;
     }
   
-    // Si déjà sélectionné (et pas de demande en attente), ouvrir modal de désinscription
+    // Cas 2: Déjà sélectionné (sans demande) → ouvrir modal de désinscription
     if (isCurrentlySelected && !demandeEnAttente) {
       setSelectedEleveForDesinscription(eleve);
       setSelectedRoleTypeForDesinscription(roleType);
@@ -534,12 +534,12 @@ export default function ExterneDashboard() {
       return;
     }
   
-    // Sinon, c'est une inscription (directe)
+    // Cas 3: Pas sélectionné → inscription directe
     const field = role === 'lecteur' ? 'lecteur_externe_id' : 'mediateur_id';
     const currentId = role === 'lecteur' ? lecteurExterneId : mediateurId;
   
     // Vérifier les conflits de créneaux
-    if (isTimeSlotBusy(eleve, role) && !isCurrentlySelected) {
+    if (isTimeSlotBusy(eleve, role)) {
       alert(`Vous avez déjà une défense en tant que ${role === 'lecteur' ? 'lecteur externe' : 'médiateur'} à ce créneau horaire !`);
       return;
     }
@@ -549,32 +549,13 @@ export default function ExterneDashboard() {
       ? (eleve.lecteur_externe_id && eleve.lecteur_externe_id !== lecteurExterneId)
       : (eleve.mediateur_id && eleve.mediateur_id !== mediateurId);
   
-    if (isAlreadyTaken && !isCurrentlySelected) {
+    if (isAlreadyTaken) {
       alert(`Ce TFH a déjà un ${role === 'lecteur' ? 'lecteur externe' : 'médiateur'} assigné à quelqu'un d'autre.`);
       return;
     }
   
+    // Inscription directe
     try {
-      // Si on sélectionne un rôle, vérifier et supprimer l'autre rôle si nécessaire
-      const otherRole = role === 'lecteur' ? 'mediateur' : 'lecteur';
-      const otherField = otherRole === 'lecteur' ? 'lecteur_externe_id' : 'mediateur_id';
-      const isOtherSelected = otherRole === 'lecteur'
-        ? selectedElevesAsLecteur.includes(eleveId)
-        : selectedElevesAsMediateur.includes(eleveId);
-      
-      if (isOtherSelected) {
-        await supabase
-          .from('eleves')
-          .update({ [otherField]: null })
-          .eq('id', eleveId);
-        
-        if (otherRole === 'lecteur') {
-          setSelectedElevesAsLecteur(prev => prev.filter(id => id !== eleveId));
-        } else {
-          setSelectedElevesAsMediateur(prev => prev.filter(id => id !== eleveId));
-        }
-      }
-      
       await supabase
         .from('eleves')
         .update({ [field]: currentId })
@@ -752,21 +733,8 @@ export default function ExterneDashboard() {
     const lecteurDemande = hasDemandeEnAttente(eleve.id, 'lecteur_externe');
     const mediateurDemande = hasDemandeEnAttente(eleve.id, 'mediateur');
     
-    // Gérer les annulations de demande
-    if (lecteurSelected && lecteurDemande) {
-      const demande = demandesEnAttente[eleve.id]?.find(d => d.role_type === 'lecteur_externe');
-      if (demande) await handleAnnulerDemande(demande.id);
-      return;
-    }
-    
-    if (mediateurSelected && mediateurDemande) {
-      const demande = demandesEnAttente[eleve.id]?.find(d => d.role_type === 'mediateur');
-      if (demande) await handleAnnulerDemande(demande.id);
-      return;
-    }
-  
-    // Si déjà sélectionné (sans demande), ouvrir modal de désinscription
-    if (lecteurSelected) {
+    // Si déjà sélectionné (ou demande en attente), ouvrir modal de désinscription
+    if (lecteurSelected || lecteurDemande) {
       setSelectedEleveForDesinscription(eleve);
       setSelectedRoleTypeForDesinscription('lecteur_externe');
       setDesinscriptionComment('');
@@ -774,7 +742,7 @@ export default function ExterneDashboard() {
       return;
     }
     
-    if (mediateurSelected) {
+    if (mediateurSelected || mediateurDemande) {
       setSelectedEleveForDesinscription(eleve);
       setSelectedRoleTypeForDesinscription('mediateur');
       setDesinscriptionComment('');
@@ -1717,12 +1685,7 @@ export default function ExterneDashboard() {
                             <td className="px-4 py-3">
                               <div className="flex gap-2">
                                 <button
-                                  onClick={() => {
-                                    if (isMediateurSelected) {
-                                      handleToggleSelection(eleve.id, 'mediateur');
-                                    }
-                                    handleToggleSelection(eleve.id, 'lecteur');
-                                  }}
+                                  onClick={() => handleToggleSelection(eleve.id, 'lecteur')}
                                   disabled={isBusyLecteur || isLecteurAlreadyTaken}
                                   className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                                     isLecteurSelected
@@ -1733,16 +1696,11 @@ export default function ExterneDashboard() {
                                   }`}
                                   title={isLecteurAlreadyTaken ? "Déjà attribué à un autre lecteur" : isBusyLecteur ? "Conflit de créneau" : ""}
                                 >
-                                  📖 Lecteur
+                                  📖 Lecteur {isLecteurSelected && '✓'}
                                 </button>
                                 
                                 <button
-                                  onClick={() => {
-                                    if (isLecteurSelected) {
-                                      handleToggleSelection(eleve.id, 'lecteur');
-                                    }
-                                    handleToggleSelection(eleve.id, 'mediateur');
-                                  }}
+                                  onClick={() => handleToggleSelection(eleve.id, 'mediateur')}
                                   disabled={isBusyMediateur || isMediateurAlreadyTaken}
                                   className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                                     isMediateurSelected
@@ -1753,7 +1711,7 @@ export default function ExterneDashboard() {
                                   }`}
                                   title={isMediateurAlreadyTaken ? "Déjà attribué à un autre médiateur" : isBusyMediateur ? "Conflit de créneau" : ""}
                                 >
-                                  ⚖️ Médiateur
+                                  ⚖️ Médiateur {isMediateurSelected && '✓'}
                                 </button>
                               </div>
                             </td>
