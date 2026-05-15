@@ -246,6 +246,13 @@ export default function DefensesTab({
     currentEleve: Eleve,
     allEleves: Eleve[]
   ): { id: string; label: string }[] => {
+    // Logs pour Ferro
+    if (currentEleve.nom === 'Ferro') {
+      console.log(`🔧 getAvailableOptions pour ${type} (élève: ${currentEleve.nom})`);
+      console.log('  currentEleve.date_defense:', currentEleve.date_defense);
+      console.log('  currentEleve.heure_defense:', currentEleve.heure_defense);
+    }
+    
     const currentDate = currentEleve.date_defense?.trim();
     const currentTime = currentEleve.heure_defense?.trim();
     
@@ -255,33 +262,44 @@ export default function DefensesTab({
       currentTimestamp = new Date(dateTimeStr).getTime();
     }
   
-    // Fonction pour obtenir la liste complète des options depuis externes
     const getAllOptions = (): { id: string; label: string; externeId: string }[] => {
       if (type === 'lecteur_interne') {
         return guides.map(g => ({ id: g.id, label: `${g.nom} ${g.initiale}.`, externeId: '' }));
       } else if (type === 'lecteur_externe') {
-        return externes
+        const lecteurs = externes
           .filter(e => e.lecteur_externe_id)
           .map(e => ({ 
             id: e.lecteur_externe_id!, 
             label: `${e.nom} ${e.prenom}`,
             externeId: e.id 
           }));
+        if (currentEleve.nom === 'Ferro') {
+          console.log('  lecteurs externes disponibles:', lecteurs);
+        }
+        return lecteurs;
       } else {
-        return externes
+        const mediateurs = externes
           .filter(e => e.mediateur_id)
           .map(e => ({ 
             id: e.mediateur_id!, 
             label: `${e.nom} ${e.prenom}`,
             externeId: e.id 
           }));
+        if (currentEleve.nom === 'Ferro') {
+          console.log('  médiateurs disponibles:', mediateurs);
+        }
+        return mediateurs;
       }
     };
   
     if (!currentTimestamp || isNaN(currentTimestamp)) {
-      return getAllOptions()
+      const options = getAllOptions()
         .map(opt => ({ id: opt.id, label: opt.label }))
         .sort((a, b) => a.label.localeCompare(b.label));
+      if (currentEleve.nom === 'Ferro') {
+        console.log('  Aucune date/heure → toutes options:', options);
+      }
+      return options;
     }
   
     // Trouver tous les élèves qui ont une défense au même créneau horaire
@@ -294,18 +312,20 @@ export default function DefensesTab({
       return eTimestamp === currentTimestamp;
     });
   
+    if (currentEleve.nom === 'Ferro') {
+      console.log('  conflits trouvés:', conflits.map(c => `${c.nom} ${c.prenom}`));
+    }
+  
     // Récupérer les IDs des externes déjà occupés sur ce créneau
     const externesIdsPris: string[] = [];
     
     conflits.forEach(e => {
-      // Chercher l'externe correspondant au lecteur_externe_id
       if (e.lecteur_externe_id) {
         const externe = externes.find(ext => ext.lecteur_externe_id === e.lecteur_externe_id);
         if (externe && externe.id) {
           externesIdsPris.push(externe.id);
         }
       }
-      // Chercher l'externe correspondant au mediateur_id
       if (e.mediateur_id) {
         const externe = externes.find(ext => ext.mediateur_id === e.mediateur_id);
         if (externe && externe.id) {
@@ -314,18 +334,28 @@ export default function DefensesTab({
       }
     });
   
+    if (currentEleve.nom === 'Ferro') {
+      console.log('  externesIdsPris:', externesIdsPris);
+    }
+  
     const allOptions = getAllOptions();
-    // Récupérer l'ID de l'externe actuellement sélectionné pour ce champ
     const currentExterne = externes.find(ext => 
       (type === 'lecteur_externe' && ext.lecteur_externe_id === currentEleve.lecteur_externe_id) ||
       (type === 'mediateur' && ext.mediateur_id === currentEleve.mediateur_id)
     );
     const currentExterneId = currentExterne?.id || '';
   
-    // Filtrer : exclure les externes occupés sauf si c'est la valeur actuelle
+    if (currentEleve.nom === 'Ferro') {
+      console.log('  currentExterneId:', currentExterneId);
+    }
+  
     const availableOptions = allOptions.filter(opt =>
       !externesIdsPris.includes(opt.externeId) || opt.externeId === currentExterneId
     );
+  
+    if (currentEleve.nom === 'Ferro') {
+      console.log('  availableOptions après filtrage:', availableOptions);
+    }
   
     return availableOptions
       .map(opt => ({ id: opt.id, label: opt.label }))
@@ -356,8 +386,26 @@ export default function DefensesTab({
   ) => {
     const currentId = eleve[field] || '';
     const currentLabel = getCurrentLabel();
-    // Obtenir les options disponibles (filtrées et triées)
+    
+    // Logs spécifiques pour l'élève Ferro
+    if (eleve.nom === 'Ferro') {
+      console.log(`🔍 === renderSelectOrLabel pour ${type} (élève: ${eleve.nom} ${eleve.prenom}) ===`);
+      console.log('  eleve.id:', eleve.id);
+      console.log('  field:', field);
+      console.log('  currentId:', currentId);
+      console.log('  currentLabel:', currentLabel);
+      console.log('  editingMode:', editingMode);
+      console.log('  mediateur_id dans eleve:', eleve.mediateur_id);
+      console.log('  lecteur_externe_id dans eleve:', eleve.lecteur_externe_id);
+      console.log('  lecteur_interne_id dans eleve:', eleve.lecteur_interne_id);
+    }
+    
     const availableOptions = getAvailableOptions(type, eleve, localEleves);
+    
+    if (eleve.nom === 'Ferro') {
+      console.log(`  availableOptions pour ${type}:`, availableOptions);
+      console.log('  ---');
+    }
   
     if (!editingMode) {
       return <div className="text-xs md:text-sm">{currentLabel || '-'}</div>;
