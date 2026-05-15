@@ -609,12 +609,8 @@ export default function DefensesTab({
                   : '';
                 
                 const mediateurLabel = (() => {
+                  if (!eleve.mediateur_id) return '';
                   const found = externes.find(e => e.mediateur_id === eleve.mediateur_id);
-                  if (eleve.nom === 'FERRO') {
-                    console.log('mediateur_id dans la recherche:', eleve.mediateur_id);
-                    console.log('found:', found);
-                    console.log('externes disponibles:', externes.map(e => ({ id: e.id, mediateur_id: e.mediateur_id, nom: e.nom })));
-                  }
                   return found ? `${found.nom} ${found.prenom}` : '';
                 })();
 
