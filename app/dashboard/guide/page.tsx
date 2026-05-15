@@ -72,6 +72,7 @@ export default function GuideDashboard() {
   const [selectedEleveForObjectif, setSelectedEleveForObjectif] = useState<Eleve | null>(null);
   const [objectifParticulier, setObjectifParticulier] = useState('');
   const [savingObjectif, setSavingObjectif] = useState(false);
+  const [presences, setPresences] = useState<Record<string, Record<number, boolean | null>>>({});
   const [displaySettings, setDisplaySettings] = useState({
     lecteur_interne_voir_eleves: true,
     lecteur_interne_voir_guides: true,
@@ -363,6 +364,41 @@ export default function GuideDashboard() {
     if (selectedCategorie === 'toutes') return true;
     return eleve.categorie === selectedCategorie;
   });
+
+  // Ajoute cette fonction après loadDefenses (vers ligne 250)
+  const loadPresences = async (eleveId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('eleves')
+        .select('journee_1_present, journee_2_present, journee_3_present, journee_4_present, journee_5_present, journee_6_present, journee_7_present, journee_8_present, journee_9_present, journee_10_present')
+        .eq('id', eleveId)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      console.error('Erreur chargement présences:', err);
+      return null;
+    }
+  };  
+
+  // Ajoute ce useEffect après le chargement des élèves (vers ligne 200)
+  useEffect(() => {
+    const loadAllPresences = async () => {
+      if (eleves.length === 0) return;
+      
+      const presencesMap: Record<string, Record<number, boolean | null>> = {};
+      for (const eleve of eleves) {
+        const pres = await loadPresences(eleve.id);
+        if (pres) {
+          presencesMap[eleve.id] = pres;
+        }
+      }
+      setPresences(presencesMap);
+    };
+    
+    loadAllPresences();
+  }, [eleves]);  
 
   const handleToggleSelection = (eleveId: string) => {
     setSelectedEleves(prev => {
@@ -794,19 +830,49 @@ export default function GuideDashboard() {
                       {sessions.map(session => {
                         const columnName = `session_${session.index}_convoque`;
                         const valeur = (eleve as any)[columnName] as string | undefined;
+                        const estConvoque = valeur?.startsWith('Oui') === true;
+                        
+                        // Récupérer la présence pour la première journée de la session (simplifié)
+                        // Dans une version plus avancée, il faudrait mapper les journées aux sessions
+                        const presenceJournee = presences[eleve.id]?.[`journee_${session.index}_present` as any];
+                        
+                        const getPresenceStyle = (presence: boolean | null | undefined) => {
+                          if (presence === true) return 'bg-green-100 text-green-700 border-green-300';
+                          if (presence === false) return 'bg-red-100 text-red-700 border-red-300';
+                          return 'bg-gray-100 text-gray-500 border-gray-200';
+                        };
+                        
+                        const getPresenceIcon = (presence: boolean | null | undefined) => {
+                          if (presence === true) return '✓';
+                          if (presence === false) return '✗';
+                          return '?';
+                        };
+                        
                         return (
                           <td key={session.index} className="px-4 py-3">
-                            <select
-                              value={valeur || ''}
-                              onChange={(e) => handleUpdateSessionConvocation(eleve.id, session.index, e.target.value)}
-                              className={`w-full border rounded px-2 py-1 text-sm ${getConvocationColor(valeur || '')}`}
-                            >
-                              {CONVOCATION_OPTIONS.map(opt => (
-                                <option key={opt.value} value={opt.value} className={opt.color}>
-                                  {opt.label}
-                                </option>
-                              ))}
-                            </select>
+                            <div className="space-y-2">
+                              <select
+                                value={valeur || ''}
+                                onChange={(e) => handleUpdateSessionConvocation(eleve.id, session.index, e.target.value)}
+                                className={`w-full border rounded px-2 py-1 text-sm ${getConvocationColor(valeur || '')}`}
+                              >
+                                {CONVOCATION_OPTIONS.map(opt => (
+                                  <option key={opt.value} value={opt.value} className={opt.color}>
+                                    {opt.label}
+                                  </option>
+                                ))}
+                              </select>
+                              
+                              {/* Afficher la présence seulement si l'élève est convoqué */}
+                              {estConvoque && (
+                                <div className="flex items-center justify-between gap-1 text-xs">
+                                  <span className="text-gray-500">Présence:</span>
+                                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${getPresenceStyle(presenceJournee)} font-bold`}>
+                                    {getPresenceIcon(presenceJournee)}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </td>
                         );
                       })}
