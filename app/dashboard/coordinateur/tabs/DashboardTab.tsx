@@ -792,7 +792,7 @@ export default function DashboardTab({
                               <span className="font-medium">Défense:</span> {new Date(demande.defense_date).toLocaleDateString('fr-FR')} à {demande.defense_horaire} - {demande.defense_localisation}
                             </p>
                             <div className="text-xs text-gray-400 mt-1">
-                              Demandé le {new Date(deme.created_at).toLocaleString('fr-FR')}
+                              Demandé le {new Date(demande.created_at).toLocaleString('fr-FR')}
                               {demande.traitee_le && ` • Traité le ${new Date(demande.traitee_le).toLocaleString('fr-FR')}`}
                             </div>
                             {demande.commentaire_demandeur && (
