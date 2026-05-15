@@ -44,7 +44,6 @@ export default function CoordinateurDashboard() {
     categories,
     loading, 
     refreshData,
-    currentCoordinateur,
     demandesEnAttente,
     demandesTraitees,
     approuverDemande,
