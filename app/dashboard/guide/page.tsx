@@ -159,7 +159,6 @@ export default function GuideDashboard() {
 
   const loadDemandesEnAttente = async (guideId: string) => {
     try {
-      console.log('🔍 Chargement demandes pour guide:', guideId);
       
       const { data, error } = await supabase
         .from('demandes_desinscription')
@@ -169,20 +168,15 @@ export default function GuideDashboard() {
         .eq('statut', 'en_attente');
   
       if (error) throw error;
-      
-      console.log('📋 Demandes trouvées:', data);
-      console.log('📋 Nombre de demandes:', data?.length);
-      
+            
       const demandesMap: Record<string, DemandeDesinscription[]> = {};
       (data || []).forEach((demande: DemandeDesinscription) => {
-        console.log('   - Demande pour eleve:', demande.eleve_id, 'role:', demande.role_type);
         if (!demandesMap[demande.eleve_id]) {
           demandesMap[demande.eleve_id] = [];
         }
         demandesMap[demande.eleve_id].push(demande);
       });
       
-      console.log('🗺️ Map finale:', demandesMap);
       setDemandesEnAttente(demandesMap);
     } catch (err) {
       console.error('Erreur chargement demandes:', err);
