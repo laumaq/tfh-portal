@@ -3,12 +3,14 @@
 'use client';
 
 import { Eleve, Guide, Externe, TabType } from '../types';
+import { DemandeDesinscription } from '../hooks/useCoordinateurData';
 import { detecterSessions, Journee, getJourneesFromSupabase } from '../utils/sessionUtils';
 import { supabase } from '@/lib/supabase';
 import { useState, useEffect } from 'react';
 import { 
   Shield, FileText, UserCheck, Calendar, 
-  Users, Settings, BarChart, ChevronRight, BookOpen 
+  Users, Settings, BarChart, ChevronRight, BookOpen,
+  AlertCircle, CheckCircle, XCircle, Clock, UserMinus, MessageCircle
 } from 'lucide-react';
 
 interface DashboardTabProps {
@@ -19,6 +21,11 @@ interface DashboardTabProps {
   userName: string;
   coordinateurNom: string; 
   coordinateurPrenom: string;
+  demandesEnAttente: DemandeDesinscription[];
+  demandesTraitees: DemandeDesinscription[];
+  onApprouverDemande: (demandeId: string, commentaire?: string) => Promise<boolean>;
+  onRefuserDemande: (demandeId: string, commentaire?: string) => Promise<boolean>;
+  onRefresh: () => void;
 }
 
 export default function DashboardTab({ 
@@ -28,10 +35,20 @@ export default function DashboardTab({
   onTabChange,
   userName,
   coordinateurNom,
-  coordinateurPrenom 
+  coordinateurPrenom,
+  demandesEnAttente,
+  demandesTraitees,
+  onApprouverDemande,
+  onRefuserDemande,
+  onRefresh
 }: DashboardTabProps) {
   const [sessions, setSessions] = useState<any[]>([]);
   const [journees, setJournees] = useState<Journee[]>([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedDemande, setSelectedDemande] = useState<DemandeDesinscription | null>(null);
+  const [commentaire, setCommentaire] = useState('');
+  const [actionType, setActionType] = useState<'approuver' | 'refuser' | null>(null);
+  const [processing, setProcessing] = useState(false);
 
   // Charger les journées et sessions
   useEffect(() => {
@@ -52,46 +69,83 @@ export default function DashboardTab({
   // Fonction pour trouver la prochaine session
   const getProchaineSession = () => {
     const maintenant = new Date();
-    
-    // Trouver la première session dont la date de fin est aujourd'hui ou dans le futur
     const prochaineSession = sessions.find(session => {
       const finSession = new Date(session.date_fin);
-      // Ajouter 1 jour pour inclure la journée même
       finSession.setHours(23, 59, 59, 999);
       return finSession >= maintenant;
     });
-    
     return prochaineSession;
+  };
+  
+  // Ouvrir le modal de traitement
+  const openTraitementModal = (demande: DemandeDesinscription, action: 'approuver' | 'refuser') => {
+    setSelectedDemande(demande);
+    setActionType(action);
+    setCommentaire('');
+    setModalOpen(true);
+  };
+  
+  // Traiter la demande
+  const handleTraiterDemande = async () => {
+    if (!selectedDemande || !actionType) return;
+    
+    setProcessing(true);
+    let success = false;
+    
+    if (actionType === 'approuver') {
+      success = await onApprouverDemande(selectedDemande.id, commentaire || undefined);
+    } else {
+      success = await onRefuserDemande(selectedDemande.id, commentaire || undefined);
+    }
+    
+    if (success) {
+      onRefresh();
+    }
+    
+    setProcessing(false);
+    setModalOpen(false);
+    setSelectedDemande(null);
+    setActionType(null);
+    setCommentaire('');
+  };
+  
+  // Récupérer le libellé du rôle
+  const getRoleLabel = (roleType: string) => {
+    switch (roleType) {
+      case 'guide': return 'Guide';
+      case 'lecteur_interne': return 'Lecteur interne';
+      case 'lecteur_externe': return 'Lecteur externe';
+      case 'mediateur': return 'Médiateur';
+      default: return roleType;
+    }
+  };
+  
+  // Récupérer la couleur du rôle
+  const getRoleColor = (roleType: string) => {
+    switch (roleType) {
+      case 'guide': return 'bg-blue-100 text-blue-700';
+      case 'lecteur_interne': return 'bg-purple-100 text-purple-700';
+      case 'lecteur_externe': return 'bg-green-100 text-green-700';
+      case 'mediateur': return 'bg-orange-100 text-orange-700';
+      default: return 'bg-gray-100 text-gray-700';
+    }
   };
   
   // Calcul des statistiques pour l'aperçu du système
   const calculateSystemOverview = () => {
-    // 1. Élèves connectés
     const elevesConnected = eleves.filter(e => e.mot_de_passe && e.mot_de_passe !== '').length;
     const elevesTotal = eleves.length;
-    
-    // 2. Guides connectés
     const guidesConnected = guides.filter(g => g.mot_de_passe && g.mot_de_passe !== '').length;
     const guidesTotal = guides.length;
-    
-    // 3. Défenses / Problématiques / Thématiques
     const defensesProgrammees = eleves.filter(e => e.date_defense).length;
     const avecProblematique = eleves.filter(e => e.problematique && e.problematique.trim() !== '').length;
     const avecThematique = eleves.filter(e => e.thematique && e.thematique.trim() !== '').length;
     
-    // 4. Convoqués à la prochaine session (trouve la prochaine session avec des convocations)
     const getProchainesConvocations = () => {
-      // Utiliser la prochaine session détectée
       const prochaineSession = getProchaineSession();
+      if (!prochaineSession) return null;
       
-      if (!prochaineSession) {
-        return null;
-      }
-      
-      // Extraire l'index de la session (ex: "session_1" -> 1)
       const sessionIndex = parseInt(prochaineSession.id.split('_')[1]);
-      
-      // Compter les élèves convoqués à cette session
       const convocations = eleves.filter(e => {
         const sessionKey = `session_${sessionIndex}_convoque` as keyof Eleve;
         const valeur = e[sessionKey];
@@ -245,6 +299,77 @@ export default function DashboardTab({
         <p className="text-gray-600">Bienvenue {coordinateurPrenom} {coordinateurNom}. Voici votre panneau de gestion des TFH.</p>
       </div>
 
+      {/* NOTIFICATIONS - Demandes en attente */}
+      {demandesEnAttente.length > 0 && (
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+            <h2 className="text-lg font-semibold text-gray-800">
+              Demandes de désinscription en attente ({demandesEnAttente.length})
+            </h2>
+          </div>
+          <div className="space-y-3">
+            {demandesEnAttente.map((demande) => (
+              <div key={demande.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-start gap-3">
+                      <div className={`p-2 rounded-lg ${getRoleColor(demande.role_type)}`}>
+                        <UserMinus className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-gray-800">
+                            {demande.demandeur_prenom} {demande.demandeur_nom}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getRoleColor(demande.role_type)}`}>
+                            {getRoleLabel(demande.role_type)}
+                          </span>
+                          <span className="text-gray-400 text-sm">•</span>
+                          <span className="text-sm text-gray-500">
+                            {new Date(demande.created_at).toLocaleString('fr-FR')}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1">
+                          souhaite se désinscrire de la défense de{' '}
+                          <span className="font-medium">{demande.eleve_prenom} {demande.eleve_nom}</span>
+                          {' '}({demande.eleve_classe})
+                        </p>
+                        <div className="text-xs text-gray-400 mt-1">
+                          Défense le {new Date(demande.defense_date).toLocaleDateString('fr-FR')} à {demande.defense_horaire} - {demande.defense_localisation}
+                        </div>
+                        {demande.commentaire_demandeur && (
+                          <div className="mt-2 p-2 bg-gray-50 rounded-lg text-sm text-gray-600 flex items-start gap-2">
+                            <MessageCircle className="w-3 h-3 text-gray-400 mt-0.5" />
+                            <span>"{demande.commentaire_demandeur}"</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => openTraitementModal(demande, 'refuser')}
+                      className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors flex items-center gap-1"
+                    >
+                      <XCircle className="w-4 h-4" />
+                      Refuser
+                    </button>
+                    <button
+                      onClick={() => openTraitementModal(demande, 'approuver')}
+                      className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors flex items-center gap-1"
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                      Approuver
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Aperçu du système */}
       <div className="bg-white rounded-xl shadow-sm border p-6 mb-8">
         <h3 className="font-semibold text-gray-800 mb-6 text-lg">Aperçu du système</h3>
@@ -351,8 +476,66 @@ export default function DashboardTab({
         </div>
       </div>
 
+      {/* Demandes traitées récemment */}
+      {demandesTraitees.length > 0 && (
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Clock className="w-4 h-4 text-gray-500" />
+            <h2 className="text-lg font-semibold text-gray-800">
+              Demandes traitées récemment ({demandesTraitees.length})
+            </h2>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="px-4 py-3 text-left text-gray-600 font-medium">Date</th>
+                  <th className="px-4 py-3 text-left text-gray-600 font-medium">Demandeur</th>
+                  <th className="px-4 py-3 text-left text-gray-600 font-medium">Rôle</th>
+                  <th className="px-4 py-3 text-left text-gray-600 font-medium">Élève</th>
+                  <th className="px-4 py-3 text-left text-gray-600 font-medium">Décision</th>
+                </tr>
+              </thead>
+              <tbody>
+                {demandesTraitees.map((demande) => (
+                  <tr key={demande.id} className="border-b hover:bg-gray-50">
+                    <td className="px-4 py-3 text-gray-500">
+                      {new Date(demande.traitee_le!).toLocaleDateString('fr-FR')}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="font-medium">{demande.demandeur_prenom} {demande.demandeur_nom}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getRoleColor(demande.role_type)}`}>
+                        {getRoleLabel(demande.role_type)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {demande.eleve_prenom} {demande.eleve_nom} ({demande.eleve_classe})
+                    </td>
+                    <td className="px-4 py-3">
+                      {demande.statut === 'approuvee' ? (
+                        <span className="inline-flex items-center gap-1 text-green-600">
+                          <CheckCircle className="w-4 h-4" />
+                          Approuvée
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-red-600">
+                          <XCircle className="w-4 h-4" />
+                          Refusée
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Cartes de navigation */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {tabs.map((tab) => (
           <div
             key={tab.id}
@@ -389,6 +572,76 @@ export default function DashboardTab({
           </div>
         ))}
       </div>
+
+      {/* Modal de traitement */}
+      {modalOpen && selectedDemande && actionType && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+            <div className="px-6 py-4 border-b">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-800">
+                    {actionType === 'approuver' ? 'Approuver la demande' : 'Refuser la demande'}
+                  </h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {selectedDemande.demandeur_prenom} {selectedDemande.demandeur_nom} - {getRoleLabel(selectedDemande.role_type)}
+                  </p>
+                </div>
+                <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+              </div>
+            </div>
+            <div className="px-6 py-4">
+              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                <p className="text-sm text-gray-600">
+                  <span className="font-medium">Élève concerné :</span> {selectedDemande.eleve_prenom} {selectedDemande.eleve_nom} ({selectedDemande.eleve_classe})
+                </p>
+                <p className="text-sm text-gray-600 mt-1">
+                  <span className="font-medium">Défense :</span> {new Date(selectedDemande.defense_date).toLocaleDateString('fr-FR')} à {selectedDemande.defense_horaire} - {selectedDemande.defense_localisation}
+                </p>
+              </div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Commentaire (optionnel) :</label>
+              <textarea
+                value={commentaire}
+                onChange={(e) => setCommentaire(e.target.value)}
+                className="w-full h-24 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                placeholder={actionType === 'approuver' ? "Justification de l'approbation..." : "Motif du refus..."}
+                autoFocus
+              />
+              {actionType === 'approuver' && (
+                <p className="text-xs text-red-500 mt-2">
+                  ⚠️ L'utilisateur sera immédiatement désinscrit et le créneau deviendra disponible.
+                </p>
+              )}
+            </div>
+            <div className="px-6 py-4 border-t bg-gray-50 rounded-b-lg">
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setModalOpen(false)}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium"
+                  disabled={processing}
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleTraiterDemande}
+                  disabled={processing}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
+                    actionType === 'approuver'
+                      ? 'bg-red-600 text-white hover:bg-red-700'
+                      : 'bg-gray-600 text-white hover:bg-gray-700'
+                  } ${processing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {processing ? (
+                    <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>Traitement...</>
+                  ) : (
+                    actionType === 'approuver' ? 'Approuver la désinscription' : 'Refuser la demande'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
