@@ -1,4 +1,4 @@
-// app/dashboard/guide/page.tsx
+// /app/dashboard/guide/page.tsx
 
 'use client';
 
@@ -953,7 +953,7 @@ export default function GuideDashboard() {
                             {eleve.guide_nom} {eleve.guide_initiale}.
                           </td>
                         )}
-                      </table>
+                      </tr>
                     ))
                   )}
                 </tbody>
@@ -1044,7 +1044,7 @@ export default function GuideDashboard() {
                                   <td className="px-4 py-3 text-sm whitespace-nowrap">
                                     {eleve.guide_nom} {eleve.guide_initiale}.
                                     {isGuide && <span className="ml-1 text-xs text-blue-600">(vous)</span>}
-                                  <td>
+                                  </td>
                                 )}
                                 {displaySettings.lecteur_interne_voir_guides && ( 
                                   <td className="px-4 py-3 text-sm whitespace-nowrap">
@@ -1054,19 +1054,19 @@ export default function GuideDashboard() {
                                         {isLecteurInterne && <span className="ml-1 text-xs text-blue-600">(vous)</span>}
                                       </span>
                                     ) : '-'}
-                                  <td>
+                                  </td>
                                 )}
                                 {displaySettings.lecteur_interne_voir_lecteurs_externes && (
                                   <td className="px-4 py-3 text-sm whitespace-nowrap">
                                     {eleve.lecteur_externe_nom ? `${eleve.lecteur_externe_prenom} ${eleve.lecteur_externe_nom}` : '-'}
-                                  <td>
+                                  </td>
                                 )}
                                 {displaySettings.lecteur_interne_voir_mediateurs && (
                                   <td className="px-4 py-3 text-sm whitespace-nowrap">
                                     {eleve.mediateur_nom ? `${eleve.mediateur_prenom} ${eleve.mediateur_nom}` : '-'}
-                                  <td>
+                                  </td>
                                 )}
-                              </table>
+                              </tr>
                             );
                           })}
                         </tbody>
@@ -1149,17 +1149,17 @@ export default function GuideDashboard() {
                                         {isLecteurInterne && <span className="ml-1 text-xs text-blue-600">(vous)</span>}
                                       </span>
                                     ) : '-'}
-                                  </td>
+                                  <td>
                                 )}
                                 {displaySettings.lecteur_interne_voir_lecteurs_externes && (
                                   <td className="px-4 py-3 text-sm whitespace-nowrap">
                                     {eleve.lecteur_externe_nom ? `${eleve.lecteur_externe_prenom} ${eleve.lecteur_externe_nom}` : '-'}
-                                  </td>
+                                  <td>
                                 )}
                                 {displaySettings.lecteur_interne_voir_mediateurs && (
                                   <td className="px-4 py-3 text-sm whitespace-nowrap">
                                     {eleve.mediateur_nom ? `${eleve.mediateur_prenom} ${eleve.mediateur_nom}` : '-'}
-                                  </td>
+                                  <td>
                                 )}
                               </tr>
                             );
@@ -1195,7 +1195,7 @@ export default function GuideDashboard() {
                             {displaySettings.lecteur_interne_voir_guides && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur interne</th>}
                             {displaySettings.lecteur_interne_voir_lecteurs_externes && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur externe</th>}
                             {displaySettings.lecteur_interne_voir_mediateurs && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Médiateur</th>}
-                          </tr>
+                          <tr>
                         </thead>
                         <tbody>
                           {defensesNonRendus.map((eleve) => {
@@ -1224,7 +1224,7 @@ export default function GuideDashboard() {
                                   </td>
                                   <td className="px-4 py-3 text-sm">
                                     <div className="whitespace-pre-wrap break-words min-h-[40px] max-w-96">{eleve.problematique || '-'}</div>
-                                  </td>
+                                  </tr>
                                   {displaySettings.lecteur_interne_voir_guides && (
                                     <td className="px-4 py-3 text-sm whitespace-nowrap">
                                       {eleve.guide_nom} {eleve.guide_initiale}.
