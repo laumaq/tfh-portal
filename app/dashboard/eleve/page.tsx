@@ -1,4 +1,5 @@
 // app/dashboard/eleve/page.tsx
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -21,7 +22,7 @@ interface EleveInfo {
   categorie: string;
   guide_nom: string;
   guide_initiale: string;
-  // Sessions dynamiques
+  guide_accepte_numerique?: boolean;
   sessions?: Array<{
     index: number;
     nom: string;
@@ -34,16 +35,18 @@ interface EleveInfo {
     localisation: string;
     mediateur_nom?: string;
     mediateur_prenom?: string;
+    mediateur_accepte_numerique?: boolean;
     lecteur_interne_nom?: string;
     lecteur_interne_initiale?: string;
+    lecteur_interne_accepte_numerique?: boolean;
     lecteur_externe_nom?: string;
     lecteur_externe_prenom?: string;
+    lecteur_externe_accepte_numerique?: boolean;
   };
   displaySettings?: {
     eleves_voir_guides: boolean;
     eleves_voir_defenses: boolean;
   };
-
   url_tfh?: string;
 }
 
@@ -124,10 +127,10 @@ export default function EleveDashboard() {
         .from('eleves')
         .select(`
           *,
-          guide:guides!guide_id (nom, initiale),
-          lecteur_interne:guides!lecteur_interne_id (nom, initiale),
-          lecteur_externe:externes!lecteur_externe_id (nom, prenom),
-          mediateur:externes!mediateur_id (nom, prenom)
+          guide:guides!guide_id (nom, prenom, initiale, accepte_numerique),
+          lecteur_interne:guides!lecteur_interne_id (nom, prenom, initiale, accepte_numerique),
+          lecteur_externe:externes!lecteur_externe_id (nom, prenom, accepte_numerique),
+          mediateur:externes!mediateur_id (nom, prenom, accepte_numerique)
         `)
         .eq('id', eleveId)
         .single();
@@ -196,20 +199,24 @@ export default function EleveDashboard() {
         return heure;
       };
       
-      // EXTRAIRE LES DONNÉES DE DÉFENSE
+      // EXTRAIRE LES DONNÉES DE DÉFENSE AVEC LES PRÉFÉRENCES NUMÉRIQUES
       const defenseData = {
         date: data.date_defense || '',
         heure: data.heure_defense ? formatHeure(data.heure_defense) : '',
         localisation: data.localisation_defense || '',
         mediateur_nom: data.mediateur?.nom || '',
         mediateur_prenom: data.mediateur?.prenom || '',
+        mediateur_accepte_numerique: data.mediateur?.accepte_numerique || false,
         lecteur_interne_nom: data.lecteur_interne?.nom || '',
         lecteur_interne_initiale: data.lecteur_interne?.initiale || '',
+        lecteur_interne_accepte_numerique: data.lecteur_interne?.accepte_numerique || false,
         lecteur_externe_nom: data.lecteur_externe?.nom || '',
-        lecteur_externe_prenom: data.lecteur_externe?.prenom || ''
+        lecteur_externe_prenom: data.lecteur_externe?.prenom || '',
+        lecteur_externe_accepte_numerique: data.lecteur_externe?.accepte_numerique || false,
+        guide_accepte_numerique: data.guide?.accepte_numerique || false
       };
       
-      console.log('Données de défense extraites:', defenseData); // Debug
+      console.log('Données de défense extraites:', defenseData);
       
       // Formater TOUTES les données en une seule fois
       const eleveFormate: EleveInfo = {
@@ -227,14 +234,14 @@ export default function EleveDashboard() {
         categorie: data.categorie,
         guide_nom: data.guide?.nom || '-',
         guide_initiale: data.guide?.initiale || '-',
+        guide_accepte_numerique: data.guide?.accepte_numerique || false,
         sessions: sessionsAVenir,
         defense: defenseData,
         url_tfh: data.url_tfh || '',
-        displaySettings: displaySettings // Inclure directement ici
+        displaySettings: displaySettings
       };
       
       setEleve(eleveFormate);
-      console.log('État élève final:', eleveFormate); // Debug
       
       setNewProblematique(data.problematique || '');
       setNewThematique(data.thematique || '');
@@ -372,21 +379,45 @@ export default function EleveDashboard() {
     }
   };
 
-  const DefenseSection = ({ eleve }: { eleve: EleveInfo }) => {
-    // Ajoutez des logs pour déboguer
-    console.log('DefenseSection - displaySettings:', eleve.displaySettings);
-    console.log('DefenseSection - defense:', eleve.defense);
-    console.log('DefenseSection - date défense:', eleve.defense?.date);
+  // Calculer le nombre de TFH à imprimer (membres du jury qui veulent du papier)
+  const calculerNombreImpressions = () => {
+    if (!eleve?.defense) return 0;
     
+    let count = 0;
+    
+    // Guide (toujours présent)
+    if (eleve.guide_accepte_numerique !== true) {
+      count++;
+    }
+    
+    // Lecteur interne
+    if (eleve.defense.lecteur_interne_nom && eleve.defense.lecteur_interne_accepte_numerique !== true) {
+      count++;
+    }
+    
+    // Lecteur externe
+    if (eleve.defense.lecteur_externe_nom && eleve.defense.lecteur_externe_accepte_numerique !== true) {
+      count++;
+    }
+    
+    // Médiateur
+    if (eleve.defense.mediateur_nom && eleve.defense.mediateur_accepte_numerique !== true) {
+      count++;
+    }
+    
+    return count;
+  };
+
+  const DefenseSection = ({ eleve }: { eleve: EleveInfo }) => {
     if (!eleve.displaySettings?.eleves_voir_defenses) {
-      console.log('DefenseSection: masqué car eleves_voir_defenses = false');
       return null;
     }
     
     if (!eleve.defense || !eleve.defense.date) {
-      console.log('DefenseSection: masqué car pas de données de défense');
       return null;
     }
+  
+    const nbImpressions = calculerNombreImpressions();
   
     return (
       <div className="border-t pt-6">
@@ -435,52 +466,149 @@ export default function EleveDashboard() {
                 </div>
               </div>
             )}
-  
-            {/* Médiateur */}
-            {eleve.displaySettings?.eleves_voir_guides && eleve.defense.mediateur_nom && (
-              <div className="flex items-start gap-3">
-                <div className="mt-1">
-                  <span className="text-purple-500 text-xl">⚖️</span>
-                </div>
-                <div>
-                  <p className="text-sm text-purple-600 font-medium">Médiateur·trice</p>
-                  <p className="text-gray-800">
-                    {eleve.defense.mediateur_prenom} {eleve.defense.mediateur_nom}
-                  </p>
-                </div>
-              </div>
-            )}
-  
-            {/* Lecteur interne */}
-            {eleve.defense.lecteur_interne_nom && (
-              <div className="flex items-start gap-3">
-                <div className="mt-1">
-                  <span className="text-purple-500 text-xl">📖</span>
-                </div>
-                <div>
-                  <p className="text-sm text-purple-600 font-medium">Lecteur·rice interne</p>
-                  <p className="text-gray-800">
-                    {eleve.defense.lecteur_interne_nom} {eleve.defense.lecteur_interne_initiale}.
-                  </p>
-                </div>
-              </div>
-            )}
-  
-            {/* Lecteur externe */}
-            {eleve.defense.lecteur_externe_nom && (
-              <div className="flex items-start gap-3">
-                <div className="mt-1">
-                  <span className="text-purple-500 text-xl">👁️</span>
-                </div>
-                <div>
-                  <p className="text-sm text-purple-600 font-medium">Lecteur·rice externe</p>
-                  <p className="text-gray-800">
-                    {eleve.defense.lecteur_externe_prenom} {eleve.defense.lecteur_externe_nom}
-                  </p>
-                </div>
-              </div>
-            )}
           </div>
+  
+          {/* Composition du jury avec préférences */}
+          <div className="mt-6 pt-4 border-t border-purple-200">
+            <h4 className="text-md font-semibold text-purple-800 mb-3">Composition du jury</h4>
+            <div className="space-y-2">
+              {/* Guide */}
+              <div className="flex items-center justify-between py-2 px-3 bg-white rounded-lg shadow-sm">
+                <div className="flex items-center gap-3">
+                  <span className="text-lg">👨‍🏫</span>
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">Guide</p>
+                    <p className="text-xs text-gray-600">{eleve.guide_nom} {eleve.guide_initiale}.</p>
+                  </div>
+                </div>
+                <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs ${
+                  eleve.guide_accepte_numerique 
+                    ? 'bg-green-100 text-green-700' 
+                    : 'bg-amber-100 text-amber-700'
+                }`}>
+                  {eleve.guide_accepte_numerique ? (
+                    <>
+                      <span>💻</span>
+                      <span>Numérique</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>📄</span>
+                      <span>Papier</span>
+                    </>
+                  )}
+                </div>
+              </div>
+  
+              {/* Lecteur interne */}
+              {eleve.defense.lecteur_interne_nom && (
+                <div className="flex items-center justify-between py-2 px-3 bg-white rounded-lg shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg">📖</span>
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">Lecteur·rice interne</p>
+                      <p className="text-xs text-gray-600">{eleve.defense.lecteur_interne_nom} {eleve.defense.lecteur_interne_initiale}.</p>
+                    </div>
+                  </div>
+                  <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs ${
+                    eleve.defense.lecteur_interne_accepte_numerique 
+                      ? 'bg-green-100 text-green-700' 
+                      : 'bg-amber-100 text-amber-700'
+                  }`}>
+                    {eleve.defense.lecteur_interne_accepte_numerique ? (
+                      <>
+                        <span>💻</span>
+                        <span>Numérique</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>📄</span>
+                        <span>Papier</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+  
+              {/* Lecteur externe */}
+              {eleve.defense.lecteur_externe_nom && (
+                <div className="flex items-center justify-between py-2 px-3 bg-white rounded-lg shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg">👁️</span>
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">Lecteur·rice externe</p>
+                      <p className="text-xs text-gray-600">{eleve.defense.lecteur_externe_prenom} {eleve.defense.lecteur_externe_nom}</p>
+                    </div>
+                  </div>
+                  <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs ${
+                    eleve.defense.lecteur_externe_accepte_numerique 
+                      ? 'bg-green-100 text-green-700' 
+                      : 'bg-amber-100 text-amber-700'
+                  }`}>
+                    {eleve.defense.lecteur_externe_accepte_numerique ? (
+                      <>
+                        <span>💻</span>
+                        <span>Numérique</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>📄</span>
+                        <span>Papier</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+  
+              {/* Médiateur */}
+              {eleve.defense.mediateur_nom && (
+                <div className="flex items-center justify-between py-2 px-3 bg-white rounded-lg shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg">⚖️</span>
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">Médiateur·trice</p>
+                      <p className="text-xs text-gray-600">{eleve.defense.mediateur_prenom} {eleve.defense.mediateur_nom}</p>
+                    </div>
+                  </div>
+                  <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs ${
+                    eleve.defense.mediateur_accepte_numerique 
+                      ? 'bg-green-100 text-green-700' 
+                      : 'bg-amber-100 text-amber-700'
+                  }`}>
+                    {eleve.defense.mediateur_accepte_numerique ? (
+                      <>
+                        <span>💻</span>
+                        <span>Numérique</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>📄</span>
+                        <span>Papier</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+  
+          {/* Compteur d'impressions */}
+          {nbImpressions > 0 && (
+            <div className="mt-4 pt-4 border-t border-purple-200">
+              <div className="bg-amber-50 rounded-lg p-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🖨️</span>
+                  <div>
+                    <p className="text-sm font-medium text-amber-800">Nombre d'exemplaires papier à fournir</p>
+                    <p className="text-xs text-amber-600">
+                      (membres du jury qui préfèrent le papier)
+                    </p>
+                  </div>
+                </div>
+                <div className="text-3xl font-bold text-amber-700">{nbImpressions}</div>
+              </div>
+            </div>
+          )}
   
           {/* Message si pas de défense programmée */}
           {!eleve.defense.date && (
@@ -1094,13 +1222,3 @@ export default function EleveDashboard() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
