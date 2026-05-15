@@ -1846,87 +1846,87 @@ export default function ExterneDashboard() {
             }}
           />
         )}
+
+              {/* Modal de demande de désinscription */}
+        {showDesinscriptionModal && selectedEleveForDesinscription && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+              <div className="px-6 py-4 border-b">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-800">Demande de désinscription</h2>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {selectedEleveForDesinscription.prenom} {selectedEleveForDesinscription.nom} - {selectedEleveForDesinscription.classe}
+                    </p>
+                  </div>
+                  <button onClick={() => setShowDesinscriptionModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+                </div>
+              </div>
+              <div className="px-6 py-4">
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Rôle concerné : <span className="font-semibold">{selectedRoleTypeForDesinscription === 'lecteur_externe' ? 'Lecteur externe' : 'Médiateur'}</span>
+                  </label>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Votre demande devra être approuvée par la coordination. En attendant, vous restez assigné à cette défense.
+                  </p>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Commentaire (optionnel) :</label>
+                  <textarea
+                    value={desinscriptionComment}
+                    onChange={(e) => setDesinscriptionComment(e.target.value)}
+                    className="w-full h-24 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                    placeholder="Expliquez brièvement votre demande de désinscription..."
+                  />
+                </div>
+              </div>
+              <div className="px-6 py-4 border-t bg-gray-50 rounded-b-lg">
+                <div className="flex justify-end gap-3">
+                  <button 
+                    onClick={() => setShowDesinscriptionModal(false)} 
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium"
+                    disabled={submittingDesinscription}
+                  >
+                    Annuler
+                  </button>
+                  <button 
+                    onClick={handleCreerDemandeDesinscription} 
+                    disabled={submittingDesinscription}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
+                      !submittingDesinscription 
+                        ? 'bg-red-600 text-white hover:bg-red-700' 
+                        : 'bg-red-400 text-white cursor-not-allowed'
+                    }`}
+                  >
+                    {submittingDesinscription ? (
+                      <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>Envoi...</>
+                    ) : (
+                      'Envoyer la demande'
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <style jsx>{`
+          @keyframes slideIn {
+            from {
+              transform: translateX(100%);
+              opacity: 0;
+            }
+            to {
+              transform: translateX(0);
+              opacity: 1;
+            }
+          }
+          .animate-slide-in {
+            animation: slideIn 0.3s ease-out;
+          }
+        `}</style>
       </div>
     );
   }
 
-      {/* Modal de demande de désinscription */}
-      {showDesinscriptionModal && selectedEleveForDesinscription && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
-            <div className="px-6 py-4 border-b">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-bold text-gray-800">Demande de désinscription</h2>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {selectedEleveForDesinscription.prenom} {selectedEleveForDesinscription.nom} - {selectedEleveForDesinscription.classe}
-                  </p>
-                </div>
-                <button onClick={() => setShowDesinscriptionModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
-              </div>
-            </div>
-            <div className="px-6 py-4">
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Rôle concerné : <span className="font-semibold">{selectedRoleTypeForDesinscription === 'lecteur_externe' ? 'Lecteur externe' : 'Médiateur'}</span>
-                </label>
-                <p className="text-sm text-gray-600 mb-4">
-                  Votre demande devra être approuvée par la coordination. En attendant, vous restez assigné à cette défense.
-                </p>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Commentaire (optionnel) :</label>
-                <textarea
-                  value={desinscriptionComment}
-                  onChange={(e) => setDesinscriptionComment(e.target.value)}
-                  className="w-full h-24 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                  placeholder="Expliquez brièvement votre demande de désinscription..."
-                />
-              </div>
-            </div>
-            <div className="px-6 py-4 border-t bg-gray-50 rounded-b-lg">
-              <div className="flex justify-end gap-3">
-                <button 
-                  onClick={() => setShowDesinscriptionModal(false)} 
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium"
-                  disabled={submittingDesinscription}
-                >
-                  Annuler
-                </button>
-                <button 
-                  onClick={handleCreerDemandeDesinscription} 
-                  disabled={submittingDesinscription}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
-                    !submittingDesinscription 
-                      ? 'bg-red-600 text-white hover:bg-red-700' 
-                      : 'bg-red-400 text-white cursor-not-allowed'
-                  }`}
-                >
-                  {submittingDesinscription ? (
-                    <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>Envoi...</>
-                  ) : (
-                    'Envoyer la demande'
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <style jsx>{`
-        @keyframes slideIn {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-        .animate-slide-in {
-          animation: slideIn 0.3s ease-out;
-        }
-      `}</style>
-    </div>
-  );
+  return null;
 }
