@@ -43,7 +43,12 @@ export default function CoordinateurDashboard() {
     currentCoordinateur,
     categories,
     loading, 
-    refreshData 
+    refreshData,
+    currentCoordinateur,
+    demandesEnAttente,
+    demandesTraitees,
+    approuverDemande,
+    refuserDemande
   } = useCoordinateurData();
   
   const {
