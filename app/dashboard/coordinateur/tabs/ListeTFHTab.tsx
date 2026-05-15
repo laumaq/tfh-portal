@@ -50,15 +50,15 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
   const getFieldValue = (eleve: Eleve, field: SortField): string => {
     switch (field) {
       case 'classe':
-        return eleve.classe || '';
+        return cleanString(eleve.classe || '');
       case 'eleve':
-        return `${eleve.nom} ${eleve.prenom}`.toLowerCase();
+        return cleanString(`${eleve.nom} ${eleve.prenom}`).toLowerCase();
       case 'thematique':
-        return eleve.thematique || '';
+        return cleanString(eleve.thematique || '');
       case 'problematique':
-        return eleve.problematique || '';
+        return cleanString(eleve.problematique || '');
       case 'categorie':
-        return eleve.categorie || '';
+        return cleanString(eleve.categorie || '');
       default:
         return '';
     }
@@ -102,6 +102,17 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
     } else {
       setSortRules([{ field, direction: 'asc' }]);
     }
+  };
+
+  // Fonction pour nettoyer une chaîne (supprime les espaces, les caractères invisibles, etc.)
+  const cleanString = (str: string): string => {
+    if (!str) return '';
+    // Supprime les caractères de contrôle, espaces insécables, espaces normaux
+    return str
+      .replace(/^[\s\u00A0\u2000-\u200F\u2028-\u202F]+/, '') // supprime les espaces au début
+      .replace(/[\s\u00A0\u2000-\u200F\u2028-\u202F]+$/, '') // supprime les espaces à la fin
+      .replace(/\u00A0/g, ' ') // remplace les espaces insécables par des espaces normaux
+      .replace(/\s+/g, ' '); // remplace les multiples espaces par un seul
   };
 
   // Obtenir l'icône de tri pour une colonne
