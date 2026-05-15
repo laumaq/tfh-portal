@@ -10,7 +10,6 @@ import ProfileSettings from './components/ProfileSettings';
 import { 
   getJourneesFromSupabase, 
   detecterSessions, 
-  estConvoque, 
   getPresenceJournee, 
   getStatutSession,
   type Session 
@@ -54,7 +53,21 @@ interface Guide {
   accepte_numerique?: boolean;
 }
 
+interface DemandeDesinscription {
+  id: string;
+  eleve_id: string;
+  role_type: string;
+  statut: string;
+  created_at: string;
+}
+
 type TabType = 'suivi' | 'lecteur-interne' | 'defenses' | 'parametres';
+
+type ToastType = {
+  message: string;
+  type: 'success' | 'error' | 'info';
+  id: number;
+};
 
 export default function GuideDashboard() {
   const [eleves, setEleves] = useState<Eleve[]>([]);
@@ -88,6 +101,15 @@ export default function GuideDashboard() {
     lecteur_interne_voir_mediateurs: true,
   });
   
+  // Nouveaux états pour les demandes de désinscription
+  const [showDesinscriptionModal, setShowDesinscriptionModal] = useState(false);
+  const [selectedEleveForDesinscription, setSelectedEleveForDesinscription] = useState<Eleve | null>(null);
+  const [selectedRoleType, setSelectedRoleType] = useState<string>('');
+  const [desinscriptionComment, setDesinscriptionComment] = useState('');
+  const [submittingDesinscription, setSubmittingDesinscription] = useState(false);
+  const [toasts, setToasts] = useState<ToastType[]>([]);
+  const [demandesEnAttente, setDemandesEnAttente] = useState<Record<string, DemandeDesinscription[]>>({});
+  
   const [sessions, setSessions] = useState<Array<{
     index: number;
     nom: string;
@@ -119,6 +141,107 @@ export default function GuideDashboard() {
     }
   ];
 
+  // Fonction pour ajouter un toast
+  const addToast = (message: string, type: 'success' | 'error' | 'info') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { message, type, id }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 5000);
+  };
+
+  // Charger les demandes en attente pour l'utilisateur
+  const loadDemandesEnAttente = async (guideId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('demandes_desinscription')
+        .select('*')
+        .eq('demandeur_id', guideId)
+        .eq('demandeur_type', 'guide')
+        .eq('statut', 'en_attente');
+
+      if (error) throw error;
+
+      const demandesMap: Record<string, DemandeDesinscription[]> = {};
+      (data || []).forEach((demande: DemandeDesinscription) => {
+        if (!demandesMap[demande.eleve_id]) {
+          demandesMap[demande.eleve_id] = [];
+        }
+        demandesMap[demande.eleve_id].push(demande);
+      });
+      setDemandesEnAttente(demandesMap);
+    } catch (err) {
+      console.error('Erreur chargement demandes:', err);
+    }
+  };
+
+  // Vérifier si une demande existe déjà pour un élève et un rôle
+  const hasDemandeEnAttente = (eleveId: string, roleType: string) => {
+    return demandesEnAttente[eleveId]?.some(d => d.role_type === roleType) || false;
+  };
+
+  // Annuler une demande
+  const handleAnnulerDemande = async (demandeId: string) => {
+    try {
+      const response = await supabase.rpc('annuler_demande_desinscription', {
+        p_demande_id: demandeId,
+        p_demandeur_id: userGuideId
+      });
+
+      if (response.error) throw response.error;
+
+      addToast('Demande annulée avec succès', 'success');
+      await loadDemandesEnAttente(userGuideId);
+      await loadDefenses(userGuideId);
+    } catch (err) {
+      console.error('Erreur annulation:', err);
+      addToast('Erreur lors de l\'annulation', 'error');
+    }
+  };
+
+  // Créer une demande de désinscription
+  const handleCreerDemandeDesinscription = async () => {
+    if (!selectedEleveForDesinscription || !selectedRoleType) return;
+
+    setSubmittingDesinscription(true);
+    try {
+      const response = await supabase.rpc('create_desinscription_demande', {
+        p_eleve_id: selectedEleveForDesinscription.id,
+        p_demandeur_id: userGuideId,
+        p_demandeur_type: 'guide',
+        p_role_type: selectedRoleType,
+        p_commentaire: desinscriptionComment || null
+      });
+
+      if (response.error) throw response.error;
+
+      addToast('Demande de désinscription envoyée à la coordination', 'success');
+      setShowDesinscriptionModal(false);
+      setSelectedEleveForDesinscription(null);
+      setSelectedRoleType('');
+      setDesinscriptionComment('');
+      await loadDemandesEnAttente(userGuideId);
+      await loadDefenses(userGuideId);
+    } catch (err) {
+      console.error('Erreur création demande:', err);
+      addToast('Erreur lors de la création de la demande', 'error');
+    } finally {
+      setSubmittingDesinscription(false);
+    }
+  };
+
+  // Ouvrir le modal de désinscription
+  const openDesinscriptionModal = (eleve: Eleve, roleType: string) => {
+    if (hasDemandeEnAttente(eleve.id, roleType)) {
+      addToast('Une demande est déjà en attente pour ce rôle', 'info');
+      return;
+    }
+    setSelectedEleveForDesinscription(eleve);
+    setSelectedRoleType(roleType);
+    setDesinscriptionComment('');
+    setShowDesinscriptionModal(true);
+  };
+
   useEffect(() => {
     const userType = localStorage.getItem('userType');
     const userId = localStorage.getItem('userId');
@@ -133,6 +256,7 @@ export default function GuideDashboard() {
     setUserGuideId(userId);
     loadData(userId);
     loadSystemSettings();
+    loadDemandesEnAttente(userId);
   }, [router]);
 
   useEffect(() => {
@@ -140,27 +264,18 @@ export default function GuideDashboard() {
       try {
         const journeesData = await getJourneesFromSupabase(supabase);
         const sessionsDetectees = detecterSessions(journeesData);
-        
-        // Stocker les sessions complètes avec leurs journées
         setSessionsData(sessionsDetectees);
         
-        // Garder aussi le format simplifié pour les en-têtes
         const toutesSessions = sessionsDetectees.map(session => {
           const match = session.id.match(/session_(\d+)/);
           const index = match ? parseInt(match[1]) : 0;
-          return {
-            index: index,
-            nom: session.nom
-          };
+          return { index, nom: session.nom };
         });
-        
         setSessions(toutesSessions);
-        
       } catch (error) {
         console.error('Erreur chargement des sessions:', error);
       }
     };
-    
     chargerSessions();
   }, []);
 
@@ -291,40 +406,15 @@ export default function GuideDashboard() {
   const getSessionStatusDisplay = (statut: string) => {
     switch (statut) {
       case 'present':
-        return {
-          text: '✓ Présent',
-          bgColor: 'bg-green-100',
-          textColor: 'text-green-700',
-          icon: '✓'
-        };
+        return { text: '✓ Présent', bgColor: 'bg-green-100', textColor: 'text-green-700', icon: '✓' };
       case 'absent':
-        return {
-          text: '✗ Absent',
-          bgColor: 'bg-red-100',
-          textColor: 'text-red-700',
-          icon: '✗'
-        };
+        return { text: '✗ Absent', bgColor: 'bg-red-100', textColor: 'text-red-700', icon: '✗' };
       case 'partiellement-present':
-        return {
-          text: '⚠️ Partiel',
-          bgColor: 'bg-yellow-100',
-          textColor: 'text-yellow-700',
-          icon: '⚠️'
-        };
+        return { text: '⚠️ Partiel', bgColor: 'bg-yellow-100', textColor: 'text-yellow-700', icon: '⚠️' };
       case 'en-attente':
-        return {
-          text: '? En attente',
-          bgColor: 'bg-gray-100',
-          textColor: 'text-gray-500',
-          icon: '?'
-        };
+        return { text: '? En attente', bgColor: 'bg-gray-100', textColor: 'text-gray-500', icon: '?' };
       default:
-        return {
-          text: 'Non convoqué',
-          bgColor: 'bg-gray-50',
-          textColor: 'text-gray-400',
-          icon: '-'
-        };
+        return { text: 'Non convoqué', bgColor: 'bg-gray-50', textColor: 'text-gray-400', icon: '-' };
     }
   };
   
@@ -409,6 +499,7 @@ export default function GuideDashboard() {
   useEffect(() => {
     if (activeTab === 'defenses' && userGuideId) {
       loadDefenses(userGuideId);
+      loadDemandesEnAttente(userGuideId);
     }
   }, [activeTab, userGuideId]);
 
@@ -417,7 +508,6 @@ export default function GuideDashboard() {
     return eleve.categorie === selectedCategorie;
   });
 
-  // Ajoute cette fonction après loadDefenses (vers ligne 250)
   const loadPresences = async (eleveId: string) => {
     try {
       const { data, error } = await supabase
@@ -434,7 +524,6 @@ export default function GuideDashboard() {
     }
   };  
 
-  // Ajoute ce useEffect après le chargement des élèves (vers ligne 200)
   useEffect(() => {
     const loadAllPresences = async () => {
       if (eleves.length === 0) return;
@@ -530,10 +619,7 @@ export default function GuideDashboard() {
   
       setEleves(prev => prev.map(eleve => {
         if (eleve.id === eleveId) {
-          return { 
-            ...eleve, 
-            [columnName]: value
-          };
+          return { ...eleve, [columnName]: value };
         }
         return eleve;
       }));
@@ -589,10 +675,6 @@ export default function GuideDashboard() {
     setObjectifParticulier('');
   };
 
-  const getShortLabel = (value: string) => {
-    return getConvocationLabelShort(value);
-  };
-
   const handleLogout = () => {
     localStorage.clear();
     router.push('/');
@@ -617,6 +699,22 @@ export default function GuideDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+      {/* Toast Container */}
+      <div className="fixed top-4 right-4 z-50 space-y-2">
+        {toasts.map(toast => (
+          <div
+            key={toast.id}
+            className={`px-4 py-3 rounded-lg shadow-lg text-sm font-medium animate-slide-in ${
+              toast.type === 'success' ? 'bg-green-500 text-white' :
+              toast.type === 'error' ? 'bg-red-500 text-white' :
+              'bg-blue-500 text-white'
+            }`}
+          >
+            {toast.message}
+          </div>
+        ))}
+      </div>
+
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
@@ -885,11 +983,9 @@ export default function GuideDashboard() {
                         const valeur = (eleve as any)[columnName] as string | undefined;
                         const estConvoqueFlag = valeur?.startsWith('Oui') === true;
                         
-                        // Obtenir le statut de présence pour cette session
                         const statutSession = getStatutSession(eleve as any, session);
                         const statusDisplay = getSessionStatusDisplay(statutSession);
                         
-                        // Si l'élève n'est pas convoqué, ne pas afficher les présences
                         if (!estConvoqueFlag) {
                           return (
                             <td key={session.id} className="px-4 py-3">
@@ -913,11 +1009,9 @@ export default function GuideDashboard() {
                           );
                         }
                         
-                        // Afficher les présences pour chaque journée de la session
                         return (
                           <td key={session.id} className="px-4 py-3">
                             <div className="space-y-2">
-                              {/* Sélecteur de convocation */}
                               <select
                                 value={valeur || ''}
                                 onChange={(e) => handleUpdateSessionConvocation(eleve.id, sessionNum, e.target.value)}
@@ -930,7 +1024,6 @@ export default function GuideDashboard() {
                                 ))}
                               </select>
                               
-                              {/* Détail des présences par journée */}
                               <div className="flex flex-wrap gap-1 justify-center">
                                 {session.journees.map((journeeKey, idx) => {
                                   const journeeNum = parseInt(journeeKey.split('_')[1]);
@@ -1147,12 +1240,16 @@ export default function GuideDashboard() {
                             {displaySettings.lecteur_interne_voir_guides && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur interne</th>}
                             {displaySettings.lecteur_interne_voir_lecteurs_externes && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur externe</th>}
                             {displaySettings.lecteur_interne_voir_mediateurs && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Médiateur</th>}
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
                           {defensesProgrammees.map((eleve) => {
                             const isGuide = eleve.guide_id === userGuideId;
                             const isLecteurInterne = eleve.lecteur_interne_id === userGuideId;
+                            const hasGuideDemande = hasDemandeEnAttente(eleve.id, 'guide');
+                            const hasLecteurInterneDemande = hasDemandeEnAttente(eleve.id, 'lecteur_interne');
+                            
                             return (
                               <tr key={eleve.id} className="border-b hover:bg-gray-50">
                                 <td className="px-4 py-3 text-sm font-medium whitespace-nowrap">{formatDate(eleve.date_defense)}</td>
@@ -1211,6 +1308,38 @@ export default function GuideDashboard() {
                                     {eleve.mediateur_nom ? `${eleve.mediateur_prenom} ${eleve.mediateur_nom}` : '-'}
                                   </td>
                                 )}
+                                <td className="px-4 py-3 text-sm">
+                                  <div className="flex gap-2">
+                                    {isGuide && (
+                                      <button
+                                        onClick={() => openDesinscriptionModal(eleve, 'guide')}
+                                        disabled={hasGuideDemande}
+                                        className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                                          hasGuideDemande 
+                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                            : 'bg-red-100 text-red-700 hover:bg-red-200'
+                                        }`}
+                                        title={hasGuideDemande ? "Demande déjà envoyée" : "Se désinscrire comme guide"}
+                                      >
+                                        {hasGuideDemande ? "Demande envoyée" : "Quitter guide"}
+                                      </button>
+                                    )}
+                                    {isLecteurInterne && (
+                                      <button
+                                        onClick={() => openDesinscriptionModal(eleve, 'lecteur_interne')}
+                                        disabled={hasLecteurInterneDemande}
+                                        className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                                          hasLecteurInterneDemande 
+                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                            : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                                        }`}
+                                        title={hasLecteurInterneDemande ? "Demande déjà envoyée" : "Se désinscrire comme lecteur interne"}
+                                      >
+                                        {hasLecteurInterneDemande ? "Demande envoyée" : "Quitter lecteur interne"}
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
                               </tr>
                             );
                           })}
@@ -1245,12 +1374,16 @@ export default function GuideDashboard() {
                             {displaySettings.lecteur_interne_voir_guides && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur interne</th>}
                             {displaySettings.lecteur_interne_voir_lecteurs_externes && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur externe</th>}
                             {displaySettings.lecteur_interne_voir_mediateurs && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Médiateur</th>}
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
                           {defensesNonProgrammees.map((eleve) => {
                             const isGuide = eleve.guide_id === userGuideId;
                             const isLecteurInterne = eleve.lecteur_interne_id === userGuideId;
+                            const hasGuideDemande = hasDemandeEnAttente(eleve.id, 'guide');
+                            const hasLecteurInterneDemande = hasDemandeEnAttente(eleve.id, 'lecteur_interne');
+                            
                             return (
                               <tr key={eleve.id} className="border-b hover:bg-gray-50">
                                 {displaySettings.lecteur_interne_voir_eleves && (
@@ -1306,6 +1439,38 @@ export default function GuideDashboard() {
                                     {eleve.mediateur_nom ? `${eleve.mediateur_prenom} ${eleve.mediateur_nom}` : '-'}
                                   </td>
                                 )}
+                                <td className="px-4 py-3 text-sm">
+                                  <div className="flex gap-2">
+                                    {isGuide && (
+                                      <button
+                                        onClick={() => openDesinscriptionModal(eleve, 'guide')}
+                                        disabled={hasGuideDemande}
+                                        className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                                          hasGuideDemande 
+                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                            : 'bg-red-100 text-red-700 hover:bg-red-200'
+                                        }`}
+                                        title={hasGuideDemande ? "Demande déjà envoyée" : "Se désinscrire comme guide"}
+                                      >
+                                        {hasGuideDemande ? "Demande envoyée" : "Quitter guide"}
+                                      </button>
+                                    )}
+                                    {isLecteurInterne && (
+                                      <button
+                                        onClick={() => openDesinscriptionModal(eleve, 'lecteur_interne')}
+                                        disabled={hasLecteurInterneDemande}
+                                        className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+                                          hasLecteurInterneDemande 
+                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                            : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                                        }`}
+                                        title={hasLecteurInterneDemande ? "Demande déjà envoyée" : "Se désinscrire comme lecteur interne"}
+                                      >
+                                        {hasLecteurInterneDemande ? "Demande envoyée" : "Quitter lecteur interne"}
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
                               </tr>
                             );
                           })}
@@ -1423,7 +1588,7 @@ export default function GuideDashboard() {
             <span>
               {activeTab === 'suivi' && 'Vous pouvez modifier la problématique en cliquant dessus (sauf si l’élève a déposé un lien, auquel cas il est cliquable vers sa version numérique). Les convocations se gèrent via les menus déroulants.'}
               {activeTab === 'lecteur-interne' && 'Sélectionnez les élèves pour lesquels vous serez lecteur interne. Un élève ne peut avoir qu\'un seul lecteur interne.'}
-              {activeTab === 'defenses' && 'Les élèves en rouge n’ont pas rendu leur TFH → soutenance annulée. Les problématiques bleues sont cliquables pour accéder à la version digitale du TFH (si disponible).'}
+              {activeTab === 'defenses' && 'Les élèves en rouge n’ont pas rendu leur TFH → soutenance annulée. Les problématiques bleues sont cliquables pour accéder à la version digitale du TFH (si disponible). Pour vous désinscrire d\'une défense, cliquez sur "Quitter guide" ou "Quitter lecteur interne" - votre demande devra être approuvée par la coordination.'}
               {activeTab === 'parametres' && 'Modifiez vos informations personnelles et vos préférences de format (papier ou numérique).'}
             </span>
           </p>
@@ -1475,6 +1640,84 @@ export default function GuideDashboard() {
           </div>
         </div>
       )}
+
+      {/* Modal de demande de désinscription */}
+      {showDesinscriptionModal && selectedEleveForDesinscription && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="px-6 py-4 border-b">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-800">Demande de désinscription</h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {selectedEleveForDesinscription.prenom} {selectedEleveForDesinscription.nom} - {selectedEleveForDesinscription.classe}
+                  </p>
+                </div>
+                <button onClick={() => setShowDesinscriptionModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+              </div>
+            </div>
+            <div className="px-6 py-4">
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Rôle concerné : <span className="font-semibold">{selectedRoleType === 'guide' ? 'Guide' : 'Lecteur interne'}</span>
+                </label>
+                <p className="text-sm text-gray-600 mb-4">
+                  Votre demande devra être approuvée par la coordination. En attendant, vous restez assigné à cette défense.
+                </p>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Commentaire (optionnel) :</label>
+                <textarea
+                  value={desinscriptionComment}
+                  onChange={(e) => setDesinscriptionComment(e.target.value)}
+                  className="w-full h-24 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                  placeholder="Expliquez brièvement votre demande de désinscription..."
+                />
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t bg-gray-50 rounded-b-lg">
+              <div className="flex justify-end gap-3">
+                <button 
+                  onClick={() => setShowDesinscriptionModal(false)} 
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium"
+                  disabled={submittingDesinscription}
+                >
+                  Annuler
+                </button>
+                <button 
+                  onClick={handleCreerDemandeDesinscription} 
+                  disabled={submittingDesinscription}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
+                    !submittingDesinscription 
+                      ? 'bg-red-600 text-white hover:bg-red-700' 
+                      : 'bg-red-400 text-white cursor-not-allowed'
+                  }`}
+                >
+                  {submittingDesinscription ? (
+                    <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>Envoi...</>
+                  ) : (
+                    'Envoyer la demande'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style jsx>{`
+        @keyframes slideIn {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        .animate-slide-in {
+          animation: slideIn 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 }
