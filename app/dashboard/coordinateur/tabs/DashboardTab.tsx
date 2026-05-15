@@ -11,7 +11,7 @@ import {
   Shield, FileText, UserCheck, Calendar, 
   Users, Settings, BarChart, ChevronRight, BookOpen,
   AlertCircle, CheckCircle, XCircle, Clock, UserMinus, MessageCircle,
-  Eye, History, Filter, AlertTriangle
+  Eye, History, Filter, AlertTriangle, Link as LinkIcon
 } from 'lucide-react';
 
 interface DashboardTabProps {
@@ -72,36 +72,92 @@ export default function DashboardTab({
     loadSessions();
   }, []);
   
-  // Fonction pour trouver la prochaine session
-  const getProchaineSession = () => {
-    const maintenant = new Date();
-    const prochaineSession = sessions.find(session => {
-      const finSession = new Date(session.date_fin);
-      finSession.setHours(23, 59, 59, 999);
-      return finSession >= maintenant;
-    });
-    return prochaineSession;
+  // Vérifier si une demande est un changement de rôle
+  const estChangementDeRole = (demande: DemandeDesinscription): boolean => {
+    return demande.commentaire_demandeur?.startsWith('CHANGEMENT_DE_ROLE_LIE|') || false;
   };
   
-  // Vérifier si un poste n'a pas été pourvu après désinscription
-  const isPosteNonPourvu = (demande: DemandeDesinscription): boolean => {
-    // Trouver l'élève concerné
-    const eleve = eleves.find(e => e.id === demande.eleve_id);
-    if (!eleve) return false;
+  // Trouver la demande liée (pour un changement de rôle)
+  const trouverDemandeLiee = (demande: DemandeDesinscription): DemandeDesinscription | undefined => {
+    if (!estChangementDeRole(demande)) return undefined;
     
-    // Vérifier si le poste est toujours vacant selon le rôle
-    switch (demande.role_type) {
-      case 'guide':
-        return !eleve.guide_id;
-      case 'lecteur_interne':
-        return !eleve.lecteur_interne_id;
-      case 'lecteur_externe':
-        return !eleve.lecteur_externe_id;
-      case 'mediateur':
-        return !eleve.mediateur_id;
-      default:
-        return false;
+    // Extraire l'ID du commentaire ou chercher par similarité
+    const toutesDemandes = [...demandesEnAttente, ...demandesTraitees];
+    
+    // Chercher une autre demande avec le même commentaire (même demande de changement)
+    return toutesDemandes.find(d => 
+      d.id !== demande.id && 
+      d.commentaire_demandeur === demande.commentaire_demandeur &&
+      d.eleve_id === demande.eleve_id &&
+      d.demandeur_id === demande.demandeur_id
+    );
+  };
+  
+  // Récupérer le nouveau rôle depuis le commentaire
+  const getNouveauRoleFromCommentaire = (commentaire: string | null): string | null => {
+    if (!commentaire || !commentaire.startsWith('CHANGEMENT_DE_ROLE_LIE|')) return null;
+    const parts = commentaire.split('|');
+    return parts.length > 1 ? parts[1] : null;
+  };
+  
+  // Récupérer l'ancien rôle depuis le commentaire
+  const getAncienRoleFromCommentaire = (commentaire: string | null): string | null => {
+    if (!commentaire || !commentaire.startsWith('CHANGEMENT_DE_ROLE_LIE|')) return null;
+    const parts = commentaire.split('|');
+    return parts.length > 2 ? parts[2] : null;
+  };
+  
+  // Traiter les deux demandes liées simultanément
+  const traiterDemandesLiees = async (demande: DemandeDesinscription, action: 'approuver' | 'refuser', commentaire?: string) => {
+    const demandeLiee = trouverDemandeLiee(demande);
+    
+    if (action === 'approuver') {
+      // Approuver les deux demandes
+      let success1 = await onApprouverDemande(demande.id, commentaire);
+      let success2 = demandeLiee ? await onApprouverDemande(demandeLiee.id, commentaire) : true;
+      
+      if (success1 && success2) {
+        // Mettre à jour la base de données pour le changement de rôle
+        const nouveauRole = getNouveauRoleFromCommentaire(demande.commentaire_demandeur);
+        const ancienRole = getAncienRoleFromCommentaire(demande.commentaire_demandeur);
+        
+        if (nouveauRole && ancienRole) {
+          // Déterminer les colonnes
+          let colonneAncien = '';
+          let colonneNouveau = '';
+          
+          switch (ancienRole) {
+            case 'lecteur_externe': colonneAncien = 'lecteur_externe_id'; break;
+            case 'mediateur': colonneAncien = 'mediateur_id'; break;
+          }
+          
+          switch (nouveauRole) {
+            case 'lecteur_externe': colonneNouveau = 'lecteur_externe_id'; break;
+            case 'mediateur': colonneNouveau = 'mediateur_id'; break;
+          }
+          
+          // Échanger les rôles
+          if (colonneAncien && colonneNouveau) {
+            // Enlever l'ancien rôle et mettre le nouveau
+            await supabase
+              .from('eleves')
+              .update({ 
+                [colonneAncien]: null,
+                [colonneNouveau]: demande.demandeur_id
+              })
+              .eq('id', demande.eleve_id);
+          }
+        }
+      }
+    } else {
+      // Refuser les deux demandes
+      await onRefuserDemande(demande.id, commentaire);
+      if (demandeLiee) {
+        await onRefuserDemande(demandeLiee.id, commentaire);
+      }
     }
+    
+    onRefresh();
   };
   
   // Ouvrir le modal de traitement
@@ -112,21 +168,25 @@ export default function DashboardTab({
     setModalOpen(true);
   };
   
-  // Traiter la demande
+  // Traiter la demande (avec gestion des demandes liées)
   const handleTraiterDemande = async () => {
     if (!selectedDemande || !actionType) return;
     
     setProcessing(true);
-    let success = false;
     
-    if (actionType === 'approuver') {
-      success = await onApprouverDemande(selectedDemande.id, commentaire || undefined);
+    if (estChangementDeRole(selectedDemande)) {
+      await traiterDemandesLiees(selectedDemande, actionType, commentaire || undefined);
     } else {
-      success = await onRefuserDemande(selectedDemande.id, commentaire || undefined);
-    }
-    
-    if (success) {
-      onRefresh();
+      // Demande simple
+      let success = false;
+      if (actionType === 'approuver') {
+        success = await onApprouverDemande(selectedDemande.id, commentaire || undefined);
+      } else {
+        success = await onRefuserDemande(selectedDemande.id, commentaire || undefined);
+      }
+      if (success) {
+        onRefresh();
+      }
     }
     
     setProcessing(false);
@@ -134,6 +194,20 @@ export default function DashboardTab({
     setSelectedDemande(null);
     setActionType(null);
     setCommentaire('');
+  };
+  
+  // Vérifier si un poste n'a pas été pourvu après désinscription
+  const isPosteNonPourvu = (demande: DemandeDesinscription): boolean => {
+    const eleve = eleves.find(e => e.id === demande.eleve_id);
+    if (!eleve) return false;
+    
+    switch (demande.role_type) {
+      case 'guide': return !eleve.guide_id;
+      case 'lecteur_interne': return !eleve.lecteur_interne_id;
+      case 'lecteur_externe': return !eleve.lecteur_externe_id;
+      case 'mediateur': return !eleve.mediateur_id;
+      default: return false;
+    }
   };
   
   // Récupérer le libellé du rôle
@@ -158,14 +232,38 @@ export default function DashboardTab({
     }
   };
   
+  // Regrouper les demandes liées pour l'affichage
+  const getDemandesAffichees = (demandes: DemandeDesinscription[]): DemandeDesinscription[] => {
+    const demandesLiees = new Set<string>();
+    const result: DemandeDesinscription[] = [];
+    
+    for (const demande of demandes) {
+      if (demandesLiees.has(demande.id)) continue;
+      
+      if (estChangementDeRole(demande)) {
+        const liee = trouverDemandeLiee(demande);
+        if (liee) {
+          demandesLiees.add(liee.id);
+          // Créer un objet virtuel pour représenter le groupe
+          result.push({
+            ...demande,
+            commentaire_demandeur: `🔄 CHANGEMENT DE RÔLE: ${getAncienRoleFromCommentaire(demande.commentaire_demandeur)} → ${getNouveauRoleFromCommentaire(demande.commentaire_demandeur)}`
+          } as DemandeDesinscription);
+          continue;
+        }
+      }
+      result.push(demande);
+    }
+    
+    return result;
+  };
+  
   // Filtrer les demandes pour l'historique
   const filteredDemandesTraitees = demandesTraitees.filter(demande => {
-    // Filtre par statut
     if (filterStatut !== 'toutes' && demande.statut !== filterStatut) {
       return false;
     }
     
-    // Filtre "postes non pourvus" (uniquement pour les demandes approuvées)
     if (filterNonPourvus && demande.statut === 'approuvee') {
       return isPosteNonPourvu(demande);
     }
@@ -191,7 +289,12 @@ export default function DashboardTab({
     const avecThematique = eleves.filter(e => e.thematique && e.thematique.trim() !== '').length;
     
     const getProchainesConvocations = () => {
-      const prochaineSession = getProchaineSession();
+      const prochaineSession = sessions.find(session => {
+        const finSession = new Date(session.date_fin);
+        finSession.setHours(23, 59, 59, 999);
+        return finSession >= new Date();
+      });
+      
       if (!prochaineSession) return null;
       
       const sessionIndex = parseInt(prochaineSession.id.split('_')[1]);
@@ -341,6 +444,8 @@ export default function DashboardTab({
     }
   ];
 
+  const demandesAffichees = getDemandesAffichees(demandesEnAttente);
+
   return (
     <div className="p-6">
       <div className="mb-8">
@@ -349,81 +454,103 @@ export default function DashboardTab({
       </div>
 
       {/* NOTIFICATIONS - Demandes en attente */}
-      {demandesEnAttente.length > 0 && (
+      {demandesAffichees.length > 0 && (
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-4">
             <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
             <h2 className="text-lg font-semibold text-gray-800">
-              Demandes de désinscription en attente ({demandesEnAttente.length})
+              Demandes en attente ({demandesAffichees.length})
             </h2>
           </div>
           <div className="space-y-3">
-            {demandesEnAttente.map((demande) => (
-              <div key={demande.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-start gap-3">
-                      <div className={`p-2 rounded-lg ${getRoleColor(demande.role_type)}`}>
-                        <UserMinus className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-gray-800">
-                            {demande.demandeur_prenom} {demande.demandeur_nom}
-                          </span>
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getRoleColor(demande.role_type)}`}>
-                            {getRoleLabel(demande.role_type)}
-                          </span>
-                          <span className="text-gray-400 text-sm">•</span>
-                          <span className="text-sm text-gray-500">
-                            {new Date(demande.created_at).toLocaleString('fr-FR')}
-                          </span>
+            {demandesAffichees.map((demande) => {
+              const isChangement = estChangementDeRole(demande);
+              const demandeLiee = isChangement ? trouverDemandeLiee(demande) : null;
+              
+              return (
+                <div key={demande.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-start gap-3">
+                        <div className={`p-2 rounded-lg ${isChangement ? 'bg-indigo-100 text-indigo-700' : getRoleColor(demande.role_type)}`}>
+                          {isChangement ? <LinkIcon className="w-4 h-4" /> : <UserMinus className="w-4 h-4" />}
                         </div>
-                        <p className="text-sm text-gray-600 mt-1">
-                          souhaite se désinscrire de la défense de{' '}
-                          <span className="font-medium">{demande.eleve_prenom} {demande.eleve_nom}</span>
-                          {' '}({demande.eleve_classe})
-                        </p>
-                        <div className="text-xs text-gray-400 mt-1">
-                          Défense le {new Date(demande.defense_date).toLocaleDateString('fr-FR')} à {demande.defense_horaire} - {demande.defense_localisation}
-                        </div>
-                        {demande.commentaire_demandeur && (
-                          <div className="mt-2 p-2 bg-gray-50 rounded-lg text-sm text-gray-600 flex items-start gap-2">
-                            <MessageCircle className="w-3 h-3 text-gray-400 mt-0.5" />
-                            <span>"{demande.commentaire_demandeur}"</span>
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-gray-800">
+                              {demande.demandeur_prenom} {demande.demandeur_nom}
+                            </span>
+                            {isChangement ? (
+                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
+                                🔄 Changement de rôle
+                              </span>
+                            ) : (
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getRoleColor(demande.role_type)}`}>
+                                {getRoleLabel(demande.role_type)}
+                              </span>
+                            )}
+                            <span className="text-gray-400 text-sm">•</span>
+                            <span className="text-sm text-gray-500">
+                              {new Date(demande.created_at).toLocaleString('fr-FR')}
+                            </span>
                           </div>
-                        )}
+                          {isChangement ? (
+                            <p className="text-sm text-gray-600 mt-1">
+                              {demande.commentaire_demandeur}
+                            </p>
+                          ) : (
+                            <p className="text-sm text-gray-600 mt-1">
+                              souhaite se désinscrire de la défense de{' '}
+                              <span className="font-medium">{demande.eleve_prenom} {demande.eleve_nom}</span>
+                              {' '}({demande.eleve_classe})
+                            </p>
+                          )}
+                          <div className="text-xs text-gray-400 mt-1">
+                            Défense le {new Date(demande.defense_date).toLocaleDateString('fr-FR')} à {demande.defense_horaire} - {demande.defense_localisation}
+                          </div>
+                          {demande.commentaire_demandeur && !isChangement && (
+                            <div className="mt-2 p-2 bg-gray-50 rounded-lg text-sm text-gray-600 flex items-start gap-2">
+                              <MessageCircle className="w-3 h-3 text-gray-400 mt-0.5" />
+                              <span>"{demande.commentaire_demandeur}"</span>
+                            </div>
+                          )}
+                          {demandeLiee && (
+                            <div className="mt-2 p-2 bg-indigo-50 rounded-lg text-sm text-indigo-700 flex items-start gap-2">
+                              <LinkIcon className="w-3 h-3 text-indigo-400 mt-0.5" />
+                              <span>Demande liée pour le rôle {getRoleLabel(demandeLiee.role_type)}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => openTraitementModal(demande, 'refuser')}
-                      className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors flex items-center gap-1"
-                    >
-                      <XCircle className="w-4 h-4" />
-                      Refuser
-                    </button>
-                    <button
-                      onClick={() => openTraitementModal(demande, 'approuver')}
-                      className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors flex items-center gap-1"
-                    >
-                      <CheckCircle className="w-4 h-4" />
-                      Approuver
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => openTraitementModal(demande, 'refuser')}
+                        className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors flex items-center gap-1"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        Refuser
+                      </button>
+                      <button
+                        onClick={() => openTraitementModal(demande, 'approuver')}
+                        className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors flex items-center gap-1"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        Approuver
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* Aperçu du système */}
+      {/* Aperçu du système - identique */}
       <div className="bg-white rounded-xl shadow-sm border p-6 mb-8">
         <h3 className="font-semibold text-gray-800 mb-6 text-lg">Aperçu du système</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Élèves */}
           <div className="p-5 bg-blue-50 rounded-xl border border-blue-100">
             <div className="flex items-center justify-between mb-2">
               <div className="text-3xl font-bold text-blue-700">
@@ -443,7 +570,6 @@ export default function DashboardTab({
             </div>
           </div>
           
-          {/* Guides */}
           <div className="p-5 bg-green-50 rounded-xl border border-green-100">
             <div className="flex items-center justify-between mb-2">
               <div className="text-3xl font-bold text-green-700">
@@ -463,7 +589,6 @@ export default function DashboardTab({
             </div>
           </div>
           
-          {/* Défenses/Problématiques/Thématiques */}
           <div className="p-5 bg-purple-50 rounded-xl border border-purple-100">
             <div className="text-center mb-2">
               <div className="text-2xl md:text-3xl font-bold text-purple-700">
@@ -497,7 +622,6 @@ export default function DashboardTab({
             </div>
           </div>
           
-          {/* Convoqués prochaine session */}
           <div className="p-5 bg-orange-50 rounded-xl border border-orange-100">
             <div className="text-center mb-2">
               <div className="text-2xl md:text-3xl font-bold text-orange-700">
@@ -564,6 +688,8 @@ export default function DashboardTab({
               <tbody>
                 {demandesTraitees.slice(0, 5).map((demande) => {
                   const posteNonPourvu = demande.statut === 'approuvee' && isPosteNonPourvu(demande);
+                  const isChangement = estChangementDeRole(demande);
+                  
                   return (
                     <tr key={demande.id} className="border-b hover:bg-gray-50">
                       <td className="px-4 py-3 text-gray-500">
@@ -573,9 +699,15 @@ export default function DashboardTab({
                         <span className="font-medium">{demande.demandeur_prenom} {demande.demandeur_nom}</span>
                        </td>
                       <td className="px-4 py-3">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getRoleColor(demande.role_type)}`}>
-                          {getRoleLabel(demande.role_type)}
-                        </span>
+                        {isChangement ? (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
+                            🔄 Changement
+                          </span>
+                        ) : (
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getRoleColor(demande.role_type)}`}>
+                            {getRoleLabel(demande.role_type)}
+                          </span>
+                        )}
                        </td>
                       <td className="px-4 py-3">
                         {demande.eleve_prenom} {demande.eleve_nom} ({demande.eleve_classe})
@@ -627,7 +759,7 @@ export default function DashboardTab({
         </div>
       )}
 
-      {/* Cartes de navigation */}
+      {/* Cartes de navigation - identiques */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {tabs.map((tab) => (
           <div
@@ -666,11 +798,10 @@ export default function DashboardTab({
         ))}
       </div>
 
-      {/* Modal d'historique complet */}
+      {/* Modal d'historique complet - identique */}
       {historiqueModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-6xl w-full max-h-[90vh] flex flex-col">
-            {/* En-tête */}
             <div className="px-6 py-4 border-b flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
@@ -689,7 +820,6 @@ export default function DashboardTab({
               </button>
             </div>
             
-            {/* Filtres */}
             <div className="px-6 py-3 border-b bg-gray-50 flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-2">
                 <Filter className="w-4 h-4 text-gray-500" />
@@ -741,7 +871,6 @@ export default function DashboardTab({
               </label>
             </div>
             
-            {/* Liste des demandes avec scroll */}
             <div className="flex-1 overflow-y-auto p-6">
               {filteredDemandesTraitees.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
@@ -751,6 +880,8 @@ export default function DashboardTab({
                 <div className="space-y-3">
                   {filteredDemandesTraitees.map((demande) => {
                     const posteNonPourvu = demande.statut === 'approuvee' && isPosteNonPourvu(demande);
+                    const isChangement = estChangementDeRole(demande);
+                    
                     return (
                       <div 
                         key={demande.id} 
@@ -764,9 +895,15 @@ export default function DashboardTab({
                               <span className="font-semibold text-gray-800">
                                 {demande.demandeur_prenom} {demande.demandeur_nom}
                               </span>
-                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getRoleColor(demande.role_type)}`}>
-                                {getRoleLabel(demande.role_type)}
-                              </span>
+                              {isChangement ? (
+                                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
+                                  🔄 Changement
+                                </span>
+                              ) : (
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getRoleColor(demande.role_type)}`}>
+                                  {getRoleLabel(demande.role_type)}
+                                </span>
+                              )}
                               {demande.statut === 'approuvee' ? (
                                 <span className="inline-flex items-center gap-1 text-green-600 text-xs">
                                   <CheckCircle className="w-3 h-3" />
@@ -795,7 +932,7 @@ export default function DashboardTab({
                               Demandé le {new Date(demande.created_at).toLocaleString('fr-FR')}
                               {demande.traitee_le && ` • Traité le ${new Date(demande.traitee_le).toLocaleString('fr-FR')}`}
                             </div>
-                            {demande.commentaire_demandeur && (
+                            {demande.commentaire_demandeur && !isChangement && (
                               <div className="mt-2 p-2 bg-gray-100 rounded-lg text-sm text-gray-600">
                                 <span className="font-medium">Commentaire du demandeur:</span> "{demande.commentaire_demandeur}"
                               </div>
@@ -814,7 +951,6 @@ export default function DashboardTab({
               )}
             </div>
             
-            {/* Pied du modal */}
             <div className="px-6 py-4 border-t bg-gray-50 rounded-b-lg">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-500">
@@ -843,7 +979,7 @@ export default function DashboardTab({
                     {actionType === 'approuver' ? 'Approuver la demande' : 'Refuser la demande'}
                   </h2>
                   <p className="text-sm text-gray-600 mt-1">
-                    {selectedDemande.demandeur_prenom} {selectedDemande.demandeur_nom} - {getRoleLabel(selectedDemande.role_type)}
+                    {selectedDemande.demandeur_prenom} {selectedDemande.demandeur_nom}
                   </p>
                 </div>
                 <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-gray-600">✕</button>
@@ -857,6 +993,11 @@ export default function DashboardTab({
                 <p className="text-sm text-gray-600 mt-1">
                   <span className="font-medium">Défense :</span> {new Date(selectedDemande.defense_date).toLocaleDateString('fr-FR')} à {selectedDemande.defense_horaire} - {selectedDemande.defense_localisation}
                 </p>
+                {estChangementDeRole(selectedDemande) && (
+                  <p className="text-sm text-red-600 mt-2 font-medium">
+                    ⚠️ Cette demande fait partie d'un changement de rôle. Les deux demandes seront traitées simultanément.
+                  </p>
+                )}
               </div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Commentaire (optionnel) :</label>
               <textarea
@@ -866,9 +1007,14 @@ export default function DashboardTab({
                 placeholder={actionType === 'approuver' ? "Justification de l'approbation..." : "Motif du refus..."}
                 autoFocus
               />
-              {actionType === 'approuver' && (
+              {actionType === 'approuver' && !estChangementDeRole(selectedDemande) && (
                 <p className="text-xs text-red-500 mt-2">
                   ⚠️ L'utilisateur sera immédiatement désinscrit et le créneau deviendra disponible.
+                </p>
+              )}
+              {actionType === 'approuver' && estChangementDeRole(selectedDemande) && (
+                <p className="text-xs text-red-500 mt-2">
+                  ⚠️ L'utilisateur changera de rôle : l'ancien rôle sera supprimé et le nouveau sera assigné.
                 </p>
               )}
             </div>
@@ -893,7 +1039,7 @@ export default function DashboardTab({
                   {processing ? (
                     <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>Traitement...</>
                   ) : (
-                    actionType === 'approuver' ? 'Approuver la désinscription' : 'Refuser la demande'
+                    actionType === 'approuver' ? 'Approuver la demande' : 'Refuser la demande'
                   )}
                 </button>
               </div>
