@@ -1149,17 +1149,17 @@ export default function GuideDashboard() {
                                         {isLecteurInterne && <span className="ml-1 text-xs text-blue-600">(vous)</span>}
                                       </span>
                                     ) : '-'}
-                                  <td>
+                                  </td>
                                 )}
                                 {displaySettings.lecteur_interne_voir_lecteurs_externes && (
                                   <td className="px-4 py-3 text-sm whitespace-nowrap">
                                     {eleve.lecteur_externe_nom ? `${eleve.lecteur_externe_prenom} ${eleve.lecteur_externe_nom}` : '-'}
-                                  <td>
+                                  </td>
                                 )}
                                 {displaySettings.lecteur_interne_voir_mediateurs && (
                                   <td className="px-4 py-3 text-sm whitespace-nowrap">
                                     {eleve.mediateur_nom ? `${eleve.mediateur_prenom} ${eleve.mediateur_nom}` : '-'}
-                                  <td>
+                                  </td>
                                 )}
                               </tr>
                             );
