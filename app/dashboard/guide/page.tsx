@@ -78,42 +78,7 @@ export default function GuideDashboard() {
     lecteur_interne_voir_lecteurs_externes: true,
     lecteur_interne_voir_mediateurs: true,
   });
-  const [presences, setPresences] = useState<Record<string, Record<number, boolean | null>>>({});
   
-  // Ajoute cette fonction pour charger les présences
-  const loadPresences = async (eleveId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('eleves')
-        .select('journee_1_present, journee_2_present, journee_3_present, journee_4_present, journee_5_present')
-        .eq('id', eleveId)
-        .single();
-      
-      if (error) throw error;
-      
-      return data;
-    } catch (err) {
-      console.error('Erreur chargement présences:', err);
-      return null;
-    }
-  };
-  
-  // Dans l'effet, charge les présences pour tous les élèves
-  useEffect(() => {
-    if (eleves.length > 0) {
-      const loadAllPresences = async () => {
-        const presencesMap: Record<string, Record<number, boolean | null>> = {};
-        for (const eleve of eleves) {
-          const pres = await loadPresences(eleve.id);
-          if (pres) {
-            presencesMap[eleve.id] = pres;
-          }
-        }
-        setPresences(presencesMap);
-      };
-      loadAllPresences();
-    }
-  }, [eleves]);  
   const [sessions, setSessions] = useState<Array<{
     index: number;
     nom: string;
@@ -682,7 +647,6 @@ export default function GuideDashboard() {
                 </div>
               </div>
               
-              {/* LÉGENDE */}
               <div className="bg-white rounded-lg shadow p-4 md:p-6 border border-gray-200 h-full">
                 <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2 mb-3">
                   <span className="text-xl">📋</span>
@@ -701,9 +665,7 @@ export default function GuideDashboard() {
                           }}></div>
                         </div>
                         <div className="flex-1">
-                          <div className="text-sm font-medium">
-                            {opt.label}
-                          </div>
+                          <div className="text-sm font-medium">{opt.label}</div>
                           <div className="text-xs opacity-75 mt-0.5">
                             {opt.value === 'Non, l\'élève atteint bien les objectifs' && '✓ L\'élève a bien travaillé → Pas de convocation'}
                             {opt.value === 'Oui, l\'élève n\'atteint pas les objectifs' && '⚠️ L\'élève a avancé mais n\'atteint pas les objectifs → Convocation'}
@@ -722,7 +684,7 @@ export default function GuideDashboard() {
                 </div>
               </div>
             </div>
-        
+
             <div className="bg-white rounded-lg shadow overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-100 border-b">
@@ -828,30 +790,24 @@ export default function GuideDashboard() {
                             </div>
                           )}
                         </div>
-                      </table>
-                      
-                      {/* Colonnes des sessions */}
+                      </td>
                       {sessions.map(session => {
                         const columnName = `session_${session.index}_convoque`;
                         const valeur = (eleve as any)[columnName] as string | undefined;
-                        const estConvoque = valeur?.startsWith('Oui') === true;
-                        
                         return (
                           <td key={session.index} className="px-4 py-3">
-                            <div className="flex flex-col gap-1">
-                              <select
-                                value={valeur || ''}
-                                onChange={(e) => handleUpdateSessionConvocation(eleve.id, session.index, e.target.value)}
-                                className={`w-full border rounded px-2 py-1 text-sm ${getConvocationColor(valeur || '')}`}
-                              >
-                                {CONVOCATION_OPTIONS.map(opt => (
-                                  <option key={opt.value} value={opt.value} className={opt.color}>
-                                    {opt.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          </table>
+                            <select
+                              value={valeur || ''}
+                              onChange={(e) => handleUpdateSessionConvocation(eleve.id, session.index, e.target.value)}
+                              className={`w-full border rounded px-2 py-1 text-sm ${getConvocationColor(valeur || '')}`}
+                            >
+                              {CONVOCATION_OPTIONS.map(opt => (
+                                <option key={opt.value} value={opt.value} className={opt.color}>
+                                  {opt.label}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
                         );
                       })}
                     </tr>
@@ -997,7 +953,7 @@ export default function GuideDashboard() {
                             {eleve.guide_nom} {eleve.guide_initiale}.
                           </td>
                         )}
-                      </tr>
+                      </table>
                     ))
                   )}
                 </tbody>
@@ -1088,7 +1044,7 @@ export default function GuideDashboard() {
                                   <td className="px-4 py-3 text-sm whitespace-nowrap">
                                     {eleve.guide_nom} {eleve.guide_initiale}.
                                     {isGuide && <span className="ml-1 text-xs text-blue-600">(vous)</span>}
-                                  </td>
+                                  <td>
                                 )}
                                 {displaySettings.lecteur_interne_voir_guides && ( 
                                   <td className="px-4 py-3 text-sm whitespace-nowrap">
@@ -1098,19 +1054,19 @@ export default function GuideDashboard() {
                                         {isLecteurInterne && <span className="ml-1 text-xs text-blue-600">(vous)</span>}
                                       </span>
                                     ) : '-'}
-                                  </td>
+                                  <td>
                                 )}
                                 {displaySettings.lecteur_interne_voir_lecteurs_externes && (
                                   <td className="px-4 py-3 text-sm whitespace-nowrap">
                                     {eleve.lecteur_externe_nom ? `${eleve.lecteur_externe_prenom} ${eleve.lecteur_externe_nom}` : '-'}
-                                  </td>
+                                  <td>
                                 )}
                                 {displaySettings.lecteur_interne_voir_mediateurs && (
                                   <td className="px-4 py-3 text-sm whitespace-nowrap">
                                     {eleve.mediateur_nom ? `${eleve.mediateur_prenom} ${eleve.mediateur_nom}` : '-'}
-                                  </td>
+                                  <td>
                                 )}
-                              </tr>
+                              </table>
                             );
                           })}
                         </tbody>
