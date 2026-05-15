@@ -503,7 +503,7 @@ export default function ExterneDashboard() {
     const otherBusyIds = busyElevesIds.filter(id => id !== eleve.id);
     return otherBusyIds.length > 0;
   };
-
+  
   const handleToggleSelection = async (eleveId: string, role: 'lecteur' | 'mediateur') => {
     const eleve = elevesDisponibles.find(e => e.id === eleveId);
     if (!eleve) return;
@@ -513,8 +513,14 @@ export default function ExterneDashboard() {
       ? selectedElevesAsLecteur.includes(eleveId)
       : selectedElevesAsMediateur.includes(eleveId);
     const demandeEnAttente = hasDemandeEnAttente(eleveId, roleType);
-  
-    // Cas 1: Annuler une demande en attente
+    
+    // Vérifier si l'utilisateur a l'autre rôle
+    const hasOtherRole = role === 'lecteur' 
+      ? selectedElevesAsMediateur.includes(eleveId)
+      : selectedElevesAsLecteur.includes(eleveId);
+    const otherRoleType = role === 'lecteur' ? 'mediateur' : 'lecteur_externe';
+    
+    // Cas 1: Annuler une demande en attente pour ce rôle
     if (isCurrentlySelected && demandeEnAttente) {
       const demande = demandesEnAttente[eleveId]?.find(d => d.role_type === roleType);
       if (demande) {
@@ -534,7 +540,17 @@ export default function ExterneDashboard() {
       return;
     }
   
-    // Cas 3: Pas sélectionné → inscription directe
+    // Cas 3: Pas sélectionné, mais a l'autre rôle → demande de changement complet
+    if (!isCurrentlySelected && hasOtherRole) {
+      // Ouvrir un modal spécial pour le changement de rôle
+      setSelectedEleveForDesinscription(eleve);
+      setSelectedRoleTypeForDesinscription(roleType);
+      setDesinscriptionComment(`Je souhaite changer de rôle : actuellement ${otherRoleType === 'mediateur' ? 'médiateur' : 'lecteur externe'}, je demande à devenir ${roleType === 'lecteur_externe' ? 'lecteur externe' : 'médiateur'}.`);
+      setShowDesinscriptionModal(true);
+      return;
+    }
+  
+    // Cas 4: Pas sélectionné → inscription directe
     const field = role === 'lecteur' ? 'lecteur_externe_id' : 'mediateur_id';
     const currentId = role === 'lecteur' ? lecteurExterneId : mediateurId;
   
