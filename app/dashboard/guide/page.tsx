@@ -1063,65 +1063,41 @@ export default function GuideDashboard() {
                 <div>
                   <h3 className="font-medium text-purple-800">Mode sélection lecteur interne</h3>
                   <p className="text-sm text-purple-600 mt-1">
-                    Sélectionnez les élèves pour lesquels vous serez lecteur interne.
-                    Cet onglet est activé par l'administration.
+                    Gérez votre rôle de lecteur interne pour chaque élève.
                   </p>
-                </div>
-                <div className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
-                  {selectedEleves.length} sélectionné(s)
                 </div>
               </div>
             </div>
-
+        
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="flex-1">
-                  <h2 className="text-xl font-semibold text-gray-800">Sélection des élèves comme lecteur interne</h2>
+                  <h2 className="text-xl font-semibold text-gray-800">Liste des élèves disponibles</h2>
                   <p className="text-gray-600 mt-1">
-                    Sélectionnez les élèves pour lesquels vous serez lecteur interne.
-                    Les élèves sélectionnés n'apparaîtront plus dans la liste des autres guides.
-                    N'oubliez pas d'enregistrer si vous cochez des élèves dans la liste.
+                    Cliquez sur "S'inscrire" pour devenir lecteur interne d'un élève.
+                    Si vous êtes déjà inscrit, vous pouvez demander votre désinscription.
                   </p>
                 </div>
-                <div className="flex flex-col md:items-end gap-3">
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Filtrer par catégorie:</label>
-                    <select
-                      value={selectedCategorie}
-                      onChange={(e) => setSelectedCategorie(e.target.value)}
-                      className="border rounded px-3 py-1 text-sm"
-                    >
-                      <option value="toutes">Toutes les catégories</option>
-                      {categories.map(categorie => (
-                        <option key={categorie} value={categorie}>{categorie}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm text-gray-600 whitespace-nowrap">{selectedEleves.length} élève(s) sélectionné(s)</span>
-                    <button
-                      onClick={handleSaveLecteurInterne}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
-                    >
-                      Enregistrer la sélection
-                    </button>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Filtrer par catégorie:</label>
+                  <select
+                    value={selectedCategorie}
+                    onChange={(e) => setSelectedCategorie(e.target.value)}
+                    className="border rounded px-3 py-1 text-sm"
+                  >
+                    <option value="toutes">Toutes les catégories</option>
+                    {categories.map(categorie => (
+                      <option key={categorie} value={categorie}>{categorie}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>
-
+        
             <div className="bg-white rounded-lg shadow overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-100 border-b">
                   <tr>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-12">
-                      <input
-                        type="checkbox"
-                        checked={selectedEleves.length === filteredElevesDisponibles.length && filteredElevesDisponibles.length > 0}
-                        onChange={handleSelectAll}
-                        className="w-4 h-4 text-blue-600 rounded"
-                      />
-                    </th>
                     {displaySettings.lecteur_interne_voir_eleves && (
                       <>
                         <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Classe</th>
@@ -1135,64 +1111,128 @@ export default function GuideDashboard() {
                     {displaySettings.lecteur_interne_voir_guides && ( 
                       <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Guide</th>
                     )}
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredElevesDisponibles.length === 0 ? (
                     <tr>
-                      <td colSpan={calculateColspan(true)} className="px-4 py-8 text-center text-gray-500">
+                      <td colSpan={calculateColspan(true) + 1} className="px-4 py-8 text-center text-gray-500">
                         {selectedCategorie === 'toutes' 
                           ? "Aucun élève disponible pour le moment."
                           : `Aucun élève trouvé dans la catégorie "${selectedCategorie}".`}
                        </td>
                     </tr>
                   ) : (
-                    filteredElevesDisponibles.map((eleve) => (
-                      <tr key={eleve.id} className="border-b hover:bg-gray-50">
-                        <td className="px-4 py-3">
-                          <input
-                            type="checkbox"
-                            checked={selectedEleves.includes(eleve.id)}
-                            onChange={() => handleToggleSelection(eleve.id)}
-                            className="w-4 h-4 text-blue-600 rounded"
-                          />
-                        </td>
-                        {displaySettings.lecteur_interne_voir_eleves && ( 
-                          <>
-                            <td className="px-4 py-3 text-sm">{eleve.classe}</td>
-                            <td className="px-4 py-3 text-sm">
-                              <div className="flex flex-col">
-                                <span className="font-medium">{eleve.nom}</span>
-                                <span>{eleve.prenom}</span>
-                              </div>
-                            </td>
-                          </>
-                        )}
-                        <td className="px-4 py-3 text-sm">
-                          {eleve.categorie ? (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                              {eleve.categorie}
-                            </span>
-                          ) : '-'}
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          <div className="max-w-xs whitespace-pre-wrap break-words min-h-[40px]">{eleve.problematique || '-'}</div>
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          {eleve.date_defense 
-                            ? new Date(eleve.date_defense).toLocaleDateString('fr-FR')
-                            : 'Non définie'}
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          {eleve.heure_defense ? eleve.heure_defense.substring(0, 5) : 'Non définie'}
-                        </td>
-                        {displaySettings.lecteur_interne_voir_guides && ( 
+                    filteredElevesDisponibles.map((eleve) => {
+                      const estInscrit = eleve.lecteur_interne_id === userGuideId;
+                      const demandeEnAttente = hasDemandeEnAttente(eleve.id, 'lecteur_interne');
+                      
+                      // Déterminer l'état et le style du bouton
+                      let buttonState: 'inscrire' | 'inscrit' | 'demande_annuler' = 'inscrire';
+                      let buttonText = "S'inscrire";
+                      let buttonStyle = "bg-gray-200 text-gray-700 hover:bg-gray-300";
+                      
+                      if (estInscrit) {
+                        if (demandeEnAttente) {
+                          buttonState = 'demande_annuler';
+                          buttonText = "Désinscription demandée";
+                          buttonStyle = "bg-blue-100 text-blue-700 hover:bg-blue-200";
+                        } else {
+                          buttonState = 'inscrit';
+                          buttonText = "Lecteur interne ✓";
+                          buttonStyle = "bg-blue-600 text-white hover:bg-blue-700";
+                        }
+                      }
+                      
+                      // Action au clic
+                      const handleButtonClick = async () => {
+                        if (buttonState === 'inscrire') {
+                          // Inscription directe
+                          try {
+                            const { error } = await supabase
+                              .from('eleves')
+                              .update({ lecteur_interne_id: userGuideId })
+                              .eq('id', eleve.id);
+                            
+                            if (error) throw error;
+                            
+                            addToast(`Vous êtes maintenant lecteur interne de ${eleve.prenom} ${eleve.nom}`, 'success');
+                            await loadData(userGuideId);
+                            await loadDemandesEnAttente(userGuideId);
+                          } catch (err) {
+                            console.error('Erreur inscription:', err);
+                            addToast('Erreur lors de l\'inscription', 'error');
+                          }
+                        } 
+                        else if (buttonState === 'inscrit') {
+                          // Demande de désinscription
+                          openDesinscriptionModal(eleve, 'lecteur_interne');
+                        } 
+                        else if (buttonState === 'demande_annuler') {
+                          // Annuler la demande de désinscription
+                          const demande = demandesEnAttente[eleve.id]?.find(d => d.role_type === 'lecteur_interne');
+                          if (demande) {
+                            await handleAnnulerDemande(demande.id);
+                            addToast(`Demande de désinscription annulée pour ${eleve.prenom} ${eleve.nom}`, 'success');
+                            await loadData(userGuideId);
+                            await loadDemandesEnAttente(userGuideId);
+                          }
+                        }
+                      };
+                      
+                      return (
+                        <tr key={eleve.id} className="border-b hover:bg-gray-50">
+                          {displaySettings.lecteur_interne_voir_eleves && (
+                            <>
+                              <td className="px-4 py-3 text-sm">{eleve.classe}</td>
+                              <td className="px-4 py-3 text-sm">
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{eleve.nom}</span>
+                                  <span>{eleve.prenom}</span>
+                                </div>
+                              </td>
+                            </>
+                          )}
                           <td className="px-4 py-3 text-sm">
-                            {eleve.guide_nom} {eleve.guide_initiale}.
+                            {eleve.categorie ? (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                {eleve.categorie}
+                              </span>
+                            ) : '-'}
                           </td>
-                        )}
-                      </tr>
-                    ))
+                          <td className="px-4 py-3 text-sm">
+                            <div className="max-w-xs whitespace-pre-wrap break-words min-h-[40px]">{eleve.problematique || '-'}</div>
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {eleve.date_defense 
+                              ? new Date(eleve.date_defense).toLocaleDateString('fr-FR')
+                              : 'Non définie'}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {eleve.heure_defense ? eleve.heure_defense.substring(0, 5) : 'Non définie'}
+                          </td>
+                          {displaySettings.lecteur_interne_voir_guides && ( 
+                            <td className="px-4 py-3 text-sm">
+                              {eleve.guide_nom} {eleve.guide_initiale}.
+                            </td>
+                          )}
+                          <td className="px-4 py-3 text-sm">
+                            <button
+                              onClick={handleButtonClick}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${buttonStyle}`}
+                            >
+                              {buttonText}
+                            </button>
+                            {buttonState === 'demande_annuler' && (
+                              <p className="text-xs text-gray-500 mt-1 italic">
+                                En attente d'approbation
+                              </p>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
