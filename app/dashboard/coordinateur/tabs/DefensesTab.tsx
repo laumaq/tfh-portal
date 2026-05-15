@@ -587,6 +587,19 @@ export default function DefensesTab({
             </thead>
             <tbody>
               {filteredAndSortedEleves.map((eleve) => {
+                // Log détaillé pour Ferro
+                if (eleve.nom === 'Ferro') {
+                  console.log('=== Élève Ferro ===');
+                  console.log('mediateur_id (direct):', eleve.mediateur_id);
+                  console.log('mediateur_id (string):', JSON.stringify(eleve.mediateur_id));
+                  console.log('mediateur_nom:', eleve.mediateur_nom);
+                  console.log('mediateur_prenom:', eleve.mediateur_prenom);
+                  
+                  // Chercher manuellement dans externes
+                  const manuel = externes.find(e => e.mediateur_id === eleve.mediateur_id);
+                  console.log('Recherche manuelle dans externes:', manuel);
+                  console.log('Tous les externes avec mediateur_id:', externes.filter(e => e.mediateur_id).map(e => ({ mediateur_id: e.mediateur_id, nom: e.nom, prenom: e.prenom })));
+                }
                 const categoryStyle = getCategoryStyle(eleve.categorie || 'Non catégorisé');
                 const lecteurInterneLabel = guides.find(g => g.id === eleve.lecteur_interne_id)
                   ? `${guides.find(g => g.id === eleve.lecteur_interne_id)!.nom} ${guides.find(g => g.id === eleve.lecteur_interne_id)!.initiale}.`
