@@ -246,7 +246,7 @@ export default function DefensesTab({
     currentEleve: Eleve,
     allEleves: Eleve[]
   ): { id: string; label: string }[] => {
-    // Logs pour Ferro
+    // Logs pour FERRO
     if (currentEleve.nom === 'FERRO') {
       console.log(`🔧 getAvailableOptions pour ${type} (élève: ${currentEleve.nom})`);
       console.log('  currentEleve.date_defense:', currentEleve.date_defense);
@@ -273,7 +273,7 @@ export default function DefensesTab({
             label: `${e.nom} ${e.prenom}`,
             externeId: e.id 
           }));
-        if (currentEleve.nom === 'Ferro') {
+        if (currentEleve.nom === 'FERRO') {
           console.log('  lecteurs externes disponibles:', lecteurs);
         }
         return lecteurs;
@@ -285,7 +285,7 @@ export default function DefensesTab({
             label: `${e.nom} ${e.prenom}`,
             externeId: e.id 
           }));
-        if (currentEleve.nom === 'Ferro') {
+        if (currentEleve.nom === 'FERRO') {
           console.log('  médiateurs disponibles:', mediateurs);
         }
         return mediateurs;
@@ -296,7 +296,7 @@ export default function DefensesTab({
       const options = getAllOptions()
         .map(opt => ({ id: opt.id, label: opt.label }))
         .sort((a, b) => a.label.localeCompare(b.label));
-      if (currentEleve.nom === 'Ferro') {
+      if (currentEleve.nom === 'FERRO') {
         console.log('  Aucune date/heure → toutes options:', options);
       }
       return options;
@@ -312,7 +312,7 @@ export default function DefensesTab({
       return eTimestamp === currentTimestamp;
     });
   
-    if (currentEleve.nom === 'Ferro') {
+    if (currentEleve.nom === 'FERRO') {
       console.log('  conflits trouvés:', conflits.map(c => `${c.nom} ${c.prenom}`));
     }
   
@@ -334,7 +334,7 @@ export default function DefensesTab({
       }
     });
   
-    if (currentEleve.nom === 'Ferro') {
+    if (currentEleve.nom === 'FERRO') {
       console.log('  externesIdsPris:', externesIdsPris);
     }
   
@@ -345,7 +345,7 @@ export default function DefensesTab({
     );
     const currentExterneId = currentExterne?.id || '';
   
-    if (currentEleve.nom === 'Ferro') {
+    if (currentEleve.nom === 'FERRO') {
       console.log('  currentExterneId:', currentExterneId);
     }
   
@@ -353,7 +353,7 @@ export default function DefensesTab({
       !externesIdsPris.includes(opt.externeId) || opt.externeId === currentExterneId
     );
   
-    if (currentEleve.nom === 'Ferro') {
+    if (currentEleve.nom === 'FERRO') {
       console.log('  availableOptions après filtrage:', availableOptions);
     }
   
@@ -387,8 +387,8 @@ export default function DefensesTab({
     const currentId = eleve[field] || '';
     const currentLabel = getCurrentLabel();
     
-    // Logs spécifiques pour l'élève Ferro
-    if (eleve.nom === 'Ferro') {
+    // Logs spécifiques pour l'élève FERRO
+    if (eleve.nom === 'FERRO') {
       console.log(`🔍 === renderSelectOrLabel pour ${type} (élève: ${eleve.nom} ${eleve.prenom}) ===`);
       console.log('  eleve.id:', eleve.id);
       console.log('  field:', field);
@@ -402,7 +402,7 @@ export default function DefensesTab({
     
     const availableOptions = getAvailableOptions(type, eleve, localEleves);
     
-    if (eleve.nom === 'Ferro') {
+    if (eleve.nom === 'FERRO') {
       console.log(`  availableOptions pour ${type}:`, availableOptions);
       console.log('  ---');
     }
@@ -587,9 +587,9 @@ export default function DefensesTab({
             </thead>
             <tbody>
               {filteredAndSortedEleves.map((eleve) => {
-                // Log détaillé pour Ferro
-                if (eleve.nom === 'Ferro') {
-                  console.log('=== Élève Ferro ===');
+                // Log détaillé pour FERRO
+                if (eleve.nom === 'FERRO') {
+                  console.log('=== Élève FERRO ===');
                   console.log('mediateur_id (direct):', eleve.mediateur_id);
                   console.log('mediateur_id (string):', JSON.stringify(eleve.mediateur_id));
                   console.log('mediateur_nom:', eleve.mediateur_nom);
@@ -610,7 +610,7 @@ export default function DefensesTab({
                 
                 const mediateurLabel = (() => {
                   const found = externes.find(e => e.mediateur_id === eleve.mediateur_id);
-                  if (eleve.nom === 'Ferro') {
+                  if (eleve.nom === 'FERRO') {
                     console.log('mediateur_id dans la recherche:', eleve.mediateur_id);
                     console.log('found:', found);
                     console.log('externes disponibles:', externes.map(e => ({ id: e.id, mediateur_id: e.mediateur_id, nom: e.nom })));
