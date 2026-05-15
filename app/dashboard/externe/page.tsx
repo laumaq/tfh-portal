@@ -105,6 +105,11 @@ export default function ExterneDashboard() {
   const [desinscriptionComment, setDesinscriptionComment] = useState('');
   const [submittingDesinscription, setSubmittingDesinscription] = useState(false);
   const [toasts, setToasts] = useState<{message: string, type: 'success' | 'error' | 'info', id: number}[]>([]);
+  const [changementDeRoleData, setChangementDeRoleData] = useState<{
+    eleve: Eleve;
+    ancienRole: string;
+    nouveauRole: string;
+  } | null>(null);
   const router = useRouter();
 
   const [displaySettings, setDisplaySettings] = useState({
@@ -391,25 +396,42 @@ export default function ExterneDashboard() {
   
     setSubmittingDesinscription(true);
     try {
-      const response = await supabase.rpc('create_desinscription_demande', {
-        p_eleve_id: selectedEleveForDesinscription.id,
-        p_demandeur_id: externeId,
-        p_demandeur_type: 'externe',
-        p_role_type: selectedRoleTypeForDesinscription,
-        p_commentaire: desinscriptionComment || null
-      });
-  
+      let response;
+      
+      if (changementDeRoleData) {
+        // Changement de rôle
+        response = await supabase.rpc('create_changement_role_demande', {
+          p_eleve_id: changementDeRoleData.eleve.id,
+          p_demandeur_id: externeId,
+          p_demandeur_type: 'externe',
+          p_ancien_role_type: changementDeRoleData.ancienRole,
+          p_nouveau_role_type: changementDeRoleData.nouveauRole,
+          p_commentaire: desinscriptionComment || null
+        });
+        addToast('Demande de changement de rôle envoyée à la coordination', 'success');
+      } else {
+        // Désinscription simple
+        response = await supabase.rpc('create_desinscription_demande', {
+          p_eleve_id: selectedEleveForDesinscription.id,
+          p_demandeur_id: externeId,
+          p_demandeur_type: 'externe',
+          p_role_type: selectedRoleTypeForDesinscription,
+          p_commentaire: desinscriptionComment || null
+        });
+        addToast('Demande de désinscription envoyée à la coordination', 'success');
+      }
+      
       if (response.error) throw response.error;
-  
-      addToast('Demande de désinscription envoyée à la coordination', 'success');
+      
       setShowDesinscriptionModal(false);
       setSelectedEleveForDesinscription(null);
       setSelectedRoleTypeForDesinscription('');
+      setChangementDeRoleData(null);
       setDesinscriptionComment('');
       await loadDemandesEnAttente(externeId);
       await loadData(lecteurExterneId, mediateurId);
     } catch (err) {
-      console.error('Erreur création demande:', err);
+      console.error('Erreur:', err);
       addToast('Erreur lors de la création de la demande', 'error');
     } finally {
       setSubmittingDesinscription(false);
@@ -519,33 +541,38 @@ export default function ExterneDashboard() {
       ? selectedElevesAsMediateur.includes(eleveId)
       : selectedElevesAsLecteur.includes(eleveId);
     const otherRoleType = role === 'lecteur' ? 'mediateur' : 'lecteur_externe';
-    
-    // Cas 1: Annuler une demande en attente pour ce rôle
+  
+    // Cas 1: Annuler une demande en attente
     if (isCurrentlySelected && demandeEnAttente) {
       const demande = demandesEnAttente[eleveId]?.find(d => d.role_type === roleType);
       if (demande) {
         await handleAnnulerDemande(demande.id);
-        addToast(`Demande de désinscription annulée`, 'success');
+        addToast(`Demande annulée`, 'success');
         await loadData(lecteurExterneId, mediateurId);
       }
       return;
     }
   
-    // Cas 2: Déjà sélectionné (sans demande) → ouvrir modal de désinscription
+    // Cas 2: Déjà sélectionné → désinscription simple
     if (isCurrentlySelected && !demandeEnAttente) {
       setSelectedEleveForDesinscription(eleve);
       setSelectedRoleTypeForDesinscription(roleType);
       setDesinscriptionComment('');
+      setChangementDeRoleData(null);
       setShowDesinscriptionModal(true);
       return;
     }
   
-    // Cas 3: Pas sélectionné, mais a l'autre rôle → demande de changement complet
+    // Cas 3: Pas sélectionné mais a l'autre rôle → CHANGEMENT DE RÔLE
     if (!isCurrentlySelected && hasOtherRole) {
-      // Ouvrir un modal spécial pour le changement de rôle
+      setChangementDeRoleData({
+        eleve,
+        ancienRole: otherRoleType,
+        nouveauRole: roleType
+      });
       setSelectedEleveForDesinscription(eleve);
       setSelectedRoleTypeForDesinscription(roleType);
-      setDesinscriptionComment(`Je souhaite changer de rôle : actuellement ${otherRoleType === 'mediateur' ? 'médiateur' : 'lecteur externe'}, je demande à devenir ${roleType === 'lecteur_externe' ? 'lecteur externe' : 'médiateur'}.`);
+      setDesinscriptionComment('');
       setShowDesinscriptionModal(true);
       return;
     }
@@ -554,23 +581,20 @@ export default function ExterneDashboard() {
     const field = role === 'lecteur' ? 'lecteur_externe_id' : 'mediateur_id';
     const currentId = role === 'lecteur' ? lecteurExterneId : mediateurId;
   
-    // Vérifier les conflits de créneaux
     if (isTimeSlotBusy(eleve, role)) {
-      alert(`Vous avez déjà une défense en tant que ${role === 'lecteur' ? 'lecteur externe' : 'médiateur'} à ce créneau horaire !`);
+      alert(`Conflit de créneau !`);
       return;
     }
   
-    // Vérifier si déjà pris par quelqu'un d'autre
     const isAlreadyTaken = role === 'lecteur'
       ? (eleve.lecteur_externe_id && eleve.lecteur_externe_id !== lecteurExterneId)
       : (eleve.mediateur_id && eleve.mediateur_id !== mediateurId);
   
     if (isAlreadyTaken) {
-      alert(`Ce TFH a déjà un ${role === 'lecteur' ? 'lecteur externe' : 'médiateur'} assigné à quelqu'un d'autre.`);
+      alert(`Déjà attribué à quelqu'un d'autre.`);
       return;
     }
   
-    // Inscription directe
     try {
       await supabase
         .from('eleves')
@@ -583,15 +607,11 @@ export default function ExterneDashboard() {
         setSelectedElevesAsMediateur(prev => [...prev, eleveId]);
       }
       
-      addToast(`Vous êtes maintenant ${role === 'lecteur' ? 'lecteur externe' : 'médiateur'} pour ${eleve.prenom} ${eleve.nom}`, 'success');
-      
-      setTimeout(() => {
-        loadData(lecteurExterneId, mediateurId);
-      }, 500);
-      
+      addToast(`Vous êtes maintenant ${role === 'lecteur' ? 'lecteur externe' : 'médiateur'}`, 'success');
+      setTimeout(() => loadData(lecteurExterneId, mediateurId), 500);
     } catch (err) {
-      console.error('Erreur lors de la sauvegarde:', err);
-      alert('Erreur lors de l\'enregistrement');
+      console.error(err);
+      alert('Erreur');
       loadData(lecteurExterneId, mediateurId);
     }
   };
@@ -1821,7 +1841,7 @@ export default function ExterneDashboard() {
           />
         )}
 
-              {/* Modal de demande de désinscription */}
+        {/* Modal de demande de désinscription */}
         {showDesinscriptionModal && selectedEleveForDesinscription && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
@@ -1842,7 +1862,13 @@ export default function ExterneDashboard() {
                     Rôle concerné : <span className="font-semibold">{selectedRoleTypeForDesinscription === 'lecteur_externe' ? 'Lecteur externe' : 'Médiateur'}</span>
                   </label>
                   <p className="text-sm text-gray-600 mb-4">
-                    Votre demande devra être approuvée par la coordination. En attendant, vous restez assigné à cette défense.
+                    {changementDeRoleData ? (
+                      <>Vous êtes actuellement <strong>{changementDeRoleData.ancienRole === 'mediateur' ? 'médiateur' : 'lecteur externe'}</strong>. 
+                      Votre demande de passage en <strong>{changementDeRoleData.nouveauRole === 'lecteur_externe' ? 'lecteur externe' : 'médiateur'}</strong> 
+                      devra être approuvée par la coordination. Les deux changements seront appliqués simultanément.</>
+                    ) : (
+                      <>Votre demande de désinscription devra être approuvée par la coordination. En attendant, vous restez assigné à cette défense.</>
+                    )}
                   </p>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Commentaire (optionnel) :</label>
                   <textarea
