@@ -1716,38 +1716,81 @@ export default function ExterneDashboard() {
                         const isMediateurAlreadyTaken = !!(eleve.mediateur_id && eleve.mediateur_id !== mediateurId);
                         const hasConflict = (isBusyLecteur && !isLecteurSelected) || (isBusyMediateur && !isMediateurSelected);
                         
+                        // Demandes en attente
+                        const lecteurDemandeEnAttente = hasDemandeEnAttente(eleve.id, 'lecteur_externe');
+                        const mediateurDemandeEnAttente = hasDemandeEnAttente(eleve.id, 'mediateur');
+                        
+                        // Rôle actuel de l'utilisateur
+                        const userIsLecteur = eleve.lecteur_externe_id === lecteurExterneId;
+                        const userIsMediateur = eleve.mediateur_id === mediateurId;
+                        
+                        // Déterminer l'état pour chaque bouton
+                        let lecteurButtonState = 'inscrire'; // 'inscrire' | 'inscrit' | 'demande'
+                        let mediateurButtonState = 'inscrire';
+                        
+                        if (userIsLecteur) {
+                          lecteurButtonState = lecteurDemandeEnAttente ? 'demande' : 'inscrit';
+                        } else if (lecteurDemandeEnAttente) {
+                          lecteurButtonState = 'demande';
+                        }
+                        
+                        if (userIsMediateur) {
+                          mediateurButtonState = mediateurDemandeEnAttente ? 'demande' : 'inscrit';
+                        } else if (mediateurDemandeEnAttente) {
+                          mediateurButtonState = 'demande';
+                        }
+                        
+                        // Styles et textes des boutons
+                        const getLecteurButtonStyle = () => {
+                          if (lecteurButtonState === 'inscrit') return 'bg-blue-600 text-white';
+                          if (lecteurButtonState === 'demande') return 'bg-blue-300 text-white cursor-not-allowed';
+                          if (isBusyLecteur || isLecteurAlreadyTaken) return 'bg-gray-200 text-gray-400 cursor-not-allowed';
+                          return 'bg-blue-100 text-blue-700 hover:bg-blue-200';
+                        };
+                        
+                        const getLecteurButtonText = () => {
+                          if (lecteurButtonState === 'inscrit') return '📖 Lecteur ✓';
+                          if (lecteurButtonState === 'demande') return '📖 Demande envoyée';
+                          return '📖 Lecteur';
+                        };
+                        
+                        const getMediateurButtonStyle = () => {
+                          if (mediateurButtonState === 'inscrit') return 'bg-purple-600 text-white';
+                          if (mediateurButtonState === 'demande') return 'bg-purple-300 text-white cursor-not-allowed';
+                          if (isBusyMediateur || isMediateurAlreadyTaken) return 'bg-gray-200 text-gray-400 cursor-not-allowed';
+                          return 'bg-purple-100 text-purple-700 hover:bg-purple-200';
+                        };
+                        
+                        const getMediateurButtonText = () => {
+                          if (mediateurButtonState === 'inscrit') return '⚖️ Médiateur ✓';
+                          if (mediateurButtonState === 'demande') return '⚖️ Demande envoyée';
+                          return '⚖️ Médiateur';
+                        };
+                        
+                        // Vérifier si le bouton doit être désactivé
+                        const isLecteurDisabled = lecteurButtonState === 'demande' || isBusyLecteur || isLecteurAlreadyTaken;
+                        const isMediateurDisabled = mediateurButtonState === 'demande' || isBusyMediateur || isMediateurAlreadyTaken;
+                        
                         return (
                           <tr key={eleve.id} className={`hover:bg-gray-50 ${hasConflict ? 'bg-gray-100 opacity-60' : ''}`}>
                             <td className="px-4 py-3">
                               <div className="flex gap-2">
                                 <button
                                   onClick={() => handleToggleSelection(eleve.id, 'lecteur')}
-                                  disabled={isBusyLecteur || isLecteurAlreadyTaken}
-                                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                                    isLecteurSelected
-                                      ? 'bg-blue-600 text-white'
-                                      : isBusyLecteur || isLecteurAlreadyTaken
-                                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                      : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                                  }`}
-                                  title={isLecteurAlreadyTaken ? "Déjà attribué à un autre lecteur" : isBusyLecteur ? "Conflit de créneau" : ""}
+                                  disabled={isLecteurDisabled}
+                                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${getLecteurButtonStyle()}`}
+                                  title={lecteurButtonState === 'demande' ? "Demande en attente d'approbation" : isLecteurAlreadyTaken ? "Déjà attribué à un autre lecteur" : isBusyLecteur ? "Conflit de créneau" : ""}
                                 >
-                                  📖 Lecteur {isLecteurSelected && '✓'}
+                                  {getLecteurButtonText()}
                                 </button>
                                 
                                 <button
                                   onClick={() => handleToggleSelection(eleve.id, 'mediateur')}
-                                  disabled={isBusyMediateur || isMediateurAlreadyTaken}
-                                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                                    isMediateurSelected
-                                      ? 'bg-purple-600 text-white'
-                                      : isBusyMediateur || isMediateurAlreadyTaken
-                                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                      : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
-                                  }`}
-                                  title={isMediateurAlreadyTaken ? "Déjà attribué à un autre médiateur" : isBusyMediateur ? "Conflit de créneau" : ""}
+                                  disabled={isMediateurDisabled}
+                                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${getMediateurButtonStyle()}`}
+                                  title={mediateurButtonState === 'demande' ? "Demande en attente d'approbation" : isMediateurAlreadyTaken ? "Déjà attribué à un autre médiateur" : isBusyMediateur ? "Conflit de créneau" : ""}
                                 >
-                                  ⚖️ Médiateur {isMediateurSelected && '✓'}
+                                  {getMediateurButtonText()}
                                 </button>
                               </div>
                             </td>
