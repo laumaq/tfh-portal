@@ -247,7 +247,7 @@ export default function DefensesTab({
     allEleves: Eleve[]
   ): { id: string; label: string }[] => {
     // Logs pour Ferro
-    if (currentEleve.nom === 'Ferro') {
+    if (currentEleve.nom === 'FERRO') {
       console.log(`🔧 getAvailableOptions pour ${type} (élève: ${currentEleve.nom})`);
       console.log('  currentEleve.date_defense:', currentEleve.date_defense);
       console.log('  currentEleve.heure_defense:', currentEleve.heure_defense);
