@@ -8,6 +8,13 @@ import { supabase } from '@/lib/supabase';
 import { getJourneesFromSupabase, detecterSessions } from '@/app/dashboard/coordinateur/utils/sessionUtils';
 import { getConvocationColor, getConvocationLabelShort } from '@/app/dashboard/coordinateur/utils/convocationUtils';
 import ProfileSettings from './components/ProfileSettings';
+import { 
+  getJourneesFromSupabase, 
+  detecterSessions, 
+  estConvoque, 
+  getPresenceJournee, 
+  getStatutSession 
+} from '@/app/dashboard/coordinateur/utils/sessionUtils';
 
 interface Eleve {
   id: string;
@@ -73,6 +80,7 @@ export default function GuideDashboard() {
   const [objectifParticulier, setObjectifParticulier] = useState('');
   const [savingObjectif, setSavingObjectif] = useState(false);
   const [presences, setPresences] = useState<Record<string, Record<number, boolean | null>>>({});
+  const [sessionsData, setSessionsData] = useState<Session[]>([]);
   const [displaySettings, setDisplaySettings] = useState({
     lecteur_interne_voir_eleves: true,
     lecteur_interne_voir_guides: true,
@@ -133,6 +141,10 @@ export default function GuideDashboard() {
         const journeesData = await getJourneesFromSupabase(supabase);
         const sessionsDetectees = detecterSessions(journeesData);
         
+        // Stocker les sessions complètes avec leurs journées
+        setSessionsData(sessionsDetectees);
+        
+        // Garder aussi le format simplifié pour les en-têtes
         const toutesSessions = sessionsDetectees.map(session => {
           const match = session.id.match(/session_(\d+)/);
           const index = match ? parseInt(match[1]) : 0;
@@ -275,6 +287,46 @@ export default function GuideDashboard() {
         setSettingsLoaded(true);
       }
     };
+
+  const getSessionStatusDisplay = (statut: string) => {
+    switch (statut) {
+      case 'present':
+        return {
+          text: '✓ Présent',
+          bgColor: 'bg-green-100',
+          textColor: 'text-green-700',
+          icon: '✓'
+        };
+      case 'absent':
+        return {
+          text: '✗ Absent',
+          bgColor: 'bg-red-100',
+          textColor: 'text-red-700',
+          icon: '✗'
+        };
+      case 'partiellement-present':
+        return {
+          text: '⚠️ Partiel',
+          bgColor: 'bg-yellow-100',
+          textColor: 'text-yellow-700',
+          icon: '⚠️'
+        };
+      case 'en-attente':
+        return {
+          text: '? En attente',
+          bgColor: 'bg-gray-100',
+          textColor: 'text-gray-500',
+          icon: '?'
+        };
+      default:
+        return {
+          text: 'Non convoqué',
+          bgColor: 'bg-gray-50',
+          textColor: 'text-gray-400',
+          icon: '-'
+        };
+    }
+  };
   
   const calculateColspan = (isProgrammed: boolean) => {
     let count = 0;
@@ -827,33 +879,48 @@ export default function GuideDashboard() {
                           )}
                         </div>
                       </td>
-                      {sessions.map(session => {
-                        const columnName = `session_${session.index}_convoque`;
+                      {sessionsData.map((session) => {
+                        const sessionNum = parseInt(session.id.split('_')[1]);
+                        const columnName = `session_${sessionNum}_convoque`;
                         const valeur = (eleve as any)[columnName] as string | undefined;
-                        const estConvoque = valeur?.startsWith('Oui') === true;
+                        const estConvoqueFlag = valeur?.startsWith('Oui') === true;
                         
-                        // Récupérer la présence pour la première journée de la session (simplifié)
-                        // Dans une version plus avancée, il faudrait mapper les journées aux sessions
-                        const presenceJournee = presences[eleve.id]?.[`journee_${session.index}_present` as any];
+                        // Obtenir le statut de présence pour cette session
+                        const statutSession = getStatutSession(eleve as any, session);
+                        const statusDisplay = getSessionStatusDisplay(statutSession);
                         
-                        const getPresenceStyle = (presence: boolean | null | undefined) => {
-                          if (presence === true) return 'bg-green-100 text-green-700 border-green-300';
-                          if (presence === false) return 'bg-red-100 text-red-700 border-red-300';
-                          return 'bg-gray-100 text-gray-500 border-gray-200';
-                        };
+                        // Si l'élève n'est pas convoqué, ne pas afficher les présences
+                        if (!estConvoqueFlag) {
+                          return (
+                            <td key={session.id} className="px-4 py-3">
+                              <div className="space-y-2">
+                                <select
+                                  value={valeur || ''}
+                                  onChange={(e) => handleUpdateSessionConvocation(eleve.id, sessionNum, e.target.value)}
+                                  className={`w-full border rounded px-2 py-1 text-sm ${getConvocationColor(valeur || '')}`}
+                                >
+                                  {CONVOCATION_OPTIONS.map(opt => (
+                                    <option key={opt.value} value={opt.value} className={opt.color}>
+                                      {opt.label}
+                                    </option>
+                                  ))}
+                                </select>
+                                <div className="text-xs text-gray-400 italic text-center">
+                                  Non convoqué
+                                </div>
+                              </div>
+                            </td>
+                          );
+                        }
                         
-                        const getPresenceIcon = (presence: boolean | null | undefined) => {
-                          if (presence === true) return '✓';
-                          if (presence === false) return '✗';
-                          return '?';
-                        };
-                        
+                        // Afficher les présences pour chaque journée de la session
                         return (
-                          <td key={session.index} className="px-4 py-3">
+                          <td key={session.id} className="px-4 py-3">
                             <div className="space-y-2">
+                              {/* Sélecteur de convocation */}
                               <select
                                 value={valeur || ''}
-                                onChange={(e) => handleUpdateSessionConvocation(eleve.id, session.index, e.target.value)}
+                                onChange={(e) => handleUpdateSessionConvocation(eleve.id, sessionNum, e.target.value)}
                                 className={`w-full border rounded px-2 py-1 text-sm ${getConvocationColor(valeur || '')}`}
                               >
                                 {CONVOCATION_OPTIONS.map(opt => (
@@ -863,15 +930,32 @@ export default function GuideDashboard() {
                                 ))}
                               </select>
                               
-                              {/* Afficher la présence seulement si l'élève est convoqué */}
-                              {estConvoque && (
-                                <div className="flex items-center justify-between gap-1 text-xs">
-                                  <span className="text-gray-500">Présence:</span>
-                                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${getPresenceStyle(presenceJournee)} font-bold`}>
-                                    {getPresenceIcon(presenceJournee)}
-                                  </div>
-                                </div>
-                              )}
+                              {/* Statut global de la session */}
+                              <div className={`text-center text-xs font-medium py-1 rounded ${statusDisplay.bgColor} ${statusDisplay.textColor}`}>
+                                {statusDisplay.text}
+                              </div>
+                              
+                              {/* Détail des présences par journée */}
+                              <div className="flex flex-wrap gap-1 justify-center">
+                                {session.journees.map((journeeKey, idx) => {
+                                  const journeeNum = parseInt(journeeKey.split('_')[1]);
+                                  const presence = getPresenceJournee(eleve as any, journeeNum);
+                                  const presenceDisplay = presence === true ? '✓' : presence === false ? '✗' : '?';
+                                  const presenceBg = presence === true ? 'bg-green-100 text-green-700' : 
+                                                     presence === false ? 'bg-red-100 text-red-700' : 
+                                                     'bg-gray-100 text-gray-500';
+                                  
+                                  return (
+                                    <div 
+                                      key={journeeKey} 
+                                      className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium ${presenceBg}`}
+                                      title={`Journée ${idx + 1}`}
+                                    >
+                                      {presenceDisplay}
+                                    </div>
+                                  );
+                                })}
+                              </div>
                             </div>
                           </td>
                         );
