@@ -77,6 +77,41 @@ export default function DashboardTab({
   const estChangementDeRole = (demande: DemandeDesinscription): boolean => {
     return demande.commentaire_demandeur?.startsWith('CHANGEMENT_DE_ROLE_LIE|') || false;
   };
+
+  const verifierRoleDejaPourvu = (demande: DemandeDesinscription): { pourvu: boolean; nom?: string } => {
+    if (!estChangementDeRole(demande)) {
+      return { pourvu: false };
+    }
+    
+    const nouveauRole = getNouveauRoleFromCommentaire(demande.commentaire_demandeur);
+    const eleve = eleves.find(e => e.id === demande.eleve_id);
+    
+    if (!eleve || !nouveauRole) {
+      return { pourvu: false };
+    }
+    
+    let estPourvu = false;
+    let nomPourvu = '';
+    
+    switch (nouveauRole) {
+      case 'lecteur_externe':
+        if (eleve.lecteur_externe_id && eleve.lecteur_externe_id !== demande.demandeur_id) {
+          estPourvu = true;
+          const externe = externes.find(e => e.id === eleve.lecteur_externe_id);
+          nomPourvu = externe ? `${externe.prenom} ${externe.nom}` : 'quelqu\'un d\'autre';
+        }
+        break;
+      case 'mediateur':
+        if (eleve.mediateur_id && eleve.mediateur_id !== demande.demandeur_id) {
+          estPourvu = true;
+          const externe = externes.find(e => e.id === eleve.mediateur_id);
+          nomPourvu = externe ? `${externe.prenom} ${externe.nom}` : 'quelqu\'un d\'autre';
+        }
+        break;
+    }
+    
+    return { pourvu: estPourvu, nom: nomPourvu };
+  };  
   
   // Récupérer le nouveau rôle depuis le commentaire
   const getNouveauRoleFromCommentaire = (commentaire: string | null): string | null => {
@@ -91,7 +126,8 @@ export default function DashboardTab({
     const parts = commentaire.split('|');
     return parts.length > 2 ? parts[2] : null;
   };
-  
+
+
   // Trouver la demande liée (pour un changement de rôle)
   const trouverDemandeLiee = (demande: DemandeDesinscription): DemandeDesinscription | undefined => {
     if (!estChangementDeRole(demande)) return undefined;
@@ -529,13 +565,16 @@ export default function DashboardTab({
             {demandesAffichees.map((demande) => {
               const isChangement = estChangementDeRole(demande);
               const demandeLiee = isChangement ? trouverDemandeLiee(demande) : null;
+              const roleDejaPourvu = isChangement ? verifierRoleDejaPourvu(demande) : { pourvu: false };
               
               return (
-                <div key={demande.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow">
+                <div key={demande.id} className={`bg-white rounded-xl shadow-sm border p-4 hover:shadow-md transition-shadow ${
+                  roleDejaPourvu.pourvu ? 'border-yellow-400 bg-yellow-50/30' : 'border-gray-200'
+                }`}>
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex items-start gap-3">
-                        <div className={`p-2 rounded-lg ${isChangement ? 'bg-indigo-100 text-indigo-700' : getRoleColor(demande.role_type)}`}>
+                        <div className={`p-2 rounded-lg ${isChangement ? (roleDejaPourvu.pourvu ? 'bg-yellow-100 text-yellow-700' : 'bg-indigo-100 text-indigo-700') : getRoleColor(demande.role_type)}`}>
                           {isChangement ? <RefreshCw className="w-4 h-4" /> : <UserMinus className="w-4 h-4" />}
                         </div>
                         <div>
@@ -544,9 +583,15 @@ export default function DashboardTab({
                               {demande.demandeur_prenom} {demande.demandeur_nom}
                             </span>
                             {isChangement ? (
-                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
-                                🔄 Changement de rôle
-                              </span>
+                              roleDejaPourvu.pourvu ? (
+                                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+                                  ⚠️ Rôle déjà pourvu
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
+                                  🔄 Changement de rôle
+                                </span>
+                              )
                             ) : (
                               <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getRoleColor(demande.role_type)}`}>
                                 {getRoleLabel(demande.role_type)}
@@ -558,9 +603,20 @@ export default function DashboardTab({
                             </span>
                           </div>
                           {isChangement ? (
-                            <p className="text-sm text-gray-700 mt-1 font-medium">
-                              {demande.commentaire_demandeur}
-                            </p>
+                            <div>
+                              <p className="text-sm text-gray-700 mt-1 font-medium">
+                                {demande.commentaire_demandeur}
+                              </p>
+                              {roleDejaPourvu.pourvu && (
+                                <div className="mt-2 p-2 bg-yellow-100 rounded-lg text-sm text-yellow-700 flex items-start gap-2">
+                                  <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                                  <span>
+                                    Le rôle demandé a déjà été attribué à {roleDejaPourvu.nom}. 
+                                    Si vous approuvez cette demande, l'utilisateur sera uniquement désinscrit de son rôle actuel.
+                                  </span>
+                                </div>
+                              )}
+                            </div>
                           ) : (
                             <p className="text-sm text-gray-600 mt-1">
                               souhaite se désinscrire de la défense de{' '}
@@ -577,7 +633,7 @@ export default function DashboardTab({
                               <span>"{demande.commentaire_demandeur}"</span>
                             </div>
                           )}
-                          {demandeLiee && (
+                          {demandeLiee && !roleDejaPourvu.pourvu && (
                             <div className="mt-2 p-2 bg-indigo-50 rounded-lg text-sm text-indigo-700 flex items-start gap-2">
                               <LinkIcon className="w-3 h-3 text-indigo-400 mt-0.5" />
                               <span>Demande liée : {getRoleLabel(demandeLiee.role_type)}</span>
