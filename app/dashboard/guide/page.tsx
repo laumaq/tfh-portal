@@ -179,7 +179,7 @@ export default function GuideDashboard() {
   const hasDemandeEnAttente = (eleveId: string, roleType: string) => {
     return demandesEnAttente[eleveId]?.some(d => d.role_type === roleType) || false;
   };
-
+  
   // Annuler une demande
   const handleAnnulerDemande = async (demandeId: string) => {
     try {
@@ -187,11 +187,12 @@ export default function GuideDashboard() {
         p_demande_id: demandeId,
         p_demandeur_id: userGuideId
       });
-
+  
       if (response.error) throw response.error;
-
+  
       addToast('Demande annulée avec succès', 'success');
       await loadDemandesEnAttente(userGuideId);
+      await loadData(userGuideId);        // ← AJOUTER CETTE LIGNE
       await loadDefenses(userGuideId);
     } catch (err) {
       console.error('Erreur annulation:', err);
@@ -202,7 +203,7 @@ export default function GuideDashboard() {
   // Créer une demande de désinscription
   const handleCreerDemandeDesinscription = async () => {
     if (!selectedEleveForDesinscription || !selectedRoleType) return;
-
+  
     setSubmittingDesinscription(true);
     try {
       const response = await supabase.rpc('create_desinscription_demande', {
@@ -212,16 +213,20 @@ export default function GuideDashboard() {
         p_role_type: selectedRoleType,
         p_commentaire: desinscriptionComment || null
       });
-
+  
       if (response.error) throw response.error;
-
+  
       addToast('Demande de désinscription envoyée à la coordination', 'success');
       setShowDesinscriptionModal(false);
       setSelectedEleveForDesinscription(null);
       setSelectedRoleType('');
       setDesinscriptionComment('');
+      
+      // 🔴 CORRECTION: Rafraîchir TOUTES les données
       await loadDemandesEnAttente(userGuideId);
-      await loadDefenses(userGuideId);
+      await loadData(userGuideId);        // ← AJOUTER CETTE LIGNE pour rafraîchir elevesDisponibles
+      await loadDefenses(userGuideId);    // Garder pour l'onglet défenses
+      
     } catch (err) {
       console.error('Erreur création demande:', err);
       addToast('Erreur lors de la création de la demande', 'error');
