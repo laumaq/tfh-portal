@@ -1195,7 +1195,7 @@ export default function GuideDashboard() {
                             {displaySettings.lecteur_interne_voir_guides && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur interne</th>}
                             {displaySettings.lecteur_interne_voir_lecteurs_externes && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Lecteur externe</th>}
                             {displaySettings.lecteur_interne_voir_mediateurs && <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Médiateur</th>}
-                          <tr>
+                          </tr>
                         </thead>
                         <tbody>
                           {defensesNonRendus.map((eleve) => {
@@ -1224,7 +1224,7 @@ export default function GuideDashboard() {
                                   </td>
                                   <td className="px-4 py-3 text-sm">
                                     <div className="whitespace-pre-wrap break-words min-h-[40px] max-w-96">{eleve.problematique || '-'}</div>
-                                  </tr>
+                                  </td>
                                   {displaySettings.lecteur_interne_voir_guides && (
                                     <td className="px-4 py-3 text-sm whitespace-nowrap">
                                       {eleve.guide_nom} {eleve.guide_initiale}.
