@@ -86,6 +86,14 @@ export default function DashboardTab({
     const nouveauRole = getNouveauRoleFromCommentaire(demande.commentaire_demandeur);
     const eleve = eleves.find(e => e.id === demande.eleve_id);
     
+    console.log('🔍 Vérification rôle déjà pourvu:', {
+      eleveId: demande.eleve_id,
+      nouveauRole,
+      demandeurId: demande.demandeur_id,
+      lecteur_externe_id: eleve?.lecteur_externe_id,
+      mediateur_id: eleve?.mediateur_id
+    });
+    
     if (!eleve || !nouveauRole) {
       return { pourvu: false };
     }
@@ -95,6 +103,7 @@ export default function DashboardTab({
     
     switch (nouveauRole) {
       case 'lecteur_externe':
+        // Vérifier si quelqu'un d'autre (pas le demandeur) a pris le rôle
         if (eleve.lecteur_externe_id && eleve.lecteur_externe_id !== demande.demandeur_id) {
           estPourvu = true;
           const externe = externes.find(e => e.id === eleve.lecteur_externe_id);
@@ -108,10 +117,15 @@ export default function DashboardTab({
           nomPourvu = externe ? `${externe.prenom} ${externe.nom}` : 'quelqu\'un d\'autre';
         }
         break;
+      default:
+        // Pour 'guide' ou 'lecteur_interne' on ne fait rien
+        break;
     }
     
+    console.log('🔍 Résultat:', { estPourvu, nomPourvu });
+    
     return { pourvu: estPourvu, nom: nomPourvu };
-  };  
+  };
   
   // Récupérer le nouveau rôle depuis le commentaire
   const getNouveauRoleFromCommentaire = (commentaire: string | null): string | null => {
@@ -341,9 +355,17 @@ export default function DashboardTab({
         const liee = trouverDemandeLiee(demande);
         if (liee) {
           demandesLiees.add(liee.id);
-          // Créer un objet virtuel pour représenter le groupe
           const ancienRole = getAncienRoleFromCommentaire(demande.commentaire_demandeur);
           const nouveauRole = getNouveauRoleFromCommentaire(demande.commentaire_demandeur);
+          
+          console.log('📋 Demande de changement trouvée:', {
+            id: demande.id,
+            ancienRole,
+            nouveauRole,
+            eleve_id: demande.eleve_id,
+            demandeur_id: demande.demandeur_id
+          });
+          
           result.push({
             ...demande,
             commentaire_demandeur: `Changement de rôle : ${getRoleLabel(ancienRole || '')} → ${getRoleLabel(nouveauRole || '')}`
