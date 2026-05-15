@@ -12,7 +12,8 @@ import {
   detecterSessions, 
   estConvoque, 
   getPresenceJournee, 
-  getStatutSession 
+  getStatutSession,
+  type Session 
 } from '@/app/dashboard/coordinateur/utils/sessionUtils';
 
 interface Eleve {
