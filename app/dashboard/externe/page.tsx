@@ -1,3 +1,5 @@
+// /app/dashboard/externe/page.tsx
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -33,6 +35,14 @@ interface Eleve {
   lecteur_externe?: { nom: string; prenom: string };
   mediateur?: { nom: string; prenom: string };
   url_tfh?: string;
+}
+
+interface DemandeDesinscription {
+  id: string;
+  eleve_id: string;
+  role_type: string;
+  statut: string;
+  created_at: string;
 }
 
 interface DefenseEvent {
@@ -88,6 +98,13 @@ export default function ExterneDashboard() {
   const [selectedMultipleLocations, setSelectedMultipleLocations] = useState<string[]>([]);
   const [tempFormatChoice, setTempFormatChoice] = useState<'papier' | 'numerique' | null>(null);
   const [accepteNumerique, setAccepteNumerique] = useState<boolean>(false);
+  const [demandesEnAttente, setDemandesEnAttente] = useState<Record<string, DemandeDesinscription[]>>({});
+  const [showDesinscriptionModal, setShowDesinscriptionModal] = useState(false);
+  const [selectedEleveForDesinscription, setSelectedEleveForDesinscription] = useState<Eleve | null>(null);
+  const [selectedRoleTypeForDesinscription, setSelectedRoleTypeForDesinscription] = useState<string>('');
+  const [desinscriptionComment, setDesinscriptionComment] = useState('');
+  const [submittingDesinscription, setSubmittingDesinscription] = useState(false);
+  const [toasts, setToasts] = useState<{message: string, type: 'success' | 'error' | 'info', id: number}[]>([]);
   const router = useRouter();
 
   const [displaySettings, setDisplaySettings] = useState({
@@ -110,6 +127,7 @@ export default function ExterneDashboard() {
     setUserName(name || '');
     setExterneId(userId);
     loadUserRoles();
+    loadDemandesEnAttente(userId);
   }, [router]);
 
   const loadUserRoles = async () => {
@@ -312,6 +330,91 @@ export default function ExterneDashboard() {
       setLoading(false);
     }
   };
+
+  const addToast = (message: string, type: 'success' | 'error' | 'info') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { message, type, id }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 5000);
+  };
+
+  const loadDemandesEnAttente = async (externeId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('demandes_desinscription')
+        .select('*')
+        .eq('demandeur_id', externeId)
+        .eq('demandeur_type', 'externe')
+        .eq('statut', 'en_attente');
+  
+      if (error) throw error;
+  
+      const demandesMap: Record<string, DemandeDesinscription[]> = {};
+      (data || []).forEach((demande: DemandeDesinscription) => {
+        if (!demandesMap[demande.eleve_id]) {
+          demandesMap[demande.eleve_id] = [];
+        }
+        demandesMap[demande.eleve_id].push(demande);
+      });
+      setDemandesEnAttente(demandesMap);
+    } catch (err) {
+      console.error('Erreur chargement demandes:', err);
+    }
+  };
+
+  const hasDemandeEnAttente = (eleveId: string, roleType: string) => {
+    return demandesEnAttente[eleveId]?.some(d => d.role_type === roleType) || false;
+  };
+  
+  // Ajouter la fonction pour annuler une demande
+  const handleAnnulerDemande = async (demandeId: string) => {
+    try {
+      const response = await supabase.rpc('annuler_demande_desinscription', {
+        p_demande_id: demandeId,
+        p_demandeur_id: externeId
+      });
+  
+      if (response.error) throw response.error;
+  
+      addToast('Demande annulée avec succès', 'success');
+      await loadDemandesEnAttente(externeId);
+      await loadData(lecteurExterneId, mediateurId);
+    } catch (err) {
+      console.error('Erreur annulation:', err);
+      addToast('Erreur lors de l\'annulation', 'error');
+    }
+  };
+
+  const handleCreerDemandeDesinscription = async () => {
+    if (!selectedEleveForDesinscription || !selectedRoleTypeForDesinscription) return;
+  
+    setSubmittingDesinscription(true);
+    try {
+      const response = await supabase.rpc('create_desinscription_demande', {
+        p_eleve_id: selectedEleveForDesinscription.id,
+        p_demandeur_id: externeId,
+        p_demandeur_type: 'externe',
+        p_role_type: selectedRoleTypeForDesinscription,
+        p_commentaire: desinscriptionComment || null
+      });
+  
+      if (response.error) throw response.error;
+  
+      addToast('Demande de désinscription envoyée à la coordination', 'success');
+      setShowDesinscriptionModal(false);
+      setSelectedEleveForDesinscription(null);
+      setSelectedRoleTypeForDesinscription('');
+      setDesinscriptionComment('');
+      await loadDemandesEnAttente(externeId);
+      await loadData(lecteurExterneId, mediateurId);
+    } catch (err) {
+      console.error('Erreur création demande:', err);
+      addToast('Erreur lors de la création de la demande', 'error');
+    } finally {
+      setSubmittingDesinscription(false);
+    }
+  };
   
   const generateBusySlots = (assignedEleves: Eleve[], lecteurExterneIdVal: string, mediateurIdVal: string) => {
     const slotsMapLecteur = new Map<string, string[]>();
@@ -405,70 +508,86 @@ export default function ExterneDashboard() {
     const eleve = elevesDisponibles.find(e => e.id === eleveId);
     if (!eleve) return;
   
-    const field = role === 'lecteur' ? 'lecteur_externe_id' : 'mediateur_id';
-    const currentId = role === 'lecteur' ? lecteurExterneId : mediateurId;
+    const roleType = role === 'lecteur' ? 'lecteur_externe' : 'mediateur';
     const isCurrentlySelected = role === 'lecteur' 
       ? selectedElevesAsLecteur.includes(eleveId)
       : selectedElevesAsMediateur.includes(eleveId);
+    const demandeEnAttente = hasDemandeEnAttente(eleveId, roleType);
   
+    // Si déjà sélectionné et demande en attente, annuler la demande
+    if (isCurrentlySelected && demandeEnAttente) {
+      const demande = demandesEnAttente[eleveId]?.find(d => d.role_type === roleType);
+      if (demande) {
+        await handleAnnulerDemande(demande.id);
+        addToast(`Demande de désinscription annulée`, 'success');
+        await loadData(lecteurExterneId, mediateurId);
+      }
+      return;
+    }
+  
+    // Si déjà sélectionné (et pas de demande en attente), ouvrir modal de désinscription
+    if (isCurrentlySelected && !demandeEnAttente) {
+      setSelectedEleveForDesinscription(eleve);
+      setSelectedRoleTypeForDesinscription(roleType);
+      setDesinscriptionComment('');
+      setShowDesinscriptionModal(true);
+      return;
+    }
+  
+    // Sinon, c'est une inscription (directe)
+    const field = role === 'lecteur' ? 'lecteur_externe_id' : 'mediateur_id';
+    const currentId = role === 'lecteur' ? lecteurExterneId : mediateurId;
+  
+    // Vérifier les conflits de créneaux
     if (isTimeSlotBusy(eleve, role) && !isCurrentlySelected) {
       alert(`Vous avez déjà une défense en tant que ${role === 'lecteur' ? 'lecteur externe' : 'médiateur'} à ce créneau horaire !`);
       return;
     }
   
+    // Vérifier si déjà pris par quelqu'un d'autre
     const isAlreadyTaken = role === 'lecteur'
       ? (eleve.lecteur_externe_id && eleve.lecteur_externe_id !== lecteurExterneId)
       : (eleve.mediateur_id && eleve.mediateur_id !== mediateurId);
   
     if (isAlreadyTaken && !isCurrentlySelected) {
-      alert(`Ce TFH a déjà un ${role === 'lecteur' ? 'lecteur externe' : 'médiateur'} assigné à quelqu\'un d'autre.`);
+      alert(`Ce TFH a déjà un ${role === 'lecteur' ? 'lecteur externe' : 'médiateur'} assigné à quelqu'un d'autre.`);
       return;
     }
   
     try {
-      if (isCurrentlySelected) {
+      // Si on sélectionne un rôle, vérifier et supprimer l'autre rôle si nécessaire
+      const otherRole = role === 'lecteur' ? 'mediateur' : 'lecteur';
+      const otherField = otherRole === 'lecteur' ? 'lecteur_externe_id' : 'mediateur_id';
+      const isOtherSelected = otherRole === 'lecteur'
+        ? selectedElevesAsLecteur.includes(eleveId)
+        : selectedElevesAsMediateur.includes(eleveId);
+      
+      if (isOtherSelected) {
         await supabase
           .from('eleves')
-          .update({ [field]: null })
+          .update({ [otherField]: null })
           .eq('id', eleveId);
         
-        if (role === 'lecteur') {
+        if (otherRole === 'lecteur') {
           setSelectedElevesAsLecteur(prev => prev.filter(id => id !== eleveId));
         } else {
           setSelectedElevesAsMediateur(prev => prev.filter(id => id !== eleveId));
         }
-      } else {
-        const otherRole = role === 'lecteur' ? 'mediateur' : 'lecteur';
-        const otherField = otherRole === 'lecteur' ? 'lecteur_externe_id' : 'mediateur_id';
-        const isOtherSelected = otherRole === 'lecteur'
-          ? selectedElevesAsLecteur.includes(eleveId)
-          : selectedElevesAsMediateur.includes(eleveId);
-        
-        if (isOtherSelected) {
-          await supabase
-            .from('eleves')
-            .update({ [otherField]: null })
-            .eq('id', eleveId);
-          
-          if (otherRole === 'lecteur') {
-            setSelectedElevesAsLecteur(prev => prev.filter(id => id !== eleveId));
-          } else {
-            setSelectedElevesAsMediateur(prev => prev.filter(id => id !== eleveId));
-          }
-        }
-        
-        await supabase
-          .from('eleves')
-          .update({ [field]: currentId })
-          .eq('id', eleveId);
-        
-        if (role === 'lecteur') {
-          setSelectedElevesAsLecteur(prev => [...prev, eleveId]);
-        } else {
-          setSelectedElevesAsMediateur(prev => [...prev, eleveId]);
-        }
       }
-  
+      
+      await supabase
+        .from('eleves')
+        .update({ [field]: currentId })
+        .eq('id', eleveId);
+      
+      if (role === 'lecteur') {
+        setSelectedElevesAsLecteur(prev => [...prev, eleveId]);
+      } else {
+        setSelectedElevesAsMediateur(prev => [...prev, eleveId]);
+      }
+      
+      addToast(`Vous êtes maintenant ${role === 'lecteur' ? 'lecteur externe' : 'médiateur'} pour ${eleve.prenom} ${eleve.nom}`, 'success');
+      
       setTimeout(() => {
         loadData(lecteurExterneId, mediateurId);
       }, 500);
@@ -479,6 +598,7 @@ export default function ExterneDashboard() {
       loadData(lecteurExterneId, mediateurId);
     }
   };
+
 
   const getAssignedRoleForEleve = (eleve: Eleve): string => {
     const roles = [];
@@ -629,20 +749,44 @@ export default function ExterneDashboard() {
   
     const lecteurSelected = selectedElevesAsLecteur.includes(eleve.id);
     const mediateurSelected = selectedElevesAsMediateur.includes(eleve.id);
-    const lecteurBusy = isTimeSlotBusy(eleve, 'lecteur');
-    const mediateurBusy = isTimeSlotBusy(eleve, 'mediateur');
-    const lecteurTaken = eleve.lecteur_externe_id && eleve.lecteur_externe_id !== lecteurExterneId;
-    const mediateurTaken = eleve.mediateur_id && eleve.mediateur_id !== mediateurId;
+    const lecteurDemande = hasDemandeEnAttente(eleve.id, 'lecteur_externe');
+    const mediateurDemande = hasDemandeEnAttente(eleve.id, 'mediateur');
+    
+    // Gérer les annulations de demande
+    if (lecteurSelected && lecteurDemande) {
+      const demande = demandesEnAttente[eleve.id]?.find(d => d.role_type === 'lecteur_externe');
+      if (demande) await handleAnnulerDemande(demande.id);
+      return;
+    }
+    
+    if (mediateurSelected && mediateurDemande) {
+      const demande = demandesEnAttente[eleve.id]?.find(d => d.role_type === 'mediateur');
+      if (demande) await handleAnnulerDemande(demande.id);
+      return;
+    }
   
+    // Si déjà sélectionné (sans demande), ouvrir modal de désinscription
     if (lecteurSelected) {
-      await handleToggleSelection(eleve.id, 'lecteur');
+      setSelectedEleveForDesinscription(eleve);
+      setSelectedRoleTypeForDesinscription('lecteur_externe');
+      setDesinscriptionComment('');
+      setShowDesinscriptionModal(true);
       return;
     }
     
     if (mediateurSelected) {
-      await handleToggleSelection(eleve.id, 'mediateur');
+      setSelectedEleveForDesinscription(eleve);
+      setSelectedRoleTypeForDesinscription('mediateur');
+      setDesinscriptionComment('');
+      setShowDesinscriptionModal(true);
       return;
     }
+  
+    // Sinon, proposer l'inscription
+    const lecteurBusy = isTimeSlotBusy(eleve, 'lecteur');
+    const mediateurBusy = isTimeSlotBusy(eleve, 'mediateur');
+    const lecteurTaken = eleve.lecteur_externe_id && eleve.lecteur_externe_id !== lecteurExterneId;
+    const mediateurTaken = eleve.mediateur_id && eleve.mediateur_id !== mediateurId;
   
     let roleChoice: 'lecteur' | 'mediateur' | null = null;
     
@@ -1392,6 +1536,21 @@ export default function ExterneDashboard() {
   if (viewMode === 'list' || viewMode === 'calendar') {
     return (
       <div className="min-h-screen bg-gray-50">
+        {/* Toast Container */}
+        <div className="fixed top-4 right-4 z-50 space-y-2">
+          {toasts.map(toast => (
+            <div
+              key={toast.id}
+              className={`px-4 py-3 rounded-lg shadow-lg text-sm font-medium animate-slide-in ${
+                toast.type === 'success' ? 'bg-green-500 text-white' :
+                toast.type === 'error' ? 'bg-red-500 text-white' :
+                'bg-blue-500 text-white'
+              }`}
+            >
+              {toast.message}
+            </div>
+          ))}
+        </div>
         <div className="sticky top-0 z-50 bg-white border-b shadow-sm">
           <div className="max-w-7xl mx-auto px-4 md:px-8 py-3">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
@@ -1691,5 +1850,83 @@ export default function ExterneDashboard() {
     );
   }
 
-  return null;
+      {/* Modal de demande de désinscription */}
+      {showDesinscriptionModal && selectedEleveForDesinscription && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+            <div className="px-6 py-4 border-b">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-800">Demande de désinscription</h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {selectedEleveForDesinscription.prenom} {selectedEleveForDesinscription.nom} - {selectedEleveForDesinscription.classe}
+                  </p>
+                </div>
+                <button onClick={() => setShowDesinscriptionModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+              </div>
+            </div>
+            <div className="px-6 py-4">
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Rôle concerné : <span className="font-semibold">{selectedRoleTypeForDesinscription === 'lecteur_externe' ? 'Lecteur externe' : 'Médiateur'}</span>
+                </label>
+                <p className="text-sm text-gray-600 mb-4">
+                  Votre demande devra être approuvée par la coordination. En attendant, vous restez assigné à cette défense.
+                </p>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Commentaire (optionnel) :</label>
+                <textarea
+                  value={desinscriptionComment}
+                  onChange={(e) => setDesinscriptionComment(e.target.value)}
+                  className="w-full h-24 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  placeholder="Expliquez brièvement votre demande de désinscription..."
+                />
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t bg-gray-50 rounded-b-lg">
+              <div className="flex justify-end gap-3">
+                <button 
+                  onClick={() => setShowDesinscriptionModal(false)} 
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium"
+                  disabled={submittingDesinscription}
+                >
+                  Annuler
+                </button>
+                <button 
+                  onClick={handleCreerDemandeDesinscription} 
+                  disabled={submittingDesinscription}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
+                    !submittingDesinscription 
+                      ? 'bg-red-600 text-white hover:bg-red-700' 
+                      : 'bg-red-400 text-white cursor-not-allowed'
+                  }`}
+                >
+                  {submittingDesinscription ? (
+                    <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>Envoi...</>
+                  ) : (
+                    'Envoyer la demande'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style jsx>{`
+        @keyframes slideIn {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        .animate-slide-in {
+          animation: slideIn 0.3s ease-out;
+        }
+      `}</style>
+    </div>
+  );
 }
