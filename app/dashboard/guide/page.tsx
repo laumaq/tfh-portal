@@ -116,7 +116,14 @@ export default function GuideDashboard() {
   }>>([]);
   
   const router = useRouter();
-
+  
+  useEffect(() => {
+    if (activeTab === 'lecteur-interne' && userGuideId) {
+      loadDemandesEnAttente(userGuideId);
+      loadData(userGuideId);
+    }
+  }, [activeTab, userGuideId]);
+  
   const CONVOCATION_OPTIONS = [
     { value: '', label: '-', color: 'bg-gray-100' },
     { 
@@ -150,25 +157,32 @@ export default function GuideDashboard() {
     }, 5000);
   };
 
-  // Charger les demandes en attente pour l'utilisateur
   const loadDemandesEnAttente = async (guideId: string) => {
     try {
+      console.log('🔍 Chargement demandes pour guide:', guideId);
+      
       const { data, error } = await supabase
         .from('demandes_desinscription')
         .select('*')
         .eq('demandeur_id', guideId)
         .eq('demandeur_type', 'guide')
         .eq('statut', 'en_attente');
-
+  
       if (error) throw error;
-
+      
+      console.log('📋 Demandes trouvées:', data);
+      console.log('📋 Nombre de demandes:', data?.length);
+      
       const demandesMap: Record<string, DemandeDesinscription[]> = {};
       (data || []).forEach((demande: DemandeDesinscription) => {
+        console.log('   - Demande pour eleve:', demande.eleve_id, 'role:', demande.role_type);
         if (!demandesMap[demande.eleve_id]) {
           demandesMap[demande.eleve_id] = [];
         }
         demandesMap[demande.eleve_id].push(demande);
       });
+      
+      console.log('🗺️ Map finale:', demandesMap);
       setDemandesEnAttente(demandesMap);
     } catch (err) {
       console.error('Erreur chargement demandes:', err);
