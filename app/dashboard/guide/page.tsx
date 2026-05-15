@@ -722,8 +722,7 @@ export default function GuideDashboard() {
                 </div>
               </div>
             </div>
-            </div>
-
+        
             <div className="bg-white rounded-lg shadow overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-100 border-b">
@@ -829,55 +828,30 @@ export default function GuideDashboard() {
                             </div>
                           )}
                         </div>
-                      </td>
+                      </table>
                       
-                      {/* Colonnes des sessions - avec affichage des présences */}
+                      {/* Colonnes des sessions */}
                       {sessions.map(session => {
                         const columnName = `session_${session.index}_convoque`;
                         const valeur = (eleve as any)[columnName] as string | undefined;
                         const estConvoque = valeur?.startsWith('Oui') === true;
                         
-                        // Récupérer les présences pour les journées de cette session
-                        // Pour simplifier, on affiche un indicateur de présence si l'élève est convoqué
-                        // Dans une version plus avancée, on pourrait charger les présences réelles
-                        
                         return (
                           <td key={session.index} className="px-4 py-3">
-                            {estConvoque ? (
-                              <div className="flex flex-col gap-1">
-                                <select
-                                  value={valeur || ''}
-                                  onChange={(e) => handleUpdateSessionConvocation(eleve.id, session.index, e.target.value)}
-                                  className={`w-full border rounded px-2 py-1 text-sm ${getConvocationColor(valeur || '')}`}
-                                >
-                                  {CONVOCATION_OPTIONS.map(opt => (
-                                    <option key={opt.value} value={opt.value} className={opt.color}>
-                                      {opt.label}
-                                    </option>
-                                  ))}
-                                </select>
-                                {/* Indicateur de présence à remplacer par les vraies données quand disponibles */}
-                                <div className="flex items-center justify-center gap-2 mt-1">
-                                  <div className="w-2 h-2 rounded-full bg-gray-300" title="Présence à confirmer"></div>
-                                  <span className="text-xs text-gray-400">Présence à renseigner</span>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="flex flex-col gap-1">
-                                <select
-                                  value={valeur || ''}
-                                  onChange={(e) => handleUpdateSessionConvocation(eleve.id, session.index, e.target.value)}
-                                  className={`w-full border rounded px-2 py-1 text-sm ${getConvocationColor(valeur || '')}`}
-                                >
-                                  {CONVOCATION_OPTIONS.map(opt => (
-                                    <option key={opt.value} value={opt.value} className={opt.color}>
-                                      {opt.label}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                            )}
-                          </td>
+                            <div className="flex flex-col gap-1">
+                              <select
+                                value={valeur || ''}
+                                onChange={(e) => handleUpdateSessionConvocation(eleve.id, session.index, e.target.value)}
+                                className={`w-full border rounded px-2 py-1 text-sm ${getConvocationColor(valeur || '')}`}
+                              >
+                                {CONVOCATION_OPTIONS.map(opt => (
+                                  <option key={opt.value} value={opt.value} className={opt.color}>
+                                    {opt.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </table>
                         );
                       })}
                     </tr>
