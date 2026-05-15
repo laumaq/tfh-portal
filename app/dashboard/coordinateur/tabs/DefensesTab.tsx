@@ -608,9 +608,15 @@ export default function DefensesTab({
                   ? `${externes.find(e => e.lecteur_externe_id === eleve.lecteur_externe_id)!.nom} ${externes.find(e => e.lecteur_externe_id === eleve.lecteur_externe_id)!.prenom}`
                   : '';
                 
-                const mediateurLabel = externes.find(e => e.mediateur_id === eleve.mediateur_id)
-                  ? `${externes.find(e => e.mediateur_id === eleve.mediateur_id)!.nom} ${externes.find(e => e.mediateur_id === eleve.mediateur_id)!.prenom}`
-                  : '';
+                const mediateurLabel = (() => {
+                  const found = externes.find(e => e.mediateur_id === eleve.mediateur_id);
+                  if (eleve.nom === 'Ferro') {
+                    console.log('mediateur_id dans la recherche:', eleve.mediateur_id);
+                    console.log('found:', found);
+                    console.log('externes disponibles:', externes.map(e => ({ id: e.id, mediateur_id: e.mediateur_id, nom: e.nom })));
+                  }
+                  return found ? `${found.nom} ${found.prenom}` : '';
+                })();
 
                 return (
                   <tr key={eleve.id} className={`border-b hover:bg-gray-50 ${eleve.tfh_non_rendu ? 'bg-red-50' : ''}`}>
