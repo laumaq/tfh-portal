@@ -13,6 +13,8 @@ interface ListeTFHTabProps {
 }
 
 type SortField = 'classe' | 'eleve' | 'thematique' | 'problematique' | 'categorie';
+type RenduFilter = 'all' | 'rendu' | 'non_rendu';
+type LienFilter = 'all' | 'avec_lien' | 'sans_lien';
 
 interface SortRule {
   field: SortField;
@@ -25,7 +27,8 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
   const [filteredClass, setFilteredClass] = useState<string>('all');
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const [localEleves, setLocalEleves] = useState<Eleve[]>([]);
-  const [renduFilter, setRenduFilter] = useState<'all' | 'rendu' | 'non_rendu'>('all');
+  const [renduFilter, setRenduFilter] = useState<RenduFilter>('all');
+  const [lienFilter, setLienFilter] = useState<LienFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortRules, setSortRules] = useState<SortRule[]>([
     { field: 'classe', direction: 'asc' },
@@ -94,11 +97,9 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
     let newDirection: 'asc' | 'desc';
     
     if (currentFirst.field === field) {
-      // Même colonne : inverser la direction
       newDirection = currentFirst.direction === 'asc' ? 'desc' : 'asc';
       setSortRules([{ field, direction: newDirection }]);
     } else {
-      // Nouvelle colonne : tri ascendant
       setSortRules([{ field, direction: 'asc' }]);
     }
   };
@@ -132,16 +133,23 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
       result = result.filter(e => e.classe === filteredClass);
     }
     
-    // Filtre par état de rendu
+    // Filtre par état de rendu (TFH rendu ou non)
     if (renduFilter === 'rendu') {
       result = result.filter(e => e.tfh_non_rendu !== true);
     } else if (renduFilter === 'non_rendu') {
       result = result.filter(e => e.tfh_non_rendu === true);
     }
     
+    // Filtre par état du lien URL
+    if (lienFilter === 'avec_lien') {
+      result = result.filter(e => e.url_tfh && e.url_tfh.trim() !== '');
+    } else if (lienFilter === 'sans_lien') {
+      result = result.filter(e => !e.url_tfh || e.url_tfh.trim() === '');
+    }
+    
     // Appliquer le tri
     return sortData(result, sortRules);
-  }, [localEleves, filteredClass, renduFilter, searchQuery, sortRules]);
+  }, [localEleves, filteredClass, renduFilter, lienFilter, searchQuery, sortRules]);
 
   // Fonction pour formater le nom complet
   const formatNomComplet = (eleve: Eleve) => {
@@ -378,18 +386,35 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
               </div>
             </div>
 
-            {/* Filtre par état de rendu */}
+            {/* Filtre par état de rendu (TFH rendu/non rendu) */}
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium text-gray-700">État:</label>
               <div className="relative">
                 <select
                   value={renduFilter}
-                  onChange={(e) => setRenduFilter(e.target.value as 'all' | 'rendu' | 'non_rendu')}
+                  onChange={(e) => setRenduFilter(e.target.value as RenduFilter)}
                   className="pl-3 pr-8 py-1.5 text-sm border border-gray-300 rounded-lg bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                 >
                   <option value="all">Tous</option>
                   <option value="rendu">Rendu</option>
                   <option value="non_rendu">Non rendu</option>
+                </select>
+                <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Filtre par état du lien URL */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Lien:</label>
+              <div className="relative">
+                <select
+                  value={lienFilter}
+                  onChange={(e) => setLienFilter(e.target.value as LienFilter)}
+                  className="pl-3 pr-8 py-1.5 text-sm border border-gray-300 rounded-lg bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                >
+                  <option value="all">Tous</option>
+                  <option value="avec_lien">Avec lien</option>
+                  <option value="sans_lien">Sans lien</option>
                 </select>
                 <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
@@ -541,6 +566,8 @@ export default function ListeTFHTab({ eleves, onUpdate, onRefresh }: ListeTFHTab
                 <li><strong>Tri</strong> : Cliquez sur les en-têtes de colonnes pour trier (ascendant/descendant)</li>
                 <li><strong>Recherche</strong> : Utilisez la barre de recherche pour filtrer par nom ou prénom</li>
                 <li><strong>Filtre classe</strong> : Sélectionnez une classe pour afficher seulement ses TFH</li>
+                <li><strong>Filtre état</strong> : Filtre les TFH rendus ou non rendus</li>
+                <li><strong>Filtre lien</strong> : Filtre les TFH avec ou sans lien URL vers le travail numérique</li>
                 <li><strong>Mode édition</strong> : Activez pour modifier tous les champs</li>
                 <li><strong>Édition instantanée</strong> : Les modifications sont sauvegardées automatiquement</li>
                 <li><strong>Effacer un champ</strong> : Survolez un champ et cliquez sur l'icône 🗑️ pour le vider</li>
