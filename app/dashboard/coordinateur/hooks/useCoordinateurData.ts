@@ -13,16 +13,75 @@ import {
   Externe 
 } from '../types';
 
+// Ajouter le type pour les demandes
+export interface DemandeDesinscription {
+  id: string;
+  demandeur_id: string;
+  demandeur_type: 'guide' | 'externe';
+  demandeur_nom: string;
+  demandeur_prenom: string;
+  demandeur_email: string;
+  eleve_id: string;
+  eleve_nom: string;
+  eleve_prenom: string;
+  eleve_classe: string;
+  role_type: 'guide' | 'lecteur_interne' | 'lecteur_externe' | 'mediateur';
+  defense_date: string;
+  defense_horaire: string;
+  defense_localisation: string;
+  statut: 'en_attente' | 'approuvee' | 'refusee' | 'annulee';
+  commentaire_demandeur: string | null;
+  commentaire_coordinateur: string | null;
+  created_at: string;
+  traitee_le: string | null;
+  traitee_par: string | null;
+}
+
 export function useCoordinateurData() {
   const [eleves, setEleves] = useState<Eleve[]>([]);
   const [guides, setGuides] = useState<Guide[]>([]);
   const [lecteursExternes, setLecteursExternes] = useState<LecteurExterne[]>([]);
   const [mediateurs, setMediateurs] = useState<Mediateur[]>([]);
-  const [externes, setExternes] = useState<Externe[]>([]); // ← NOUVEAU
+  const [externes, setExternes] = useState<Externe[]>([]);
   const [coordinateurs, setCoordinateurs] = useState<Coordinateur[]>([]);
+  const [demandesEnAttente, setDemandesEnAttente] = useState<DemandeDesinscription[]>([]);
+  const [demandesTraitees, setDemandesTraitees] = useState<DemandeDesinscription[]>([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<string[]>([]);
-  const [currentCoordinateur, setCurrentCoordinateur] = useState<{nom: string, prenom: string} | null>(null);
+  const [currentCoordinateur, setCurrentCoordinateur] = useState<{nom: string, prenom: string, id: string} | null>(null);
+
+  const loadDemandes = useCallback(async (coordinateurId: string) => {
+    try {
+      // Demandes en attente
+      const { data: enAttente, error: error1 } = await supabase
+        .from('demandes_desinscription')
+        .select('*')
+        .eq('statut', 'en_attente')
+        .order('created_at', { ascending: false });
+
+      if (!error1) {
+        setDemandesEnAttente(enAttente || []);
+      }
+
+      // Demandes traitées (30 derniers jours)
+      const dateLimite = new Date();
+      dateLimite.setDate(dateLimite.getDate() - 30);
+      
+      const { data: traitees, error: error2 } = await supabase
+        .from('demandes_desinscription')
+        .select('*')
+        .in('statut', ['approuvee', 'refusee'])
+        .gte('traitee_le', dateLimite.toISOString())
+        .order('traitee_le', { ascending: false });
+
+      if (!error2) {
+        setDemandesTraitees(traitees || []);
+      }
+
+    } catch (err) {
+      console.error('Erreur chargement demandes:', err);
+    }
+  }, []);
 
   const loadData = useCallback(async () => {
     try {
@@ -59,7 +118,7 @@ export function useCoordinateurData() {
         setCoordinateurs(coordinateursData || []);
       }
       
-      // Charger les élèves avec jointures (corrigé pour utiliser externes)
+      // Charger les élèves avec jointures
       const { data: elevesData, error: elevesError } = await supabase
         .from('eleves')
         .select(`
@@ -99,12 +158,14 @@ export function useCoordinateurData() {
         if (userId) {
           const { data } = await supabase
             .from('coordinateurs')
-            .select('nom, prenom, mot_de_passe')
+            .select('id, nom, prenom, mot_de_passe')
             .eq('id', userId)
             .single();
           
           if (data) {
             setCurrentCoordinateur(data);
+            // Charger les demandes une fois qu'on a l'ID coordinateur
+            await loadDemandes(data.id);
           }
         }
       };
@@ -116,7 +177,7 @@ export function useCoordinateurData() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadDemandes]);
 
   useEffect(() => {
     loadData();
@@ -133,6 +194,50 @@ export function useCoordinateurData() {
     ));
   };
   
+  // Fonction pour approuver une demande
+  const approuverDemande = async (demandeId: string, commentaire?: string) => {
+    if (!currentCoordinateur) return false;
+    
+    try {
+      const response = await supabase.rpc('traiter_demande_desinscription', {
+        p_demande_id: demandeId,
+        p_nouveau_statut: 'approuvee',
+        p_commentaire: commentaire || null,
+        p_coordinateur_id: currentCoordinateur.id
+      });
+      
+      if (response.error) throw response.error;
+      
+      await refreshData();
+      return true;
+    } catch (err) {
+      console.error('Erreur approbation:', err);
+      return false;
+    }
+  };
+  
+  // Fonction pour refuser une demande
+  const refuserDemande = async (demandeId: string, commentaire?: string) => {
+    if (!currentCoordinateur) return false;
+    
+    try {
+      const response = await supabase.rpc('traiter_demande_desinscription', {
+        p_demande_id: demandeId,
+        p_nouveau_statut: 'refusee',
+        p_commentaire: commentaire || null,
+        p_coordinateur_id: currentCoordinateur.id
+      });
+      
+      if (response.error) throw response.error;
+      
+      await refreshData();
+      return true;
+    } catch (err) {
+      console.error('Erreur refus:', err);
+      return false;
+    }
+  };
+  
   return {
     eleves,
     guides,
@@ -144,6 +249,10 @@ export function useCoordinateurData() {
     categories,
     loading,
     refreshData,
-    updateEleveLocal
+    updateEleveLocal,
+    demandesEnAttente,
+    demandesTraitees,
+    approuverDemande,
+    refuserDemande
   };
 }
